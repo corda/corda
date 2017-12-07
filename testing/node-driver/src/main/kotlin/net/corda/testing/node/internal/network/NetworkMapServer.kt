@@ -7,6 +7,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType

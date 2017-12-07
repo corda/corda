@@ -10,6 +10,8 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="bootstrapper_main" target="1.8" />
+      <module name="bootstrapper_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
       <module name="buildSrc_test" target="1.8" />
       <module name="client_main" target="1.8" />

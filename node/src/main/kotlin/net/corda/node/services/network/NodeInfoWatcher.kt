@@ -8,7 +8,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
 import rx.Scheduler

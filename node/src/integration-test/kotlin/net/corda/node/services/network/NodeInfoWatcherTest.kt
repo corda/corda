@@ -7,8 +7,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
-import net.corda.nodeapi.internal.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.internal.createNodeInfoAndSigned

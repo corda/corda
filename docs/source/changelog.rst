@@ -6,13 +6,11 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-* Support for external user credentials data source and password encryption [CORDA-827].
-
 
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
    * The previous design was never intended to be final but was rather a quick implementation in the earliest days of the
-     Corda project to unblock higher priority items. It sufffers from numerous disadvantages including lack of scalability,
+     Corda project to unblock higher priority items. It suffers from numerous disadvantages including lack of scalability,
      as one node is expected to hold open and manage connections to every node on the network; not reliable; hard to defend
      against DoS attacks; etc.
 
@@ -49,6 +47,8 @@ UNRELEASED
 
    * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
      was needed to allow changes to the schema.
+
+* Support for external user credentials data source and password encryption [CORDA-827].
 
 * Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using
   DriverDSL and/or cordformation node runner.

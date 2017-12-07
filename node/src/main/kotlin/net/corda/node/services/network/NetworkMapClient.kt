@@ -12,9 +12,9 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
-import net.corda.nodeapi.internal.NetworkMap
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.SignedNetworkMap
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.SignedNodeInfo
 import okhttp3.CacheControl
 import okhttp3.Headers

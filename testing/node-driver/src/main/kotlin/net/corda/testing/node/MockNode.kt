@@ -22,8 +22,8 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.node.VersionInfo
 import net.corda.core.utilities.seconds
+import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -37,18 +37,18 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.setGlobalSerialization
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
@@ -229,12 +229,12 @@ class MockNetwork(private val cordappPackages: List<String>,
     }
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
-        return notarySpecs.mapIndexed { index, spec ->
+        return notarySpecs.mapIndexed { index, (name, validating) ->
             val identity = ServiceIdentityGenerator.generateToDisk(
                     dirs = listOf(baseDirectory(nextNodeId + index)),
-                    serviceName = spec.name,
+                    serviceName = name,
                     serviceId = "identity")
-            NotaryInfo(identity, spec.validating)
+            NotaryInfo(identity, validating)
         }
     }
 

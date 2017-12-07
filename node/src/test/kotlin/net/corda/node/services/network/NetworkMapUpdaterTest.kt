@@ -16,8 +16,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.nodeapi.internal.NetworkMap
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.internal.TestNodeInfoBuilder

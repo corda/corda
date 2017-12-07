@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal
+package net.corda.nodeapi.internal.network
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
@@ -15,7 +15,7 @@ import java.security.cert.X509Certificate
 import java.time.Instant
 
 const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
-// TODO: Need more discussion on rather we should move this class out of internal.
+
 /**
  * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
  */

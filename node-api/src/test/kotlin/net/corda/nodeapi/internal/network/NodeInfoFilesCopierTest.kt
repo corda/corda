@@ -1,7 +1,7 @@
-package net.corda.nodeapi
+package net.corda.nodeapi.internal.network
 
 import net.corda.cordform.CordformNode
-import net.corda.nodeapi.internal.NodeInfoFilesCopier
+import net.corda.nodeapi.eventually
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -14,14 +14,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 import kotlin.test.assertEquals
 
-/**
- * tests for [NodeInfoFilesCopier]
- */
 class NodeInfoFilesCopierTest {
-
-    @Rule @JvmField var folder = TemporaryFolder()
-    private val rootPath get() = folder.root.toPath()
-    private val scheduler = TestScheduler()
     companion object {
         private const val ORGANIZATION = "Organization"
         private const val NODE_1_PATH = "node1"
@@ -33,6 +26,13 @@ class NodeInfoFilesCopierTest {
         private val BAD_NODE_INFO_NAME = "something"
     }
 
+    @Rule
+    @JvmField
+    val folder = TemporaryFolder()
+
+    private val rootPath get() = folder.root.toPath()
+    private val scheduler = TestScheduler()
+
     private fun nodeDir(nodeBaseDir : String) = rootPath.resolve(nodeBaseDir).resolve(ORGANIZATION.toLowerCase())
 
     private val node1RootPath by lazy { nodeDir(NODE_1_PATH) }
@@ -40,7 +40,7 @@ class NodeInfoFilesCopierTest {
     private val node1AdditionalNodeInfoPath by lazy { node1RootPath.resolve(CordformNode.NODE_INFO_DIRECTORY) }
     private val node2AdditionalNodeInfoPath by lazy { node2RootPath.resolve(CordformNode.NODE_INFO_DIRECTORY) }
 
-    lateinit var nodeInfoFilesCopier: NodeInfoFilesCopier
+    private lateinit var nodeInfoFilesCopier: NodeInfoFilesCopier
 
     @Before
     fun setUp() {

@@ -8,12 +8,11 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.days
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import tornadofx.*
 import java.io.IOException

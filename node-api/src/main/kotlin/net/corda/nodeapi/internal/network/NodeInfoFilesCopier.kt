@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal
+package net.corda.nodeapi.internal.network
 
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.ThreadBox
@@ -65,7 +65,6 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     }
 
     /**
-     * @param nodeConfig the configuration to be removed.
      * Remove the configuration of a node which is about to be stopped or already stopped.
      * No files written by that node will be copied to other nodes, nor files from other nodes will be copied to this
      * one.
