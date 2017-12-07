@@ -81,7 +81,7 @@ open class NodeStartup(val args: Array<String>) {
                 conf0
             }
 
-//        banJavaSerialisation(conf)
+        banJavaSerialisation(conf)
         preNetworkRegistration(conf)
         if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
                 registerWithNetwork(cmdlineOptions, conf)
