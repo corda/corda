@@ -4,20 +4,25 @@ package net.corda.testing
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.loadKeyStore
+import net.corda.nodeapi.internal.crypto.*
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.Security
+import java.security.cert.CertPathValidator
+import java.security.cert.PKIXCertPathValidatorResult
+import java.security.cert.PKIXParameters
+import java.security.cert.TrustAnchor
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
@@ -69,6 +74,20 @@ val DEV_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
     val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
     caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+}
+val DEV_NODE_CA: CertificateAndKeyPair by lazy {
+    val issuerCertificate = DEV_CA.certificate
+    val issuerKeyPair = DEV_CA.keyPair
+    val keyPair = generateKeyPair()
+    val subject = CordaX500Name(organisation = X509Utilities.CORDA_CLIENT_CA_CN, locality = "London", country = "GB")
+
+    val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
+    val provider = Security.getProvider(signatureScheme.providerName)
+    val issuerSigner = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
+
+    val certificate = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuerCertificate.subject, issuerSigner, subject,
+            keyPair.public, Pair(issuerCertificate.notBefore, issuerCertificate.notAfter))
+    CertificateAndKeyPair(certificate, keyPair)
 }
 val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
     // TODO: Should be identity scheme
