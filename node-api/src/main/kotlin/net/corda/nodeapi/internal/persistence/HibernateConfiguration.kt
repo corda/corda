@@ -63,8 +63,9 @@ class HibernateConfiguration(
         val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix)
         logger.info("Created session factory for schemas: $schemas")
 
-        // enable JMX
-        initStatistics(sessionFactory)
+        // export Hibernate JMX statistics
+        if (databaseConfig.exportStatistics)
+            initStatistics(sessionFactory)
 
         return sessionFactory
     }
