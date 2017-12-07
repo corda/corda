@@ -19,7 +19,6 @@ import org.apache.shiro.authz.Permission
 import org.apache.shiro.authz.SimpleAuthorizationInfo
 import org.apache.shiro.authz.permission.DomainPermission
 import org.apache.shiro.authz.permission.PermissionResolver
-import org.apache.shiro.cache.AbstractCacheManager
 import org.apache.shiro.cache.CacheManager
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
@@ -299,19 +298,16 @@ private class GuavaCacheManager(val maxSize: Long,
     private val instances = ConcurrentHashMap<String, ShiroCache<*, *>>()
 
     override fun <K, V> getCache(name: String): ShiroCache<K, V> {
-
-        var result = instances.get(name)
-        if (result == null) {
-            logger.info("Creating cache $name with TTL = $timeToLiveSeconds secs and max-size = $maxSize")
-            result = CacheBuilder.newBuilder()
-                    .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
-                    .maximumSize(maxSize)
-                    .build<K, V>()
-                    .toShiroCache(name)
-            instances.putIfAbsent(name, result)
-        }
+        val result = instances[name] ?: buildCache<K, V>(name)
+        instances.putIfAbsent(name, result)
         return result as ShiroCache<K, V>
     }
+
+    private fun <K, V> buildCache(name: String) = CacheBuilder.newBuilder()
+            .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
+            .maximumSize(maxSize)
+            .build<K, V>()
+            .toShiroCache(name)
 
     companion object {
         private val logger = loggerFor<GuavaCacheManager>()
