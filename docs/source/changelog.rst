@@ -8,6 +8,48 @@ UNRELEASED
 ----------
 * Support for external user credentials data source and password encryption [CORDA-827].
 
+
+* The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
+
+   * The previous design was never intended to be final but was rather a quick implementation in the earliest days of the
+     Corda project to unblock higher priority items. It sufffers from numerous disadvantages including lack of scalability,
+     as one node is expected to hold open and manage connections to every node on the network; not reliable; hard to defend
+     against DoS attacks; etc.
+
+   * There is no longer a special network map node for distributing the network map to the other nodes. Instead the network
+     map is now a collection of signed ``NodeInfo`` files distributed via HTTP.
+
+   * The ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL`` which is the base URL for the
+     doorman registration and for downloading the network map. There is also an end-point for the node to publish its node-info
+     object, which the node does each time it changes. ``networkMapService`` config has been removed.
+
+   * To support local and test deployments, the node polls the ``additional-node-infos`` directory for these signed ``NodeInfo``
+     objects which are stored in its local cache. On startup the node generates its own signed file with the filename format
+     "nodeInfo-*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
+
+   * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
+     parameter is no longer needed.
+
+   * For test deployments we've introduced a bootstrapping tool (see :doc:`setting-up-a-corda-network`).
+
+   * ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
+     removed. The configuration of notaries has been simplified into a single ``notary`` config object. See
+     :doc:`corda-configuration-file` for more details.
+
+   * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
+     to correctly interop.
+
+   * The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
+     their X500 name.
+
+   * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
+     Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+
+   * The common name in the node's X500 legal name is no longer reserved and can be used as part of the node's name.
+
+   * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
+     was needed to allow changes to the schema.
+
 * Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using
   DriverDSL and/or cordformation node runner.
 
@@ -38,23 +80,11 @@ UNRELEASED
   deploys nodes for development and testing, the latter turns a project into a cordapp project that generates JARs in
   the standard CorDapp format.
 
-* ``Cordform`` and node identity generation:
-  * Removed the parameter ``NetworkMap`` from Cordform. Now at the end of the deployment the following happens:
-    1. Each node is started and its signed serialized NodeInfo is written to disk in the node base directory.
-    2. Every serialized ``NodeInfo`` above is copied in every other node "additional-node-info" folder under the NodeInfo folder.
-
-* Nodes read and poll the filesystem for serialized ``NodeInfo`` in the ``additional-node-info`` directory.
-
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
 * Enums now respect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
-
-* ``extraAdvertisedServiceIds`` config has been removed as part of the previous work to retire the concept of advertised
-  services. The remaining use of this config was for notaries, the configuring of which has been cleaned up and simplified.
-  ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` have also been removed and replaced by a single
-  ``notary`` config object. See :doc:`corda-configuration-file` for more details.
 
 * Gradle task ``deployNodes`` can have an additional parameter ``configFile`` with the path to a properties file
   to be appended to node.conf.
@@ -72,8 +102,8 @@ UNRELEASED
   allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
   service classes with only ``ServiceHub`` constructors will still work.
 
-* ``TimeWindow`` now has a ``length`` property that returns the length of the time-window, or ``null`` if the
-  time-window is open-ended.
+* ``TimeWindow`` now has a ``length`` property that returns the length of the time-window as a ``java.time.Duration`` object,
+  or ``null`` if the time-window isn't closed.
 
 * A new ``SIGNERS_GROUP`` with ordinal 6 has been added to ``ComponentGroupEnum`` that corresponds to the ``Command``
   signers.
@@ -89,18 +119,13 @@ UNRELEASED
 * The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
   feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
 
-* Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This is
-  needed to allow new ``node_info_hash`` column to be added for the network map redesign work.
-
 * Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
 
-* Replaced node configuration parameter ``certificateSigningService`` with ``compatibilityZoneURL``, which is Corda
-  compatibility zone network management service's address.
+* ``DriverDSLExposedInterface`` has been renamed to ``DriverDSL`` and the ``waitForAllNodesToFinish()`` method has instead
+  become a parameter on driver creation.
 
-* ``waitForAllNodesToFinish()`` method in ``DriverDSLExposedInterface`` has instead become a parameter on driver creation.
-
-* ``database.transactionIsolationLevel`` values now follow the ``java.sql.Connection`` int constants but without the
-  "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
+* Values for the ``database.transactionIsolationLevel`` config now follow the ``java.sql.Connection`` int constants but
+  without the "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
 
 .. _changelog_v1:
 
