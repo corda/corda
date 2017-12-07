@@ -27,7 +27,7 @@ import java.sql.Statement
 import java.util.*
 import kotlin.test.assertFailsWith
 
-abstract class SecurityDataSourceTest : NodeBasedTest () {
+abstract class SecurityDataSourceTest : NodeBasedTest() {
 
     protected lateinit var node: StartedNode<Node>
     protected lateinit var client: CordaRPCClient
@@ -77,7 +77,7 @@ abstract class SecurityDataSourceTest : NodeBasedTest () {
         client.start("user", "foo").use {
             val proxy = it.proxy
             proxy.stateMachinesFeed()
-            assertFailsWith (
+            assertFailsWith(
                     PermissionException::class,
                     "This user should not be authorized to call 'nodeInfo'") {
                 proxy.nodeInfo()
@@ -88,7 +88,6 @@ abstract class SecurityDataSourceTest : NodeBasedTest () {
     @StartableByRPC
     @InitiatingFlow
     class DummyFlow : FlowLogic<Unit>() {
-
         @Suspendable
         override fun call() = Unit
     }
@@ -108,7 +107,7 @@ class SecurityDataSourceTestEmbedded : SecurityDataSourceTest() {
                 type = SecurityDataSourceType.EMBEDDED,
                 passwordEncryption = PasswordEncryption.NONE,
                 users = listOf(rpcUser))
-                    .toConfig().root().unwrapped()
+                .toConfig().root().unwrapped()
 
         val configOverrides = mapOf("securityDataSource" to dataSourceConfig)
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
@@ -135,9 +134,9 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
                             role = "admin",
                             permissions = listOf("ALL")
                     )))
+
     @Before
     fun setup() {
-
         val dataSourceConfig = SecurityDataSourceConfig(
                 type = SecurityDataSourceType.JDBC,
                 passwordEncryption = PasswordEncryption.NONE,
@@ -154,23 +153,23 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
     }
 
     @Test
-    fun `Add new users on-the-fly` () {
+    fun `Add new users on-the-fly`() {
         assertFailsWith(
-            ActiveMQSecurityException::class,
-            "Login with incorrect password should fail") {
-                client.start("user2", "bar")
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user2", "bar")
         }
 
         db.insert(UserAndRoles(
-                    username = "user2",
-                    password = "bar",
-                    roles = listOf("default")))
+                username = "user2",
+                password = "bar",
+                roles = listOf("default")))
 
         client.start("user2", "bar")
     }
 
     @Test
-    fun `Modify user permissions during RPC session` () {
+    fun `Modify user permissions during RPC session`() {
         db.insert(UserAndRoles(
                 username = "user3",
                 password = "bar",
@@ -179,7 +178,7 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
 
         client.start("user3", "bar").use {
             val proxy = it.proxy
-            assertFailsWith (
+            assertFailsWith(
                     PermissionException::class,
                     "This user should not be authorized to call 'nodeInfo'") {
                 proxy.stateMachinesFeed()
@@ -190,7 +189,7 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
     }
 
     @Test
-    fun `Revoke user permissions during RPC session` () {
+    fun `Revoke user permissions during RPC session`() {
         db.insert(UserAndRoles(
                 username = "user4",
                 password = "test",
@@ -200,13 +199,12 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
             val proxy = it.proxy
             proxy.stateMachinesFeed()
             db.deleteUser("user4")
-            assertFailsWith (
+            assertFailsWith(
                     PermissionException::class,
                     "This user should not be authorized to call 'nodeInfo'") {
                 proxy.stateMachinesFeed()
             }
         }
-
     }
 
     @After
@@ -269,7 +267,7 @@ private class UsersDB : AutoCloseable {
         }
     }
 
-    inline private fun session (statement : (Statement) -> Unit) {
+    inline private fun session(statement: (Statement) -> Unit) {
         DriverManager.getConnection(jdbcUrl).use {
             it.autoCommit = false
             it.createStatement().use(statement)
@@ -287,7 +285,7 @@ private class UsersDB : AutoCloseable {
             it.execute(DB_CREATE_SCHEMA)
         }
 
-        require (users.map { it.username }.toSet().size == users.size) {
+        require(users.map { it.username }.toSet().size == users.size) {
             "Duplicate username in input"
         }
 

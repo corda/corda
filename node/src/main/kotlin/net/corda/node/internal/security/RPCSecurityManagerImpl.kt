@@ -1,5 +1,8 @@
 package net.corda.node.internal.security
 
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.Cache
+import com.google.common.primitives.Ints
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.context.AuthServiceId
@@ -16,6 +19,8 @@ import org.apache.shiro.authz.Permission
 import org.apache.shiro.authz.SimpleAuthorizationInfo
 import org.apache.shiro.authz.permission.DomainPermission
 import org.apache.shiro.authz.permission.PermissionResolver
+import org.apache.shiro.cache.AbstractCacheManager
+import org.apache.shiro.cache.CacheManager
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
@@ -23,6 +28,8 @@ import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
 import org.apache.shiro.subject.Subject
 import javax.security.auth.login.FailedLoginException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * Default implementation of [RPCSecurityManager] adapting
@@ -245,5 +252,68 @@ private class NodeJdbcRealm(config: SecurityDataSourceConfig) : JdbcRealm() {
         setPermissionsLookupEnabled(true)
         dataSource = HikariDataSource(HikariConfig(config.dataSourceProperties!!))
         permissionResolver = RPCPermissionResolver
+    }
+}
+
+private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
+
+/**
+ * Adapts a [com.google.common.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
+ */
+private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
+
+    val name = name
+    private val impl = this@toShiroCache
+
+    override operator fun get(key: K) = impl.getIfPresent(key)
+
+    override fun put(key: K, value: V): V? {
+        val lastValue = get(key)
+        impl.put(key, value)
+        return lastValue
+    }
+
+    override fun remove(key: K): V? {
+        val lastValue = get(key)
+        impl.invalidate(key)
+        return lastValue
+    }
+
+    override fun clear() {
+        impl.invalidateAll()
+    }
+
+    override fun size() = Ints.checkedCast(impl.size())
+    override fun keys() = impl.asMap().keys
+    override fun values() = impl.asMap().values
+    override fun toString() = "Guava cache adapter [$impl]"
+}
+
+/**
+ * Implementation of [org.apache.shiro.cache.CacheManager] based on
+ * cache implementation in [com.google.common.cache]
+ */
+private class GuavaCacheManager(val maxSize: Long,
+                                val timeToLiveSeconds: Long) : CacheManager {
+
+    private val instances = ConcurrentHashMap<String, ShiroCache<*, *>>()
+
+    override fun <K, V> getCache(name: String): ShiroCache<K, V> {
+
+        var result = instances.get(name)
+        if (result == null) {
+            logger.info("Creating cache $name with TTL = $timeToLiveSeconds secs and max-size = $maxSize")
+            result = CacheBuilder.newBuilder()
+                    .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
+                    .maximumSize(maxSize)
+                    .build<K, V>()
+                    .toShiroCache(name)
+            instances.putIfAbsent(name, result)
+        }
+        return result as ShiroCache<K, V>
+    }
+
+    companion object {
+        private val logger = loggerFor<GuavaCacheManager>()
     }
 }
