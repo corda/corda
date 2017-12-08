@@ -4,20 +4,23 @@ package net.corda.testing
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX509CertHolder
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.loadKeyStore
+import net.corda.core.internal.x500Name
+import net.corda.nodeapi.internal.crypto.*
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralSubtree
+import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.Security
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
