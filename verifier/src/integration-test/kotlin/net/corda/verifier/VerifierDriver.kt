@@ -22,6 +22,7 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -59,6 +60,7 @@ fun <A> verifierDriver(
         waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: VerifierDriverDSL.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -72,7 +74,8 @@ fun <A> verifierDriver(
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs
+                        notarySpecs = notarySpecs,
+                        jmxPolicy = jmxPolicy
                 )
         ),
         coerce = { it },
