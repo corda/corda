@@ -81,7 +81,7 @@ private abstract class JavaCommand(
         jvmArgs: List<String>
 ) {
     private val jolokiaJar by lazy {
-        File("$dir/drivers").listFiles { dir, filename ->
+        File("$dir/drivers").listFiles { _, filename ->
             filename.matches("jolokia-jvm-.*-agent\\.jar$".toRegex())
         }.first().name
     }
