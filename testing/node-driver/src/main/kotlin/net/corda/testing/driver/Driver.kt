@@ -128,6 +128,10 @@ data class NodeParameters(
     fun setMaximumHeapSize(maximumHeapSize: String) = copy(maximumHeapSize = maximumHeapSize)
 }
 
+data class JmxPolicy(val startJmxHttpServer: Boolean = false,
+                     val jmxHttpServerPortAllocation: PortAllocation? =
+                        if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+
 /**
  * [driver] allows one to start up nodes like this:
  *   driver {
@@ -155,6 +159,9 @@ data class NodeParameters(
  *     not. Note that this may be overridden in [DriverDSL.startNode].
  * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
+ * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
+ *      startJmxHttpServer: indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote JMX monitoring using HTTP/JSON.
+ *      jmxHttpServerPortAllocation: the port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP. Defaults to incremental.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -171,6 +178,7 @@ fun <A> driver(
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -184,7 +192,8 @@ fun <A> driver(
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan
+                    extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    jmxPolicy = jmxPolicy
             ),
             coerce = { it },
             dsl = dsl,
@@ -219,7 +228,9 @@ data class DriverParameters(
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-        val extraCordappPackagesToScan: List<String> = emptyList()
+        val extraCordappPackagesToScan: List<String> = emptyList(),
+        val jmxPolicy: JmxPolicy = JmxPolicy()
+
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -232,4 +243,5 @@ data class DriverParameters(
     fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean) = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
     fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
+    fun setJmxPolicy(jmxPolicy: JmxPolicy) = copy(jmxPolicy = jmxPolicy)
 }

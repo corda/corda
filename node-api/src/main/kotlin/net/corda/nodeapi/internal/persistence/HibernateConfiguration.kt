@@ -17,8 +17,10 @@ import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
+import java.lang.management.ManagementFactory
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
+import javax.management.ObjectName
 import javax.persistence.AttributeConverter
 
 class HibernateConfiguration(
@@ -60,7 +62,29 @@ class HibernateConfiguration(
 
         val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix)
         logger.info("Created session factory for schemas: $schemas")
+
+        // export Hibernate JMX statistics
+        if (databaseConfig.exportHibernateJMXStatistics)
+            initStatistics(sessionFactory)
+
         return sessionFactory
+    }
+
+    // NOTE: workaround suggested to overcome deprecation of StatisticsService (since Hibernate v4.0)
+    // https://stackoverflow.com/questions/23606092/hibernate-upgrade-statisticsservice
+    fun initStatistics(sessionFactory: SessionFactory) {
+        val statsName = ObjectName("org.hibernate:type=statistics")
+        val mbeanServer = ManagementFactory.getPlatformMBeanServer()
+
+        val statisticsMBean = DelegatingStatisticsService(sessionFactory.statistics)
+        statisticsMBean.isStatisticsEnabled = true
+
+        try {
+            mbeanServer.registerMBean(statisticsMBean, statsName)
+        }
+        catch (e: Exception) {
+            logger.warn(e.message)
+        }
     }
 
     private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {

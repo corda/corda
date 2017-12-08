@@ -58,7 +58,7 @@ class NodeWebServer(val config: WebServerConfig) {
         // Export JMX monitoring statistics and data over REST/JSON.
         if (config.exportJMXto.split(',').contains("http")) {
             val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-            val warpath = classpath.firstOrNull { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
+            val warpath = classpath.firstOrNull { it.contains("jolokia-war") && it.endsWith(".war") }
             if (warpath != null) {
                 handlerCollection.addHandler(WebAppContext().apply {
                     // Find the jolokia WAR file on the classpath.
