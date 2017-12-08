@@ -54,7 +54,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         }
     }
 
-    // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
