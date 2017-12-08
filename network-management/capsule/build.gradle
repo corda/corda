@@ -27,7 +27,13 @@ task buildDoormanJAR(type: FatCapsule, dependsOn: ':network-management:jar') {
 
 artifacts {
     runtimeArtifacts buildDoormanJAR
-    publish buildDoormanJAR
+    publish buildDoormanJAR {
+        classifier ""
+    }
+}
+
+jar {
+    classifier "ignore"
 }
 
 publish {

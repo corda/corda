@@ -22,6 +22,9 @@ repositories {
     maven {
         url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev'
     }
+    maven {
+        url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases'
+    }
 }
 
 configurations {

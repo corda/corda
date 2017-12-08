@@ -30,6 +30,10 @@ artifacts {
     publish buildHsmJAR
 }
 
+jar {
+    classifier "ignore"
+}
+
 publish {
     name 'doorman-hsm'
     disableDefaultJar = true
