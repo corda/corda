@@ -32,17 +32,16 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         return if (isInterface) listOf(SerializerFactory.nameForType(resolvedType)) else emptyList()
     }
 
-    private fun generateDefault(): String? {
-        if (isJVMPrimitive) {
-            return when (resolvedType) {
-                java.lang.Boolean.TYPE -> "false"
-                java.lang.Character.TYPE -> "&#0"
-                else -> "0"
+    private fun generateDefault(): String? =
+            if (isJVMPrimitive) {
+                when (resolvedType) {
+                    java.lang.Boolean.TYPE -> "false"
+                    java.lang.Character.TYPE -> "&#0"
+                    else -> "0"
+                }
+            } else {
+                null
             }
-        } else {
-            return null
-        }
-    }
 
     private fun generateMandatory(): Boolean {
         return isJVMPrimitive || readMethod?.returnsNullable() == false
