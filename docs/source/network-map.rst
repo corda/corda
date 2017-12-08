@@ -34,13 +34,13 @@ Network Map service REST API:
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Request method | Path                              | Description                                                                                                                                            |
 +================+===================================+========================================================================================================================================================+
-| POST           | /api/network-map/publish          | Publish new ``NodeInfo`` to the network map service, the legal identity in ``NodeInfo`` must match with the identity registered with the doorman.      |
+| POST           | /network-map/publish              | Publish new ``NodeInfo`` to the network map service, the legal identity in ``NodeInfo`` must match with the identity registered with the doorman.      |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /api/network-map                  | Retrieve ``NetworkMap`` from the server, the ``NetworkMap`` object contains list of node info hashes and ``NetworkParameters`` hash.                   |
+| GET            | /network-map                      | Retrieve ``NetworkMap`` from the server, the ``NetworkMap`` object contains list of node info hashes and ``NetworkParameters`` hash.                   |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /api/network-map/node-info/{hash} | Retrieve ``NodeInfo`` object with the same hash.                                                                                                       |
+| GET            | /network-map/node-info/{hash}     | Retrieve ``NodeInfo`` object with the same hash.                                                                                                       |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /api/network-map/parameters/{hash}| Retrieve ``NetworkParameters`` object with the same hash.                                                                                              |
+| GET            | /network-map/parameters/{hash}    | Retrieve ``NetworkParameters`` object with the same hash.                                                                                              |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 TODO: Access control of the network map will be added in the future.
