@@ -66,7 +66,7 @@ null property.
     discussion below.
 
 As before, instances of state A will be able to deserialize serialized forms of state B as it will simply
-treat them as if the property has been removed (as from it's perspective, they will have been.)
+treat them as if the property has been removed (as from its perspective, they will have been.)
 
 
 Constructor Versioning
