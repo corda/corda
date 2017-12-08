@@ -20,7 +20,7 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.*
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.driver.DriverDSLExposedInterface
+import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockServices
@@ -51,14 +51,14 @@ class AttachmentLoadingTests {
                 Class.forName("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator", true, URLClassLoader(arrayOf(isolatedJAR)))
                         .asSubclass(FlowLogic::class.java)
 
-        private fun DriverDSLExposedInterface.createTwoNodes(): List<NodeHandle> {
+        private fun DriverDSL.createTwoNodes(): List<NodeHandle> {
             return listOf(
                     startNode(providedName = bankAName),
                     startNode(providedName = bankBName)
             ).transpose().getOrThrow()
         }
 
-        private fun DriverDSLExposedInterface.installIsolatedCordappTo(nodeName: CordaX500Name) {
+        private fun DriverDSL.installIsolatedCordappTo(nodeName: CordaX500Name) {
             // Copy the app jar to the first node. The second won't have it.
             val path = (baseDirectory(nodeName.toString()) / "cordapps").createDirectories() / "isolated.jar"
             logger.info("Installing isolated jar to $path")

@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.driver.*
+import net.corda.testing.internal.DriverDSLImpl
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
@@ -14,7 +15,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
-interface SpringDriverExposedDSLInterface : DriverDSLExposedInterface {
+interface SpringDriverExposedDSLInterface : DriverDSL {
 
     /**
      * Starts a Spring Boot application, passes the RPC connection data as parameters the process.
@@ -55,11 +56,11 @@ fun <A> springDriver(
         startNodesInProcess = startNodesInProcess,
         extraCordappPackagesToScan = extraCordappPackagesToScan,
         notarySpecs = notarySpecs,
-        driverDslWrapper = { driverDSL:DriverDSL -> SpringBootDriverDSL(driverDSL) },
+        driverDslWrapper = { driverDSL: DriverDSLImpl -> SpringBootDriverDSL(driverDSL) },
         coerce = { it }, dsl = dsl
 )
 
-data class SpringBootDriverDSL(private val driverDSL: DriverDSL) : DriverDSLInternalInterface by driverDSL, SpringDriverInternalDSLInterface {
+data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : DriverDSLInternalInterface by driverDSL, SpringDriverInternalDSLInterface {
     companion object {
         private val log = contextLogger()
     }

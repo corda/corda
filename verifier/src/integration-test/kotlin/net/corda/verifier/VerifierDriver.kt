@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.driver.*
+import net.corda.testing.internal.DriverDSLImpl
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.NotarySpec
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -44,10 +45,10 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * This file defines an extension to [DriverDSL] that allows starting of verifier processes and
+ * This file defines an extension to [DriverDSLImpl] that allows starting of verifier processes and
  * lightweight verification requestors.
  */
-interface VerifierExposedDSLInterface : DriverDSLExposedInterface {
+interface VerifierExposedDSLInterface : DriverDSL {
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
     fun startVerificationRequestor(name: CordaX500Name): CordaFuture<VerificationRequestorHandle>
 
@@ -88,7 +89,7 @@ fun <A> verifierDriver(
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
-                DriverDSL(
+                DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
                         systemProperties = systemProperties,
@@ -145,7 +146,7 @@ data class VerificationRequestorHandle(
 
 
 data class VerifierDriverDSL(
-        val driverDSL: DriverDSL
+        val driverDSL: DriverDSLImpl
 ) : DriverDSLInternalInterface by driverDSL, VerifierInternalDSLInterface {
     val verifierCount = AtomicInteger(0)
 

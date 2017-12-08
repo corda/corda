@@ -52,7 +52,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 
-interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
+interface RPCDriverExposedDSLInterface : DriverDSLInternalInterface {
     /**
      * Starts an In-VM RPC server. Note that only a single one may be started.
      *
@@ -239,7 +239,7 @@ fun <A> rpcDriver(
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
-                DriverDSL(
+                DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
                         systemProperties = systemProperties,
@@ -279,7 +279,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
 }
 
 data class RPCDriverDSL(
-        private val driverDSL: DriverDSL, private val externalTrace: Trace?
+        private val driverDSL: DriverDSLImpl, private val externalTrace: Trace?
 ) : DriverDSLInternalInterface by driverDSL, RPCDriverInternalDSLInterface {
     private companion object {
         val notificationAddress = "notifications"
