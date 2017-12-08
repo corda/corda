@@ -113,8 +113,8 @@ class DriverDSLImpl(
             Paths.get(jarFileUrl.toURI()).toString()
         }
         catch(e: Exception) {
-            log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}")
-            ""
+            log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
+            throw e
         }
     }
 
