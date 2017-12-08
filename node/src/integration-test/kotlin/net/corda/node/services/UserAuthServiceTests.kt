@@ -215,8 +215,6 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
     }
 }
 
-private fun CordaRPCClient.start(username: String, password: String) = this.start(username, password)
-
 private data class UserAndRoles(val username: String, val password: String, val roles: List<String>)
 private data class RoleAndPermissions(val role: String, val permissions: List<String>)
 
