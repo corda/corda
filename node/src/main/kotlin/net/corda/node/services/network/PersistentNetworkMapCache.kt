@@ -20,6 +20,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -37,13 +38,22 @@ class NetworkMapCacheImpl(
         networkMapCacheBase: NetworkMapCacheBaseInternal,
         private val identityService: IdentityService
 ) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
+    companion object {
+        private val logger = loggerFor<NetworkMapCacheImpl>()
+    }
+
     init {
         networkMapCacheBase.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
         networkMapCacheBase.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
                 mapChange.node.legalIdentitiesAndCerts.forEach {
-                    identityService.verifyAndRegisterIdentity(it)
+                    try {
+                        identityService.verifyAndRegisterIdentity(it)
+                    } catch (ignore: Exception) {
+                        // Log a warning to indicate node info is not added to the network map cache.
+                        logger.warn("Node info for :'${it.name}' is not added to the network map due to verification error.")
+                    }
                 }
             }
         }
