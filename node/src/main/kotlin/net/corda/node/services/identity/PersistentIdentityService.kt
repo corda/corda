@@ -110,17 +110,16 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         }
     }
 
-    // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-            log.error(e.localizedMessage)
-            log.error("Path = ")
+            log.warn(e.localizedMessage)
+            log.warn("Path = ")
             identity.certPath.certificates.reversed().forEach {
-                log.error(it.toX509CertHolder().subject.toString())
+                log.warn(it.toX509CertHolder().subject.toString())
             }
             throw e
         }

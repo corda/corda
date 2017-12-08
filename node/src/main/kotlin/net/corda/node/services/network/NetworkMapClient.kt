@@ -88,6 +88,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
         // Only publish and write to disk if there are changes to the node info.
         val signedNodeInfo = signNodeInfo(newInfo)
+        networkMapCache.addNode(newInfo)
         fileWatcher.saveToFile(signedNodeInfo)
 
         if (networkMapClient != null) {
