@@ -34,33 +34,6 @@ only shared with those who need to see them, and planned use of Intel SGX, it is
 privacy breaches. Confidential identities are used to ensure that even if a third party gets access to an unencrypted
 transaction, they cannot identify the participants without additional information.
 
-Name
-----
-
-Identity names are X.500 distinguished names with Corda-specific constraints applied. In order to be compatible with
-other implementations (particularly TLS implementations), we constrain the allowed X.500 attribute types to a subset of
-the minimum supported set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
-
-* organization (O)
-* state (ST)
-* locality (L)
-* country (C)
-* organizational-unit (OU)
-* common name (CN) - used only for service identities
-
-The organisation, locality and country attributes are required, while state, organisational-unit and common name are
-optional. Attributes cannot be be present more than once in the name.
-
-All of these attributes have the following set of constraints applied for security reasons:
-
- - No blacklisted words (currently "node" and "server").
- - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and character confusability attacks.
- - No commas or equals signs.
- - No dollars or quote marks.
-
-Additionally the "organisation" attribute must consist of at least three letters and starting with a capital letter,
-and "country code" is strictly restricted to valid ISO 3166-1 two letter codes.
-
 Certificates
 ------------
 
@@ -83,5 +56,3 @@ to the main network map service, for operational reasons. Identities registered 
 considered well known, and it is never appropriate to store confidential identities in a central directory without
 controls applied at the record level to ensure only those who require access to an identity can retrieve its
 certificate.
-
-.. TODO: Revisit once design & use cases of private maps is further fleshed out

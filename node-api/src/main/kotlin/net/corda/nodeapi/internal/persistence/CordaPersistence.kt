@@ -20,7 +20,8 @@ const val NODE_DATABASE_PREFIX = "node_"
 data class DatabaseConfig(
         val initialiseSchema: Boolean = true,
         val serverNameTablePrefix: String = "",
-        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
+        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
+        val exportHibernateJMXStatistics: Boolean = false
 )
 
 // This class forms part of the node config and so any changes to it must be handled with care

@@ -211,7 +211,12 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                     addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
                 }
         )
-    }.configureAddressSecurity()
+            // JMX enablement
+            if (config.exportJMXto.isNotEmpty()) {isJMXManagementEnabled = true
+            isJMXUseBrokerName = true}
+
+        }.configureAddressSecurity()
+
 
     private fun queueConfig(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
         return CoreQueueConfiguration().apply {
@@ -234,8 +239,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
-        // TODO: remove the NODE_USER role below once the webserver doesn't need it anymore.
-        securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
         // Each RPC user must have its own role and its own queue. This prevents users accessing each other's queues
         // and stealing RPC responses.
         val rolesAdderOnLogin = RolesAdderOnLogin { username ->
