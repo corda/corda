@@ -36,6 +36,7 @@ import javax.ws.rs.core.Response.ok
 
 class NetworkMapServer(cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
+                       root_ca: CertificateAndKeyPair = ROOT_CA, // Default to ROOT_CA for testing.
                        vararg additionalServices: Any) : Closeable {
     companion object {
         val stubNetworkParameter = NetworkParameters(1, emptyList(), 40000, 40000, Instant.now(), 10)
@@ -53,9 +54,7 @@ class NetworkMapServer(cacheTimeout: Duration,
     }
 
     private val server: Server
-    // Default to ROOT_CA for testing.
-    // TODO: make this configurable?
-    private val service = InMemoryNetworkMapService(cacheTimeout, networkMapKeyAndCert(ROOT_CA))
+    private val service = InMemoryNetworkMapService(cacheTimeout, networkMapKeyAndCert(root_ca))
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
