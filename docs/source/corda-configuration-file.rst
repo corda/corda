@@ -73,6 +73,7 @@ path to the node's base directory.
         :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
@@ -163,7 +164,9 @@ path to the node's base directory.
     Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
     for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``
 
-:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials
-        and permissions as RPC subsystem. It has one required parameter.
+:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
     :port: The port to start SSH server on
+
+:exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
+    Default Jolokia access url is http://127.0.0.1:7005/jolokia/

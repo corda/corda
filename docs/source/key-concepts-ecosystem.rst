@@ -42,13 +42,3 @@ Nodes can provide several types of services:
   updates. Each notary service may be run on a single node, or across a cluster of nodes.
 * Zero or more **oracle services**. An oracle is a well-known service that signs transactions if they state a fact and
   that fact is considered to be true.
-
-These components are illustrated in the following diagram:
-
-.. image:: resources/cordaNetwork.png
-   :scale: 25%
-   :align: center
-
-In this diagram, Corda infrastructure services are those upon which all participants depend, such as the network map
-and notary services. Corda services may be deployed by participants, third parties or a central network operator
-(such as R3). The diagram is not intended to imply that only a centralised model is supported.

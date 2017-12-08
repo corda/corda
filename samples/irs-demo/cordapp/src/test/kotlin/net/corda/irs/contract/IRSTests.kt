@@ -4,6 +4,9 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
@@ -30,6 +33,7 @@ import java.time.LocalDate
 import java.util.*
 import kotlin.test.assertEquals
 
+private val DUMMY_PARTY = Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public)
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {

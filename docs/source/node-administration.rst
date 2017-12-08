@@ -93,6 +93,8 @@ formats for accessing MBeans, and provides client libraries to work with that pr
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
 
+* `hawtio <https://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
+  jolokia agent. This tool provides a nice JMX dashboard very similar to the traditional JVisualVM / JConsole MBbeans original.
 * `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
   scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
   in Docker and can be started with a single command.
@@ -104,6 +106,29 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
 * `Telegraf <https://github.com/influxdata/telegraf>`_ is a tool to collect, process, aggregate, and write metrics.
   It can bridge any data input to any output using their plugin system, for example, Telegraf can
   be configured to collect data from Jolokia and write to DataDog web api.
+
+The Node configuration parameter `exportJMXTo` should be set to ``http`` to ensure a Jolokia agent is instrumented with
+the JVM run-time.
+
+The following JMX statistics are exported:
+
+* Corda specific metrics: flow information (total started, finished, in-flight; flow duration by flow type), attachments (count)
+* Apache Artemis metrics: queue information for P2P and RPC services
+* JVM statistics: classloading, garbage collection, memory, runtime, threading, operating system
+* Hibernate statistics (only when node is started-up in `devMode` due to to expensive run-time costs)
+
+When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message similar to the following:
+**Jolokia: Agent started with URL http://127.0.0.1:7005/jolokia/**
+
+When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs similar to the following:
+**Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
+
+Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
+environments under ``/config/<env>``.
+
+The following diagram illustrates Corda flow metrics visualized using `hawtio <https://hawt.io>`_ :
+
+.. image:: resources/hawtio-jmx.png
 
 Memory usage and tuning
 -----------------------

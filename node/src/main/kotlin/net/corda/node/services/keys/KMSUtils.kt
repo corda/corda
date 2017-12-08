@@ -35,7 +35,7 @@ fun freshCertificate(identityService: IdentityServiceInternal,
                      revocationEnabled: Boolean = false): PartyAndCertificate {
     val issuerCert = issuer.certificate.toX509CertHolder()
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCert)
-    val ourCertificate = X509Utilities.createCertificate(CertificateType.IDENTITY, issuerCert.subject,
+    val ourCertificate = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, issuerCert.subject,
             issuerSigner, issuer.name, subjectPublicKey, window)
     val ourCertPath = X509CertificateFactory().delegate.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)

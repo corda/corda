@@ -89,6 +89,7 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
 private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
@@ -101,28 +102,29 @@ fun <A> rpcDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: RPCDriverDSL.() -> A
-): A {
+) : A {
     return genericDriver(
-            driverDsl = RPCDriverDSL(
-                    DriverDSLImpl(
-                            portAllocation = portAllocation,
-                            debugPortAllocation = debugPortAllocation,
-                            systemProperties = systemProperties,
-                            driverDirectory = driverDirectory.toAbsolutePath(),
-                            useTestClock = useTestClock,
-                            isDebug = isDebug,
-                            startNodesInProcess = startNodesInProcess,
-                            waitForNodesToFinish = waitForNodesToFinish,
-                            extraCordappPackagesToScan = extraCordappPackagesToScan,
-                            notarySpecs = notarySpecs
-                    ), externalTrace
-            ),
-            coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = false
-    )
-}
+        driverDsl = RPCDriverDSL(
+                DriverDSLImpl(
+                        portAllocation = portAllocation,
+                        debugPortAllocation = debugPortAllocation,
+                        systemProperties = systemProperties,
+                        driverDirectory = driverDirectory.toAbsolutePath(),
+                        useTestClock = useTestClock,
+                        isDebug = isDebug,
+                        startNodesInProcess = startNodesInProcess,
+                        waitForNodesToFinish = waitForNodesToFinish,
+                        extraCordappPackagesToScan = extraCordappPackagesToScan,
+                        notarySpecs = notarySpecs,
+                        jmxPolicy = jmxPolicy
+                ), externalTrace
+        ),
+        coerce = { it },
+        dsl = dsl,
+        initialiseSerialization = false
+)}
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)

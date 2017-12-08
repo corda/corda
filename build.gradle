@@ -24,7 +24,7 @@ buildscript {
     ext.jackson_version = '2.9.2'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.jolokia_version = '2.0.0-M3'
+    ext.jolokia_version = '1.3.7'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
@@ -50,6 +50,7 @@ buildscript {
     ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
+    ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -73,6 +74,7 @@ buildscript {
         classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
     }
 }
 
@@ -81,7 +83,6 @@ plugins {
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     // Version 1.0.2 of this plugin uses capsule:1.0.1
     id "us.kirchmeier.capsule" version "1.0.2"
-    id "com.jfrog.artifactory" version "4.4.18"
 }
 
 ext {
@@ -93,6 +94,7 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
