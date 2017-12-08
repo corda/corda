@@ -337,7 +337,7 @@ class CompositeKeyTests {
         val ca = X509Utilities.createSelfSignedCACertificate(caName, caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, caName.copy(commonName = "CompositeKey"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, ca, caKeyPair, caName.copy(commonName = "CompositeKey"), compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"

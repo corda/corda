@@ -109,7 +109,7 @@ class EvolutionSerializer(
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        throw IllegalAccessException("It should be impossible to write an evolution serializer")
+        throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 
     /**

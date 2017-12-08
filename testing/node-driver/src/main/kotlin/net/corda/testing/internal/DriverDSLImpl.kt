@@ -4,13 +4,16 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
@@ -20,6 +23,7 @@ import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.millis
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
@@ -30,10 +34,7 @@ import net.corda.node.services.transactions.RaftNonValidatingNotaryService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.NodeInfoFilesCopier
-import net.corda.nodeapi.internal.NotaryInfo
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
@@ -46,8 +47,9 @@ import net.corda.testing.driver.*
 import net.corda.testing.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.node.ClusterSpec
-import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.setGlobalSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Observable
@@ -58,8 +60,12 @@ import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -79,7 +85,7 @@ class DriverDSLImpl(
         extraCordappPackagesToScan: List<String>,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?
-) : DriverDSLInternalInterface {
+) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
@@ -321,10 +327,7 @@ class DriverDSLImpl(
         }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
-
-        nodeInfoFilesCopier = NodeInfoFilesCopier()
         shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
-
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
         networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
@@ -423,7 +426,7 @@ class DriverDSLImpl(
         }
     }
 
-    fun baseDirectory(nodeName: CordaX500Name): Path {
+    override fun baseDirectory(nodeName: CordaX500Name): Path {
         val nodeDirectoryName = nodeName.organisation.filter { !it.isWhitespace() }
         return driverDirectory / nodeDirectoryName
     }
@@ -598,12 +601,12 @@ class DriverDSLImpl(
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
-                val node = InProcessNode(nodeConf, MockServices.MOCK_VERSION_INFO, cordappPackages).start()
+                val node = InProcessNode(nodeConf, MOCK_VERSION_INFO, cordappPackages).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
                     node.internals.run()
                 }
                 node to nodeThread
-            }.flatMap { nodeAndThread ->
+}.flatMap { nodeAndThread ->
                 addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread }
             }
         }
@@ -641,7 +644,7 @@ class DriverDSLImpl(
                     "-javaagent:$quasarJarPath=$excludePattern"
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
-            val arguments = mutableListOf<String>(
+            val arguments = mutableListOf(
                     "--base-directory=${nodeConf.baseDirectory}",
                     "--logging-level=$loggingLevel",
                     "--no-local-shell").also {
@@ -677,12 +680,20 @@ class DriverDSLImpl(
             )
         }
 
-        private fun getCallerPackage(): String {
-            return Exception()
-                    .stackTrace
-                    .first { it.fileName != "Driver.kt" }
-                    .let { Class.forName(it.className).`package`?.name }
-                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+        /**
+         * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
+         * This makes the driver automatically pick the CorDapp module that it's run from.
+         *
+         * This returns List<String> rather than String? to make it easier to bolt onto extraCordappPackagesToScan.
+         */
+        private fun getCallerPackage(): List<String> {
+            val stackTrace = Throwable().stackTrace
+            val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
+            // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
+            if (index == -1) return emptyList()
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
+                    throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            return listOf(callerPackage.name)
         }
 
         /**
@@ -693,4 +704,129 @@ class DriverDSLImpl(
             return filterNot { it.key == "java.class.path" }
         }
     }
+}
+
+interface InternalDriverDSL : DriverDSL, CordformContext {
+    private companion object {
+        private val DEFAULT_POLL_INTERVAL = 500.millis
+        private const val DEFAULT_WARN_COUNT = 120
+    }
+
+    val shutdownManager: ShutdownManager
+
+    override fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
+
+    /**
+     * Polls a function until it returns a non-null value. Note that there is no timeout on the polling.
+     *
+     * @param pollName A description of what is being polled.
+     * @param pollInterval The interval of polling.
+     * @param warnCount The number of polls after the Driver gives a warning.
+     * @param check The function being polled.
+     * @return A future that completes with the non-null value [check] has returned.
+     */
+    fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT, check: () -> A?): CordaFuture<A>
+
+    /**
+     * Polls the given function until it returns true.
+     * @see pollUntilNonNull
+     */
+    fun pollUntilTrue(pollName: String, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT, check: () -> Boolean): CordaFuture<Unit> {
+        return pollUntilNonNull(pollName, pollInterval, warnCount) { if (check()) Unit else null }
+    }
+
+    fun start()
+
+    fun shutdown()
+}
+
+/**
+ * This is a helper method to allow extending of the DSL, along the lines of
+ *   interface SomeOtherExposedDSLInterface : DriverDSL
+ *   interface SomeOtherInternalDSLInterface : InternalDriverDSL, SomeOtherExposedDSLInterface
+ *   class SomeOtherDSL(val driverDSL : DriverDSLImpl) : InternalDriverDSL by driverDSL, SomeOtherInternalDSLInterface
+ *
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
+ */
+fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
+        driverDsl: D,
+        initialiseSerialization: Boolean = true,
+        coerce: (D) -> DI,
+        dsl: DI.() -> A
+): A {
+    val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
+    try {
+        driverDsl.start()
+        return dsl(coerce(driverDsl))
+    } catch (exception: Throwable) {
+        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+        throw exception
+    } finally {
+        driverDsl.shutdown()
+        shutdownHook.cancel()
+        serializationEnv.unset()
+    }
+}
+
+/**
+ * This is a helper method to allow extending of the DSL, along the lines of
+ *   interface SomeOtherExposedDSLInterface : DriverDSL
+ *   interface SomeOtherInternalDSLInterface : InternalDriverDSL, SomeOtherExposedDSLInterface
+ *   class SomeOtherDSL(val driverDSL : DriverDSLImpl) : InternalDriverDSL by driverDSL, SomeOtherInternalDSLInterface
+ *
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
+ */
+fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
+        defaultParameters: DriverParameters = DriverParameters(),
+        isDebug: Boolean = defaultParameters.isDebug,
+        driverDirectory: Path = defaultParameters.driverDirectory,
+        portAllocation: PortAllocation = defaultParameters.portAllocation,
+        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        systemProperties: Map<String, String> = defaultParameters.systemProperties,
+        useTestClock: Boolean = defaultParameters.useTestClock,
+        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        waitForNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
+        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        notarySpecs: List<NotarySpec>,
+        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        driverDslWrapper: (DriverDSLImpl) -> D,
+        coerce: (D) -> DI, dsl: DI.() -> A
+): A {
+    val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    val driverDsl = driverDslWrapper(
+            DriverDSLImpl(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    waitForNodesToFinish = waitForNodesToFinish,
+                    extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    notarySpecs = notarySpecs
+            )
+    )
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
+    try {
+        driverDsl.start()
+        return dsl(coerce(driverDsl))
+    } catch (exception: Throwable) {
+        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+        throw exception
+    } finally {
+        driverDsl.shutdown()
+        shutdownHook.cancel()
+        serializationEnv.unset()
+    }
+}
+
+fun getTimestampAsDirectoryName(): String {
+    return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now())
+}
+
+fun writeConfig(path: Path, filename: String, config: Config) {
+    val configString = config.root().render(ConfigRenderOptions.defaults())
+    configString.byteInputStream().copyTo(path / filename, StandardCopyOption.REPLACE_EXISTING)
 }

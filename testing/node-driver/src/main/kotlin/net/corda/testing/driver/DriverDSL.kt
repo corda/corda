@@ -1,14 +1,16 @@
 package net.corda.testing.driver
 
-import net.corda.cordform.CordformContext
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
+import net.corda.node.internal.Node
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.node.NotarySpec
+import java.nio.file.Path
 
-interface DriverDSL : CordformContext {
+interface DriverDSL {
     /** Returns a list of [NotaryHandle]s matching the list of [NotarySpec]s passed into [driver]. */
     val notaryHandles: List<NotaryHandle>
 
@@ -16,8 +18,7 @@ interface DriverDSL : CordformContext {
      * Returns the [NotaryHandle] for the single notary on the network. Throws if there are none or more than one.
      * @see notaryHandles
      */
-    val defaultNotaryHandle: NotaryHandle
-        get() {
+    val defaultNotaryHandle: NotaryHandle get() {
         return when (notaryHandles.size) {
             0 -> throw IllegalStateException("There are no notaries defined on the network")
             1 -> notaryHandles[0]
@@ -37,8 +38,7 @@ interface DriverDSL : CordformContext {
      * @see defaultNotaryHandle
      * @see notaryHandles
      */
-    val defaultNotaryNode: CordaFuture<NodeHandle>
-        get() {
+    val defaultNotaryNode: CordaFuture<NodeHandle> get() {
         return defaultNotaryHandle.nodeHandles.map {
             it.singleOrNull() ?: throw IllegalStateException("Default notary is not a single node")
         }
@@ -64,6 +64,7 @@ interface DriverDSL : CordformContext {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
+
             maximumHeapSize: String = defaultParameters.maximumHeapSize
     ): CordaFuture<NodeHandle>
 
@@ -86,5 +87,9 @@ interface DriverDSL : CordformContext {
      */
     fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle>
 
-    val shutdownManager: ShutdownManager
+    /**
+     * Returns the base directory for a node with the given [CordaX500Name]. This method is useful if the base directory
+     * is needed before the node is started.
+     */
+    fun baseDirectory(nodeName: CordaX500Name): Path
 }

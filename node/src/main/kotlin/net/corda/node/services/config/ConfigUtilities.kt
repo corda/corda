@@ -50,7 +50,7 @@ fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrust
 fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
     certificatesDirectory.createDirectories()
     if (!trustStoreFile.exists()) {
-        javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").copyTo(trustStoreFile)
+        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks"), "trustpass").save(trustStoreFile, trustStorePassword)
     }
     if (!sslKeystore.exists() || !nodeKeystore.exists()) {
         val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
