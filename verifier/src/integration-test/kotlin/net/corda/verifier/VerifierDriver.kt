@@ -22,6 +22,7 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -50,33 +51,31 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 fun <A> verifierDriver(
         isDebug: Boolean = false,
-        isMonitor: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        monitorPortAllocation: PortAllocation = PortAllocation.Incremental(7005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: VerifierDriverDSL.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
                 DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        monitorPortAllocation = monitorPortAllocation,
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         isDebug = isDebug,
-                        isMonitor = isMonitor,
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs
+                        notarySpecs = notarySpecs,
+                        jmxPolicy = jmxPolicy
                 )
         ),
         coerce = { it },
