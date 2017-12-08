@@ -6,12 +6,12 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -27,7 +27,7 @@ import javax.persistence.Lob
 
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
-                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
+                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
     constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {

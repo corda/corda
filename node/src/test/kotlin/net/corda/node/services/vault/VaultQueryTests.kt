@@ -89,7 +89,7 @@ class VaultQueryTests {
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
         vaultFillerCashNotary = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, CASH_NOTARY)
-        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
         identitySvc = services.identityService
         // Register all of the identities we're going to use
         (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
@@ -1324,15 +1324,15 @@ class VaultQueryTests {
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
         val gbpCashIssuerName = CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB")
-        val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, generateKeyPair())
+        val gbpCashIssuerServices = MockServices(cordappPackages, rigorousMock(), gbpCashIssuerName, generateKeyPair())
         val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentityAndCert()
         // USD issuer
         val usdCashIssuerName = CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US")
-        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, generateKeyPair())
+        val usdCashIssuerServices = MockServices(cordappPackages, rigorousMock(), usdCashIssuerName, generateKeyPair())
         val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentityAndCert()
         // CHF issuer
         val chfCashIssuerName = CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH")
-        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, generateKeyPair())
+        val chfCashIssuerServices = MockServices(cordappPackages, rigorousMock(), chfCashIssuerName, generateKeyPair())
         val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentityAndCert()
         listOf(gbpCashIssuer, usdCashIssuer, chfCashIssuer).forEach { identity ->
             services.identityService.verifyAndRegisterIdentity(identity)

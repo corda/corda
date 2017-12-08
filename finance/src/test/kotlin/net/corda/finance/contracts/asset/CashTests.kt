@@ -1,5 +1,6 @@
 package net.corda.finance.contracts.asset
 
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -18,6 +19,7 @@ import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashBy
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
@@ -67,9 +69,11 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), MINI_CORP.name, MINI_CORP_KEY)
-        val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
+        }, MINI_CORP.name, MINI_CORP_KEY)
+        val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(generateKeyPair()),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
@@ -502,10 +506,9 @@ class CashTests {
 
     private fun makeSpend(services: ServiceHub, amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val ourIdentity = services.myInfo.singleIdentityAndCert()
-        val changeIdentity = services.keyManagementService.freshKeyAndCert(ourIdentity, false)
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            Cash.generateSpend(services, tx, amount, changeIdentity, dest)
+            Cash.generateSpend(services, tx, amount, ourIdentity, dest)
         }
         return tx.toWireTransaction(services)
     }
@@ -601,11 +604,10 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithParties() {
-        val changeIdentity = ourServices.keyManagementService.freshKeyAndCert(ourServices.myInfo.singleIdentityAndCert(), false)
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(ourServices, tx, 80.DOLLARS, changeIdentity, ALICE, setOf(MINI_CORP))
+            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -774,8 +776,9 @@ class CashTests {
     // Double spend.
     @Test
     fun chainCashDoubleSpendFailsWith() {
-        val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP.name, MEGA_CORP_KEY)
-
+        val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+        }, MEGA_CORP.name, MEGA_CORP_KEY)
         ledger(mockService) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
@@ -813,12 +816,11 @@ class CashTests {
     fun multiSpend() {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            val changeIdentity = ourServices.keyManagementService.freshKeyAndCert(ourServices.myInfo.singleIdentityAndCert(), false)
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(CHARLIE_ANONYMISED, 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, tx, payments, changeIdentity)
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
         val wtx = tx.toWireTransaction(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State

@@ -1,13 +1,17 @@
 apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.jfrog.artifactory'
 
 // Used for bootstrapping project
 buildscript {
     Properties constants = new Properties()
     file("../../constants.properties").withInputStream { constants.load(it) }
 
-    ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
+    ext {
+        gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
+        artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+    }
 
     repositories {
         jcenter()
@@ -15,6 +19,7 @@ buildscript {
 
     dependencies {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
     }
 }
 

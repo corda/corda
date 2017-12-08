@@ -15,6 +15,11 @@ import java.util.function.Predicate
 import kotlin.test.*
 
 class CompatibleTransactionTests {
+    private companion object {
+        val DUMMY_KEY_1 = generateKeyPair()
+        val DUMMY_KEY_2 = generateKeyPair()
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
