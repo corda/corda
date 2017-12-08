@@ -68,9 +68,9 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
             factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
         }
 
-        cordappLoader.forEach { ca ->
-            ca.serializationCustomSerializers.forEach {
-                factory.registerExternal(CorDappCustomSerializer(it, factory))
+        for (loader in cordappLoader) {
+            for (schema in loader.serializationCustomSerializers) {
+                factory.registerExternal(CorDappCustomSerializer(schema, factory))
             }
         }
     }

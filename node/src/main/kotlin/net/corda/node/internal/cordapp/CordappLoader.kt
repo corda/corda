@@ -10,8 +10,10 @@ import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.SerializationWhitelist
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
-import net.corda.core.serialization.*
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
@@ -197,7 +199,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
-                    findSerialzers(scanResult),
+                    findSerializers(scanResult),
                     findCustomSchemas(scanResult),
                     it.url)
         }
@@ -248,8 +250,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
-    private fun findSerialzers(scanResult: RestrictedScanResult) : List<SerializationCustomSerializer<*, *>> {
-//        return scanResult.getClassesWithAnnotation(SerializationCustomSerializer::class, CordaCustomSerializer::class)
+    private fun findSerializers(scanResult: RestrictedScanResult): List<SerializationCustomSerializer<*, *>> {
         return scanResult.getClassesImplementing(SerializationCustomSerializer::class)
     }
 

@@ -36,8 +36,8 @@ const val PROXY_TYPE = 1
  * automatically
  * @property type the Java [Type] of the class which this serializes, inferred via reflection of the
  * [serializer]'s super type
- * @property proxyType the Java [Type] of the class into which instances of [type] are proxied for use byt
- * the underlying serialisation engine
+ * @property proxyType the Java [Type] of the class into which instances of [type] are proxied for use by
+ * the underlying serialization engine
  *
  * @param factory a [SerializerFactory] belonging to the context this serializer is being instantiated
  * for
@@ -58,17 +58,15 @@ class CorDappCustomSerializer(
 
     override val type = types[CORDAPP_TYPE]
     val proxyType = types[PROXY_TYPE]
-
     override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${nameForType(type)}")
     val descriptor: Descriptor = Descriptor(typeDescriptor)
-
     private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyType, factory) }
 
     override fun writeClassInfo(output: SerializationOutput) {}
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         val proxy = uncheckedCast<SerializationCustomSerializer<*, *>,
-                SerializationCustomSerializer<Any?,Any?>> (serializer).toProxy(obj)
+                SerializationCustomSerializer<Any?, Any?>>(serializer).toProxy(obj)
 
         data.withDescribed(descriptor) {
             data.withList {
@@ -80,7 +78,7 @@ class CorDappCustomSerializer(
     }
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput) =
-            uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?,Any?>> (
+            uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?, Any?>>(
                     serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input)))!!
 
     override fun isSerializerFor(clazz: Class<*>) = clazz == type
