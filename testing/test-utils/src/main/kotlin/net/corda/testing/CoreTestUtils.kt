@@ -4,12 +4,14 @@
 package net.corda.testing
 
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
+import net.corda.core.internal.x500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -22,6 +24,10 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralSubtree
+import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.cert.X509CertificateHolder
 import org.mockito.Mockito.mock
 import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
@@ -128,18 +134,27 @@ fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguratio
         configureDevKeyAndTrustStores(legalName)
     }
 }
+fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
+    val trustRoot: X509CertificateHolder = DEV_TRUST_ROOT
+    val intermediate: CertificateAndKeyPair = DEV_CA
 
-fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
-    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
-    val certPath = X509CertificateFactory().delegate.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
+    val nodeCaName = party.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN)
+    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, party.name.x500Name))), arrayOf())
+    val issuerKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+    val issuerCertificate = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediate.certificate, intermediate.keyPair, nodeCaName, issuerKeyPair.public,
+            nameConstraints = nameConstraints)
+
+    val certHolder = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, issuerCertificate, issuerKeyPair, party.name, party.owningKey)
+    val pathElements = listOf(certHolder, issuerCertificate, intermediate.certificate, trustRoot)
+    val certPath = X509CertificateFactory().delegate.generateCertPath(pathElements.map(X509CertificateHolder::cert))
     return PartyAndCertificate(certPath)
 }
 
 /**
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
-fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
-    return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
+fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): PartyAndCertificate {
+    return getTestPartyAndCertificate(Party(name, publicKey))
 }
 
 @Suppress("unused")
