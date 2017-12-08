@@ -1,6 +1,7 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -87,7 +88,7 @@ class TransactionSerializationTests {
         assertFailsWith(IllegalArgumentException::class) {
             stx.copy(sigs = emptyList())
         }
-
+        val DUMMY_KEY_2 = generateKeyPair()
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,

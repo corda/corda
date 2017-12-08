@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -48,6 +49,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
+    companion object {
+        private val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)

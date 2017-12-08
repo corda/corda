@@ -531,6 +531,7 @@ class NodeVaultServiceTest {
 
         val identity = services.myInfo.singleIdentityAndCert()
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+        // We use a random key pair to pay to here, as we don't actually use the cash once sent
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
@@ -550,8 +551,7 @@ class NodeVaultServiceTest {
 
         database.transaction {
             val moveBuilder = TransactionBuilder(notary).apply {
-                val changeIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-                Cash.generateSpend(services, this, Amount(1000, GBP), changeIdentity, thirdPartyIdentity)
+                Cash.generateSpend(services, this, Amount(1000, GBP), identity, thirdPartyIdentity)
             }
             val moveTx = moveBuilder.toWireTransaction(services)
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
@@ -610,7 +610,7 @@ class NodeVaultServiceTest {
         // Move cash
         val moveTxBuilder = database.transaction {
             TransactionBuilder(newNotary).apply {
-                Cash.generateSpend(services, this, Amount(amount.quantity, GBP), anonymousIdentity, thirdPartyIdentity.party.anonymise())
+                Cash.generateSpend(services, this, Amount(amount.quantity, GBP), identity, thirdPartyIdentity.party.anonymise())
             }
         }
         val moveTx = moveTxBuilder.toWireTransaction(services)

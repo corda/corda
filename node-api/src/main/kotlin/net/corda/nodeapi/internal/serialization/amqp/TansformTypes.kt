@@ -28,7 +28,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     Unknown({ UnknownTransform() }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
-        override fun validate(l : List<Transform>, constants: Map<String, Int>) { }
+        override fun validate(list: List<Transform>, constants: Map<String, Int>) {}
     },
     EnumDefault({ a -> EnumDefaultSchemaTransform((a as CordaSerializationTransformEnumDefault).old, a.new) }) {
         override fun getDescriptor(): Any = DESCRIPTOR
@@ -37,13 +37,13 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
         /**
          * Validates a list of constant additions to an enumerated type. To be valid a default (the value
          * that should be used when we cannot use the new value) must refer to a constant that exists in the
-         * enum class as it exists now and it cannot refer to itself. 
+         * enum class as it exists now and it cannot refer to itself.
          *
-         * @param l The list of transforms representing new constants and the mapping from that constant to an
+         * @param list The list of transforms representing new constants and the mapping from that constant to an
          * existing value
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
-        override fun validate(list : List<Transform>, constants: Map<String, Int>) {
+        override fun validate(list: List<Transform>, constants: Map<String, Int>) {
             uncheckedCast<List<Transform>, List<EnumDefaultSchemaTransform>>(list).forEach {
                 if (!constants.contains(it.new)) {
                     throw NotSerializableException("Unknown enum constant ${it.new}")
@@ -62,7 +62,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
                 if (constants[it.old]!! >= constants[it.new]!!) {
                     throw NotSerializableException(
                             "Enum extensions must default to older constants. ${it.new}[${constants[it.new]}] " +
-                            "defaults to ${it.old}[${constants[it.old]}] which is greater")
+                                    "defaults to ${it.old}[${constants[it.old]}] which is greater")
                 }
             }
         }
@@ -76,15 +76,16 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * that is a constant is renamed to something that used to exist in the enum. We do this for both
          * the same constant (i.e. C -> D -> C) and multiple constants (C->D, B->C)
          *
-         * @param l The list of transforms representing the renamed constants and the mapping between their new
+         * @param list The list of transforms representing the renamed constants and the mapping between their new
          * and old values
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
-        override fun validate(l : List<Transform>, constants: Map<String, Int>) {
+        override fun validate(list: List<Transform>, constants: Map<String, Int>) {
             object : Any() {
-                    val from : MutableSet<String> = mutableSetOf()
-                    val to : MutableSet<String> = mutableSetOf() }.apply {
-                @Suppress("UNCHECKED_CAST") (l as List<RenameSchemaTransform>).forEach { rename ->
+                val from: MutableSet<String> = mutableSetOf()
+                val to: MutableSet<String> = mutableSetOf()
+            }.apply {
+                @Suppress("UNCHECKED_CAST") (list as List<RenameSchemaTransform>).forEach { rename ->
                     if (rename.to in this.to || rename.from in this.from) {
                         throw NotSerializableException("Cyclic renames are not allowed (${rename.to})")
                     }
@@ -104,7 +105,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     //}
     ;
 
-    abstract fun validate(l: List<Transform>, constants: Map<String, Int>)
+    abstract fun validate(list: List<Transform>, constants: Map<String, Int>)
 
     companion object : DescribedTypeConstructor<TransformTypes> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT_KEY.amqpDescriptor

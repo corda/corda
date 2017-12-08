@@ -242,7 +242,7 @@ class TLSAuthenticationTests {
         // Client 1 keys, certs and SSLKeyStore.
         val client1CAKeyPair = Crypto.generateKeyPair(client1CAScheme)
         val client1CACert = X509Utilities.createCertificate(
-                CertificateType.CLIENT_CA,
+                CertificateType.NODE_CA,
                 intermediateCACert,
                 intermediateCAKeyPair,
                 CLIENT_1_X500,
@@ -269,7 +269,7 @@ class TLSAuthenticationTests {
         // Client 2 keys, certs and SSLKeyStore.
         val client2CAKeyPair = Crypto.generateKeyPair(client2CAScheme)
         val client2CACert = X509Utilities.createCertificate(
-                CertificateType.CLIENT_CA,
+                CertificateType.NODE_CA,
                 intermediateCACert,
                 intermediateCAKeyPair,
                 CLIENT_2_X500,

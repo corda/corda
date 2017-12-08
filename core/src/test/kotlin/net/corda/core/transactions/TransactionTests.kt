@@ -16,6 +16,11 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
 class TransactionTests {
+    private companion object {
+        val DUMMY_KEY_1 = generateKeyPair()
+        val DUMMY_KEY_2 = generateKeyPair()
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
