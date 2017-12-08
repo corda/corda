@@ -55,6 +55,10 @@ class LegalNameValidatorTest {
     fun `unicode range in organization`() {
         LegalNameValidator.validateOrganization("The quick brown fox jumped over the lazy dog.1234567890", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
+            // Null
+            LegalNameValidator.validateOrganization("\u0000R3 Null", LegalNameValidator.Validation.FULL)
+        }
+        assertFailsWith(IllegalArgumentException::class) {
             // Right to left direction override
             LegalNameValidator.validateOrganization("\u202EdtL 3R", LegalNameValidator.Validation.FULL)
         }

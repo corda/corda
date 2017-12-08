@@ -16,6 +16,7 @@ object LegalNameValidator {
     /**
      * The validation function validates a string for use as part of a legal name. It applies the following rules:
      *
+     * - Does not contain the null character
      * - Must be normalized (as per the [normalize] function).
      * - Length must be 255 characters or shorter.
      *
@@ -80,7 +81,8 @@ object LegalNameValidator {
             val attributeRules: List<Rule<String>> = listOf(
                     UnicodeNormalizationRule(),
                     LengthRule(maxLength = 255),
-                    MustHaveAtLeastTwoLettersRule()
+                    MustHaveAtLeastTwoLettersRule(),
+                    CharacterRule('\u0000') // Ban null
             )
             val attributeFullRules: List<Rule<String>> = attributeRules + listOf(
                     CharacterRule(',', '=', '$', '"', '\'', '\\'),
