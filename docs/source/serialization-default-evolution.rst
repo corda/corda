@@ -28,11 +28,11 @@ The serialization framework allows nullable properties to be freely added. For e
         // Class post addition of property c
         data class Example1 (val a: Int, b: String, c: Int?) // (B)
 
-A node with class Example1 in state A will be able to deserialize a blob serialized by a node with it
-in state B as the framework would treat it as a removed property
+A node with class ``Example1`` in state A will be able to deserialize a blob serialized by a node with it
+in state B as the framework would treat it as a removed property.
 
-A node with the class in state B will be able to deserialize a serialized Example1 in state A without
-any modification as the property is nullable and will thus provide null to the constructor
+A node with the class in state B will be able to deserialize a serialized ``Example1`` in state A without
+any modification as the property is nullable and will thus provide null to the constructor.
 
 Adding Non Nullable Properties
 ------------------------------
@@ -51,23 +51,22 @@ this to work. Consider a similar example to our nullable example above
         // Class post addition of property c
         data class Example1 (val a: Int, b: String, c: Int) { // (B)
              @DeprecatedConstructorForDeserialization(1)
-             constructor (a: Int, b: String) : this(a, b, 0) // 0 has been determind as a sensible default
-
+             constructor (a: Int, b: String) : this(a, b, 0) // 0 has been determined as a sensible default
         }
 
 For this to work we have had to add a new constructor that allows nodes in state B to create an instance from
 a serialised form of A. A sensible default for the missing value is provided for instantiation of the non
-null property
+null property.
 
 .. note:: The ``@DeprecatedConstructorForDeserialization`` annotation is important, this signifies to the
     serialization framework that this constructor should be considered for building instances of the
     object when evolution is required.
 
     Furthermore, the integer parameter passed to the constructor indicates a precedence order, see the
-    discussion below
+    discussion below.
 
 As before, instances of state A will be able to deserialize serialized forms of state B as it will simply
-treat them as if the property has been removed (As from it's perspective, they will have been)
+treat them as if the property has been removed (as from it's perspective, they will have been.)
 
 
 Constructor Versioning
@@ -116,7 +115,7 @@ Consider this example:
             constructor (a: Int, b: Int, c: Int, d) : this(a, b, c, d, -1) // alt constructor 3
         }
 
-In this case, the deserialiger has to be able to deserialize instances of class Example3 that were serialized as, for example:
+In this case, the deserializer has to be able to deserialize instances of class ``Example3`` that were serialized as, for example:
 
 .. container:: codeset
 
@@ -157,7 +156,7 @@ be:
         }
 
 Constructors are selected in strict descending order taking the one that enables construction. So, deserializing examples I to IV would
-give us
+give us:
 
 .. container:: codeset
 
@@ -173,7 +172,7 @@ Removing Properties
 
 Property removal is effectively a mirror of adding properties (both nullable and non nullable) given it is required to facilitate
 the addition of properties. When this state is detected by the serialization framework, properties that don't have matching
-parameters in the main constructor are simply omitted from objected construction
+parameters in the main constructor are simply omitted from objected construction:
 
 .. container:: codeset
 
@@ -191,9 +190,9 @@ Reordering Constructor Parameter Order
 --------------------------------------
 
 Properties (in Kotlin this corresponds to constructor parameters) may be reordered freely. The evolution serializer will create a
-mapping between how a class was serialized and it's current constructor order. This is important to our AMQP framework as it
+mapping between how a class was serialized and its current constructor order. This is important to our AMQP framework as it
 constructs objects using their primary (or annotated) constructor. The ordering of whose parameters will have determined the way
-an objects properties were serialised into the byte stream.
+an object's properties were serialised into the byte stream.
 
 For an illustrative example consider a simple class:
 
@@ -205,12 +204,12 @@ For an illustrative example consider a simple class:
 
         val e = Example5(999, "hello")
 
-When we serialize ``e`` it's properties will be encoded in order of it's primary constructors paramaters, so:
+When we serialize ``e`` its properties will be encoded in order of its primary constructors parameters, so:
 
 ``999hello``
 
 Were those parameters to be reordered post serialisation then deserializing, without evolution, would fail with a basic
-type error as we'd attempt to create the new value of ``Example5`` with the values provided in the wrong order
+type error as we'd attempt to create the new value of ``Example5`` with the values provided in the wrong order:
 
 .. Container:: codeset
 
