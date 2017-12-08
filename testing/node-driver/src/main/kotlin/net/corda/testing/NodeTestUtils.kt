@@ -29,9 +29,10 @@ import java.nio.file.Path
  * Creates and tests a ledger built by the passed in dsl.
  */
 fun ServiceHub.ledger(
+        notary: Party,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    return LedgerDSL(TestLedgerDSLInterpreter(this)).also { dsl(it) }
+    return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply(dsl)
 }
 
 /**
@@ -42,8 +43,8 @@ fun ServiceHub.ledger(
 fun ServiceHub.transaction(
         notary: Party,
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger {
-    dsl(TransactionDSL(TestTransactionDSLInterpreter(interpreter, TransactionBuilder(notary))))
+) = ledger(notary) {
+    dsl(TransactionDSL(TestTransactionDSLInterpreter(interpreter, TransactionBuilder(notary)), notary))
 }
 
 fun testNodeConfiguration(

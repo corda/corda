@@ -37,7 +37,7 @@ class PartialMerkleTreeTest {
         hashed = nodes.map { it.serialize().sha256() }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
-        testLedger = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name).ledger {
+        testLedger = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",

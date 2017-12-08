@@ -783,7 +783,7 @@ class CashTests {
         val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         }, MEGA_CORP.name, MEGA_CORP_KEY)
-        mockService.ledger {
+        mockService.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",

@@ -393,7 +393,7 @@ class IRSTests {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
-        return ledgerServices.ledger {
+        return ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement", singleIRS())
@@ -661,7 +661,7 @@ class IRSTests {
         val bd1 = BigDecimal("0.0063518")
 
         val irs = singleIRS()
-        return ledgerServices.ledger {
+        return ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement1",

@@ -352,7 +352,7 @@ class ObligationTests {
     @Test
     fun `close-out netting`() {
         // Try netting out two obligations
-        mockService.ledger {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -368,7 +368,7 @@ class ObligationTests {
 
         // Try netting out two obligations, with the third uninvolved obligation left
         // as-is
-        mockService.ledger {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -384,7 +384,7 @@ class ObligationTests {
         }
 
         // Try having outputs mis-match the inputs
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -398,7 +398,7 @@ class ObligationTests {
         }
 
         // Have the wrong signature on the transaction
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -414,7 +414,7 @@ class ObligationTests {
     @Test
     fun `payment netting`() {
         // Try netting out two obligations
-        mockService.ledger {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -429,7 +429,7 @@ class ObligationTests {
 
         // Try netting out two obligations, but only provide one signature. Unlike close-out netting, we need both
         // signatures for payment netting
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -442,7 +442,7 @@ class ObligationTests {
         }
 
         // Multilateral netting, A -> B -> C which can net down to A -> C
-        mockService.ledger {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -457,7 +457,7 @@ class ObligationTests {
         }
 
         // Multilateral netting without the key of the receiving party
-        mockService.ledger {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -474,7 +474,7 @@ class ObligationTests {
     @Test
     fun `cash settlement`() {
         // Try settling an obligation
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
@@ -490,7 +490,7 @@ class ObligationTests {
 
         // Try partial settling of an obligation
         val halfAMillionDollars = 500000.DOLLARS `issued by` defaultIssuer
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
@@ -506,7 +506,7 @@ class ObligationTests {
 
         // Make sure we can't settle an obligation that's defaulted
         val defaultedObligation: Obligation.State<Currency> = (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)).copy(lifecycle = Lifecycle.DEFAULTED)
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, defaultedObligation) // Alice's defaulted $1,000,000 obligation to Bob
@@ -519,7 +519,7 @@ class ObligationTests {
         }
 
         // Make sure settlement amount must match the amount leaving the ledger
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
@@ -543,7 +543,7 @@ class ObligationTests {
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Obligation.PROGRAM_ID)
                 output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ obligation to Bob", oneUnitFcojObligation between Pair(ALICE, BOB))
@@ -565,7 +565,7 @@ class ObligationTests {
     @Test
     fun `payment default`() {
         // Try defaulting an obligation without a time-window.
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
@@ -589,7 +589,7 @@ class ObligationTests {
         }
 
         // Try defaulting an obligation that is now in the past
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Obligation.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)

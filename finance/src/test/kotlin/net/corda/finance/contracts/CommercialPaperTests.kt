@@ -96,7 +96,7 @@ class CommercialPaperTestsGeneric {
     @Test
     fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` issuer
-        ledgerServices.ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)
