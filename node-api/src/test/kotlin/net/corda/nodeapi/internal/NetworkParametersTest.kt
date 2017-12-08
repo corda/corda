@@ -2,8 +2,6 @@ package net.corda.nodeapi.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.internal.deleteIfExists
-import net.corda.core.internal.div
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
@@ -18,10 +16,8 @@ import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
-import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class NetworkParametersTest {
     private val mockNet= MockNetwork(
@@ -33,26 +29,15 @@ class NetworkParametersTest {
         mockNet.stopNodes()
     }
 
-    // Epoch tests
     @Test
-    fun `choose highest epoch`() {
-        var alice = mockNet.createPartyNode(ALICE.name)
-        val aliceDirectory = alice.internals.configuration.baseDirectory
-        // Epoch is not exposed by node, so we are checking notaries instead.
-        assertEquals(DUMMY_NOTARY.name, alice.services.networkMapCache.notaryIdentities[0].name)
-        alice.dispose()
-        // Make parameters with higher epoch and different notary so it's easier to check them.
+    fun `only one network parameters file allowed in base directory`() {
+        val alice = mockNet.createUnstartedNode(MockNodeParameters(legalName = ALICE.name, forcedID = 100))
+        val aliceDirectory = mockNet.baseDirectory(100)
+        val firstParams = testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)), epoch = 10)
         val secondParams = testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_BANK_A, true)), epoch = 10)
-        dropParametersToDir(aliceDirectory, "network-parameters-2", secondParams)
-        alice = mockNet.createNode(MockNodeParameters(alice.internals.id))
-        assertEquals(1, alice.services.networkMapCache.notaryIdentities.size)
-        assertEquals(DUMMY_BANK_A, alice.services.networkMapCache.notaryIdentities[0])
-        alice.dispose()
-        // Remove the params, and check that old ones were read in correctly.
-        assertTrue((aliceDirectory / "network-parameters-2").deleteIfExists())
-        alice = mockNet.createNode(MockNodeParameters(alice.internals.id))
-        assertEquals(1, alice.services.networkMapCache.notaryIdentities.size)
-        assertEquals(mockNet.defaultNotaryIdentity, alice.services.networkMapCache.notaryIdentities[0])
+        dropParametersToDir(aliceDirectory, "network-parameters", firstParams)
+        dropParametersToDir(aliceDirectory, "network-parameters-1", secondParams)
+        assertFails { alice.start() }
     }
 
     // Minimum Platform Version tests

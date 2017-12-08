@@ -10,7 +10,6 @@ import net.corda.core.serialization.deserialize
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
-import java.time.Duration
 import java.time.Instant
 
 const val NETWORK_PARAM_FILE_PREFIX = "network-parameters"

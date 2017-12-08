@@ -639,22 +639,24 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun readNetworkParameters() {
-        // Load network parameters with the latest known epoch.
-        val latestParams = Files.list(configuration.baseDirectory).filter { NETWORK_PARAM_FILE_PREFIX in it.toString() }.toList()
-                .mapNotNull { try {
-                    it.readAll().deserialize<SignedData<NetworkParameters>>().verified()
-                } catch (t: Throwable) {
-                    null // We ignore all the files that are incorrect.
-                }}.maxBy { it.epoch }
-        networkParameters = if (latestParams != null) {
-            latestParams
+        val files = Files.list(configuration.baseDirectory).filter { NETWORK_PARAM_FILE_PREFIX in it.toString() }.toList()
+        require(files.size <= 1) { "More than one network parameters file in the directory, please update only to the current one." }
+        val params = try {
+            // It's fine at this point if we don't have network parameters or have corrupted file, later we check if parameters can be downloaded from network map server.
+            files[0].readAll().deserialize<SignedData<NetworkParameters>>().verified()
+        } catch(t: Throwable) {
+            null
+        }
+        networkParameters = if (params != null) {
+            params
         } else if (networkMapClient != null) {
+            log.info("Requesting network parameters from network map server...")
             val (networkMap, _) = networkMapClient!!.getNetworkMap()
             networkMapClient!!.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
         } else {
             throw IllegalArgumentException("Couldn't load network parameters file")
         }
-        log.info("Loaded the latest known version of network parameters $latestParams")
+        log.info("Loaded network parameters $params")
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
     }
 
