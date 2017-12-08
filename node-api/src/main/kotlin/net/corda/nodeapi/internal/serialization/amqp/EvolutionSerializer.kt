@@ -11,7 +11,7 @@ import kotlin.reflect.jvm.javaType
 
 /**
  * Serializer for deserializing objects whose definition has changed since they
- * were serialised
+ * were serialised.
  */
 class EvolutionSerializer(
         clazz: Type,
@@ -40,9 +40,9 @@ class EvolutionSerializer(
         /**
          * Unlike the generic deserialization case where we need to locate the primary constructor
          * for the object (or our best guess) in the case of an object whose structure has changed
-         * since serialisation we need to attempt to locate a constructor that we can use. I.e.
-         * it's parameters match the serialised members and it will initialise any newly added
-         * elements
+         * since serialisation we need to attempt to locate a constructor that we can use. For example,
+         * its parameters match the serialised members and it will initialise any newly added
+         * elements.
          *
          * TODO: Type evolution
          * TODO: rename annotation
@@ -70,8 +70,8 @@ class EvolutionSerializer(
         }
 
         /**
-         * Build a serialization object for deserialisation only of objects serialised
-         * as different versions of a class
+         * Build a serialization object for deserialization only of objects serialised
+         * as different versions of a class.
          *
          * @param old is an object holding the schema that represents the object
          *  as it was serialised and the type descriptor of that type
@@ -119,7 +119,7 @@ class EvolutionSerializer(
      * to the object list of values we need to map that list, which is ordered per the
      * constructor of the original state of the object, we need to map the new parameter order
      * of the current constructor onto that list inserting nulls where new parameters are
-     * encountered
+     * encountered.
      *
      * TODO: Object references
      */

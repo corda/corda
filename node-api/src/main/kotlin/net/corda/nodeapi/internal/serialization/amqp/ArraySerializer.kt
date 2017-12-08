@@ -22,7 +22,7 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     // for example).
     //
     // We *need* to retain knowledge for AMQP deserialization weather that lowest primitive
-    // was boxed or unboxed so just infer it recursively
+    // was boxed or unboxed so just infer it recursively.
     private fun calcTypeName(type: Type): String =
             if (type.componentType().isArray()) {
                 val typeName = calcTypeName(type.componentType()); "$typeName[]"
