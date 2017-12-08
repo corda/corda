@@ -1,5 +1,6 @@
 package net.corda.client.rpc;
 
+import com.google.common.collect.Sets;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
@@ -32,7 +33,7 @@ import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
-        super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
+        super(Sets.newHashSet("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
     }
 
     private List<String> perms = Arrays.asList(

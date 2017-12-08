@@ -58,7 +58,7 @@ fun <A> verifierDriver(
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
-        extraCordappPackagesToScan: List<String> = emptyList(),
+        extraCordappPackagesToScan: Set<String> = emptySet(),
         notarySpecs: List<NotarySpec> = emptyList(),
         jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: VerifierDriverDSL.() -> A

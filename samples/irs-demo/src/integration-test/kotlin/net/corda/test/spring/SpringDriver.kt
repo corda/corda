@@ -28,7 +28,7 @@ fun <A> springDriver(
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
-        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        extraCordappPackagesToScan: Set<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringBootDriverDSL.() -> A
 ): A {
     return genericDriver(

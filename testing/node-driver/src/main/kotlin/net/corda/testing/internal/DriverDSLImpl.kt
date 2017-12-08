@@ -71,7 +71,7 @@ class DriverDSLImpl(
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
         val waitForNodesToFinish: Boolean,
-        extraCordappPackagesToScan: List<String>,
+        extraCordappPackagesToScan: Set<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>
 ) : InternalDriverDSL {
@@ -467,7 +467,7 @@ class DriverDSLImpl(
                 executorService: ScheduledExecutorService,
                 nodeConf: NodeConfiguration,
                 config: Config,
-                cordappPackages: List<String>
+                cordappPackages: Set<String>
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${nodeConf.myLegalName.organisation}")
@@ -492,7 +492,7 @@ class DriverDSLImpl(
                 jolokiaJarPath: String,
                 monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
-                cordappPackages: List<String>,
+                cordappPackages: Set<String>,
                 maximumHeapSize: String
         ): Process {
             log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled") + ", jolokia monitoring port is " + (monitorPort ?: "not enabled"))
@@ -659,7 +659,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         waitForNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
-        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        extraCordappPackagesToScan: Set<String> = defaultParameters.extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = JmxPolicy(),
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A

@@ -33,7 +33,7 @@ class CollectSignaturesFlowTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = MockNetwork(cordappPackages = setOf("net.corda.testing.contracts"))
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
         charlieNode = mockNet.createPartyNode(CHARLIE.name)
@@ -129,7 +129,7 @@ class CollectSignaturesFlowTests {
     @Test
     fun `fails when not signed by initiator`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.ref(1))
-        val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
+        val miniCorpServices = MockServices(setOf("net.corda.testing.contracts"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()

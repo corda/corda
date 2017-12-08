@@ -84,7 +84,7 @@ open class MockServices private constructor(
         @JvmStatic
         fun makeTestDatabaseAndMockServices(keys: List<KeyPair>,
                                             identityService: IdentityServiceInternal,
-                                            cordappPackages: List<String> = emptyList(),
+                                            cordappPackages: Set<String> = emptySet(),
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
@@ -108,8 +108,8 @@ open class MockServices private constructor(
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), identityService, initialIdentityName, *keys)
-    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentityName, *keys)
-    constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptyList(), identityService, initialIdentityName, *keys)
+    constructor(cordappPackages: Set<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentityName, *keys)
+    constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptySet(), identityService, initialIdentityName, *keys)
     constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(identityService, initialIdentityName, generateKeyPair())
 
     val key: KeyPair get() = keys.first()

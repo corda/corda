@@ -51,7 +51,7 @@ class NodeMonitorModelTest {
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     private fun setup(runTest: () -> Unit) {
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(extraCordappPackagesToScan = setOf("net.corda.finance")) {
             val cashUser = User("user1", "test", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),

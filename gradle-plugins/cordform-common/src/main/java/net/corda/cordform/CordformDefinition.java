@@ -4,13 +4,15 @@ import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public abstract class CordformDefinition {
     private Path nodesDirectory = Paths.get("build", "nodes");
     private final List<Consumer<CordformNode>> nodeConfigurers = new ArrayList<>();
-    private final List<String> cordappPackages = new ArrayList<>();
+    private final Set<String> cordappPackages = new HashSet<>();
 
     public Path getNodesDirectory() {
         return nodesDirectory;
@@ -28,7 +30,7 @@ public abstract class CordformDefinition {
         nodeConfigurers.add(configurer);
     }
 
-    public List<String> getCordappPackages() {
+    public Set<String> getCordappPackages() {
         return cordappPackages;
     }
 

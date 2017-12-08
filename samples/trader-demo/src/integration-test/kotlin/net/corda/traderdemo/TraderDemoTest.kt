@@ -32,7 +32,7 @@ class TraderDemoTest {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(startNodesInProcess = true, extraCordappPackagesToScan = setOf("net.corda.finance")) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),

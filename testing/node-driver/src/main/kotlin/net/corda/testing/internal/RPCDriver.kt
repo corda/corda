@@ -99,7 +99,7 @@ fun <A> rpcDriver(
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
-        extraCordappPackagesToScan: List<String> = emptyList(),
+        extraCordappPackagesToScan: Set<String> = emptySet(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),

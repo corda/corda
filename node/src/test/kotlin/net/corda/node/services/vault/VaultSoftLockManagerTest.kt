@@ -81,7 +81,7 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
+    private val mockNet = MockNetwork(cordappPackages = setOf(ContractImpl::class.packageName), defaultFactory = { args ->
         object : MockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
                 val realVault = super.makeVaultService(keyManagementService, stateLoader, hibernateConfig)

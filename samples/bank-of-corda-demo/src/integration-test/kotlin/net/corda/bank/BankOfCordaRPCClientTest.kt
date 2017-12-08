@@ -23,7 +23,7 @@ class BankOfCordaRPCClientTest {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities)
         )
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {
+        driver(extraCordappPackagesToScan = setOf("net.corda.finance"), isDebug = true) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)

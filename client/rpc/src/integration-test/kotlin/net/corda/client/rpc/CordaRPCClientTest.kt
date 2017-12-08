@@ -33,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
+class CordaRPCClientTest : NodeBasedTest(setOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
     private val rpcUser = User("user1", "test", permissions = setOf(
             startFlow<CashIssueFlow>(),
             startFlow<CashPaymentFlow>(),

@@ -59,7 +59,7 @@ class VaultQueryTests {
     @JvmField
     val expectedEx: ExpectedException = ExpectedException.none()
 
-    private val cordappPackages = mutableListOf(
+    private val cordappPackages = mutableSetOf(
             "net.corda.testing.contracts",
             "net.corda.finance.contracts",
             CashSchemaV1::class.packageName,

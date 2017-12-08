@@ -1,6 +1,7 @@
 package net.corda.node.services.vault;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import kotlin.Pair;
 import kotlin.Triple;
 import net.corda.core.contracts.*;
@@ -60,7 +61,7 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
-        List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        Set<String> cordappPackages = Sets.newHashSet("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 Arrays.asList(getMEGA_CORP_KEY(), getDUMMY_NOTARY_KEY()),

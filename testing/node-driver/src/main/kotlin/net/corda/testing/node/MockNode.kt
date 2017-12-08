@@ -67,13 +67,13 @@ data class MockNetworkParameters(
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         val defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode = MockNetwork::MockNode,
         val initialiseSerialization: Boolean = true,
-        val cordappPackages: List<String> = emptyList()) {
+        val cordappPackages: Set<String> = emptySet()) {
     fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
     fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
     fun setDefaultFactory(defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode) = copy(defaultFactory = defaultFactory)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setCordappPackages(cordappPackages: List<String>) = copy(cordappPackages = cordappPackages)
+    fun setCordappPackages(cordappPackages: Set<String>) = copy(cordappPackages = cordappPackages)
 }
 
 /**
@@ -123,7 +123,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
+                  private val cordappPackages: Set<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
 

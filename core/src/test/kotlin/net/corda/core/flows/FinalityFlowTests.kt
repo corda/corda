@@ -25,7 +25,7 @@ class FinalityFlowTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = MockNetwork(cordappPackages = setOf("net.corda.finance.contracts.asset"))
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceServices = aliceNode.services

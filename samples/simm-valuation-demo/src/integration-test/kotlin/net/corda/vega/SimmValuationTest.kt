@@ -27,7 +27,7 @@ class SimmValuationTest {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.vega.contracts")) {
+        driver(isDebug = true, extraCordappPackagesToScan = setOf("net.corda.vega.contracts")) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }

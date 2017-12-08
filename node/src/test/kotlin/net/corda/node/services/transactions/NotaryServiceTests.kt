@@ -39,7 +39,7 @@ class NotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = MockNetwork(cordappPackages = setOf("net.corda.testing.contracts"))
         aliceServices = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME)).services
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that
         notary = mockNet.defaultNotaryIdentity
