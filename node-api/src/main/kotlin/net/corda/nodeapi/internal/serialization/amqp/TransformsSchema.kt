@@ -92,7 +92,7 @@ class UnknownTestTransform(val a: Int, val b: Int, val c: Int) : Transform() {
     companion object : DescribedTypeConstructor<UnknownTestTransform> {
         val typeName = "UnknownTest"
 
-        override fun newInstance(obj: Any?) : UnknownTestTransform {
+        override fun newInstance(obj: Any?): UnknownTestTransform {
             val described = obj as List<*>
             return UnknownTestTransform(described[1] as Int, described[2] as Int, described[3] as Int)
         }
@@ -201,40 +201,40 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          * class loader and this dictates which classes we can and cannot see
          */
         fun get(name: String, sf: SerializerFactory) = sf.transformsCache.computeIfAbsent(name) {
-                val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
-                try {
-                    val clazz = sf.classloader.loadClass(name)
+            val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+            try {
+                val clazz = sf.classloader.loadClass(name)
 
-                    supportedTransforms.forEach { transform ->
-                        clazz.getAnnotation(transform.type)?.let { list ->
-                            transform.getAnnotations(list).forEach { annotation ->
-                                val t = transform.enum.build(annotation)
+                supportedTransforms.forEach { transform ->
+                    clazz.getAnnotation(transform.type)?.let { list ->
+                        transform.getAnnotations(list).forEach { annotation ->
+                            val t = transform.enum.build(annotation)
 
-                                // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
-                                // ignore them it feels like a good thing to alert the user to since this is
-                                // more than likely a typo in their code so best make it an actual error
-                                if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
-                                        .filter { t == it }
-                                        .isNotEmpty()) {
-                                    throw NotSerializableException(
-                                            "Repeated unique transformation annotation of type ${t.name}")
-                                }
-
-                                transforms[transform.enum]!!.add(t)
+                            // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
+                            // ignore them it feels like a good thing to alert the user to since this is
+                            // more than likely a typo in their code so best make it an actual error
+                            if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
+                                    .filter { t == it }
+                                    .isNotEmpty()) {
+                                throw NotSerializableException(
+                                        "Repeated unique transformation annotation of type ${t.name}")
                             }
 
-                            transform.enum.validate(
-                                    transforms[transform.enum] ?: emptyList(),
-                                    clazz.enumConstants.mapIndexed { i, s -> Pair(s.toString(), i) }.toMap())
+                            transforms[transform.enum]!!.add(t)
                         }
-                    }
-                } catch (_: ClassNotFoundException) {
-                    // if we can't load the class we'll end up caching an empty list which is fine as that
-                    // list, on lookup, won't be included in the schema because it's empty
-                }
 
-                transforms
+                        transform.enum.validate(
+                                transforms[transform.enum] ?: emptyList(),
+                                clazz.enumConstants.mapIndexed { i, s -> Pair(s.toString(), i) }.toMap())
+                    }
+                }
+            } catch (_: ClassNotFoundException) {
+                // if we can't load the class we'll end up caching an empty list which is fine as that
+                // list, on lookup, won't be included in the schema because it's empty
             }
+
+            transforms
+        }
 
         private fun getAndAdd(
                 type: String,

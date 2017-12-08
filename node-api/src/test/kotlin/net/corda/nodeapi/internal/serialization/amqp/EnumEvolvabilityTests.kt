@@ -6,7 +6,6 @@ import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
-import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -47,7 +46,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun noAnnotation() {
-        data class C (val n: NotAnnotated)
+        data class C(val n: NotAnnotated)
 
         val sf = testDefaultFactory()
         val bAndS = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C(NotAnnotated.A))
@@ -63,7 +62,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun missingDefaults() {
-        data class C (val m: MissingDefaults)
+        data class C(val m: MissingDefaults)
 
         val sf = testDefaultFactory()
         val bAndS = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C(MissingDefaults.A))
@@ -74,7 +73,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun missingRenames() {
-        data class C (val m: MissingRenames)
+        data class C(val m: MissingRenames)
 
         val sf = testDefaultFactory()
         val bAndS = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C(MissingRenames.A))
@@ -86,7 +85,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun defaultAnnotationIsAddedToEnvelope() {
-        data class C (val annotatedEnum: AnnotatedEnumOnce)
+        data class C(val annotatedEnum: AnnotatedEnumOnce)
 
         val sf = testDefaultFactory()
         val bAndS = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C(AnnotatedEnumOnce.D))
@@ -94,45 +93,45 @@ class EnumEvolvabilityTests {
         // only the enum is decorated so schema sizes should be different (2 objects, only one evolved)
         assertEquals(2, bAndS.schema.types.size)
         assertEquals(1, bAndS.transformsSchema.types.size)
-        assertEquals (AnnotatedEnumOnce::class.java.name, bAndS.transformsSchema.types.keys.first())
+        assertEquals(AnnotatedEnumOnce::class.java.name, bAndS.transformsSchema.types.keys.first())
 
         val schema = bAndS.transformsSchema.types.values.first()
 
         assertEquals(1, schema.size)
-        assertTrue (schema.keys.contains(TransformTypes.EnumDefault))
-        assertEquals (1, schema[TransformTypes.EnumDefault]!!.size)
-        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
-        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
+        assertTrue(schema.keys.contains(TransformTypes.EnumDefault))
+        assertEquals(1, schema[TransformTypes.EnumDefault]!!.size)
+        assertTrue(schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
+        assertEquals("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
     fun doubleDefaultAnnotationIsAddedToEnvelope() {
-        data class C (val annotatedEnum: AnnotatedEnumTwice)
+        data class C(val annotatedEnum: AnnotatedEnumTwice)
 
         val sf = testDefaultFactory()
         val bAndS = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C(AnnotatedEnumTwice.E))
 
         assertEquals(2, bAndS.schema.types.size)
         assertEquals(1, bAndS.transformsSchema.types.size)
-        assertEquals (AnnotatedEnumTwice::class.java.name, bAndS.transformsSchema.types.keys.first())
+        assertEquals(AnnotatedEnumTwice::class.java.name, bAndS.transformsSchema.types.keys.first())
 
         val schema = bAndS.transformsSchema.types.values.first()
 
         assertEquals(1, schema.size)
-        assertTrue (schema.keys.contains(TransformTypes.EnumDefault))
-        assertEquals (2, schema[TransformTypes.EnumDefault]!!.size)
-        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
-        assertEquals ("E", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
-        assertTrue (schema[TransformTypes.EnumDefault]!![1] is EnumDefaultSchemaTransform)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).new)
-        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).old)
+        assertTrue(schema.keys.contains(TransformTypes.EnumDefault))
+        assertEquals(2, schema[TransformTypes.EnumDefault]!!.size)
+        assertTrue(schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
+        assertEquals("E", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
+        assertTrue(schema[TransformTypes.EnumDefault]!![1] is EnumDefaultSchemaTransform)
+        assertEquals("D", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).new)
+        assertEquals("A", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
     fun defaultAnnotationIsAddedToEnvelopeAndDeserialised() {
-        data class C (val annotatedEnum: AnnotatedEnumOnce)
+        data class C(val annotatedEnum: AnnotatedEnumOnce)
 
         val sf = testDefaultFactory()
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(C(AnnotatedEnumOnce.D))
@@ -152,11 +151,11 @@ class EnumEvolvabilityTests {
 
         val schema = transforms[eName]
 
-        assertTrue (schema!!.keys.contains(TransformTypes.EnumDefault))
-        assertEquals (1, schema[TransformTypes.EnumDefault]!!.size)
-        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
-        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
+        assertTrue(schema!!.keys.contains(TransformTypes.EnumDefault))
+        assertEquals(1, schema[TransformTypes.EnumDefault]!!.size)
+        assertTrue(schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
+        assertEquals("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
@@ -174,9 +173,9 @@ class EnumEvolvabilityTests {
 
         val transforms = db.envelope.transformsSchema.types
 
-        assertTrue (transforms.contains(AnnotatedEnumTwice::class.java.name))
-        assertTrue (transforms[AnnotatedEnumTwice::class.java.name]!!.contains(TransformTypes.EnumDefault))
-        assertEquals (2, transforms[AnnotatedEnumTwice::class.java.name]!![TransformTypes.EnumDefault]!!.size)
+        assertTrue(transforms.contains(AnnotatedEnumTwice::class.java.name))
+        assertTrue(transforms[AnnotatedEnumTwice::class.java.name]!!.contains(TransformTypes.EnumDefault))
+        assertEquals(2, transforms[AnnotatedEnumTwice::class.java.name]!![TransformTypes.EnumDefault]!!.size)
 
         val enumDefaults = transforms[AnnotatedEnumTwice::class.java.name]!![TransformTypes.EnumDefault]!!
 
@@ -188,7 +187,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun renameAnnotationIsAdded() {
-        data class C (val annotatedEnum: RenameEnumOnce)
+        data class C(val annotatedEnum: RenameEnumOnce)
 
         val sf = testDefaultFactory()
 
@@ -197,7 +196,7 @@ class EnumEvolvabilityTests {
 
         assertEquals(2, bAndS.schema.types.size)
         assertEquals(1, bAndS.transformsSchema.types.size)
-        assertEquals (RenameEnumOnce::class.java.name, bAndS.transformsSchema.types.keys.first())
+        assertEquals(RenameEnumOnce::class.java.name, bAndS.transformsSchema.types.keys.first())
 
         val serialisedSchema = bAndS.transformsSchema.types[RenameEnumOnce::class.java.name]!!
 
@@ -212,7 +211,7 @@ class EnumEvolvabilityTests {
 
         assertEquals(2, cAndS.envelope.schema.types.size)
         assertEquals(1, cAndS.envelope.transformsSchema.types.size)
-        assertEquals (RenameEnumOnce::class.java.name, cAndS.envelope.transformsSchema.types.keys.first())
+        assertEquals(RenameEnumOnce::class.java.name, cAndS.envelope.transformsSchema.types.keys.first())
 
         val deserialisedSchema = cAndS.envelope.transformsSchema.types[RenameEnumOnce::class.java.name]!!
 
@@ -232,7 +231,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun doubleRenameAnnotationIsAdded() {
-        data class C (val annotatedEnum: RenameEnumTwice)
+        data class C(val annotatedEnum: RenameEnumTwice)
 
         val sf = testDefaultFactory()
 
@@ -241,7 +240,7 @@ class EnumEvolvabilityTests {
 
         assertEquals(2, bAndS.schema.types.size)
         assertEquals(1, bAndS.transformsSchema.types.size)
-        assertEquals (RenameEnumTwice::class.java.name, bAndS.transformsSchema.types.keys.first())
+        assertEquals(RenameEnumTwice::class.java.name, bAndS.transformsSchema.types.keys.first())
 
         val serialisedSchema = bAndS.transformsSchema.types[RenameEnumTwice::class.java.name]!!
 
@@ -258,7 +257,7 @@ class EnumEvolvabilityTests {
 
         assertEquals(2, cAndS.envelope.schema.types.size)
         assertEquals(1, cAndS.envelope.transformsSchema.types.size)
-        assertEquals (RenameEnumTwice::class.java.name, cAndS.envelope.transformsSchema.types.keys.first())
+        assertEquals(RenameEnumTwice::class.java.name, cAndS.envelope.transformsSchema.types.keys.first())
 
         val deserialisedSchema = cAndS.envelope.transformsSchema.types[RenameEnumTwice::class.java.name]!!
 
@@ -271,15 +270,15 @@ class EnumEvolvabilityTests {
         assertEquals("F", (deserialisedSchema[TransformTypes.Rename]!![1] as RenameSchemaTransform).to)
     }
 
-    @CordaSerializationTransformRename(from="A", to="X")
-    @CordaSerializationTransformEnumDefault(old = "X", new="E")
+    @CordaSerializationTransformRename(from = "A", to = "X")
+    @CordaSerializationTransformEnumDefault(old = "X", new = "E")
     enum class RenameAndExtendEnum {
         X, B, C, D, E
     }
 
     @Test
     fun bothAnnotationTypes() {
-        data class C (val annotatedEnum: RenameAndExtendEnum)
+        data class C(val annotatedEnum: RenameAndExtendEnum)
 
         val sf = testDefaultFactory()
 
@@ -288,15 +287,15 @@ class EnumEvolvabilityTests {
 
         assertEquals(2, bAndS.schema.types.size)
         assertEquals(1, bAndS.transformsSchema.types.size)
-        assertEquals (RenameAndExtendEnum::class.java.name, bAndS.transformsSchema.types.keys.first())
+        assertEquals(RenameAndExtendEnum::class.java.name, bAndS.transformsSchema.types.keys.first())
 
         val serialisedSchema = bAndS.transformsSchema.types[RenameAndExtendEnum::class.java.name]!!
 
         // This time there should be two distinct transform types (all previous tests have had only
         // a single type
         assertEquals(2, serialisedSchema.size)
-        assertTrue (serialisedSchema.containsKey(TransformTypes.Rename))
-        assertTrue (serialisedSchema.containsKey(TransformTypes.EnumDefault))
+        assertTrue(serialisedSchema.containsKey(TransformTypes.Rename))
+        assertTrue(serialisedSchema.containsKey(TransformTypes.EnumDefault))
 
         assertEquals(1, serialisedSchema[TransformTypes.Rename]!!.size)
         assertEquals("A", (serialisedSchema[TransformTypes.Rename]!![0] as RenameSchemaTransform).from)
@@ -307,7 +306,7 @@ class EnumEvolvabilityTests {
         assertEquals("X", (serialisedSchema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
-    @CordaSerializationTransformEnumDefaults (
+    @CordaSerializationTransformEnumDefaults(
             CordaSerializationTransformEnumDefault("D", "A"),
             CordaSerializationTransformEnumDefault("D", "A"))
     enum class RepeatedAnnotation {
@@ -316,7 +315,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun repeatedAnnotation() {
-        data class C (val a: RepeatedAnnotation)
+        data class C(val a: RepeatedAnnotation)
 
         val sf = testDefaultFactory()
 
@@ -330,40 +329,40 @@ class EnumEvolvabilityTests {
         A, B, C, D
     }
 
-    @CordaSerializationTransformEnumDefaults (
+    @CordaSerializationTransformEnumDefaults(
             CordaSerializationTransformEnumDefault("D", "A"),
             CordaSerializationTransformEnumDefault("E", "A"))
     enum class E2 {
         A, B, C, D, E
     }
 
-    @CordaSerializationTransformEnumDefaults (CordaSerializationTransformEnumDefault("D", "A"))
+    @CordaSerializationTransformEnumDefaults(CordaSerializationTransformEnumDefault("D", "A"))
     enum class E3 {
         A, B, C, D
     }
 
     @Test
     fun multiEnums() {
-        data class A (val a: E1, val b: E2)
-        data class B (val a: E3, val b: A, val c: E1)
-        data class C (val a: B, val b: E2, val c: E3)
+        data class A(val a: E1, val b: E2)
+        data class B(val a: E3, val b: A, val c: E1)
+        data class C(val a: B, val b: E2, val c: E3)
 
-        val c = C(B(E3.A,A(E1.A,E2.B),E1.C),E2.B,E3.A)
+        val c = C(B(E3.A, A(E1.A, E2.B), E1.C), E2.B, E3.A)
 
         val sf = testDefaultFactory()
 
         // Serialise the object
         val bAndS = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(c)
 
-        println (bAndS.transformsSchema)
+        println(bAndS.transformsSchema)
 
         // we have six types and three of those, the enums, should have transforms
         assertEquals(6, bAndS.schema.types.size)
         assertEquals(3, bAndS.transformsSchema.types.size)
 
-        assertTrue (E1::class.java.name in bAndS.transformsSchema.types)
-        assertTrue (E2::class.java.name in bAndS.transformsSchema.types)
-        assertTrue (E3::class.java.name in bAndS.transformsSchema.types)
+        assertTrue(E1::class.java.name in bAndS.transformsSchema.types)
+        assertTrue(E2::class.java.name in bAndS.transformsSchema.types)
+        assertTrue(E3::class.java.name in bAndS.transformsSchema.types)
 
         val e1S = bAndS.transformsSchema.types[E1::class.java.name]!!
         val e2S = bAndS.transformsSchema.types[E2::class.java.name]!!
@@ -404,7 +403,7 @@ class EnumEvolvabilityTests {
         assertTrue(sf.transformsCache.containsKey(C2::class.java.name))
         assertTrue(sf.transformsCache.containsKey(AnnotatedEnumOnce::class.java.name))
 
-        assertEquals (sb1.transformsSchema.types[AnnotatedEnumOnce::class.java.name],
+        assertEquals(sb1.transformsSchema.types[AnnotatedEnumOnce::class.java.name],
                 sb2.transformsSchema.types[AnnotatedEnumOnce::class.java.name])
     }
 
@@ -447,7 +446,7 @@ class EnumEvolvabilityTests {
     //
     // And we're not at 3. However, we ban this rename
     //
-    @CordaSerializationTransformRenames (
+    @CordaSerializationTransformRenames(
             CordaSerializationTransformRename("D", "C"),
             CordaSerializationTransformRename("C", "D")
     )
@@ -455,7 +454,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun rejectCyclicRename() {
-        data class C (val e: RejectCyclicRename)
+        data class C(val e: RejectCyclicRename)
 
         val sf = testDefaultFactory()
         Assertions.assertThatThrownBy {
@@ -468,7 +467,7 @@ class EnumEvolvabilityTests {
     // unserailzble. However, in this case, it isn't a struct cycle, rather one element
     // is renamed to match what a different element used to be called
     //
-    @CordaSerializationTransformRenames (
+    @CordaSerializationTransformRenames(
             CordaSerializationTransformRename(from = "B", to = "C"),
             CordaSerializationTransformRename(from = "C", to = "D")
     )
@@ -476,7 +475,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun rejectCyclicRenameAlt() {
-        data class C (val e: RejectCyclicRenameAlt)
+        data class C(val e: RejectCyclicRenameAlt)
 
         val sf = testDefaultFactory()
         Assertions.assertThatThrownBy {
@@ -484,7 +483,7 @@ class EnumEvolvabilityTests {
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
-    @CordaSerializationTransformRenames (
+    @CordaSerializationTransformRenames(
             CordaSerializationTransformRename("G", "C"),
             CordaSerializationTransformRename("F", "G"),
             CordaSerializationTransformRename("E", "F"),
@@ -495,7 +494,7 @@ class EnumEvolvabilityTests {
 
     @Test
     fun rejectCyclicRenameRedux() {
-        data class C (val e: RejectCyclicRenameRedux)
+        data class C(val e: RejectCyclicRenameRedux)
 
         val sf = testDefaultFactory()
         Assertions.assertThatThrownBy {
@@ -503,12 +502,12 @@ class EnumEvolvabilityTests {
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
-    @CordaSerializationTransformEnumDefault (new = "D", old = "X")
+    @CordaSerializationTransformEnumDefault(new = "D", old = "X")
     enum class RejectBadDefault { A, B, C, D }
 
     @Test
     fun rejectBadDefault() {
-        data class C (val e: RejectBadDefault)
+        data class C(val e: RejectBadDefault)
 
         val sf = testDefaultFactory()
         Assertions.assertThatThrownBy {
@@ -516,12 +515,12 @@ class EnumEvolvabilityTests {
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
-    @CordaSerializationTransformEnumDefault (new = "D", old = "D")
+    @CordaSerializationTransformEnumDefault(new = "D", old = "D")
     enum class RejectBadDefaultToSelf { A, B, C, D }
 
     @Test
     fun rejectBadDefaultToSelf() {
-        data class C (val e: RejectBadDefaultToSelf)
+        data class C(val e: RejectBadDefaultToSelf)
 
         val sf = testDefaultFactory()
         Assertions.assertThatThrownBy {

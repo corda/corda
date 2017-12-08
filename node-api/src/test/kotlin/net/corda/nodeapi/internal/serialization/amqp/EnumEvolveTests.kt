@@ -1,12 +1,13 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializationTransformEnumDefault
+import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
-import java.net.URI
 import kotlin.test.assertEquals
 
 // NOTE: To recreate the test files used by these tests uncomment the original test classes and comment
@@ -30,7 +31,7 @@ class EnumEvolveTests {
         val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
-        data class C (val e : DeserializeNewerSetToUnknown)
+        data class C(val e: DeserializeNewerSetToUnknown)
 
         // Uncomment to re-generate test files
         // File(URI("$localPath/$resource")).writeBytes(
@@ -40,7 +41,7 @@ class EnumEvolveTests {
 
         val obj = DeserializationInput(sf).deserialize(SerializedBytes<C>(File(path.toURI()).readBytes()))
 
-        assertEquals (DeserializeNewerSetToUnknown.C, obj.e)
+        assertEquals(DeserializeNewerSetToUnknown.C, obj.e)
     }
 
     // Version of the class as it was serialised
@@ -78,9 +79,9 @@ class EnumEvolveTests {
         // of the evolution code
         val obj3 = DeserializationInput(sf).deserialize(SerializedBytes<C>(File(path3.toURI()).readBytes()))
 
-        assertEquals (DeserializeNewerSetToUnknown2.C, obj1.e)
-        assertEquals (DeserializeNewerSetToUnknown2.C, obj2.e)
-        assertEquals (DeserializeNewerSetToUnknown2.C, obj3.e)
+        assertEquals(DeserializeNewerSetToUnknown2.C, obj1.e)
+        assertEquals(DeserializeNewerSetToUnknown2.C, obj2.e)
+        assertEquals(DeserializeNewerSetToUnknown2.C, obj3.e)
     }
 
 
@@ -149,7 +150,7 @@ class EnumEvolveTests {
         data class C(val e: DeserializeWithRename)
 
         // Uncomment to re-generate test files, needs to be done in three stages
-        val so = SerializationOutput(sf)
+        // val so = SerializationOutput(sf)
         // First change
         // File(URI("$localPath/$resource.1.AA")).writeBytes(so.serialize(C(DeserializeWithRename.AA)).bytes)
         // File(URI("$localPath/$resource.1.B")).writeBytes(so.serialize(C(DeserializeWithRename.B)).bytes)
@@ -271,7 +272,7 @@ class EnumEvolveTests {
         data class C(val e: MultiOperations)
 
         // Uncomment to re-generate test files, needs to be done in three stages
-        val so = SerializationOutput(sf)
+        // val so = SerializationOutput(sf)
         // First change
         // File(URI("$localPath/$resource.1.A")).writeBytes(so.serialize(C(MultiOperations.A)).bytes)
         // File(URI("$localPath/$resource.1.B")).writeBytes(so.serialize(C(MultiOperations.B)).bytes)
@@ -345,15 +346,15 @@ class EnumEvolveTests {
                 Pair("$resource.5.G", MultiOperations.C))
 
         fun load(l: List<Pair<String, MultiOperations>>) = l.map {
-                Pair (DeserializationInput(sf).deserialize(SerializedBytes<C>(
-                        File(EvolvabilityTests::class.java.getResource(it.first).toURI()).readBytes())), it.second)
+            Pair(DeserializationInput(sf).deserialize(SerializedBytes<C>(
+                    File(EvolvabilityTests::class.java.getResource(it.first).toURI()).readBytes())), it.second)
         }
 
-        load (stage1Resources).forEach { assertEquals(it.second, it.first.e) }
-        load (stage2Resources).forEach { assertEquals(it.second, it.first.e) }
-        load (stage3Resources).forEach { assertEquals(it.second, it.first.e) }
-        load (stage4Resources).forEach { assertEquals(it.second, it.first.e) }
-        load (stage5Resources).forEach { assertEquals(it.second, it.first.e) }
+        load(stage1Resources).forEach { assertEquals(it.second, it.first.e) }
+        load(stage2Resources).forEach { assertEquals(it.second, it.first.e) }
+        load(stage3Resources).forEach { assertEquals(it.second, it.first.e) }
+        load(stage4Resources).forEach { assertEquals(it.second, it.first.e) }
+        load(stage5Resources).forEach { assertEquals(it.second, it.first.e) }
     }
 
     @CordaSerializationTransformEnumDefault(old = "A", new = "F")
@@ -363,7 +364,7 @@ class EnumEvolveTests {
     fun badNewValue() {
         val sf = testDefaultFactory()
 
-        data class C (val e : BadNewValue)
+        data class C(val e: BadNewValue)
 
         Assertions.assertThatThrownBy {
             SerializationOutput(sf).serialize(C(BadNewValue.A))
@@ -374,13 +375,13 @@ class EnumEvolveTests {
             CordaSerializationTransformEnumDefault(new = "D", old = "E"),
             CordaSerializationTransformEnumDefault(new = "E", old = "A")
     )
-    enum class OutOfOrder { A, B, C, D, E}
+    enum class OutOfOrder { A, B, C, D, E }
 
     @Test
     fun outOfOrder() {
         val sf = testDefaultFactory()
 
-        data class C (val e : OutOfOrder)
+        data class C(val e: OutOfOrder)
 
         Assertions.assertThatThrownBy {
             SerializationOutput(sf).serialize(C(OutOfOrder.A))

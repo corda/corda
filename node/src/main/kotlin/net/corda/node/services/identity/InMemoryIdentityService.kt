@@ -45,18 +45,17 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         principalToParties.putAll(identities.associateBy { it.name })
     }
 
-    // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-            log.error("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
-            log.error("Certificate path :")
+            log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            log.warn("Certificate path :")
             identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
-                log.error("$space${certificate.toX509CertHolder().subject}")
+                log.warn("$space${certificate.toX509CertHolder().subject}")
             }
             throw e
         }

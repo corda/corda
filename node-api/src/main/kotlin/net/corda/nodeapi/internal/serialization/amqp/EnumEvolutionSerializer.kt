@@ -27,9 +27,9 @@ import java.util.*
  * transformation rules we create a mapping between those values and the values that exist on the
  * current class
  *
- * @property clazz The enum as it exists now, not as it did when it was serialized (either in the past
+ * @property type The enum as it exists now, not as it did when it was serialized (either in the past
  * or future).
- * @property factory the [SerializerFactory] that is building this serialization object.
+ * @param factory the [SerializerFactory] that is building this serialization object.
  * @property conversions A mapping between all potential enum constants that could've been assigned to
  * an instance of the enum as it existed at time of serialisation and those that exist now
  * @property ordinals Convenience mapping of constant to ordinality
@@ -57,7 +57,7 @@ class EnumEvolutionSerializer(
          * received AMQP header
          * @param new The Serializer object we built based on the current state of the enum class on our classpath
          * @param factory the [SerializerFactory] that is building this serialization object.
-         * @param transformsFromBlob the transforms attached to the class in the AMQP header, i.e. the transforms
+         * @param schemas the transforms attached to the class in the AMQP header, i.e. the transforms
          * known at serialization time
          */
         fun make(old: RestrictedType,

@@ -6,7 +6,6 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
-import java.net.URI
 import kotlin.test.assertEquals
 
 // To regenerate any of the binary test files do the following
@@ -19,13 +18,14 @@ import kotlin.test.assertEquals
 //  5. Comment back out the generation code and uncomment the actual test
 class EvolvabilityTests {
     // When regenerating the test files this needs to be set to the file system location of the resource files
+    @Suppress("UNUSED")
     var localPath = projectRootDir.toUri().resolve(
             "node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp")
 
     @Test
     fun simpleOrderSwapSameType() {
         val sf = testDefaultFactory()
-        val resource= "EvolvabilityTests.simpleOrderSwapSameType"
+        val resource = "EvolvabilityTests.simpleOrderSwapSameType"
 
         val A = 1
         val B = 2
@@ -89,7 +89,7 @@ class EvolvabilityTests {
 
         assertEquals(A, deserializedC.a)
         assertEquals(null, deserializedC.b)
-     }
+    }
 
     @Test(expected = NotSerializableException::class)
     fun addAdditionalParam() {
@@ -369,6 +369,7 @@ class EvolvabilityTests {
 
         // Add a parameter to inner but keep outer unchanged
         data class Inner(val a: Int, val b: String?)
+
         data class Outer(val a: Int, val b: Inner)
 
         val path = EvolvabilityTests::class.java.getResource(resource)
