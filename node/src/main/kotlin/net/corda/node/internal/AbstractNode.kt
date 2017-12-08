@@ -292,7 +292,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 info = it
             }
         }
-        networkMapCache.addNode(info)
         return Pair(keyPairs, info)
     }
 
