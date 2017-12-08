@@ -26,8 +26,7 @@ import javax.persistence.Id
 import javax.persistence.Lob
 
 @ThreadSafe
-class PersistentIdentityService(override val trustRoot: X509Certificate,
-                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
+class PersistentIdentityService(override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
     constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {
@@ -87,16 +86,10 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             var publicKeyHash: String = ""
     )
 
-    override val caCertStore: CertStore
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
 
     private val keyToParties = createPKMap()
     private val principalToParties = createX500Map()
-
-    init {
-        val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
-        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
-    }
 
     /** Requires a database transaction. */
     fun loadIdentities(identities: Iterable<PartyAndCertificate> = emptySet(), confidentialIdentities: Iterable<PartyAndCertificate> = emptySet()) {
