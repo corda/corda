@@ -6,12 +6,14 @@ import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import net.corda.node.utilities.ObjectDiffer
+import java.time.Instant
 
 /**
  * This is a diagnostic record that stores information about a state machine transition and provides pretty printing
  * by diffing the two states.
  */
 data class TransitionDiagnosticRecord(
+        val timestamp: Instant,
         val flowId: StateMachineRunId,
         val previousState: StateMachineState,
         val nextState: StateMachineState,
@@ -26,6 +28,7 @@ data class TransitionDiagnosticRecord(
                 listOf(
                         "",
                         " --- Transition of flow $flowId ---",
+                        "  Timestamp: $timestamp",
                         "  Event: $event",
                         "  Actions: ",
                         "    ${transition.actions.joinToString("\n    ")}",

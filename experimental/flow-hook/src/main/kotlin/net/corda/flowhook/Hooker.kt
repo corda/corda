@@ -56,62 +56,83 @@ class Hooker(hookContainer: Any) : ClassFileTransformer {
     private fun instrumentClass(clazz: CtClass): CtClass? {
         val hookMethods = hooks[clazz.name] ?: return null
         val usedHookMethods = HashSet<Method>()
-        var isAnyInstrumented = false
         for (method in clazz.declaredBehaviors) {
-            val hookMethod = instrumentBehaviour(method, hookMethods)
-            if (hookMethod != null) {
-                isAnyInstrumented = true
-                usedHookMethods.add(hookMethod)
-            }
+            usedHookMethods.addAll(instrumentBehaviour(method, hookMethods))
         }
         val unusedHookMethods = hookMethods.values.mapTo(HashSet()) { it.first } - usedHookMethods
+        if (usedHookMethods.isNotEmpty()) {
+            println("Hooked methods $usedHookMethods")
+        }
         if (unusedHookMethods.isNotEmpty()) {
             println("Unused hook methods $unusedHookMethods")
         }
-        return if (isAnyInstrumented) {
+        return if (usedHookMethods.isNotEmpty()) {
             clazz
         } else {
             null
         }
     }
 
-    private fun instrumentBehaviour(method: CtBehavior, methodHooks: MethodHooks): Method? {
-        val signature = Signature(method.name, method.parameterTypes.map { it.name })
-        val (hookMethod, annotation) = methodHooks[signature] ?: return null
-        val invocationString = if (annotation.passThis) {
-            "${hookMethod.declaringClass.canonicalName}.${hookMethod.name}(this, \$\$)"
-        } else {
-            "${hookMethod.declaringClass.canonicalName}.${hookMethod.name}(\$\$)"
+    private val objectName = Any::class.java.name
+    private fun instrumentBehaviour(method: CtBehavior, methodHooks: MethodHooks): List<Method> {
+        val pairs = methodHooks.mapNotNull { (signature, pair) ->
+            if (signature.functionName != method.name) return@mapNotNull null
+            if (signature.parameterTypes.size != method.parameterTypes.size) return@mapNotNull null
+            for (i in 0 until signature.parameterTypes.size) {
+                if (signature.parameterTypes[i] != objectName && signature.parameterTypes[i] != method.parameterTypes[i].name) {
+                    return@mapNotNull null
+                }
+            }
+            pair
+        }
+        for ((hookMethod, annotation) in pairs) {
+            val invocationString = if (annotation.passThis) {
+                "${hookMethod.declaringClass.canonicalName}.${hookMethod.name}(this, \$\$)"
+            } else {
+                "${hookMethod.declaringClass.canonicalName}.${hookMethod.name}(\$\$)"
+            }
+
+            val overriddenPosition = if (method.methodInfo.isConstructor && annotation.passThis && annotation.position == HookPosition.Before) {
+                println("passThis=true and position=${HookPosition.Before} for a constructor. " +
+                        "You can only inspect 'this' at the end of the constructor! Hooking *after*.. $method")
+                HookPosition.After
+            } else {
+                annotation.position
+            }
+
+            val insertHook: (CtBehavior.(code: String) -> Unit) = when (overriddenPosition) {
+                HookPosition.Before -> CtBehavior::insertBefore
+                HookPosition.After -> CtBehavior::insertAfter
+            }
+            when {
+                Function0::class.java.isAssignableFrom(hookMethod.returnType) -> {
+                    method.addLocalVariable("after", classPool.get("kotlin.jvm.functions.Function0"))
+                    method.insertHook("after = null; ${wrapTryCatch("after = $invocationString;")}")
+                    method.insertAfter("if (after != null) ${wrapTryCatch("after.invoke();")}")
+                }
+                Function1::class.java.isAssignableFrom(hookMethod.returnType) -> {
+                    method.addLocalVariable("after", classPool.get("kotlin.jvm.functions.Function1"))
+                    method.insertHook("after = null; ${wrapTryCatch("after = $invocationString;")}")
+                    method.insertAfter("if (after != null) ${wrapTryCatch("after.invoke((\$w)\$_);")}")
+                }
+                else -> {
+                    method.insertHook(wrapTryCatch("$invocationString;"))
+                }
+            }
+        }
+        return pairs.map { it.first }
+    }
+
+    companion object {
+
+        fun wrapTryCatch(statement: String): String {
+            return "try { $statement } catch (Throwable throwable) { ${Hooker::class.java.canonicalName}.${Hooker.Companion::exceptionInHook.name}(throwable); }"
         }
 
-        val overriddenPosition = if (method.methodInfo.isConstructor && annotation.passThis && annotation.position == HookPosition.Before) {
-            println("passThis=true and position=${HookPosition.Before} for a constructor. " +
-                    "You can only inspect 'this' at the end of the constructor! Hooking *after*.. $method")
-            HookPosition.After
-        } else {
-            annotation.position
+        @JvmStatic
+        fun exceptionInHook(throwable: Throwable) {
+            throwable.printStackTrace()
         }
-
-        val insertHook: (CtBehavior.(code: String) -> Unit) = when (overriddenPosition) {
-            HookPosition.Before -> CtBehavior::insertBefore
-            HookPosition.After -> CtBehavior::insertAfter
-        }
-        when {
-            Function0::class.java.isAssignableFrom(hookMethod.returnType) -> {
-                method.addLocalVariable("after", classPool.get("kotlin.jvm.functions.Function0"))
-                method.insertHook("after = $invocationString;")
-                method.insertAfter("after.invoke();")
-            }
-            Function1::class.java.isAssignableFrom(hookMethod.returnType) -> {
-                method.addLocalVariable("after", classPool.get("kotlin.jvm.functions.Function1"))
-                method.insertHook("after = $invocationString;")
-                method.insertAfter("after.invoke((\$w)\$_);")
-            }
-            else -> {
-                method.insertHook("$invocationString;")
-            }
-        }
-        return hookMethod
     }
 }
 
@@ -122,7 +143,11 @@ enum class HookPosition {
 }
 
 @Target(AnnotationTarget.FUNCTION)
-annotation class Hook(val clazz: String, val position: HookPosition = HookPosition.Before, val passThis: Boolean = false)
+annotation class Hook(
+        val clazz: String,
+        val position: HookPosition = HookPosition.Before,
+        val passThis: Boolean = false
+)
 
 private data class Signature(val functionName: String, val parameterTypes: List<String>)
 
