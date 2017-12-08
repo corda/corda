@@ -7,7 +7,10 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -22,9 +25,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.DriverDSLImpl
-import net.corda.testing.internal.ProcessUtilities
-import net.corda.testing.internal.poll
+import net.corda.testing.internal.*
 import net.corda.testing.node.NotarySpec
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -180,7 +181,6 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
         val securityManager = object : ActiveMQSecurityManager {
             // We don't need auth, SSL is good enough
             override fun validateUser(user: String?, password: String?) = true
-
             override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = true
         }
 

@@ -64,10 +64,8 @@ interface DriverDSL {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-
             maximumHeapSize: String = defaultParameters.maximumHeapSize
     ): CordaFuture<NodeHandle>
-
 
     /**
      * Helper function for starting a [Node] with custom parameters from Java.

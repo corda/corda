@@ -2,6 +2,8 @@ package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.DUMMY_BANK_A
@@ -10,12 +12,12 @@ import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.internal.addressMustBeBound
 import net.corda.testing.internal.addressMustNotBeBound
+import net.corda.testing.internal.internalDriver
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-
 
 class DriverTests {
     companion object {
@@ -33,7 +35,6 @@ class DriverTests {
             addressMustNotBeBound(executorService, hostAndPort)
         }
     }
-    private val portAllocation = PortAllocation.Incremental(10000)
 
     @Test
     fun `simple node startup and shutdown`() {
@@ -46,13 +47,12 @@ class DriverTests {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = portAllocation) {
+        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A.name)
             nodeMustBeUp(nodeInfo)
         }
         nodeMustBeDown(nodeHandle)
     }
-
 
     @Test
     fun `debug mode enables debug logging level`() {

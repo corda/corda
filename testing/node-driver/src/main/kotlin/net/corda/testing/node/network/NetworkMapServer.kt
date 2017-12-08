@@ -46,7 +46,7 @@ class NetworkMapServer(cacheTimeout: Duration,
         private fun networkMapKeyAndCert(rootCAKeyAndCert: CertificateAndKeyPair): CertificateAndKeyPair {
             val networkMapKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val networkMapCert = X509Utilities.createCertificate(
-                    CertificateType.IDENTITY,
+                    CertificateType.INTERMEDIATE_CA,
                     rootCAKeyAndCert.certificate,
                     rootCAKeyAndCert.keyPair,
                     X500Name("CN=Corda Network Map,L=London"),

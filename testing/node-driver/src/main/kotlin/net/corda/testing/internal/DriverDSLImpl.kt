@@ -94,8 +94,7 @@ class DriverDSLImpl(
     // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
     // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
     // Investigate whether we can avoid that.
-    // TODO: NodeInfoFilesCopier create observable threads in the init method, we should move that to a start method instead, changing this to lateinit instead to prevent that.
-    private lateinit var nodeInfoFilesCopier: NodeInfoFilesCopier
+    private var nodeInfoFilesCopier: NodeInfoFilesCopier? = null
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
@@ -327,7 +326,12 @@ class DriverDSLImpl(
         }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
-        shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
+        if (compatibilityZone == null) {
+            // Without a compatibility zone URL we have to copy the node info files ourselves to make sure the nodes see each other
+            nodeInfoFilesCopier = NodeInfoFilesCopier().also {
+                shutdownManager.registerShutdown(it::close)
+            }
+        }
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
         networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
@@ -493,10 +497,6 @@ class DriverDSLImpl(
                                   maximumHeapSize: String): CordaFuture<NodeHandle> {
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
-        // Distribute node info file using file copier when network map service URL (compatibilityZoneURL) is null.
-        // TODO: need to implement the same in cordformation?
-        val nodeInfoFilesCopier = if (compatibilityZone == null) nodeInfoFilesCopier else null
-
         nodeInfoFilesCopier?.addConfig(baseDirectory)
         networkParameters!!.install(baseDirectory)
         val onNodeExit: () -> Unit = {
@@ -606,7 +606,7 @@ class DriverDSLImpl(
                     node.internals.run()
                 }
                 node to nodeThread
-}.flatMap { nodeAndThread ->
+            }.flatMap { nodeAndThread ->
                 addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread }
             }
         }
@@ -625,13 +625,19 @@ class DriverDSLImpl(
             // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
-            val systemProperties = overriddenSystemProperties + mapOf(
+            val systemProperties = mutableMapOf(
                     "name" to nodeConf.myLegalName,
                     "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                    Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
                     "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
                     "log4j2.debug" to if(debugPort != null) "true" else "false"
             )
+
+            if (cordappPackages.isNotEmpty()) {
+                systemProperties += Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator)
+            }
+
+            systemProperties += overriddenSystemProperties
+
             // See experimental/quasar-hook/README.md for how to generate.
             val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
                     "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
@@ -805,7 +811,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    notarySpecs = notarySpecs
+                    notarySpecs = notarySpecs,
+                    compatibilityZone = null
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -820,6 +827,48 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         shutdownHook.cancel()
         serializationEnv.unset()
     }
+}
+
+/**
+ * @property url The base CZ URL for registration and network map updates
+ * @property rootCert If specified then the node will register itself using [url] and expect the registration response
+ * to be rooted at this cert.
+ */
+data class CompatibilityZoneParams(val url: URL, val rootCert: X509Certificate? = null)
+
+fun <A> internalDriver(
+        isDebug: Boolean = DriverParameters().isDebug,
+        driverDirectory: Path = DriverParameters().driverDirectory,
+        portAllocation: PortAllocation = DriverParameters().portAllocation,
+        debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
+        systemProperties: Map<String, String> = DriverParameters().systemProperties,
+        useTestClock: Boolean = DriverParameters().useTestClock,
+        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
+        startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
+        waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
+        notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
+        extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
+        compatibilityZone: CompatibilityZoneParams? = null,
+        dsl: DriverDSLImpl.() -> A
+): A {
+    return genericDriver(
+            driverDsl = DriverDSLImpl(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    waitForNodesToFinish = waitForAllNodesToFinish,
+                    notarySpecs = notarySpecs,
+                    extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    compatibilityZone = compatibilityZone
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = initialiseSerialization
+    )
 }
 
 fun getTimestampAsDirectoryName(): String {

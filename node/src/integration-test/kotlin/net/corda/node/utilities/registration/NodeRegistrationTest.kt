@@ -13,9 +13,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.testing.driver.CompatibilityZoneParams
+import net.corda.testing.internal.CompatibilityZoneParams
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.internalDriver
+import net.corda.testing.internal.internalDriver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -126,7 +126,7 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
                                               caCertPath: Array<Certificate>): Pair<CertPath, CordaX500Name> {
         val request = JcaPKCS10CertificationRequest(certificationRequest)
         val name = CordaX500Name.parse(request.subject.toString())
-        val x509CertificateHolder = X509Utilities.createCertificate(CertificateType.CLIENT_CA,
+        val x509CertificateHolder = X509Utilities.createCertificate(CertificateType.NODE_CA,
                 caCertPath.first().toX509CertHolder(),
                 caKeyPair,
                 name,

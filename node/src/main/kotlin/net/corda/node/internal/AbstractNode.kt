@@ -43,7 +43,6 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
@@ -69,7 +68,6 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
-import java.io.NotSerializableException
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -183,7 +181,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         initialiseDatabasePersistence(schemaService,  makeIdentityService(identity.certificate)) { database ->
-            val persistentNetworkMapCache = PersistentNetworkMapCache(database)
+            // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like
+            // a code smell.
+            val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
             val identityKeypair = keyPairs.first { it.public == info.legalIdentities.first().owningKey }
             val serialisedNodeInfo = info.serialize()
@@ -203,7 +203,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val identityService = makeIdentityService(identity.certificate)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
-            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database), identityService)
+            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database)

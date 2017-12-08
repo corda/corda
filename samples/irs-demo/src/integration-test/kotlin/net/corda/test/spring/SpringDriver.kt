@@ -7,9 +7,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.WebserverHandle
-import net.corda.testing.internal.DriverDSLImpl
-import net.corda.testing.internal.ProcessUtilities
-import net.corda.testing.internal.addressMustBeBoundFuture
+import net.corda.testing.internal.*
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -93,7 +91,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
             log.debug("Retrying webserver info at ${handle.webAddress}")
         }
 
-        throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL ${url}")
+        throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL $url")
     }
 
     private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {

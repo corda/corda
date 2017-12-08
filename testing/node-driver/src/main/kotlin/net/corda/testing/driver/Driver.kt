@@ -16,13 +16,13 @@ import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.internal.DriverDSLImpl
+import net.corda.testing.internal.genericDriver
+import net.corda.testing.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.NotarySpec
 import java.net.InetSocketAddress
 import java.net.ServerSocket
-import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.cert.X509Certificate
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -136,7 +136,7 @@ data class NodeParameters(
  *     (...)
  *   }
  *
- * Note that [DriverDSLImpl.startNode] does not wait for the node to start up synchronously, but rather returns a [CordaFuture]
+ * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [CordaFuture]
  * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service or
  * loaded node data from database.
  *
@@ -145,14 +145,14 @@ data class NodeParameters(
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
- *   and may be specified in [DriverDSLImpl.startNode].
+ *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
- * @param notarySpecs The notaries advertised  for this network. These nodes will be started automatically and will be
+ * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
@@ -185,50 +185,6 @@ fun <A> driver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     compatibilityZone = null
-            ),
-            coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = initialiseSerialization
-    )
-}
-
-// TODO Move CompatibilityZoneParams and internalDriver into internal package
-
-/**
- * @property url The base CZ URL for registration and network map updates
- * @property rootCert If specified then the node will register itself using [url] and expect the registration response
- * to be rooted at this cert.
- */
-data class CompatibilityZoneParams(val url: URL, val rootCert: X509Certificate? = null)
-
-fun <A> internalDriver(
-        isDebug: Boolean = DriverParameters().isDebug,
-        driverDirectory: Path = DriverParameters().driverDirectory,
-        portAllocation: PortAllocation = DriverParameters().portAllocation,
-        debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
-        systemProperties: Map<String, String> = DriverParameters().systemProperties,
-        useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
-        startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
-        waitForAllNodesToFinish: Boolean = DriverParameters().waitForNodesToFinish,
-        notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
-        extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
-        compatibilityZone: CompatibilityZoneParams? = null,
-        dsl: DriverDSLImpl.() -> A
-): A {
-    return genericDriver(
-            driverDsl = DriverDSLImpl(
-                    portAllocation = portAllocation,
-                    debugPortAllocation = debugPortAllocation,
-                    systemProperties = systemProperties,
-                    driverDirectory = driverDirectory.toAbsolutePath(),
-                    useTestClock = useTestClock,
-                    isDebug = isDebug,
-                    startNodesInProcess = startNodesInProcess,
-                    waitForNodesToFinish = waitForAllNodesToFinish,
-                    notarySpecs = notarySpecs,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    compatibilityZone = compatibilityZone
             ),
             coerce = { it },
             dsl = dsl,
