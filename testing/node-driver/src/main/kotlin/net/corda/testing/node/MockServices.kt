@@ -52,7 +52,7 @@ open class MockServices private constructor(
         override val validatedTransactions: WritableTransactionStorage,
         override val identityService: IdentityServiceInternal,
         private val initialIdentityName: CordaX500Name,
-        vararg val keys: KeyPair
+        val keys: Array<out KeyPair>
 ) : ServiceHub, StateLoader by validatedTransactions {
     companion object {
         @JvmStatic
@@ -91,7 +91,7 @@ open class MockServices private constructor(
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
-                object : MockServices(cordappLoader, identityService, initialIdentityName, *(keys.toTypedArray())) {
+                object : MockServices(cordappLoader, identityService, initialIdentityName, keys.toTypedArray()) {
                     override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
@@ -107,8 +107,9 @@ open class MockServices private constructor(
         }
     }
 
-    private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), identityService, initialIdentityName, *keys)
-    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentityName, *keys)
+    private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, keys: Array<out KeyPair>) : this(cordappLoader, MockTransactionStorage(), identityService, initialIdentityName, keys)
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentityName, keys)
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentity: TestIdentity, vararg moreKeys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentity.name, arrayOf(initialIdentity.key) + moreKeys)
     constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptyList(), identityService, initialIdentityName, *keys)
     constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(identityService, initialIdentityName, generateKeyPair())
 
