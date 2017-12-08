@@ -9,7 +9,7 @@ enum class SchemaFlags {
 }
 
 /**
- * A Schema is the representation of an object the Carpenter can contsruct
+ * A Schema is the representation of an object the Carpenter can construct
  *
  * Known Sub Classes
  *   - [ClassSchema]
@@ -111,7 +111,7 @@ class EnumSchema(
 }
 
 /**
- * Factory object used by the serialiser when building [Schema]s based
+ * Factory object used by the serializer when building [Schema]s based
  * on an AMQP schema
  */
 object CarpenterSchemaFactory {

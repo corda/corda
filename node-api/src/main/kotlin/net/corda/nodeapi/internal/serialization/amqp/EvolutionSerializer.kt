@@ -10,7 +10,7 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaType
 
 /**
- * Serializer for deserialising objects whose definition has changed since they
+ * Serializer for deserializing objects whose definition has changed since they
  * were serialised
  */
 class EvolutionSerializer(
@@ -38,7 +38,7 @@ class EvolutionSerializer(
 
     companion object {
         /**
-         * Unlike the generic deserialisation case where we need to locate the primary constructor
+         * Unlike the generic deserialization case where we need to locate the primary constructor
          * for the object (or our best guess) in the case of an object whose structure has changed
          * since serialisation we need to attempt to locate a constructor that we can use. I.e.
          * it's parameters match the serialised members and it will initialise any newly added
@@ -47,7 +47,7 @@ class EvolutionSerializer(
          * TODO: Type evolution
          * TODO: rename annotation
          */
-        internal fun getEvolverConstructor(type: Type, oldArgs: Map<String?, Type>): KFunction<Any>? {
+        private fun getEvolverConstructor(type: Type, oldArgs: Map<String?, Type>): KFunction<Any>? {
             val clazz: Class<*> = type.asClass()!!
             if (!isConcrete(clazz)) return null
 
@@ -77,6 +77,8 @@ class EvolutionSerializer(
          *  as it was serialised and the type descriptor of that type
          * @param new is the Serializer built for the Class as it exists now, not
          * how it was serialised and persisted.
+         * @param factory the [SerializerFactory] associated with the serialization
+         * context this serializer is being built for
          */
         fun make(old: CompositeType, new: ObjectSerializer,
                  factory: SerializerFactory): AMQPSerializer<Any> {
