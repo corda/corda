@@ -357,9 +357,6 @@ class RPCServer(
         observableMap.cleanUp()
     }
 
-    // TODO remove this User once webserver doesn't need it
-    private val nodeUser = User(NODE_USER, NODE_USER, setOf())
-
     private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
         val trace = Trace.newInstance(sessionId = sessionId)
         val externalTrace = externalTrace()
@@ -372,15 +369,11 @@ class RPCServer(
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
         // TODO switch userService based on targetLegalIdentity
-        val rpcUser = userService.getUser(validatedUser)
-        return if (rpcUser != null) {
-            Actor(Id(rpcUser.username), userService.id, targetLegalIdentity) to RpcPermissions(rpcUser.permissions)
-        } else if (CordaX500Name.parse(validatedUser) == nodeLegalName) {
-            // TODO remove this after Shell and WebServer will no longer need it
-            Actor(Id(nodeUser.username), userService.id, targetLegalIdentity) to RpcPermissions(nodeUser.permissions)
-        } else {
-            throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
-        }
+        val rpcUser = userService.getUser(validatedUser) ?:
+                throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user")
+        return Pair(
+            Actor(Id(rpcUser.username), userService.id, targetLegalIdentity),
+            RpcPermissions(rpcUser.permissions))
     }
 }
 

@@ -43,6 +43,11 @@ sourceSets {
 // This prevents problems in IntelliJ with regard to duplicate source roots.
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
+    from file("$rootDir/config/dev/jolokia-access.xml")
+}
+
+processTestResources {
+    from file("$rootDir/config/test/jolokia-access.xml")
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -174,6 +179,9 @@ dependencies {
     testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // Jolokia JVM monitoring agent
+    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {

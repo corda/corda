@@ -81,13 +81,13 @@ open class NodeStartup(val args: Array<String>) {
                 conf0
             }
 
-            banJavaSerialisation(conf)
-            preNetworkRegistration(conf)
-            if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
+        banJavaSerialisation(conf)
+        preNetworkRegistration(conf)
+        if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
                 registerWithNetwork(cmdlineOptions, conf)
                 return true
             }
-            logStartupInfo(versionInfo, cmdlineOptions, conf)
+        logStartupInfo(versionInfo, cmdlineOptions, conf)
 
             try {
                 cmdlineOptions.baseDirectory.createDirectories()

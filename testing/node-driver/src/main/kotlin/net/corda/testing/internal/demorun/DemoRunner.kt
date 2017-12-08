@@ -8,6 +8,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
+import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.internal.DriverDSLImpl
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -41,6 +42,7 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             .max()!!
     driver(
             isDebug = true,
+            jmxPolicy =  JmxPolicy(true),
             driverDirectory = nodesDirectory,
             extraCordappPackagesToScan = cordappPackages,
             // Notaries are manually specified in Cordform so we don't want the driver automatically starting any
