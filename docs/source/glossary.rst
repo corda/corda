@@ -53,8 +53,6 @@ Protocol
     The old name for a Corda "Flow"
 Quasar
     A library that provides performant lightweight threads that can be suspended and restored extremely quickly.
-R3
-    The consortium behind Corda
 SIMM
     Standard Initial Margin Model. A way of determining a counterparty's margin payment to another counterparty based on a collection of trades such that, in the event of default, the receiving counterparty has limited exposure.
 Serialization
