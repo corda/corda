@@ -25,7 +25,6 @@ import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
-import org.apache.shiro.subject.Subject
 import javax.security.auth.login.FailedLoginException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -52,22 +51,21 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
     override fun authenticate(principal: String, password: Password): AuthorizingSubject {
         password.use {
             val authToken = UsernamePasswordToken(principal, it.value)
-            val authSubject = Subject.Builder(manager).buildSubject()
             try {
-                authSubject.login(authToken)
-            } catch (authcException : AuthenticationException) {
+                manager.authenticate(authToken)
+            } catch (authcException: AuthenticationException) {
                 throw FailedLoginException(authcException.toString())
             }
-            return ShiroAuthorizingSubject(authSubject)
+            return ShiroAuthorizingSubject(
+                    subjectId = SimplePrincipalCollection(principal, id.value),
+                    manager = manager)
         }
     }
 
     override fun buildSubject(principal: String): AuthorizingSubject =
             ShiroAuthorizingSubject(
-                    Subject.Builder(manager)
-                            .authenticated(true)
-                            .principals(SimplePrincipalCollection(principal, id.value))
-                            .buildSubject())
+                    subjectId = SimplePrincipalCollection(principal, id.value),
+                    manager = manager)
 
 
     companion object {
@@ -181,13 +179,14 @@ private object RPCPermissionResolver : PermissionResolver {
     }
 }
 
-private class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingSubject {
+private class ShiroAuthorizingSubject(
+        private val subjectId: PrincipalCollection,
+        private val manager: DefaultSecurityManager) : AuthorizingSubject {
 
-    override val principal: String
-        get() = impl.principals.primaryPrincipal as String
+    override val principal get() = subjectId.primaryPrincipal.toString()
 
     override fun isPermitted(action: String, vararg arguments: String) =
-            impl.isPermitted(RPCPermission(setOf(action), arguments.firstOrNull()))
+            manager.isPermitted(subjectId, RPCPermission(setOf(action), arguments.firstOrNull()))
 }
 
 private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {

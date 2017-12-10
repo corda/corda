@@ -3,8 +3,7 @@ Access security settings
 
 Access to node functionalities via SSH or RPC is protected by an authentication and authorisation policy.
 
-The field ``security`` in ``node.conf`` expose various sub-fields related to authentication/authorisation allowing
-to specify:
+The field ``security`` in ``node.conf`` exposes various sub-fields related to authentication/authorisation specifying:
 
  * The data source providing credentials and permissions for users (e.g.: a remote RDBMS)
  * An optional password encryption method.
@@ -83,8 +82,8 @@ subfield identify the type of data provider, currently supported one are:
 
            - Table ``users`` containing columns ``username`` and ``password``.
              The ``username`` column *must have unique values*.
-           - Table ``user_roles`` containing columns ``username`` and ``role_name``, mapping a user to a set of *roles*
-           - Table ``roles_permissions`` containing columns ``role_name`` and ``permission``, mapping roles to set of
+           - Table ``user_roles`` containing columns ``username`` and ``role_name`` associating a user to a set of *roles*
+           - Table ``roles_permissions`` containing columns ``role_name`` and ``permission`` associating a role to a set of
              permission strings
 
    Note in particular how in the DB case permissions are assigned to _roles_ rather than individual users.
@@ -129,8 +128,8 @@ the examples above:
              }
         }
 
-This will activate an in-memory cache, with maximum capacity (number of entries) given by the ``capacity`` field and
-maximum life time of an entry in the cache of ``expiryTimeSecs`` seconds.
+This will enable an in-memory cache with maximum capacity (number of entries) and maximum life time of entries given by
+respectively the values set by the ``capacity`` and ``expiryTimeSecs`` fields.
 
 
 
