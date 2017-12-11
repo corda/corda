@@ -86,7 +86,7 @@ subfield identify the type of data provider, currently supported one are:
            - Table ``roles_permissions`` containing columns ``role_name`` and ``permission`` associating a role to a set of
              permission strings
 
-   Note in particular how in the DB case permissions are assigned to _roles_ rather than individual users.
+   Note in particular how in the DB case permissions are assigned to *roles* rather than individual users.
    Also, there is no prescription on the SQL type of the columns (although in our tests we defined ``username`` and
    ``role_name`` of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type) and it is allowed to put additional columns
    besides the one expected by the implementation.

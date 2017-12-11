@@ -157,14 +157,14 @@ private object RPCPermissionResolver : PermissionResolver {
         val action = representation.substringBefore(SEPARATOR).toLowerCase()
         when (action) {
             ACTION_INVOKE_RPC -> {
-                val rpcCall = representation.substringAfter(SEPARATOR)
+                val rpcCall = representation.substringAfter(SEPARATOR, "")
                 require(representation.count { it == SEPARATOR } == 1) {
                     "Malformed permission string"
                 }
                 return RPCPermission(setOf(rpcCall))
             }
             ACTION_START_FLOW -> {
-                val targetFlow = representation.substringAfter(SEPARATOR)
+                val targetFlow = representation.substringAfter(SEPARATOR, "")
                 require(targetFlow.isNotEmpty()) {
                     "Missing target flow after StartFlow"
                 }
