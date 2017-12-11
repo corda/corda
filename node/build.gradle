@@ -162,6 +162,9 @@ dependencies {
     // FastClasspathScanner: classpath scanning
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
+    // Apache Shiro: authentication, authorization and session management.
+    compile "org.apache.shiro:shiro-core:${shiro_version}"
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"

@@ -21,8 +21,8 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     // id to generate it properly (it will always return [[[Ljava.lang.type -> type[][][]
     // for example).
     //
-    // We *need* to retain knowledge for AMQP deserialisation weather that lowest primitive
-    // was boxed or unboxed so just infer it recursively
+    // We *need* to retain knowledge for AMQP deserialization weather that lowest primitive
+    // was boxed or unboxed so just infer it recursively.
     private fun calcTypeName(type: Type): String =
             if (type.componentType().isArray()) {
                 val typeName = calcTypeName(type.componentType()); "$typeName[]"

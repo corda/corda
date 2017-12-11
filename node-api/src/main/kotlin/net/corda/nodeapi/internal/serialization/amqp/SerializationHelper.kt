@@ -82,11 +82,13 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     for (param in kotlinConstructor.parameters) {
         val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
         val matchingProperty = properties[name] ?:
-                throw NotSerializableException("No property matching constructor parameter named '$name' of '$clazz'." +
-                        " If using Java, check that you have the -parameters option specified in the Java compiler.")
+                throw NotSerializableException("No property matching constructor parameter named '$name' of '$clazz'. " +
+                        "If using Java, check that you have the -parameters option specified in the Java compiler. " +
+                        "Alternately, provide a proxy serializer (SerializationCustomSerializer) if recompiling isn't an option")
         // Check that the method has a getter in java.
-        val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz." +
-                " If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
+        val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz. " +
+                "If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler." +
+                "Alternately, provide a proxy serializer (SerializationCustomSerializer) if recompiling isn't an option")
         val returnType = resolveTypeVariables(getter.genericReturnType, type)
         if (constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param)) {
             rc += PropertySerializer.make(name, getter, returnType, factory)

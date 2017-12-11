@@ -12,9 +12,13 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.node.internal.Node
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.Password
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
@@ -25,13 +29,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.*
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -97,7 +101,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val p2pPort: Int,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
-                             val userService: RPCUserService) : SingletonSerializeAsToken() {
+                             val securityManager: RPCSecurityManager) : SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
@@ -234,7 +238,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
-    private fun ConfigurationImpl.configureAddressSecurity() : Pair<Configuration, LoginListener> {
+    private fun ConfigurationImpl.configureAddressSecurity(): Pair<Configuration, LoginListener> {
         val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
@@ -285,7 +289,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
                         LoginListener::javaClass.name to loginListener,
-                        RPCUserService::class.java.name to userService,
+                        RPCSecurityManager::class.java.name to securityManager,
                         NodeLoginModule.CERT_CHAIN_CHECKS_OPTION_NAME to certChecks)
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }
@@ -560,7 +564,7 @@ class NodeLoginModule : LoginModule {
     private var loginSucceeded: Boolean = false
     private lateinit var subject: Subject
     private lateinit var callbackHandler: CallbackHandler
-    private lateinit var userService: RPCUserService
+    private lateinit var securityManager: RPCSecurityManager
     private lateinit var loginListener: LoginListener
     private lateinit var peerCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var nodeCertCheck: CertificateChainCheckPolicy.Check
@@ -570,7 +574,7 @@ class NodeLoginModule : LoginModule {
     override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
         this.subject = subject
         this.callbackHandler = callbackHandler
-        userService = options[RPCUserService::class.java.name] as RPCUserService
+        securityManager = options[RPCSecurityManager::class.java.name] as RPCSecurityManager
         loginListener = options[LoginListener::javaClass.name] as LoginListener
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
@@ -601,7 +605,7 @@ class NodeLoginModule : LoginModule {
                 PEER_ROLE -> authenticatePeer(certificates)
                 NODE_ROLE -> authenticateNode(certificates)
                 VERIFIER_ROLE -> authenticateVerifier(certificates)
-                RPC_ROLE -> authenticateRpcUser(password, username)
+                RPC_ROLE -> authenticateRpcUser(username, Password(password))
                 else -> throw FailedLoginException("Peer does not belong on our network")
             }
             principals += UserPrincipal(validatedUser)
@@ -632,13 +636,8 @@ class NodeLoginModule : LoginModule {
         return certificates.first().subjectDN.name
     }
 
-    private fun authenticateRpcUser(password: String, username: String): String {
-        val rpcUser = userService.getUser(username) ?: throw FailedLoginException("User does not exist")
-        if (password != rpcUser.password) {
-            // TODO Switch to hashed passwords
-            // TODO Retrieve client IP address to include in exception message
-            throw FailedLoginException("Password for user $username does not match")
-        }
+    private fun authenticateRpcUser(username: String, password: Password): String {
+        securityManager.authenticate(username, password)
         loginListener(username)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses

@@ -7,10 +7,12 @@ import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
@@ -19,11 +21,13 @@ import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.NodeTestUtils.ledger;
 import static net.corda.testing.NodeTestUtils.transaction;
 import static net.corda.testing.TestConstants.*;
+import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 
 public class CommercialPaperTest {
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{123});
+    private final MockServices ledgerServices = new MockServices(makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), getMINI_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY())), getMEGA_CORP().getName());
 
     // DOCSTART 1
     private ICommercialPaperState getPaper() {
@@ -40,7 +44,7 @@ public class CommercialPaperTest {
     @Test
     public void simpleCP() {
         ICommercialPaperState inState = getPaper();
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.transaction(tx -> {
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.input(JCP_PROGRAM_ID, inState);
@@ -55,7 +59,7 @@ public class CommercialPaperTest {
     @Test
     public void simpleCPMove() {
         ICommercialPaperState inState = getPaper();
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.transaction(tx -> {
                 tx.input(JCP_PROGRAM_ID, inState);
                 tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
@@ -71,7 +75,7 @@ public class CommercialPaperTest {
     @Test
     public void simpleCPMoveFails() {
         ICommercialPaperState inState = getPaper();
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.transaction(tx -> {
                 tx.input(JCP_PROGRAM_ID, inState);
                 tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
@@ -87,7 +91,7 @@ public class CommercialPaperTest {
     @Test
     public void simpleCPMoveSuccess() {
         ICommercialPaperState inState = getPaper();
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.transaction(tx -> {
                 tx.input(JCP_PROGRAM_ID, inState);
                 tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
@@ -104,7 +108,7 @@ public class CommercialPaperTest {
     // DOCSTART 6
     @Test
     public void simpleIssuanceWithTweak() {
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.transaction(tx -> {
                 tx.output(JCP_PROGRAM_ID, "paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
                 tx.attachments(JCP_PROGRAM_ID);
@@ -125,7 +129,7 @@ public class CommercialPaperTest {
     // DOCSTART 7
     @Test
     public void simpleIssuanceWithTweakTopLevelTx() {
-        transaction(tx -> {
+        transaction(ledgerServices, getDUMMY_NOTARY(), tx -> {
             tx.output(JCP_PROGRAM_ID, "paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
             tx.attachments(JCP_PROGRAM_ID);
             tx.tweak(tw -> {
@@ -144,7 +148,7 @@ public class CommercialPaperTest {
     @Test
     public void chainCommercialPaper() {
         PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.unverifiedTransaction(tx -> {
                 tx.output(Cash.PROGRAM_ID, "alice's $900",
                         new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE()));
@@ -180,7 +184,7 @@ public class CommercialPaperTest {
     @Test
     public void chainCommercialPaperDoubleSpend() {
         PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.unverifiedTransaction(tx -> {
                 tx.output(Cash.PROGRAM_ID, "alice's $900",
                         new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE()));
@@ -226,7 +230,7 @@ public class CommercialPaperTest {
     @Test
     public void chainCommercialPaperTweak() {
         PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
-        ledger(l -> {
+        ledger(ledgerServices, getDUMMY_NOTARY(), l -> {
             l.unverifiedTransaction(tx -> {
                 tx.output(Cash.PROGRAM_ID, "alice's $900",
                         new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE()));
