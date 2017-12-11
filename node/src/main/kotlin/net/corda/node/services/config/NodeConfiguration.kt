@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
+import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -21,6 +22,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val exportJMXto: String
     val dataSourceProperties: Properties
     val rpcUsers: List<User>
+    val security: SecurityConfiguration?
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
     val compatibilityZoneURL: URL?
@@ -93,6 +95,7 @@ data class NodeConfigurationImpl(
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
+        override val security : SecurityConfiguration? = null,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
@@ -113,14 +116,18 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode)
         ) : NodeConfiguration {
+
     override val exportJMXto: String get() = "http"
 
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
+        require(security == null || rpcUsers.isEmpty()) {
+            "Cannot specify both 'rpcUsers' and 'security' in configuration"
+        }
     }
 }
 
@@ -149,3 +156,77 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
 }
 
 data class SSHDConfiguration(val port: Int)
+
+// Supported types of authentication/authorization data providers
+enum class AuthDataSourceType {
+    // External RDBMS
+    DB,
+
+    // Static dataset hard-coded in config
+    INMEMORY
+}
+
+// Password encryption scheme
+enum class PasswordEncryption {
+
+    // Password stored in clear
+    NONE,
+
+    // Password salt-hashed using Apache Shiro flexible encryption format
+    // [org.apache.shiro.crypto.hash.format.Shiro1CryptFormat]
+    SHIRO_1_CRYPT
+}
+
+// Subset of Node configuration related to security aspects
+data class SecurityConfiguration(val authService: SecurityConfiguration.AuthService) {
+
+    // Configure RPC/Shell users authentication/authorization service
+    data class AuthService(val dataSource: AuthService.DataSource,
+                           val id: AuthServiceId = defaultAuthServiceId(dataSource.type),
+                           val options: AuthService.Options? = null) {
+
+        init {
+            require(!(dataSource.type == AuthDataSourceType.INMEMORY &&
+                    options?.cache != null)) {
+                "No cache supported for INMEMORY data provider"
+            }
+        }
+
+        // Optional components: cache
+        data class Options(val cache: Options.Cache?) {
+
+            // Cache parameters
+            data class Cache(val expiryTimeInSecs: Long, val capacity: Long)
+
+        }
+
+        // Provider of users credentials and permissions data
+        data class DataSource(val type: AuthDataSourceType,
+                              val passwordEncryption: PasswordEncryption = PasswordEncryption.NONE,
+                              val connection: Properties? = null,
+                              val users: List<User>? = null) {
+            init {
+                when (type) {
+                    AuthDataSourceType.INMEMORY -> require(users != null && connection == null)
+                    AuthDataSourceType.DB -> require(users == null && connection != null)
+                }
+            }
+        }
+
+        companion object {
+            // If unspecified, we assign an AuthServiceId by default based on the
+            // underlying data provider
+            fun defaultAuthServiceId(type: AuthDataSourceType) = when (type) {
+                AuthDataSourceType.INMEMORY -> AuthServiceId("NODE_CONFIG")
+                AuthDataSourceType.DB -> AuthServiceId("REMOTE_DATABASE")
+            }
+
+            fun fromUsers(users: List<User>) = AuthService(
+                    dataSource = DataSource(
+                            type = AuthDataSourceType.INMEMORY,
+                            users = users,
+                            passwordEncryption = PasswordEncryption.NONE),
+                    id = AuthServiceId("NODE_CONFIG"))
+        }
+    }
+}

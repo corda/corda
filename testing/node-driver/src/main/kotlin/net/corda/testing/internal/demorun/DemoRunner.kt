@@ -5,7 +5,7 @@ package net.corda.testing.internal.demorun
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
+import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.internalDriver
 
@@ -39,6 +39,7 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             .max()!!
     internalDriver(
             isDebug = true,
+            jmxPolicy =  JmxPolicy(true),
             driverDirectory = nodesDirectory,
             extraCordappPackagesToScan = cordappPackages,
             // Notaries are manually specified in Cordform so we don't want the driver automatically starting any

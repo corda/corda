@@ -83,6 +83,7 @@ class DriverDSLImpl(
         val startNodesInProcess: Boolean,
         val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
+        val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?
 ) : InternalDriverDSL {
@@ -109,11 +110,25 @@ class DriverDSLImpl(
 
     //TODO: remove this once we can bundle quasar properly.
     private val quasarJarPath: String by lazy {
-        val cl = ClassLoader.getSystemClassLoader()
-        val urls = (cl as URLClassLoader).urLs
-        val quasarPattern = ".*quasar.*\\.jar$".toRegex()
-        val quasarFileUrl = urls.first { quasarPattern.matches(it.path) }
-        Paths.get(quasarFileUrl.toURI()).toString()
+        resolveJar(".*quasar.*\\.jar$")
+    }
+
+    private val jolokiaJarPath: String by lazy {
+        resolveJar(".*jolokia-jvm-.*-agent\\.jar$")
+    }
+
+    private fun resolveJar(jarNamePattern: String): String {
+        return try {
+            val cl = ClassLoader.getSystemClassLoader()
+            val urls = (cl as URLClassLoader).urLs
+            val jarPattern = jarNamePattern.toRegex()
+            val jarFileUrl = urls.first { jarPattern.matches(it.path) }
+            Paths.get(jarFileUrl.toURI()).toString()
+        }
+        catch(e: Exception) {
+            log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
+            throw e
+        }
     }
 
     override fun shutdown() {
@@ -522,8 +537,7 @@ class DriverDSLImpl(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
-                    systemProperties, cordappPackages, maximumHeapSize, initialRegistration = false)
+            val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else nullval process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize, initialRegistration = false)
             if (waitForNodesToFinish) {
                 state.locked {
                     processes += process
@@ -616,12 +630,14 @@ class DriverDSLImpl(
                 config: Config,
                 quasarJarPath: String,
                 debugPort: Int?,
+                jolokiaJarPath: String,
+                monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 cordappPackages: List<String>,
                 maximumHeapSize: String,
                 initialRegistration: Boolean
         ): Process {
-            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
+            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled") + ", jolokia monitoring port is " + (monitorPort ?: "not enabled"))
             // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
@@ -648,6 +664,7 @@ class DriverDSLImpl(
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
+            val jolokiaAgent = monitorPort?.let { "-javaagent:$jolokiaJarPath=port=$monitorPort,host=localhost" }
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
             val arguments = mutableListOf(
@@ -663,7 +680,7 @@ class DriverDSLImpl(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments,
+                    extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
                     errorLogPath = nodeConf.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
                     workingDirectory = nodeConf.baseDirectory,
                     maximumHeapSize = maximumHeapSize
@@ -796,6 +813,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
@@ -811,6 +829,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    jmxPolicy = jmxPolicy,
                     notarySpecs = notarySpecs,
                     compatibilityZone = null
             )

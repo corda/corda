@@ -2037,7 +2037,7 @@ class VaultQueryTests {
      *  USE CASE demonstrations (outside of mainline Corda)
      *
      *  1) Template / Tutorial CorDapp service using Vault API Custom Query to access attributes of IOU State
-     *  2) Template / Tutorial Flow using a JDBC session to execute a custom query
+     *  2) Template / Tutorial Flow using a DB session to execute a custom query
      *  3) Template / Tutorial CorDapp service query extension executing Named Queries via JPA
      *  4) Advanced pagination queries using Spring Data (and/or Hibernate/JPQL)
      */

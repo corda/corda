@@ -9,6 +9,7 @@ The following are the core APIs that are used in the development of CorDapps:
    api-states
    api-persistence
    api-contracts
+   api-contract-constraints
    api-vault-query
    api-transactions
    api-flows

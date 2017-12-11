@@ -16,7 +16,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -89,6 +89,7 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
 private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
@@ -102,28 +103,31 @@ fun <A> rpcDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: RPCDriverDSL.() -> A
 ) : A {
     return genericDriver(
-        driverDsl = RPCDriverDSL(
-                DriverDSLImpl(
-                        portAllocation = portAllocation,
-                        debugPortAllocation = debugPortAllocation,
-                        systemProperties = systemProperties,
-                        driverDirectory = driverDirectory.toAbsolutePath(),
-                        useTestClock = useTestClock,
-                        isDebug = isDebug,
-                        startNodesInProcess = startNodesInProcess,
-                        waitForNodesToFinish = waitForNodesToFinish,
-                        extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs,
-                        compatibilityZone = null
-                ), externalTrace
-        ),
-        coerce = { it },
-        dsl = dsl,
-        initialiseSerialization = false
-)}
+            driverDsl = RPCDriverDSL(
+                    DriverDSLImpl(
+                            portAllocation = portAllocation,
+                            debugPortAllocation = debugPortAllocation,
+                            systemProperties = systemProperties,
+                            driverDirectory = driverDirectory.toAbsolutePath(),
+                            useTestClock = useTestClock,
+                            isDebug = isDebug,
+                            startNodesInProcess = startNodesInProcess,
+                            waitForNodesToFinish = waitForNodesToFinish,
+                            extraCordappPackagesToScan = extraCordappPackagesToScan,
+                            notarySpecs = notarySpecs,
+                            jmxPolicy = jmxPolicy,
+                            compatibilityZone = null
+                    ), externalTrace
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = false
+    )
+}
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
@@ -428,17 +432,13 @@ data class RPCDriverDSL(
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             isUseGlobalPools = false
         }
-        val userService = object : RPCUserService {
-            override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
-            override val users: List<User> get() = listOf(rpcUser)
-            override val id: AuthServiceId = AuthServiceId("RPC_DRIVER")
-        }
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,
                 rpcUser.password,
                 locator,
-                userService,
+                rpcSecurityManager,
                 nodeLegalName,
                 configuration
         )

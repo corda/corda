@@ -75,6 +75,7 @@ class Node(private val project: Project) : CordformNode() {
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
+        installAgentJar()
         installBuiltCordapp()
         installCordapps()
         installConfig()
@@ -154,6 +155,29 @@ class Node(private val project: Project) : CordformNode() {
             it.apply {
                 from(cordapps)
                 into(cordappsDir)
+            }
+        }
+    }
+
+    /**
+     * Installs the jolokia monitoring agent JAR to the node/drivers directory
+     */
+    private fun installAgentJar() {
+        val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
+        val agentJar = project.configuration("runtime").files {
+            (it.group == "org.jolokia") &&
+            (it.name == "jolokia-jvm") &&
+            (it.version == jolokiaVersion)
+            // TODO: revisit when classifier attribute is added. eg && (it.classifier = "agent")
+        }.first()  // should always be the jolokia agent fat jar: eg. jolokia-jvm-1.3.7-agent.jar
+        project.logger.info("Jolokia agent jar: $agentJar")
+        if (agentJar.isFile) {
+            val driversDir = File(nodeDir, "drivers")
+            project.copy {
+                it.apply {
+                    from(agentJar)
+                    into(driversDir)
+                }
             }
         }
     }

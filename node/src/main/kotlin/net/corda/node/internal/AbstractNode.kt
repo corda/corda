@@ -35,7 +35,7 @@ import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.*
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -141,7 +141,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    lateinit var userService: RPCUserService get
+    lateinit var securityManager: RPCSecurityManager get
 
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
@@ -272,7 +272,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun getRxIoScheduler(): Scheduler
 
     open fun startShell(rpcOps: CordaRPCOps) {
-        InteractiveShell.startShell(configuration, rpcOps, userService, _services.identityService, _services.database)
+        InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
     }
 
     private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,

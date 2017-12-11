@@ -2,17 +2,14 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import org.junit.Test
-import java.time.DayOfWeek
-
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-
-import java.io.File
-import java.io.NotSerializableException
-
 import net.corda.core.serialization.SerializedBytes
 import org.assertj.core.api.Assertions
+import org.junit.Test
+import java.io.File
+import java.io.NotSerializableException
+import java.time.DayOfWeek
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class EnumTests {
     enum class Bras {
@@ -42,8 +39,8 @@ class EnumTests {
     //}
 
     // the new state, note in the test we serialised with value UNDERWIRE so the spacer
-    // occuring after this won't have changed the ordinality of our serialised value
-    // and thus should still be deserialisable
+    // occurring after this won't have changed the ordinality of our serialised value
+    // and thus should still be deserializable
     enum class OldBras2 {
         TSHIRT, UNDERWIRE, PUSHUP, SPACER, BRALETTE, SPACER2
     }

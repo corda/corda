@@ -1,9 +1,10 @@
 package net.corda.node.services.messaging
 
+import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
-import net.corda.node.services.RPCUserServiceImpl
+import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
@@ -50,7 +51,7 @@ class ArtemisMessagingTests {
 
     private lateinit var config: NodeConfiguration
     private lateinit var database: CordaPersistence
-    private lateinit var userService: RPCUserService
+    private lateinit var securityManager: RPCSecurityManager
     private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
 
@@ -58,7 +59,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        userService = RPCUserServiceImpl(emptyList())
+        securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = temporaryFolder.root.toPath(),
                 myLegalName = ALICE.name)
@@ -169,7 +170,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }
