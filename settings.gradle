@@ -35,6 +35,7 @@ include 'tools:explorer:capsule'
 include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
+include 'tools:jmeter'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
 include 'samples:attachment-demo'
@@ -57,4 +58,5 @@ project(':hsm-tool').with {
     name = 'sgx-hsm-tool'
     projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
 }
+include 'perftestcordapp'
 

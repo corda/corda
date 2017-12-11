@@ -104,7 +104,7 @@ class CashTests {
     @Before
     fun setUp() = withTestSerialization {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset","com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, MEGA_CORP_KEY)
+        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset","com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
@@ -844,7 +844,7 @@ class CashTests {
     // Double spend.
     @Test
     fun chainCashDoubleSpendFailsWith() = withTestSerialization {
-        val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), MEGA_CORP.name, MEGA_CORP_KEY)
+        val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
 
         ledger(mockService) {
             unverifiedTransaction {
