@@ -10,6 +10,7 @@ Corda nodes
    corda-configuration-file
    clientrpc
    shell
+   node-auth-config
    node-database
    node-administration
    out-of-process-verification
