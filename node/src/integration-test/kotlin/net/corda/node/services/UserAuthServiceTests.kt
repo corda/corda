@@ -210,7 +210,7 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
     }
 
     @After
-    fun tearDown() {
+    override fun tearDown() {
         db.close()
     }
 }

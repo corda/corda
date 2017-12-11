@@ -115,7 +115,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<CashIssueFlow>())))).get()
             a as NodeHandle.InProcess
-            val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.node.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->
                 startPublishingFixedRateInjector(metricRegistry, 1, 5.minutes, 2000L / TimeUnit.SECONDS) {
                     connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), ALICE).returnValue.get()
@@ -159,7 +159,7 @@ class NodePerformanceTests : IntegrationTest() {
                 portAllocation = PortAllocation.Incremental(20000)
         ) {
             val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
-            val metricRegistry = startReporter(shutdownManager, notary.node.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.node.services.monitoringService.metrics)
             notary.rpcClientToNode().use("A", "A") { connection ->
                 connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.getOrThrow()
                 connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, defaultNotaryIdentity).returnValue.getOrThrow()
