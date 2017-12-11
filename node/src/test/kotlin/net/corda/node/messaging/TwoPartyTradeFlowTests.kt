@@ -94,7 +94,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // allow interruption half way through.
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+        MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -146,7 +146,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+        MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -204,7 +204,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `shutdown and restore`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+        MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             var bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -325,9 +325,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bob = bobNode.info.singleIdentity()
         val bank = bankNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
-
-        ledger(aliceNode.services) {
-
+        aliceNode.services.ledger(DUMMY_NOTARY) {
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
             JarOutputStream(stream).use {
@@ -431,8 +429,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bank: Party = bankNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
-
-        ledger(aliceNode.services) {
+        aliceNode.services.ledger(DUMMY_NOTARY) {
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
             JarOutputStream(stream).use {
@@ -501,7 +498,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `dependency with error on buyer side`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+        MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             runWithError(ledgerIdentityService, true, false, "at least one cash input")
         }
     }
@@ -510,7 +507,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `dependency with error on seller side`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+        MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             runWithError(ledgerIdentityService, false, true, "Issuances have a time-window")
         }
     }

@@ -4,6 +4,8 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import java.io.InputStream
@@ -14,7 +16,7 @@ import java.io.InputStream
  */
 interface OutputStateLookup {
     /**
-     * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
+     * Retrieves an output previously defined by [TransactionDSLInterpreter.output] with a label passed in.
      * @param clazz The class object holding the type of the output state expected.
      * @param label The label of the to-be-retrieved output state.
      * @return The output [StateAndRef].
@@ -90,7 +92,7 @@ interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, Ou
      * @return The final [WireTransaction] of the built transaction.
      */
     fun _transaction(transactionLabel: String?, transactionBuilder: TransactionBuilder,
-                     dsl: TransactionDSL<T>.() -> EnforceVerifyOrFail): WireTransaction
+                     dsl: T.() -> EnforceVerifyOrFail): WireTransaction
 
     /**
      * Creates and adds a transaction to the ledger that will not be verified by [verifies].
@@ -100,13 +102,13 @@ interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, Ou
      * @return The final [WireTransaction] of the built transaction.
      */
     fun _unverifiedTransaction(transactionLabel: String?, transactionBuilder: TransactionBuilder,
-                               dsl: TransactionDSL<T>.() -> Unit): WireTransaction
+                               dsl: T.() -> Unit): WireTransaction
 
     /**
      * Creates a local scoped copy of the ledger.
      * @param dsl The ledger DSL to be interpreted using the copy.
      */
-    fun tweak(dsl: LedgerDSL<T, LedgerDSLInterpreter<T>>.() -> Unit)
+    fun _tweak(dsl: LedgerDSLInterpreter<T>.() -> Unit)
 
     /**
      * Adds an attachment to the ledger.
@@ -123,24 +125,27 @@ interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, Ou
  * functionality then first add your primitive to [LedgerDSLInterpreter] and then add the convenience defaults/extension
  * methods here.
  */
-class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<T>>(val interpreter: L) :
+class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<T>>(val interpreter: L, private val notary: Party) :
         LedgerDSLInterpreter<TransactionDSLInterpreter> by interpreter {
 
     /**
      * Creates and adds a transaction to the ledger.
      */
     @JvmOverloads
-    fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
+    fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = notary),
                     dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) =
-            _transaction(label, transactionBuilder, dsl)
+            _transaction(label, transactionBuilder) { TransactionDSL(this, notary).dsl() }
 
     /**
      * Creates and adds a transaction to the ledger that will not be verified by [verifies].
      */
     @JvmOverloads
-    fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
+    fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = notary),
                               dsl: TransactionDSL<TransactionDSLInterpreter>.() -> Unit) =
-            _unverifiedTransaction(label, transactionBuilder, dsl)
+            _unverifiedTransaction(label, transactionBuilder) { TransactionDSL(this, notary).dsl() }
+
+    /** Creates a local scoped copy of the ledger. */
+    fun tweak(dsl: LedgerDSL<T, L>.() -> Unit) = _tweak { LedgerDSL<T, L>(uncheckedCast(this), notary).dsl() }
 
     /**
      * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
