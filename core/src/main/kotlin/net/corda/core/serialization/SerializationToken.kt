@@ -6,7 +6,7 @@ import net.corda.core.serialization.SingletonSerializationToken.Companion.single
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
  * mark themselves as needing converting to some form of token representation in the serialised form
- * and converting back again when deserialising.
+ * and converting back again when deserializing.
  *
  * Typically these classes would be used for node services and subsystems that might become reachable from
  * Fibers and thus sucked into serialization when they are checkpointed.
