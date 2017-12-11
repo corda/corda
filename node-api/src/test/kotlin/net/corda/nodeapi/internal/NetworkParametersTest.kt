@@ -29,17 +29,6 @@ class NetworkParametersTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `only one network parameters file allowed in base directory`() {
-        val alice = mockNet.createUnstartedNode(MockNodeParameters(legalName = ALICE.name, forcedID = 100))
-        val aliceDirectory = mockNet.baseDirectory(100)
-        val firstParams = testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)), epoch = 10)
-        val secondParams = testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_BANK_A, true)), epoch = 10)
-        dropParametersToDir(aliceDirectory, "network-parameters", firstParams)
-        dropParametersToDir(aliceDirectory, "network-parameters-1", secondParams)
-        assertFails { alice.start() }
-    }
-
     // Minimum Platform Version tests
     @Test
     fun `node shutdowns when on lower platform version than network`() {
@@ -48,7 +37,7 @@ class NetworkParametersTest {
         val netParams = testNetworkParameters(
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),
                 minimumPlatformVersion = 2)
-        dropParametersToDir(aliceDirectory, "network-parameters", netParams)
+        dropParametersToDir(aliceDirectory, netParams)
         assertFails { alice.start() }
     }
 
@@ -59,7 +48,7 @@ class NetworkParametersTest {
         val netParams = testNetworkParameters(
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),
                 minimumPlatformVersion = 1)
-        dropParametersToDir(aliceDirectory, "network-parameters", netParams)
+        dropParametersToDir(aliceDirectory, netParams)
         alice.start()
     }
 
@@ -79,7 +68,7 @@ class NetworkParametersTest {
     }
 
     // Helpers
-    private fun dropParametersToDir(dir: Path, filename: String, params: NetworkParameters) {
-        NetworkParametersCopier(params).install(dir, filename)
+    private fun dropParametersToDir(dir: Path, params: NetworkParameters) {
+        NetworkParametersCopier(params).install(dir)
     }
 }

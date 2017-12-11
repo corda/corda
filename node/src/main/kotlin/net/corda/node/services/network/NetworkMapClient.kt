@@ -68,7 +68,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
         }
     }
 
-    fun getNetworkParameter(networkParameterHash: SecureHash): NetworkParameters? {
+    fun getNetworkParameter(networkParameterHash: SecureHash): SignedData<NetworkParameters>? {
         val conn = URL("$networkMapUrl/network-parameter/$networkParameterHash").openHttpConnection()
         return if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
             null

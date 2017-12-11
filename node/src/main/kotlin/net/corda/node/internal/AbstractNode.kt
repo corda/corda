@@ -57,7 +57,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.nodeapi.internal.NETWORK_PARAM_FILE_PREFIX
+import net.corda.nodeapi.internal.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -138,7 +138,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected var networkMapClient: NetworkMapClient? = null
+    protected lateinit var networkMapClient: NetworkMapClient
 
     lateinit var securityManager: RPCSecurityManager get
 
@@ -200,8 +200,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
-        networkMapClient = configuration.compatibilityZoneURL?.let {
-            NetworkMapClient(it, identityService.trustRoot)
+        if (configuration.compatibilityZoneURL != null) {
+            networkMapClient = NetworkMapClient(configuration.compatibilityZoneURL!!, identityService.trustRoot)
         }
         readNetworkParameters()
         // Do all of this in a database transaction so anything that might need a connection has one.
@@ -243,7 +243,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
-                networkMapClient,
+                configuration.compatibilityZoneURL?.let { networkMapClient },
                 networkParameters.serialize().hash)
         runOnStop += networkMapUpdater::close
 
@@ -639,24 +639,27 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun readNetworkParameters() {
-        val files = Files.list(configuration.baseDirectory).filter { NETWORK_PARAM_FILE_PREFIX in it.toString() }.toList()
-        require(files.size <= 1) { "More than one network parameters file in the directory, please update only to the current one." }
-        val params = try {
+        val files = Files.list(configuration.baseDirectory).filter { NETWORK_PARAMS_FILE_NAME == it.fileName.toString() }.toList()
+        val paramsFromFile = try {
             // It's fine at this point if we don't have network parameters or have corrupted file, later we check if parameters can be downloaded from network map server.
             files[0].readAll().deserialize<SignedData<NetworkParameters>>().verified()
         } catch(t: Throwable) {
+            log.warn("Couldn't find correct network parameters file in the base directory")
             null
         }
-        networkParameters = if (params != null) {
-            params
-        } else if (networkMapClient != null) {
+        networkParameters = if (paramsFromFile != null) {
+            paramsFromFile
+        } else if (configuration.compatibilityZoneURL != null) {
             log.info("Requesting network parameters from network map server...")
-            val (networkMap, _) = networkMapClient!!.getNetworkMap()
-            networkMapClient!!.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
+            val (networkMap, _) = networkMapClient.getNetworkMap()
+            val paramsFromMap = networkMapClient.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
+            val verifiedParams = paramsFromMap.verified() // Verify before saving.
+            paramsFromMap.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+            verifiedParams
         } else {
             throw IllegalArgumentException("Couldn't load network parameters file")
         }
-        log.info("Loaded network parameters $params")
+        log.info("Loaded network parameters $networkParameters")
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
     }
 

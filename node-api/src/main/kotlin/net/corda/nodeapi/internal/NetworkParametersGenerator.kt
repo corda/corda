@@ -45,7 +45,7 @@ class NetworkParametersGenerator {
                     maxTransactionSize = 40000,
                     epoch = 1
             ))
-            nodesDirs.forEach { copier.install(it) }
+            nodesDirs.forEach(copier::install)
         } finally {
             _contextSerializationEnv.set(null)
         }

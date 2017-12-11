@@ -12,7 +12,7 @@ import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import java.time.Instant
 
-const val NETWORK_PARAM_FILE_PREFIX = "network-parameters"
+const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
 // TODO: Need more discussion on rather we should move this class out of internal.
 /**
  * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
@@ -31,7 +31,7 @@ data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameter
  */
 // TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
 //  It needs separate design.
-// TODO Currently both maxTransactionSize and modifiedTime are not wired.
+// TODO Currently maxTransactionSize is not wired.
 @CordaSerializable
 data class NetworkParameters(
         val minimumPlatformVersion: Int,

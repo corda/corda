@@ -69,7 +69,7 @@ class NetworkMapClientTest {
     @Test
     fun `download NetworkParameter correctly`() {
         // The test server returns same network parameter for any hash.
-        val networkParameter = networkMapClient.getNetworkParameter(SecureHash.randomSHA256())
+        val networkParameter = networkMapClient.getNetworkParameter(SecureHash.randomSHA256())?.verified()
         assertNotNull(networkParameter)
         assertEquals(NetworkMapServer.stubNetworkParameter, networkParameter)
     }

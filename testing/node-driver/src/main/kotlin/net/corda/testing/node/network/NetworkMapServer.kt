@@ -7,7 +7,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.hours
 import net.corda.nodeapi.internal.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.NetworkMap
 import net.corda.nodeapi.internal.NetworkParameters
@@ -40,6 +39,7 @@ class NetworkMapServer(cacheTimeout: Duration,
                        vararg additionalServices: Any) : Closeable {
     companion object {
         val stubNetworkParameter = NetworkParameters(1, emptyList(), 40000, 40000, Instant.now(), 10)
+        private val serializedParameters = stubNetworkParameter.serialize()
 
         private fun networkMapKeyAndCert(rootCAKeyAndCert: CertificateAndKeyPair): CertificateAndKeyPair {
             val networkMapKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -96,7 +96,11 @@ class NetworkMapServer(cacheTimeout: Duration,
     @Path("network-map")
     class InMemoryNetworkMapService(private val cacheTimeout: Duration, private val networkMapKeyAndCert: CertificateAndKeyPair) {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedData<NodeInfo>>()
-        private val parametersHash = stubNetworkParameter.serialize().hash
+        private val parametersHash = serializedParameters.hash
+        private val signedParameters = SignedData(
+                serializedParameters,
+                DigitalSignature.WithKey(networkMapKeyAndCert.keyPair.public, Crypto.doSign(networkMapKeyAndCert.keyPair.private, serializedParameters.bytes))
+        )
 
         @POST
         @Path("publish")
@@ -140,7 +144,7 @@ class NetworkMapServer(cacheTimeout: Duration,
         @Path("network-parameter/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNetworkParameter(@PathParam("var") networkParameterHash: String): Response {
-            return Response.ok(stubNetworkParameter.serialize().bytes).build()
+            return Response.ok(signedParameters.serialize().bytes).build()
         }
 
         @GET

@@ -1,7 +1,13 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.SignedData
+import net.corda.core.internal.readAll
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.SerializationEnvironmentRule
@@ -16,6 +22,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
+import java.nio.file.Files
+import kotlin.streams.toList
+import kotlin.test.assertEquals
 
 class NetworkMapTest {
     @Rule
@@ -39,6 +48,16 @@ class NetworkMapTest {
         networkMapServer.close()
     }
 
+    @Test
+    fun `node corectly downloads and saves network parameters file on startup`() {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
+            val aliceDir = baseDirectory(ALICE.name)
+            startNode(providedName = ALICE.name).getOrThrow()
+            val networkParameters = Files.list(aliceDir).filter { NETWORK_PARAMS_FILE_NAME == it.fileName.toString() }.toList()[0]
+                    .readAll().deserialize<SignedData<NetworkParameters>>().verified()
+            assertEquals(NetworkMapServer.stubNetworkParameter, networkParameters)
+        }
+    }
     @Test
     fun `nodes can see each other using the http network map`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
