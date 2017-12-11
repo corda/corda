@@ -16,6 +16,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
@@ -25,7 +27,6 @@ import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.testNodeConfiguration
 import org.bouncycastle.cert.X509CertificateHolder
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -161,15 +162,18 @@ fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().to
     return props
 }
 
-fun startDoorman(intermediateCACertAndKey: CertificateAndKeyPair, rootCACert: X509CertificateHolder): DoormanServer {
+fun startDoorman(intermediateCACertAndKey: CertificateAndKeyPair, rootCACert: X509CertificateHolder): NetworkManagementServer {
     val signer = LocalSigner(intermediateCACertAndKey.keyPair,
             arrayOf(intermediateCACertAndKey.certificate.toX509Certificate(), rootCACert.toX509Certificate()))
     //Start doorman server
     return startDoorman(signer)
 }
 
-fun startDoorman(localSigner: LocalSigner? = null): DoormanServer {
+fun startDoorman(localSigner: LocalSigner? = null): NetworkManagementServer {
     val database = configureDatabase(makeTestDataSourceProperties())
     //Start doorman server
-    return startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), localSigner, 2, 30, null)
+    val server = NetworkManagementServer()
+    server.start(NetworkHostAndPort("localhost", 0), database, localSigner, testNetworkParameters(emptyList()), NetworkMapConfig(1.minutes.toMillis(), 1.minutes.toMillis()), DoormanConfig(true, null, 3.seconds.toMillis()))
+
+    return server
 }

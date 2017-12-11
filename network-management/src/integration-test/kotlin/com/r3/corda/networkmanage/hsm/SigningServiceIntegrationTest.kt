@@ -7,7 +7,8 @@ import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
-import com.r3.corda.networkmanage.doorman.startDoorman
+import com.r3.corda.networkmanage.doorman.DoormanConfig
+import com.r3.corda.networkmanage.doorman.NetworkManagementServer
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
@@ -24,7 +25,6 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
-import net.corda.testing.common.internal.testNetworkParameters
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.h2.tools.Server
@@ -94,44 +94,44 @@ class SigningServiceIntegrationTest {
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
         val database = configureDatabase(makeTestDataSourceProperties())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 30, networkMapParameters = testNetworkParameters(emptyList()))
 
-        // Start Corda network registration.
-        val config = testNodeConfiguration(
-                baseDirectory = tempFolder.root.toPath(),
-                myLegalName = ALICE.name).also {
-            val doormanHostAndPort = doorman.hostAndPort
-            whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
-        }
-
-        val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties()))
-
-        val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
-        // Poll the database for approved requests
-        timer.scheduleAtFixedRate(0, 1.seconds.toMillis()) {
-            // The purpose of this tests is to validate the communication between this service and Doorman
-            // by the means of data in the shared database.
-            // Therefore the HSM interaction logic is mocked here.
-            try {
-                val approved = signingServiceStorage.getApprovedRequests()
-                if (approved.isNotEmpty()) {
-                    hsmSigner.sign(approved)
-                    timer.cancel()
-                }
-            } catch (exception: PersistenceException) {
-                // It may happen that Doorman DB is not created at the moment when the signing service polls it.
-                // This is due to the fact that schema is initialized at the time first hibernate session is established.
-                // Since Doorman does this at the time the first CSR arrives, which in turn happens after signing service
-                // startup, the very first iteration of the signing service polling fails with
-                // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
+        NetworkManagementServer().use { server ->
+            server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)
+            // Start Corda network registration.
+            val config = testNodeConfiguration(
+                    baseDirectory = tempFolder.root.toPath(),
+                    myLegalName = ALICE.name).also {
+                val doormanHostAndPort = server.hostAndPort
+                whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             }
-        }
-        config.rootCaCertFile.parent.createDirectories()
-        X509Utilities.saveCertificateAsPEMFile(rootCACert, config.rootCaCertFile)
 
-        NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
-        verify(hsmSigner).sign(any())
-        doorman.close()
+            val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties()))
+
+            val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
+            // Poll the database for approved requests
+            timer.scheduleAtFixedRate(0, 1.seconds.toMillis()) {
+                // The purpose of this tests is to validate the communication between this service and Doorman
+                // by the means of data in the shared database.
+                // Therefore the HSM interaction logic is mocked here.
+                try {
+                    val approved = signingServiceStorage.getApprovedRequests()
+                    if (approved.isNotEmpty()) {
+                        hsmSigner.sign(approved)
+                        timer.cancel()
+                    }
+                } catch (exception: PersistenceException) {
+                    // It may happen that Doorman DB is not created at the moment when the signing service polls it.
+                    // This is due to the fact that schema is initialized at the time first hibernate session is established.
+                    // Since Doorman does this at the time the first CSR arrives, which in turn happens after signing service
+                    // startup, the very first iteration of the signing service polling fails with
+                    // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
+                }
+            }
+            config.rootCaCertFile.parent.createDirectories()
+            X509Utilities.saveCertificateAsPEMFile(rootCACert, config.rootCaCertFile)
+            NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
+            verify(hsmSigner).sign(any())
+        }
     }
 
     /*
@@ -147,31 +147,31 @@ class SigningServiceIntegrationTest {
     fun `DEMO - Create CSR and poll`() {
         //Start doorman server
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, networkMapParameters = testNetworkParameters(emptyList()))
 
-        thread(start = true, isDaemon = true) {
-            val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")
-            Server.createTcpServer(*h2ServerArgs).start()
-        }
-
-        // Start Corda network registration.
-        (1..3).map {
-            thread(start = true) {
-
-                val config = testNodeConfiguration(
-                        baseDirectory = tempFolder.root.toPath(),
-                        myLegalName = when (it) {
-                            1 -> ALICE.name
-                            2 -> BOB.name
-                            3 -> CHARLIE.name
-                            else -> throw IllegalArgumentException("Unrecognised option")
-                        }).also {
-                    whenever(it.compatibilityZoneURL).thenReturn(URL("http://$HOST:${doorman.hostAndPort.port}"))
-                }
-                NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
+        NetworkManagementServer().use { server ->
+            server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)
+            thread(start = true, isDaemon = true) {
+                val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")
+                Server.createTcpServer(*h2ServerArgs).start()
             }
-        }.map { it.join() }
-        doorman.close()
+
+            // Start Corda network registration.
+            (1..3).map {
+                thread(start = true) {
+                    val config = testNodeConfiguration(
+                            baseDirectory = tempFolder.root.toPath(),
+                            myLegalName = when (it) {
+                                1 -> ALICE.name
+                                2 -> BOB.name
+                                3 -> CHARLIE.name
+                                else -> throw IllegalArgumentException("Unrecognised option")
+                            }).also {
+                        whenever(it.compatibilityZoneURL).thenReturn(URL("http://$HOST:${server.hostAndPort.port}"))
+                    }
+                    NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
+                }
+            }.map { it.join() }
+        }
     }
 }
 

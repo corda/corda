@@ -42,16 +42,16 @@ class RegistrationWebServiceTest : TestBase() {
     private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 Ltd", country = "GB"), rootCAKey)
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-    private lateinit var doormanServer: DoormanServer
+    private lateinit var webServer: NetworkManagementWebServer
 
     private fun startSigningServer(csrHandler: CsrHandler) {
-        doormanServer = DoormanServer(NetworkHostAndPort("localhost", 0), RegistrationWebService(csrHandler, DoormanServerStatus()))
-        doormanServer.start()
+        webServer = NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), RegistrationWebService(csrHandler))
+        webServer.start()
     }
 
     @After
     fun close() {
-        doormanServer.close()
+        webServer.close()
     }
 
     @Test
@@ -169,7 +169,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     private fun submitRequest(request: PKCS10CertificationRequest): String {
-        val conn = URL("http://${doormanServer.hostAndPort}/certificate").openConnection() as HttpURLConnection
+        val conn = URL("http://${webServer.hostAndPort}/certificate").openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
@@ -178,7 +178,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     private fun pollForResponse(id: String): PollResponse {
-        val url = URL("http://${doormanServer.hostAndPort}/certificate/$id")
+        val url = URL("http://${webServer.hostAndPort}/certificate/$id")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
 

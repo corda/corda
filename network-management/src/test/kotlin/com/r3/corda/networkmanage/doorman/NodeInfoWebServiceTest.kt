@@ -18,6 +18,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.NetworkMap
 import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -44,6 +45,7 @@ class NodeInfoWebServiceTest {
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
 
+    private val testNetwotkMapConfig =  NetworkMapConfig(10.seconds.toMillis(), 10.seconds.toMillis())
     @Test
     fun `submit nodeInfo`() {
         // Create node info.
@@ -59,41 +61,12 @@ class NodeInfoWebServiceTest {
             on { getCertificatePath(any()) }.thenReturn(certPath)
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock(), testNetwotkMapConfig)).use {
             it.start()
             val registerURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/publish")
             val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
-            // Post node info and signature to doorman
+            // Post node info and signature to doorman, this should pass without any exception.
             doPost(registerURL, nodeInfoAndSignature)
-            verify(nodeInfoStorage, times(1)).getCertificatePath(any())
-        }
-    }
-
-    @Test
-    fun `submit nodeInfo with invalid signature`() {
-        // Create node info.
-        val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = "Test", locality = "London", country = "GB"), keyPair.public)
-        val certPath = buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
-
-        // Create digital signature.
-        val attackerKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val digitalSignature = DigitalSignature.WithKey(attackerKeyPair.public, Crypto.doSign(attackerKeyPair.private, nodeInfo.serialize().bytes))
-
-        val nodeInfoStorage: NodeInfoStorage = mock {
-            on { getCertificatePath(any()) }.thenReturn(certPath)
-        }
-
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
-            it.start()
-            val registerURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/publish")
-            val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
-            // Post node info and signature to doorman
-            assertFailsWith(IOException::class) {
-                doPost(registerURL, nodeInfoAndSignature)
-            }
-            verify(nodeInfoStorage, times(1)).getCertificatePath(any())
         }
     }
 
@@ -104,7 +77,7 @@ class NodeInfoWebServiceTest {
         val networkMapStorage: NetworkMapStorage = mock {
             on { getCurrentNetworkMap() }.thenReturn(SignedNetworkMap(serializedNetworkMap, intermediateCAKey.sign(serializedNetworkMap).withCert(intermediateCACert.cert)))
         }
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetwotkMapConfig)).use {
             it.start()
             val conn = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}").openConnection() as HttpURLConnection
             val signedNetworkMap = conn.inputStream.readBytes().deserialize<SignedNetworkMap>()
@@ -127,7 +100,7 @@ class NodeInfoWebServiceTest {
             on { getNodeInfo(nodeInfoHash) }.thenReturn(SignedData(serializedNodeInfo, keyPair.sign(serializedNodeInfo)))
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock(), testNetwotkMapConfig)).use {
             it.start()
             val nodeInfoURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/node-info/$nodeInfoHash")
             val conn = nodeInfoURL.openConnection()

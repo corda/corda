@@ -1,113 +1,100 @@
 package com.r3.corda.networkmanage.doorman
 
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
-import com.typesafe.config.Config
+import com.r3.corda.networkmanage.common.utils.toConfigWithOptions
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import joptsimple.OptionParser
-import joptsimple.util.EnumConverter
+import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.config.parseAs
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 
-data class DoormanParameters(// TODO Create a localSigning sub-config and put that there
-                             val keystorePassword: String?,
-                             // TODO Should be part of a localSigning sub-config
-                             val caPrivateKeyPassword: String?,
-                             // TODO Should be part of a localSigning sub-config
-                             val rootKeystorePassword: String?,
-                             // TODO Should be part of a localSigning sub-config
-                             val rootPrivateKeyPassword: String?,
-                             val host: String,
-                             val port: Int,
-                             val dataSourceProperties: Properties,
-                             val approveAll: Boolean = false,
-                             val databaseProperties: Properties? = null,
-                             val jiraConfig: JiraConfig? = null,
-                             // TODO Should be part of a localSigning sub-config
-                             val keystorePath: Path? = null,
-                             // TODO Should be part of a localSigning sub-config
-                             val rootStorePath: Path? = null,
-                             // TODO Change these to Duration in the future
-                             val approveInterval: Long = DEFAULT_APPROVE_INTERVAL,
-                             val signInterval: Long = DEFAULT_SIGN_INTERVAL
+data class NetworkManagementServerParameters(// TODO: Move local signing to signing server.
+        val host: String,
+        val port: Int,
+        val dataSourceProperties: Properties,
+        val databaseProperties: Properties? = null,
+        val mode: Mode,
+
+        val doormanConfig: DoormanConfig?,
+        val networkMapConfig: NetworkMapConfig?,
+
+        val updateNetworkParameters: Path?,
+
+        // TODO Should be part of a localSigning sub-config
+        val keystorePath: Path? = null,
+        // TODO Should be part of a localSigning sub-config
+        val rootStorePath: Path? = null,
+        val keystorePassword: String?,
+        // TODO Should be part of a localSigning sub-config
+        val caPrivateKeyPassword: String?,
+        // TODO Should be part of a localSigning sub-config
+        val rootKeystorePassword: String?,
+        // TODO Should be part of a localSigning sub-config
+        val rootPrivateKeyPassword: String?
+
 ) {
-    enum class Mode {
-        DOORMAN, CA_KEYGEN, ROOT_KEYGEN
-    }
-
-    data class JiraConfig(
-            val address: String,
-            val projectCode: String,
-            val username: String,
-            val password: String,
-            val doneTransitionCode: Int
-    )
-
     companion object {
-        val DEFAULT_APPROVE_INTERVAL = 5L // seconds
-        val DEFAULT_SIGN_INTERVAL = 5L // seconds
+        // TODO: Do we really need these defaults?
+        val DEFAULT_APPROVE_INTERVAL = 5.seconds
+        val DEFAULT_SIGN_INTERVAL = 5.seconds
     }
-}
 
-data class CommandLineOptions(val configFile: Path,
-                              val updateNetworkParametersFile: Path?,
-                              val mode: DoormanParameters.Mode) {
     init {
-        check(configFile.isRegularFile()) { "Config file $configFile does not exist" }
-        if (updateNetworkParametersFile != null) {
-            check(updateNetworkParametersFile.isRegularFile()) { "Update network parameters file $updateNetworkParametersFile does not exist" }
+        if (updateNetworkParameters != null) {
+            check(updateNetworkParameters.isRegularFile()) { "Update network parameters file $updateNetworkParameters does not exist" }
         }
     }
 }
 
+data class DoormanConfig(val approveAll: Boolean = false,
+                         val jiraConfig: JiraConfig? = null,
+                         val approveInterval: Long = NetworkManagementServerParameters.DEFAULT_APPROVE_INTERVAL.toMillis())
+
+data class NetworkMapConfig(val cacheTimeout: Long,
+        // TODO: Move signing to signing server.
+                            val signInterval: Long = NetworkManagementServerParameters.DEFAULT_SIGN_INTERVAL.toMillis())
+
+enum class Mode {
+    DOORMAN, CA_KEYGEN, ROOT_KEYGEN
+}
+
+data class JiraConfig(
+        val address: String,
+        val projectCode: String,
+        val username: String,
+        val password: String,
+        val doneTransitionCode: Int
+)
+
 /**
  * Parses the doorman command line options.
  */
-fun parseCommandLine(vararg args: String): CommandLineOptions {
-    val optionParser = OptionParser()
-    val configFileArg = optionParser
-            .accepts("config-file", "The path to the config file")
-            .withRequiredArg()
-            .describedAs("filepath")
-    val updateNetworkParametersArg = optionParser
-            .accepts("update-network-parameters", "Update network parameters filepath. Currently only network parameters initialisation is supported.")
-            .withRequiredArg()
-            .describedAs("The new network map")
-            .describedAs("filepath")
-    val modeArg = optionParser
-            .accepts("mode", "Set the mode of this application")
-            .withRequiredArg()
-            .withValuesConvertedBy(object : EnumConverter<DoormanParameters.Mode>(DoormanParameters.Mode::class.java) {})
-            .defaultsTo(DoormanParameters.Mode.DOORMAN)
-    val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp()
-
-    val optionSet = optionParser.parse(*args)
-    // Print help and exit on help option or if there are missing options.
-    if (optionSet.has(helpOption) || !optionSet.has(configFileArg)) {
-        throw ShowHelpException(optionParser)
+fun parseParameters(vararg args: String): NetworkManagementServerParameters {
+    val argConfig = args.toConfigWithOptions {
+        accepts("config-file", "The path to the config file")
+                .withRequiredArg()
+                .describedAs("filepath")
+        accepts("update-network-parameters", "Update network parameters filepath. Currently only network parameters initialisation is supported.")
+                .withRequiredArg()
+                .describedAs("The new network map")
+                .describedAs("filepath")
+        accepts("mode", "Set the mode of this application")
+                .withRequiredArg()
+                .defaultsTo(Mode.DOORMAN.name)
     }
 
-    val configFile = Paths.get(optionSet.valueOf(configFileArg)).toAbsolutePath()
-    val updateNetworkParametersOptionValue = optionSet.valueOf(updateNetworkParametersArg)
-    val updateNetworkParameters = updateNetworkParametersOptionValue?.let {
-        Paths.get(it).toAbsolutePath()
+    val configFile = if (argConfig.hasPath("configFile")) {
+        Paths.get(argConfig.getString("configFile"))
+    } else {
+        Paths.get(".") / "network-management.conf"
     }
+    check(configFile.isRegularFile()) { "Config file $configFile does not exist" }
 
-    return CommandLineOptions(configFile, updateNetworkParameters, optionSet.valueOf(modeArg))
-}
-
-/**
- * Parses a configuration file, which contains all the configuration except the initial values for the network
- * parameters.
- */
-fun parseParameters(configFile: Path, overrides: Config = ConfigFactory.empty()): DoormanParameters {
-    val config = ConfigFactory
-            .parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))
+    return argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
             .resolve()
-    return overrides
-            .withFallback(config)
             .parseAs()
 }
+

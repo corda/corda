@@ -4,14 +4,16 @@ import com.r3.corda.networkmanage.common.persistence.entity.CertificateDataEntit
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 
 /**
  * Database implementation of the [NetworkMapStorage] interface
@@ -19,13 +21,19 @@ import java.security.cert.CertPath
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
     override fun putNodeInfo(signedNodeInfo: SignedData<NodeInfo>): SecureHash = database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
         val nodeInfo = signedNodeInfo.verified()
-        val publicKeyHash = nodeInfo.legalIdentities.first().owningKey.hashString()
-        val request = singleRequestWhere(CertificateDataEntity::class.java) { builder, path ->
-            val certPublicKeyHashEq = builder.equal(path.get<String>(CertificateDataEntity::publicKeyHash.name), publicKeyHash)
-            val certStatusValid = builder.equal(path.get<CertificateStatus>(CertificateDataEntity::certificateStatus.name), CertificateStatus.VALID)
-            builder.and(certPublicKeyHashEq, certStatusValid)
+        val orgName = nodeInfo.legalIdentities.first().name.organisation
+        // TODO: use cert extension to identify NodeCA cert when Ross's work is in.
+        val nodeCACert = nodeInfo.legalIdentitiesAndCerts.first().certPath.certificates.map { it as X509Certificate }
+                .find { CordaX500Name.build(it.issuerX500Principal).organisation != orgName && CordaX500Name.build(it.subjectX500Principal).organisation == orgName }
+
+        val request = nodeCACert?.let {
+            singleRequestWhere(CertificateDataEntity::class.java) { builder, path ->
+                val certPublicKeyHashEq = builder.equal(path.get<String>(CertificateDataEntity::publicKeyHash.name), it.publicKey.encoded.sha256().toString())
+                val certStatusValid = builder.equal(path.get<CertificateStatus>(CertificateDataEntity::certificateStatus.name), CertificateStatus.VALID)
+                builder.and(certPublicKeyHashEq, certStatusValid)
+            }
         }
-        request ?: throw IllegalArgumentException("CSR data missing for provided node info: $nodeInfo")
+        request ?: throw IllegalArgumentException("Unknown node info, this public key is not registered with the network management service.")
         /*
          * Delete any previous [NodeInfoEntity] instance for this CSR
          * Possibly it should be moved at the network signing process at the network signing process

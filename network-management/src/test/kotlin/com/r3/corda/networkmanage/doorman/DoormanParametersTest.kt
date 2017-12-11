@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.io.File
+import java.lang.reflect.InvocationTargetException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -16,16 +17,16 @@ class DoormanParametersTest {
 
     @Test
     fun `should fail when initial network parameters file is missing`() {
-        val message = assertFailsWith<IllegalStateException> {
-            parseCommandLine("--config-file", validConfigPath, "--update-network-parameters", "not-here")
-        }.message
+        val message = assertFailsWith<InvocationTargetException> {
+            parseParameters("--config-file", validConfigPath, "--update-network-parameters", "not-here")
+        }.targetException.message
         assertThat(message).contains("Update network parameters file ")
     }
 
     @Test
     fun `should fail when config file is missing`() {
         val message = assertFailsWith<IllegalStateException> {
-            parseCommandLine("--config-file", "not-existing-file")
+            parseParameters("--config-file", "not-existing-file")
         }.message
         assertThat(message).contains("Config file ")
     }
@@ -33,28 +34,24 @@ class DoormanParametersTest {
     @Test
     fun `should throw ShowHelpException when help option is passed on the command line`() {
         assertFailsWith<ShowHelpException> {
-            parseCommandLine("-?")
+            parseParameters("-?")
         }
     }
 
     @Test
     fun `should fail when config missing`() {
         assertFailsWith<ConfigException.Missing> {
-            parseParameters(parseCommandLine("--config-file", invalidConfigPath).configFile)
+            parseParameters("--config-file", invalidConfigPath)
         }
     }
 
     @Test
     fun `should parse jira config correctly`() {
-        val parameter =  parseCommandLineAndGetParameters()
+        val parameter = parseParameters(*validArgs).doormanConfig!!
         assertEquals("https://doorman-jira-host.com/", parameter.jiraConfig?.address)
         assertEquals("TD", parameter.jiraConfig?.projectCode)
         assertEquals("username", parameter.jiraConfig?.username)
         assertEquals("password", parameter.jiraConfig?.password)
         assertEquals(41, parameter.jiraConfig?.doneTransitionCode)
-    }
-
-    private fun parseCommandLineAndGetParameters(): DoormanParameters {
-        return parseParameters(parseCommandLine(*validArgs).configFile)
     }
 }

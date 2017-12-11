@@ -60,6 +60,9 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     compile "net.corda:corda-node-api:$corda_dependency_version"
+
+    // TODO remove this when AMQP P2P serialization context is supported.
+    compile "net.corda:corda-rpc:$corda_dependency_version"
     testCompile "net.corda:corda-node-driver:$corda_dependency_version"
     testCompile "net.corda:corda-test-common:$corda_dependency_version"
 
@@ -104,4 +107,11 @@ dependencies {
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.5.1"
+
+    // For H2 database support in persistence
+    compile "com.h2database:h2:$h2_version"
+
+    //TODO remove once we can put driver jar into a predefined directory
+    //JDBC driver can be passed to the Node at startup using setting the jarDirs property in the Node configuration file.
+    compile 'com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8'
 }

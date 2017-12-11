@@ -68,26 +68,6 @@ class DBCertificateRequestStorageTest : TestBase() {
     }
 
     @Test
-    fun `approve request ignores subsequent approvals`() {
-        // Given
-        val (request, _) = createRequest("LegalName")
-        // Add request to DB.
-        val requestId = storage.saveRequest(request)
-        storage.markRequestTicketCreated(requestId)
-        storage.approveRequest(requestId, "ApproverA")
-
-        var thrown: Exception? = null
-        // When subsequent approval is performed
-        try {
-            storage.approveRequest(requestId, "ApproverB")
-        } catch (e: IllegalArgumentException) {
-            thrown = e
-        }
-        // Then check request has not been approved
-        assertNotNull(thrown)
-    }
-
-    @Test
     fun `sign request`() {
         val (csr, _) = createRequest("LegalName")
         // Add request to DB.

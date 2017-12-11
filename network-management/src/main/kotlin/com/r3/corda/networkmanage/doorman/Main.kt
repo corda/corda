@@ -5,88 +5,158 @@ import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
-import com.r3.corda.networkmanage.doorman.DoormanServer.Companion.logger
 import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
+import com.r3.corda.networkmanage.doorman.webservice.MonitoringWebService
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.server.ServerConnector
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
-import org.glassfish.jersey.server.ResourceConfig
-import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
-import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
-/**
- *  DoormanServer runs on Jetty server and provides certificate signing service via http.
- *  The server will require keystorePath, keystore password and key password via command line input.
- *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
- */
-// TODO: Move this class to its own file.
-class DoormanServer(hostAndPort: NetworkHostAndPort, private vararg val webServices: Any) : Closeable {
+class NetworkManagementServer : Closeable {
+    private val doOnClose = mutableListOf<() -> Unit>()
+    lateinit var hostAndPort: NetworkHostAndPort
+
+    override fun close() = doOnClose.forEach { it() }
+
     companion object {
-        val logger = loggerFor<DoormanServer>()
-        val serverStatus = DoormanServerStatus()
+        private val logger = loggerFor<NetworkManagementServer>()
     }
 
-    private val server: Server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
-        handler = HandlerCollection().apply {
-            addHandler(buildServletContextHandler())
-        }
-    }
+    private fun getNetworkMapService(config: NetworkMapConfig, database: CordaPersistence, signer: LocalSigner?, updateNetworkParameters: NetworkParameters?): NodeInfoWebService {
+        val networkMapStorage = PersistentNetworkMapStorage(database)
+        val nodeInfoStorage = PersistentNodeInfoStorage(database)
 
-    val hostAndPort: NetworkHostAndPort
-        get() = server.connectors.mapNotNull { it as? ServerConnector }
-                .map { NetworkHostAndPort(it.host, it.localPort) }
-                .first()
-
-    override fun close() {
-        logger.info("Shutting down Doorman Web Services...")
-        server.stop()
-        server.join()
-    }
-
-    fun start() {
-        logger.info("Starting Doorman Web Services...")
-        server.start()
-        logger.info("Doorman Web Services started on $hostAndPort")
-    }
-
-    private fun buildServletContextHandler(): ServletContextHandler {
-        return ServletContextHandler().apply {
-            contextPath = "/"
-            val resourceConfig = ResourceConfig().apply {
-                // Add your API provider classes (annotated for JAX-RS) here
-                webServices.forEach { register(it) }
+        updateNetworkParameters?.let {
+            // Persisting new network parameters
+            val currentNetworkParameters = networkMapStorage.getCurrentNetworkParameters()
+            if (currentNetworkParameters == null) {
+                networkMapStorage.saveNetworkParameters(it)
+            } else {
+                throw UnsupportedOperationException("Network parameters already exist. Updating them via the file config is not supported yet.")
             }
-            val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
-            addServlet(jerseyServlet, "/*")
         }
+
+        // This call will fail if parameter is null in DB.
+        try {
+            val latestParameter = networkMapStorage.getLatestNetworkParameters()
+            logger.info("Starting network map service with network parameters : $latestParameter")
+        } catch (e: NoSuchElementException) {
+            logger.error("No network parameter found, please upload new network parameter before starting network map service. The server will now exit.")
+            exitProcess(-1)
+        }
+
+        val networkMapSigner = if (signer != null) NetworkMapSigner(networkMapStorage, signer) else null
+
+        // Thread sign network map in case of change (i.e. a new node info has been added or a node info has been removed).
+        if (networkMapSigner != null) {
+            val scheduledExecutor = Executors.newScheduledThreadPool(1)
+            val signingThread = Runnable {
+                try {
+                    networkMapSigner.signNetworkMap()
+                } catch (e: Exception) {
+                    // Log the error and carry on.
+                    logger.error("Error encountered when processing node info changes.", e)
+                }
+            }
+            scheduledExecutor.scheduleAtFixedRate(signingThread, config.signInterval, config.signInterval, TimeUnit.MILLISECONDS)
+            doOnClose += { scheduledExecutor.shutdown() }
+        }
+
+        return NodeInfoWebService(nodeInfoStorage, networkMapStorage, config)
+    }
+
+
+    private fun getDoormanService(config: DoormanConfig, database: CordaPersistence, signer: LocalSigner?, serverStatus: NetworkManagementServerStatus): RegistrationWebService {
+        logger.info("Starting Doorman server.")
+        val requestService = if (config.approveAll) {
+            logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
+            ApproveAllCertificateRequestStorage(PersistentCertificateRequestStorage(database))
+        } else {
+            PersistentCertificateRequestStorage(database)
+        }
+
+        val jiraConfig = config.jiraConfig
+        val requestProcessor = if (jiraConfig != null) {
+            val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
+            val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
+            JiraCsrHandler(jiraClient, requestService, DefaultCsrHandler(requestService, signer))
+        } else {
+            DefaultCsrHandler(requestService, signer)
+        }
+
+        val scheduledExecutor = Executors.newScheduledThreadPool(1)
+        val approvalThread = Runnable {
+            try {
+                serverStatus.lastRequestCheckTime = Instant.now()
+                // Create tickets for requests which don't have one yet.
+                requestProcessor.createTickets()
+                // Process Jira approved tickets.
+                requestProcessor.processApprovedRequests()
+            } catch (e: Exception) {
+                // Log the error and carry on.
+                logger.error("Error encountered when approving request.", e)
+            }
+        }
+        scheduledExecutor.scheduleAtFixedRate(approvalThread, config.approveInterval, config.approveInterval, TimeUnit.MILLISECONDS)
+        doOnClose += { scheduledExecutor.shutdown() }
+
+        return RegistrationWebService(requestProcessor)
+    }
+
+    fun start(hostAndPort: NetworkHostAndPort,
+              database: CordaPersistence,
+              signer: LocalSigner? = null,
+              updateNetworkParameters: NetworkParameters?,
+              networkMapServiceParameter: NetworkMapConfig?,
+              doormanServiceParameter: DoormanConfig?) {
+
+        val services = mutableListOf<Any>()
+        val serverStatus = NetworkManagementServerStatus()
+
+        // TODO: move signing to signing server.
+        networkMapServiceParameter?.let { services += getNetworkMapService(it, database, signer, updateNetworkParameters) }
+        doormanServiceParameter?.let { services += getDoormanService(it, database, signer, serverStatus) }
+
+        require(services.isNotEmpty()) { "No service created, please provide at least one service config." }
+
+        // TODO: use mbean to expose audit data?
+        services += MonitoringWebService(serverStatus)
+
+        val webServer = NetworkManagementWebServer(hostAndPort, *services.toTypedArray())
+        webServer.start()
+
+        doOnClose += { webServer.close() }
+        this.hostAndPort = webServer.hostAndPort
     }
 }
 
-data class DoormanServerStatus(var serverStartTime: Instant = Instant.now(), var lastRequestCheckTime: Instant? = null)
+data class NetworkManagementServerStatus(var serverStartTime: Instant = Instant.now(), var lastRequestCheckTime: Instant? = null)
 
 /** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
 internal fun readPassword(fmt: String): String {
@@ -120,6 +190,9 @@ fun generateRootKeyPair(rootStorePath: Path, rootKeystorePass: String?, rootPriv
     val selfSignCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null), selfSignKey)
     rootStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
     rootStore.save(rootStorePath, rootKeystorePassword)
+
+    // TODO: remove this once we create truststore for nodes.
+    X509Utilities.saveCertificateAsPEMFile(selfSignCert, rootStorePath.parent / "rootcert.pem")
 
     println("Root CA keypair and certificate stored in ${rootStorePath.toAbsolutePath()}.")
     println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
@@ -157,85 +230,8 @@ fun generateCAKeyPair(keystorePath: Path, rootStorePath: Path, rootKeystorePass:
     println(loadKeyStore(keystorePath, keystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey)
 }
 
-// TODO: Move this method to DoormanServer.
-fun startDoorman(hostAndPort: NetworkHostAndPort,
-                 database: CordaPersistence,
-                 approveAll: Boolean,
-                 networkMapParameters: NetworkParameters?,
-                 signer: LocalSigner? = null,
-                 approveInterval: Long,
-                 signInterval: Long,
-                 jiraConfig: DoormanParameters.JiraConfig? = null): DoormanServer {
 
-    logger.info("Starting Doorman server.")
-
-    val requestService = if (approveAll) {
-        logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
-        ApproveAllCertificateRequestStorage(PersistentCertificateRequestStorage(database))
-    } else {
-        PersistentCertificateRequestStorage(database)
-    }
-
-    val requestProcessor = if (jiraConfig != null) {
-        val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
-        val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
-        JiraCsrHandler(jiraClient, requestService, DefaultCsrHandler(requestService, signer))
-    } else {
-        DefaultCsrHandler(requestService, signer)
-    }
-    val networkMapStorage = PersistentNetworkMapStorage(database)
-    val nodeInfoStorage = PersistentNodeInfoStorage(database)
-
-    if (networkMapParameters != null) {
-        // Persisting new network parameters
-        val currentNetworkParameters = networkMapStorage.getCurrentNetworkParameters()
-        if (currentNetworkParameters == null) {
-            networkMapStorage.saveNetworkParameters(networkMapParameters)
-        } else {
-            throw UnsupportedOperationException("Network parameters already exist. Updating them via the file config is not supported yet.")
-        }
-    }
-
-    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(nodeInfoStorage, networkMapStorage))
-    doorman.start()
-
-    val networkMapSigner = if (signer != null) NetworkMapSigner(networkMapStorage, signer) else null
-
-    // Thread process approved request periodically.
-    val scheduledExecutor = Executors.newScheduledThreadPool(2)
-    val approvalThread = Runnable {
-        try {
-            DoormanServer.serverStatus.lastRequestCheckTime = Instant.now()
-            // Create tickets for requests which don't have one yet.
-            requestProcessor.createTickets()
-            // Process Jira approved tickets.
-            requestProcessor.processApprovedRequests()
-        } catch (e: Exception) {
-            // Log the error and carry on.
-            DoormanServer.logger.error("Error encountered when approving request.", e)
-        }
-    }
-    scheduledExecutor.scheduleAtFixedRate(approvalThread, approveInterval, approveInterval, TimeUnit.SECONDS)
-    // Thread sign network map in case of change (i.e. a new node info has been added or a node info has been removed).
-    if (networkMapSigner != null) {
-        val signingThread = Runnable {
-            try {
-                networkMapSigner.signNetworkMap()
-            } catch (e: Exception) {
-                // Log the error and carry on.
-                DoormanServer.logger.error("Error encountered when processing node info changes.", e)
-            }
-        }
-        scheduledExecutor.scheduleAtFixedRate(signingThread, signInterval, signInterval, TimeUnit.SECONDS)
-    }
-    Runtime.getRuntime().addShutdownHook(thread(start = false) {
-        scheduledExecutor.shutdown()
-        doorman.close()
-    })
-    return doorman
-}
-
-private fun buildLocalSigner(parameters: DoormanParameters): LocalSigner? {
+private fun buildLocalSigner(parameters: NetworkManagementServerParameters): LocalSigner? {
     return parameters.keystorePath?.let {
         // Get password from console if not in config.
         val keystorePassword = parameters.keystorePassword ?: readPassword("Keystore Password: ")
@@ -261,33 +257,55 @@ private class ApproveAllCertificateRequestStorage(private val delegate: Certific
 
 fun main(args: Array<String>) {
     try {
-        val commandLineOptions = parseCommandLine(*args)
-        val mode = commandLineOptions.mode
-        parseParameters(commandLineOptions.configFile).run {
+        parseParameters(*args).run {
             println("Starting in $mode mode")
             when (mode) {
-                DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair(
+                Mode.ROOT_KEYGEN -> generateRootKeyPair(
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
                         rootKeystorePassword,
                         rootPrivateKeyPassword)
-                DoormanParameters.Mode.CA_KEYGEN -> generateCAKeyPair(
+                Mode.CA_KEYGEN -> generateCAKeyPair(
                         keystorePath ?: throw IllegalArgumentException("The 'keystorePath' parameter must be specified when generating keys!"),
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
                         rootKeystorePassword,
                         rootPrivateKeyPassword,
                         keystorePassword,
                         caPrivateKeyPassword)
-                DoormanParameters.Mode.DOORMAN -> {
+                Mode.DOORMAN -> {
+                    initialiseSerialization()
                     val database = configureDatabase(dataSourceProperties)
+                    // TODO: move signing to signing server.
                     val signer = buildLocalSigner(this)
-                    val networkParameters = commandLineOptions.updateNetworkParametersFile?.let {
+
+                    if (signer != null) {
+                        println("Starting network management services with local signer.")
+                    }
+
+                    val networkManagementServer = NetworkManagementServer()
+                    val networkParameter = updateNetworkParameters?.let {
+                        println("Parsing network parameter from '${it.fileName}'...")
                         parseNetworkParametersFrom(it)
                     }
-                    startDoorman(NetworkHostAndPort(host, port), database, approveAll, networkParameters, signer, approveInterval, signInterval, jiraConfig)
+                    networkManagementServer.start(NetworkHostAndPort(host, port), database, signer, networkParameter, networkMapConfig, doormanConfig)
+
+                    Runtime.getRuntime().addShutdownHook(thread(start = false) {
+                        networkManagementServer.close()
+                    })
                 }
             }
         }
     } catch (e: ShowHelpException) {
+        e.errorMessage?.let(::println)
         e.parser.printHelpOn(System.out)
     }
+}
+
+private fun initialiseSerialization() {
+    val context = KRYO_P2P_CONTEXT
+    nodeSerializationEnv = SerializationEnvironmentImpl(
+            SerializationFactoryImpl().apply {
+                registerScheme(KryoClientSerializationScheme())
+                registerScheme(AMQPClientSerializationScheme())
+            },
+            context)
 }

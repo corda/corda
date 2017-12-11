@@ -22,7 +22,7 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage, privat
                 .forEach { processRequest(it.requestId, it.request) }
     }
 
-    override fun createTickets() { }
+    override fun createTickets() {}
 
     private fun processRequest(requestId: String, request: PKCS10CertificationRequest) {
         if (signer != null) {
@@ -68,10 +68,18 @@ class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: Ce
     }
 
     override fun processApprovedRequests() {
-        jiraClient.getApprovedRequests().forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
+        val approvedRequest = jiraClient.getApprovedRequests()
+        approvedRequest.forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
         delegate.processApprovedRequests()
-        val signedRequests = storage.getRequests(RequestStatus.SIGNED).mapNotNull {
-            it.certData?.certPath?.let { certs -> it.requestId to certs }
+
+        val signedRequests = approvedRequest.mapNotNull { (id, _) ->
+            val request = storage.getRequest(id)
+
+            if (request != null && request.status == RequestStatus.SIGNED) {
+                request.certData?.certPath?.let { certs -> id to certs }
+            } else {
+                null
+            }
         }.toMap()
         jiraClient.updateSignedRequests(signedRequests)
     }

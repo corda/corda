@@ -1,6 +1,5 @@
 package com.r3.corda.networkmanage.common.persistence
 
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.node.NodeInfo

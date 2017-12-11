@@ -12,7 +12,7 @@ configurations {
 
 task buildDoormanJAR(type: FatCapsule, dependsOn: ':network-management:jar') {
     applicationClass 'com.r3.corda.networkmanage.doorman.MainKt'
-    archiveName "doorman-${version}-capsule.jar"
+    archiveName "doorman-${version}.jar"
     capsuleManifest {
         applicationVersion = corda_dependency_version
         systemProperties['visualvm.display.name'] = 'Doorman'

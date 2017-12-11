@@ -84,13 +84,13 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
 
     override fun approveRequest(requestId: String, approvedBy: String) {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = findRequest(requestId, RequestStatus.TICKET_CREATED)
-            request ?: throw IllegalArgumentException("Error when approving request with id: $requestId. Request does not exist or its status is not TICKET_CREATED.")
-            val update = request.copy(
-                    modifiedBy = listOf(approvedBy),
-                    modifiedAt = Instant.now(),
-                    status = RequestStatus.APPROVED)
-            session.merge(update)
+            findRequest(requestId, RequestStatus.TICKET_CREATED)?.let {
+                val update = it.copy(
+                        modifiedBy = listOf(approvedBy),
+                        modifiedAt = Instant.now(),
+                        status = RequestStatus.APPROVED)
+                session.merge(update)
+            }
         }
     }
 
