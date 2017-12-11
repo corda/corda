@@ -227,8 +227,8 @@ data class RPCDriverDSL(
     fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I
     ): CordaFuture<RpcServerHandle> {
@@ -295,8 +295,8 @@ data class RPCDriverDSL(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             customPort: NetworkHostAndPort? = null,
             ops: I
@@ -378,8 +378,8 @@ data class RPCDriverDSL(
     fun startRpcBroker(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             customPort: NetworkHostAndPort? = null
     ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
@@ -402,8 +402,8 @@ data class RPCDriverDSL(
 
     fun startInVmRpcBroker(
             rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE
     ): CordaFuture<RpcBrokerHandle> {
         return driverDSL.executorService.fork {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)

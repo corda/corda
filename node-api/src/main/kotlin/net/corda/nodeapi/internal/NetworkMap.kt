@@ -45,8 +45,8 @@ data class NetworkParameters(
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
         require(epoch > 0) { "epoch must be at least 1" }
-        require(maxMessageSize > 0 ) { "maxMessageSize must be at least 1" }
-        require(maxTransactionSize > 0 ) { "maxTransactionSize must be at least 1" }
+        require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
+        require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
     }
 }
 

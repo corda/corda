@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal
+package net.corda.node.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -7,6 +7,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.config.NotaryConfig
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.MockNetwork
@@ -17,10 +20,10 @@ import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
 import kotlin.test.assertFails
-import kotlin.test.assertFalse
+import org.assertj.core.api.Assertions.*
 
 class NetworkParametersTest {
-    private val mockNet= MockNetwork(
+    private val mockNet = MockNetwork(
             MockNetworkParameters(networkSendManuallyPumped = true),
             notarySpecs = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY.name)))
 
@@ -38,7 +41,7 @@ class NetworkParametersTest {
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),
                 minimumPlatformVersion = 2)
         dropParametersToDir(aliceDirectory, netParams)
-        assertFails { alice.start() }
+        assertThatThrownBy { alice.start() }.hasMessageContaining("platform version")
     }
 
     @Test
@@ -59,9 +62,8 @@ class NetworkParametersTest {
             val notary = NotaryConfig(false)
             doReturn(notary).whenever(it).notary}))
         val fakeNotaryId = fakeNotary.info.chooseIdentity()
-        assertFalse(fakeNotary.internals.configuration.notary == null)
         val alice = mockNet.createPartyNode(ALICE_NAME)
-        assertFalse(fakeNotaryId in alice.services.networkMapCache.notaryIdentities)
+        assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)
         assertFails {
             alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
         }

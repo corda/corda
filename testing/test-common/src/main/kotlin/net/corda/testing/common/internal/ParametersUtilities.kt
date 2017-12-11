@@ -8,7 +8,7 @@ fun testNetworkParameters(
         notaries: List<NotaryInfo>,
         minimumPlatformVersion: Int = 1,
         modifiedTime: Instant = Instant.now(),
-        maxMessageSize: Int = 40000,
+        maxMessageSize: Int = 1048576,
         maxTransactionSize: Int = 40000,
         epoch: Int = 1
 ): NetworkParameters {

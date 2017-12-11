@@ -138,7 +138,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected lateinit var networkMapClient: NetworkMapClient
+    protected var networkMapClient: NetworkMapClient? = null
 
     lateinit var securityManager: RPCSecurityManager get
 
@@ -196,12 +196,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
-        readNetworkParameters()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
-        if (configuration.compatibilityZoneURL != null) {
-            networkMapClient = NetworkMapClient(configuration.compatibilityZoneURL!!, identityService.trustRoot)
+        networkMapClient = configuration.compatibilityZoneURL?.let {
+            NetworkMapClient(it, identityService.trustRoot)
         }
         readNetworkParameters()
         // Do all of this in a database transaction so anything that might need a connection has one.
@@ -243,7 +242,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
-                configuration.compatibilityZoneURL?.let { networkMapClient },
+                networkMapClient,
                 networkParameters.serialize().hash)
         runOnStop += networkMapUpdater::close
 
@@ -643,24 +642,24 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val paramsFromFile = try {
             // It's fine at this point if we don't have network parameters or have corrupted file, later we check if parameters can be downloaded from network map server.
             files[0].readAll().deserialize<SignedData<NetworkParameters>>().verified()
-        } catch(t: Throwable) {
+        } catch (t: Exception) {
             log.warn("Couldn't find correct network parameters file in the base directory")
             null
         }
         networkParameters = if (paramsFromFile != null) {
             paramsFromFile
-        } else if (configuration.compatibilityZoneURL != null) {
+        } else if (networkMapClient != null) {
             log.info("Requesting network parameters from network map server...")
-            val (networkMap, _) = networkMapClient.getNetworkMap()
-            val paramsFromMap = networkMapClient.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
-            val verifiedParams = paramsFromMap.verified() // Verify before saving.
-            paramsFromMap.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+            val (networkMap, _) = networkMapClient!!.getNetworkMap()
+            val signedParams = networkMapClient!!.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
+            val verifiedParams = signedParams.verified() // Verify before saving.
+            signedParams.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
             verifiedParams
         } else {
             throw IllegalArgumentException("Couldn't load network parameters file")
         }
         log.info("Loaded network parameters $networkParameters")
-        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
+        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node's platform version is lower than network's required minimumPlatformVersion" }
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {

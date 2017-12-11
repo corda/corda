@@ -28,14 +28,15 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class NetworkMapUpdaterTest {
+    companion object {
+        val NETWORK_PARAMS_HASH = SecureHash.randomSHA256()
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
     private val jimFs = Jimfs.newFileSystem(Configuration.unix())
     private val baseDir = jimFs.getPath("/node")
-    companion object {
-        val NETWORK_PARAMS_HASH = SecureHash.randomSHA256()
-    }
 
     @Test
     fun `publish node info`() {

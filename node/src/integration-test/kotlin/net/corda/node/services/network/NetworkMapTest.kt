@@ -49,15 +49,16 @@ class NetworkMapTest {
     }
 
     @Test
-    fun `node corectly downloads and saves network parameters file on startup`() {
+    fun `node correctly downloads and saves network parameters file on startup`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val aliceDir = baseDirectory(ALICE.name)
             startNode(providedName = ALICE.name).getOrThrow()
-            val networkParameters = Files.list(aliceDir).filter { NETWORK_PARAMS_FILE_NAME == it.fileName.toString() }.toList()[0]
+            val networkParameters = Files.list(aliceDir).toList().single { NETWORK_PARAMS_FILE_NAME == it.fileName.toString() }
                     .readAll().deserialize<SignedData<NetworkParameters>>().verified()
             assertEquals(NetworkMapServer.stubNetworkParameter, networkParameters)
         }
     }
+
     @Test
     fun `nodes can see each other using the http network map`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
