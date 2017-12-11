@@ -498,7 +498,8 @@ class DriverDSLImpl(
 
     private fun startOutOfProcessNodeRegistration(config: Config, configuration: NodeConfiguration): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
+        val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
+        val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort,
                 systemProperties, cordappPackages, "200m", initialRegistration = true)
 
         return poll(executorService, "node registration (${configuration.myLegalName})") {
@@ -537,7 +538,8 @@ class DriverDSLImpl(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else nullval process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize, initialRegistration = false)
+            val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
+            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize, initialRegistration = false)
             if (waitForNodesToFinish) {
                 state.locked {
                     processes += process
@@ -867,6 +869,7 @@ fun <A> internalDriver(
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
+        jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         compatibilityZone: CompatibilityZoneParams? = null,
         dsl: DriverDSLImpl.() -> A
 ): A {
@@ -882,6 +885,7 @@ fun <A> internalDriver(
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone
             ),
             coerce = { it },

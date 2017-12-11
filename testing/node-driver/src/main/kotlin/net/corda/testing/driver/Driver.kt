@@ -177,7 +177,7 @@ fun <A> driver(
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
+        jmxPolicy: JmxPolicy = defaultParameters.jmxPolicy,
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -230,7 +230,6 @@ data class DriverParameters(
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy()
-
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
