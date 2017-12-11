@@ -7,5 +7,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
  * should be marked deprecated.
  */
 object CordaOID {
-    const val X509_EXTENSION_CORDA_ROLE = "1.3.6.1.4.1.50530.1.1"
+    const val R3_ROOT = "1.3.6.1.4.1.50530"
+    const val CORDA_PLATFORM = R3_ROOT + ".1"
+    const val X509_EXTENSION_CORDA_ROLE = CORDA_PLATFORM + ".1"
 }
