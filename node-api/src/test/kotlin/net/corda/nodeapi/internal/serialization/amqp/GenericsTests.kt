@@ -3,25 +3,82 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import org.junit.Test
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
 class GenericsTests {
+    companion object {
+        val VERBOSE = false
+    }
+
+    private fun printSeparator() = if(VERBOSE) println ("\n\n-------------------------------------------\n\n") else Unit
+
+    private fun<T : Any> BytesAndSchemas<T>.printSchema() = if (VERBOSE) println ("${this.schema}\n") else Unit
+
+    private fun ConcurrentHashMap<Any, AMQPSerializer<Any>>.printKeyToType() {
+        if (!VERBOSE) return
+
+        forEach {
+            println ("Key = ${it.key} - ${it.value.type.typeName}")
+        }
+        println()
+    }
+
+    @Test
+    fun twoDifferntTypesSameParameterizedOuter() {
+        data class G<A>(val a: A)
+
+        val factory = testDefaultFactoryNoEvolution()
+
+        val bytes1 = SerializationOutput(factory).serializeAndReturnSchema(G("hi")).apply { printSchema() }
+
+        factory.serializersByDescriptor.printKeyToType()
+
+        val bytes2 = SerializationOutput(factory).serializeAndReturnSchema(G(121)).apply { printSchema() }
+
+        factory.serializersByDescriptor.printKeyToType()
+
+        listOf (factory, testDefaultFactory()).forEach { f ->
+            DeserializationInput(f).deserialize(bytes1.obj).apply { assertEquals("hi", this.a) }
+            DeserializationInput(f).deserialize(bytes2.obj).apply { assertEquals(121, this.a) }
+        }
+    }
+
+    @Test
+    fun doWeIgnoreMultipleParams() {
+        data class G1<out T>(val a: T)
+        data class G2<out T>(val a: T)
+        data class Wrapper<out T>(val a: Int, val b: G1<T>, val c: G2<T>)
+
+        val factory = testDefaultFactoryNoEvolution()
+        val factory2 = testDefaultFactoryNoEvolution()
+
+        val bytes = SerializationOutput(factory).serializeAndReturnSchema(Wrapper(1, G1("hi"), G2("poop"))).apply { printSchema() }
+        printSeparator()
+        DeserializationInput(factory2).deserialize(bytes.obj)
+    }
 
     @Test
     fun nestedSerializationOfGenerics() {
-        data class G<T>(val a: T)
-        data class Wrapper<T>(val a: Int, val b: G<T>)
+        data class G<out T>(val a: T)
+        data class Wrapper<out T>(val a: Int, val b: G<T>)
 
-        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        val altContextFactory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val factory = testDefaultFactoryNoEvolution()
+        val altContextFactory = testDefaultFactoryNoEvolution()
         val ser = SerializationOutput(factory)
 
-        val bytes = ser.serializeAndReturnSchema(G("hi"))
+        val bytes = ser.serializeAndReturnSchema(G("hi")).apply { printSchema() }
+
+        factory.serializersByDescriptor.printKeyToType()
 
         assertEquals("hi", DeserializationInput(factory).deserialize(bytes.obj).a)
         assertEquals("hi", DeserializationInput(altContextFactory).deserialize(bytes.obj).a)
 
-        val bytes2 = ser.serializeAndReturnSchema(Wrapper(1, G("hi")))
+        val bytes2 = ser.serializeAndReturnSchema(Wrapper(1, G("hi"))).apply { printSchema() }
+
+        factory.serializersByDescriptor.printKeyToType()
+
+        printSeparator()
 
         DeserializationInput(factory).deserialize(bytes2.obj).apply {
             assertEquals(1, a)

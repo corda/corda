@@ -130,3 +130,52 @@ class EvolutionSerializer(
     }
 }
 
+/**
+ * Instances of this type are injected into a [SerializerFactory] at creation time to dictate the
+ * behaviour of evolution within that factory. Under normal circumstances this will simply
+ * be an object that returns an [EvolutionSerializer]. Of course, any implementation that
+ * extends this class can be written to invoke whatever behaviour is desired.
+ */
+abstract class EvolutionSerializerGetterBase {
+    abstract fun getEvolutionSerializer(
+            factory: SerializerFactory,
+            typeNotation: TypeNotation,
+            newSerializer: AMQPSerializer<Any>,
+            schemas: SerializationSchemas): AMQPSerializer<Any>
+}
+
+/**
+ * The normal use case for generating an [EvolutionSerializer]'s based on the differences
+ * between the received schema and the class as it exists now on the class path,
+ */
+class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
+    override fun getEvolutionSerializer(factory: SerializerFactory,
+                                        typeNotation: TypeNotation,
+                                        newSerializer: AMQPSerializer<Any>,
+                                        schemas: SerializationSchemas): AMQPSerializer<Any> =
+            factory.serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+                when (typeNotation) {
+                    is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
+                    is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                }
+            }
+}
+
+/**
+ * An implementation of [EvolutionSerializerGetterBase] that disables all evolution within a
+ * [SerializerFactory]. This is most useful in testing where it is known that evolution should not be
+ * occurring and where bugs may be hidden by transparent invocation of an [EvolutionSerializer]. This
+ * prevents that by simply throwing an exception whenever such a serializer is requested.
+ */
+class EvolutionSerializerGetterTesting : EvolutionSerializerGetterBase() {
+    override fun getEvolutionSerializer(factory: SerializerFactory,
+                                        typeNotation: TypeNotation,
+                                        newSerializer: AMQPSerializer<Any>,
+                                        schemas: SerializationSchemas): AMQPSerializer<Any> {
+        throw NotSerializableException("No evolution should be occurring\n" +
+                "    ${typeNotation.name}\n" +
+                "        ${typeNotation.descriptor.name}\n" +
+                "    ${newSerializer.type.typeName}\n" +
+                "        ${newSerializer.typeDescriptor}\n\n${schemas.schema}")
+    }
+}
