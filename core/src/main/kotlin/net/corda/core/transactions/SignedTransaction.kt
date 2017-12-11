@@ -50,7 +50,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @Volatile
     @Transient private var cachedTransaction: CoreTransaction? = null
 
-    /** Lazily calculated access to the deserialised/hashed transaction data. */
+    /** Lazily calculated access to the deserialized/hashed transaction data. */
     private val transaction: CoreTransaction get() = cachedTransaction ?: txBits.deserialize().apply { cachedTransaction = this }
 
     /** The id of the contained [WireTransaction]. */
