@@ -1,11 +1,12 @@
 package net.corda.node.services
 
-
+import net.corda.core.context.AuthServiceId
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.nodeapi.internal.config.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
-class RPCUserServiceTest {
+class RPCSecurityManagerTest {
 
     @Test
     fun `Artemis special characters not permitted in RPC usernames`() {
@@ -15,6 +16,6 @@ class RPCUserServiceTest {
     }
 
     private fun configWithRPCUsername(username: String) {
-        RPCUserServiceImpl(listOf(User(username, "password", setOf())))
+        RPCSecurityManagerImpl.fromUserList(users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
     }
 }

@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -16,11 +17,10 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
@@ -133,7 +133,12 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
-        userService = RPCUserServiceImpl(configuration.rpcUsers)
+        // Construct security manager reading users data either from the 'security' config section
+        // if present or from rpcUsers list if the former is missing from config.
+        val securityManagerConfig = configuration.security?.authService ?:
+            SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+
+        securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()
@@ -156,7 +161,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -208,7 +213,7 @@ open class Node(configuration: NodeConfiguration,
         // Start up the MQ clients.
         rpcMessagingClient.run {
             runOnStop += this::stop
-            start(rpcOps, userService)
+            start(rpcOps, securityManager)
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop
@@ -221,10 +226,10 @@ open class Node(configuration: NodeConfiguration,
     }
 
     /**
-     * If the node is persisting to an embedded H2 database, then expose this via TCP with a JDBC URL of the form:
+     * If the node is persisting to an embedded H2 database, then expose this via TCP with a DB URL of the form:
      * jdbc:h2:tcp://<host>:<port>/node
      * with username and password as per the DataSource connection details.  The key element to enabling this support is to
-     * ensure that you specify a JDBC connection URL of the form jdbc:h2:file: in the node config and that you include
+     * ensure that you specify a DB connection URL of the form jdbc:h2:file: in the node config and that you include
      * the H2 option AUTO_SERVER_PORT set to the port you desire to use (0 will give a dynamically allocated port number)
      * but exclude the H2 option AUTO_SERVER=TRUE.
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
@@ -300,11 +305,11 @@ open class Node(configuration: NodeConfiguration,
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoServerSerializationScheme())
-                    registerScheme(AMQPServerSerializationScheme())
+                    registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
                 },
-                KRYO_P2P_CONTEXT.withClassLoader(classloader),
+                p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
-                storageContext = KRYO_STORAGE_CONTEXT.withClassLoader(classloader),
+                storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 

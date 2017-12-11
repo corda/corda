@@ -16,7 +16,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -428,17 +428,13 @@ data class RPCDriverDSL(
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             isUseGlobalPools = false
         }
-        val userService = object : RPCUserService {
-            override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
-            override val users: List<User> get() = listOf(rpcUser)
-            override val id: AuthServiceId = AuthServiceId("RPC_DRIVER")
-        }
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,
                 rpcUser.password,
                 locator,
-                userService,
+                rpcSecurityManager,
                 nodeLegalName,
                 configuration
         )

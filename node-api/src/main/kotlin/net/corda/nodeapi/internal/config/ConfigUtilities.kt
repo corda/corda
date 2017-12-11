@@ -80,6 +80,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         URL::class -> URL(getString(path))
         CordaX500Name::class -> CordaX500Name.parse(getString(path))
         Properties::class -> getConfig(path).toProperties()
+        Config::class -> getConfig(path)
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {

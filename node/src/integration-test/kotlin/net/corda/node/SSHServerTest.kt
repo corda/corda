@@ -117,7 +117,8 @@ class SSHServerTest {
 
             channel.disconnect()
             session.disconnect()
-            assertThat(response).matches("(?s)User not permissioned with any of \\[[^]]*$flowNameEscaped.*")
+
+            assertThat(response).matches("(?s)User not authorized to perform RPC call .*")
         }
     }
 

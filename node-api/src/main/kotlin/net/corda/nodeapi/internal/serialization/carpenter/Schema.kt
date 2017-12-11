@@ -9,7 +9,7 @@ enum class SchemaFlags {
 }
 
 /**
- * A Schema is the representation of an object the Carpenter can contsruct
+ * A Schema is the representation of an object the Carpenter can construct
  *
  * Known Sub Classes
  *   - [ClassSchema]
@@ -62,7 +62,7 @@ fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess(): Boolean {
 }
 
 /**
- * Represents a concrete object
+ * Represents a concrete object.
  */
 class ClassSchema(
         name: String,
@@ -77,7 +77,7 @@ class ClassSchema(
 
 /**
  * Represents an interface. Carpented interfaces can be used within [ClassSchema]s
- * if that class should be implementing that interface
+ * if that class should be implementing that interface.
  */
 class InterfaceSchema(
         name: String,
@@ -91,7 +91,7 @@ class InterfaceSchema(
 }
 
 /**
- * Represents an enumerated type
+ * Represents an enumerated type.
  */
 class EnumSchema(
         name: String,
@@ -111,8 +111,8 @@ class EnumSchema(
 }
 
 /**
- * Factory object used by the serialiser when building [Schema]s based
- * on an AMQP schema
+ * Factory object used by the serializer when building [Schema]s based
+ * on an AMQP schema.
  */
 object CarpenterSchemaFactory {
     fun newInstance(

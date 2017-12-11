@@ -27,10 +27,8 @@ import java.util.*
 class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
-    /*
-     * These classes are assignment-compatible Java equivalents of Kotlin classes.
-     * The point is that we do not want to send Kotlin types "over the wire" via RPC.
-     */
+    // These classes are assignment-compatible Java equivalents of Kotlin classes.
+    // The point is that we do not want to send Kotlin types "over the wire" via RPC.
     private val javaAliases: Map<Class<*>, Class<*>> = mapOf(
             listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
             setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
@@ -176,7 +174,8 @@ class GlobalTransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableC
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since it implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.serialization.SerializationWhitelist],
+ * since it implements [MutableClassWhitelist].
  */
 class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 

@@ -41,7 +41,7 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
             return SerializationEnvironmentImpl(
                     SerializationFactoryImpl().apply {
                         registerScheme(KryoClientSerializationScheme())
-                        registerScheme(AMQPClientSerializationScheme())
+                        registerScheme(AMQPClientSerializationScheme(emptyList()))
                     },
                     KRYO_P2P_CONTEXT,
                     rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)

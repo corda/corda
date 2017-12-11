@@ -19,7 +19,7 @@ val PORTFOLIO_SWAP_PROGRAM_ID = "net.corda.vega.contracts.PortfolioSwap"
  * given point in time. This state can be consumed to create a new state with a mutated valuation or portfolio.
  */
 data class PortfolioState(val portfolio: List<StateRef>,
-                          private val _parties: Pair<AbstractParty, AbstractParty>,
+                          val _parties: Pair<AbstractParty, AbstractParty>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())

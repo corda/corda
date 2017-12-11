@@ -133,9 +133,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.setTimeWindow(data)
     }
 
-    override fun tweak(
-            dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-    ) = dsl(TransactionDSL(copy()))
+    override fun _tweak(dsl: TransactionDSLInterpreter.() -> EnforceVerifyOrFail) = copy().dsl()
 
     override fun _attachment(contractClassName: ContractClassName) {
         (services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage)
@@ -205,11 +203,9 @@ data class TestLedgerDSLInterpreter private constructor(
 
     private fun <R> interpretTransactionDsl(
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> R
+            dsl: TestTransactionDSLInterpreter.() -> R
     ): TestTransactionDSLInterpreter {
-        val transactionInterpreter = TestTransactionDSLInterpreter(this, transactionBuilder)
-        dsl(TransactionDSL(transactionInterpreter))
-        return transactionInterpreter
+        return TestTransactionDSLInterpreter(this, transactionBuilder).apply { dsl() }
     }
 
     fun transactionName(transactionHash: SecureHash): String? {
@@ -227,7 +223,7 @@ data class TestLedgerDSLInterpreter private constructor(
     private fun <R> recordTransactionWithTransactionMap(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> R,
+            dsl: TestTransactionDSLInterpreter.() -> R,
             transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
             /** If set to true, will add dummy components to [transactionBuilder] to make it valid. */
             fillTransaction: Boolean = false
@@ -267,19 +263,17 @@ data class TestLedgerDSLInterpreter private constructor(
     override fun _transaction(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> EnforceVerifyOrFail
+            dsl: TestTransactionDSLInterpreter.() -> EnforceVerifyOrFail
     ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, transactionWithLocations)
 
     override fun _unverifiedTransaction(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> Unit
+            dsl: TestTransactionDSLInterpreter.() -> Unit
     ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations, fillTransaction = true)
 
-    override fun tweak(
-            dsl: LedgerDSL<TestTransactionDSLInterpreter,
-                    LedgerDSLInterpreter<TestTransactionDSLInterpreter>>.() -> Unit) =
-            dsl(LedgerDSL(copy()))
+    override fun _tweak(dsl: LedgerDSLInterpreter<TestTransactionDSLInterpreter>.() -> Unit) =
+            copy().dsl()
 
     override fun attachment(attachment: InputStream): SecureHash {
         return services.attachments.importAttachment(attachment)

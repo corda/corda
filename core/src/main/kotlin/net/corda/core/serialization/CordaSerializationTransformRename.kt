@@ -18,11 +18,11 @@ annotation class CordaSerializationTransformRenames(vararg val value: CordaSeria
 // TODO When we have class renaming update the docs
 /**
  * This annotation is used to mark a class has having had a property element. It is used by the
- * AMQP deserialiser to allow instances with different versions of the class on their Class Path
- * to successfully deserialize the object
+ * AMQP deserializer to allow instances with different versions of the class on their Class Path
+ * to successfully deserialize the object.
  *
- * NOTE: Renaming of the class itself is not be done with this annotation. For class renaming
- * see ???
+ * NOTE: Renaming of the class itself isn't done with this annotation or, at present, supported
+ * by Corda
  *
  * @property to [String] representation of the properties new name
  * @property from [String] representation of the properties old new
