@@ -5,8 +5,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CertRole
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Role
 import net.corda.core.internal.cert
 import net.corda.core.internal.read
 import net.corda.core.internal.x500Name
@@ -327,7 +327,7 @@ class X509CertificateFactory {
     }
 }
 
-enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: Role?) {
+enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: CertRole?) {
     ROOT_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
             KeyPurposeId.id_kp_serverAuth,
@@ -343,7 +343,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
-            role = Role.INTERMEDIATE_CA
+            role = CertRole.INTERMEDIATE_CA
     ),
 
     NETWORK_MAP(
@@ -352,7 +352,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
-            role = Role.NETWORK_MAP
+            role = CertRole.NETWORK_MAP
     ),
 
     NODE_CA(
@@ -361,7 +361,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
-            role = Role.NODE_CA
+            role = CertRole.NODE_CA
     ),
 
     TLS(
@@ -370,7 +370,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
-            role = Role.TLS
+            role = CertRole.TLS
     ),
 
     // TODO: Identity certs should have tight name constraints on child certificates
@@ -380,7 +380,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
-            role = Role.WELL_KNOWN_IDENTITY
+            role = CertRole.WELL_KNOWN_IDENTITY
     ),
 
     CONFIDENTIAL_IDENTITY(
@@ -389,7 +389,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
-            role = Role.CONFIDENTIAL_IDENTITY
+            role = CertRole.CONFIDENTIAL_IDENTITY
     )
 }
 

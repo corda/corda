@@ -2,8 +2,7 @@ package net.corda.node.services.keys
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.IdentityRoleExtension
-import net.corda.core.identity.Role
-import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.core.identity.CertRole
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
@@ -21,7 +20,7 @@ class KMSUtilsTests {
         val confidentialIdentity = mockServices.keyManagementService.freshKeyAndCert(wellKnownIdentity, false)
         val cert = confidentialIdentity.certificate
         val extensionData = DEROctetString.getInstance(cert.getExtensionValue(CordaOID.X509_EXTENSION_CORDA_ROLE))
-        val expected = Role.CONFIDENTIAL_IDENTITY
+        val expected = CertRole.CONFIDENTIAL_IDENTITY
         val actual = IdentityRoleExtension.getInstance(extensionData.octets)!!.role
         assertEquals(expected, actual)
     }

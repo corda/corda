@@ -22,10 +22,7 @@ class PartyAndCertificate(val certPath: CertPath) {
         certificate = certs[0] as X509Certificate
         val roleExtension = IdentityRoleExtension.extract(certificate)
         val role = roleExtension?.role
-        if (role!= Role.WELL_KNOWN_IDENTITY
-                && role != Role.CONFIDENTIAL_IDENTITY) {
-            throw CertPathValidatorException("Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role")
-        }
+        require(role?.isIdentity ?: false) { "Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role" }
     }
 
     @Transient
@@ -47,7 +44,7 @@ class PartyAndCertificate(val certPath: CertPath) {
         val validator = CertPathValidator.getInstance("PKIX")
         val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
         // Apply Corda-specific validity rules to the chain
-        var parentRole: Role? = IdentityRoleExtension.extract(result.trustAnchor.trustedCert)?.role
+        var parentRole: CertRole? = IdentityRoleExtension.extract(result.trustAnchor.trustedCert)?.role
         for (certIdx in (0 until certPath.certificates.size).reversed()) {
             val certificate = certPath.certificates[certIdx]
             val extension = IdentityRoleExtension.extract(certificate)

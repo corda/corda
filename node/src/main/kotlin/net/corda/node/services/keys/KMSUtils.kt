@@ -2,7 +2,6 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.identity.Role
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.days
