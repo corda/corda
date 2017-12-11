@@ -1,5 +1,6 @@
 package net.corda.core.identity
 
+import net.corda.core.internal.CertRole
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*

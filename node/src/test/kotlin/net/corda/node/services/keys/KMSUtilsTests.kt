@@ -1,11 +1,13 @@
 package net.corda.node.services.keys
 
 import net.corda.core.CordaOID
-import net.corda.core.crypto.IdentityRoleExtension
-import net.corda.core.identity.CertRole
-import net.corda.testing.*
+import net.corda.core.internal.CertRole
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_IDENTITY
+import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.singleIdentityAndCert
 import org.bouncycastle.asn1.DEROctetString
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -21,7 +23,7 @@ class KMSUtilsTests {
         val cert = confidentialIdentity.certificate
         val extensionData = DEROctetString.getInstance(cert.getExtensionValue(CordaOID.X509_EXTENSION_CORDA_ROLE))
         val expected = CertRole.CONFIDENTIAL_IDENTITY
-        val actual = IdentityRoleExtension.getInstance(extensionData.octets)!!.role
+        val actual = CertRole.getInstance(extensionData.octets)!!
         assertEquals(expected, actual)
     }
 }

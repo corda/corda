@@ -4,7 +4,7 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.identity.CertRole
+import net.corda.core.internal.CertRole
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.read

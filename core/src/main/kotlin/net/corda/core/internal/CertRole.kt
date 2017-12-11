@@ -1,4 +1,4 @@
-package net.corda.core.identity
+package net.corda.core.internal
 
 import net.corda.core.CordaOID
 import org.bouncycastle.asn1.*
@@ -8,6 +8,11 @@ import java.security.cert.X509Certificate
 /**
  * Describes the Corda role a certificate is used for. This is used both to verify the hierarchy of certificates is
  * correct, and to determine which is the well known identity's certificate.
+ *
+ * @property parent the parent role of this role - must match exactly for the certificate hierarchy to be valid for use
+ * in Corda. Null indicates the parent certificate has no role.
+ * @property isIdentity true if the role is valid for use as a [Party] identity, false otherwise (the role is Corda
+ * infrastructure of some kind).
  */
 // The order of the entries in the enum MUST NOT be changed, as their ordinality is used as an identifier.
 // TODO: Link to the specification once it has a permanent URL
@@ -28,15 +33,11 @@ enum class CertRole(val parent: CertRole?, val isIdentity: Boolean) : ASN1Encoda
     CONFIDENTIAL_IDENTITY(WELL_KNOWN_IDENTITY, true);
 
     companion object {
-        fun getInstance(obj: ASN1Encodable): CertRole {
-            val ordinal = (obj as ASN1Integer).positiveValue
-            return CertRole.values().get(ordinal.toInt() - 1)
+        fun getInstance(id: ASN1Integer): CertRole {
+            val ordinal = id.positiveValue.toInt() - 1
+            return CertRole.values().get(ordinal)
         }
-        fun getInstance(data: ByteArray): CertRole? {
-            val sequence = ASN1Sequence.getInstance(data)
-            require(sequence.size() == 1)
-            return getInstance(sequence.getObjectAt(0))
-        }
+        fun getInstance(data: ByteArray): CertRole? = getInstance(ASN1Integer.getInstance(data))
 
         fun extract(cert: Certificate): CertRole? {
             val x509Cert = cert as? X509Certificate

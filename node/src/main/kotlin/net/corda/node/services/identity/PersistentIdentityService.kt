@@ -4,6 +4,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.UnknownAnonymousPartyException
