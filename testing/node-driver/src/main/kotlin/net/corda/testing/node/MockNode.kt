@@ -47,6 +47,8 @@ import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
+import org.slf4j.Logger
+import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
