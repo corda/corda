@@ -48,10 +48,6 @@ handling, and ensures the Corda service is run at boot.
       trustStorePassword : "trustpass"
       useHTTPS : false
       devMode : false
-      networkMapService {
-          address="networkmap.foo.bar.com:10002"
-          legalName="O=FooBar NetworkMap, L=Dublin, C=IE"
-      }
       rpcUsers=[
           {
               user=corda
@@ -223,10 +219,6 @@ at boot, and means the Corda service stays running with no users connected to th
         extraAdvertisedServiceIds: [ "" ]
         useHTTPS : false
         devMode : false
-        networkMapService {
-                address="networkmap.foo.bar.com:10002"
-                legalName="O=FooBar NetworkMap, L=Dublin, C=IE"
-        }
         rpcUsers=[
             {
                 user=corda

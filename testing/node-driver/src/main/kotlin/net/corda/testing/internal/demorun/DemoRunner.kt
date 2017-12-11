@@ -4,14 +4,11 @@ package net.corda.testing.internal.demorun
 
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.driver.JmxPolicy
-import net.corda.testing.internal.DriverDSLImpl
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
+import net.corda.testing.internal.internalDriver
 
 fun CordformDefinition.clean() {
     System.err.println("Deleting: $nodesDirectory")
@@ -35,12 +32,13 @@ fun CordformDefinition.deployNodesThen(block: () -> Unit) {
 }
 
 private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block: () -> Unit) {
+    clean()
     val nodes = nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } }
     val maxPort = nodes
             .flatMap { listOf(it.p2pAddress, it.rpcAddress, it.webAddress) }
             .mapNotNull { address -> address?.let { NetworkHostAndPort.parse(it).port } }
             .max()!!
-    driver(
+    internalDriver(
             isDebug = true,
             jmxPolicy =  JmxPolicy(true),
             driverDirectory = nodesDirectory,
@@ -51,17 +49,8 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             portAllocation = PortAllocation.Incremental(maxPort + 1),
             waitForAllNodesToFinish = waitForAllNodesToFinish
     ) {
-        this as DriverDSLImpl  // access internal API
         setup(this)
-        nodes.map {
-            val startedNode = startCordformNode(it)
-            if (it.webAddress != null) {
-                // Start a webserver if an address for it was specified
-                startedNode.flatMap { startWebserver(it) }
-            } else {
-                startedNode
-            }
-        }.transpose().getOrThrow()  // Only proceed once everything is up and running
+        startCordformNodes(nodes).getOrThrow() // Only proceed once everything is up and running
         println("All nodes and webservers are ready...")
         block()
     }

@@ -22,10 +22,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.*
 import net.corda.core.node.services.*
-import net.corda.core.serialization.SerializationWhitelist
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -46,7 +43,6 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
@@ -61,6 +57,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -94,6 +91,8 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
  * Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
  * sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.
  */
+// TODO Log warning if this node is a notary but not one of the ones specified in the network parameters, both for core and custom
+
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(val configuration: NodeConfiguration,
@@ -123,6 +122,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
 
+    protected lateinit var networkParameters: NetworkParameters
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
 
@@ -135,7 +135,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected val networkMapClient: NetworkMapClient? by lazy { configuration.compatibilityZoneURL?.let(::NetworkMapClient) }
+    protected val networkMapClient: NetworkMapClient? by lazy {
+        configuration.compatibilityZoneURL?.let {
+            NetworkMapClient(it, services.identityService.trustRoot)
+        }
+    }
 
     lateinit var securityManager: RPCSecurityManager get
 
@@ -177,7 +181,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         initialiseDatabasePersistence(schemaService,  makeIdentityService(identity.certificate)) { database ->
-            val persistentNetworkMapCache = PersistentNetworkMapCache(database)
+            // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like
+            // a code smell.
+            val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
             val identityKeypair = keyPairs.first { it.public == info.legalIdentities.first().owningKey }
             val serialisedNodeInfo = info.serialize()
@@ -191,12 +197,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
+        readNetworkParameters()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
-            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database), identityService)
+            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database)
@@ -274,14 +281,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val keyPairs = mutableSetOf(identityKeyPair)
 
         myNotaryIdentity = configuration.notary?.let {
-            val (notaryIdentity, notaryIdentityKeyPair) = obtainIdentity(it)
-            keyPairs += notaryIdentityKeyPair
-            notaryIdentity
+            if (it.isClusterConfig) {
+                val (notaryIdentity, notaryIdentityKeyPair) = obtainIdentity(it)
+                keyPairs += notaryIdentityKeyPair
+                notaryIdentity
+            } else {
+                // In case of a single notary service myNotaryIdentity will be the node's single identity.
+                identity
+            }
         }
 
         var info = NodeInfo(
                 myAddresses(),
-                listOf(identity, myNotaryIdentity).filterNotNull(),
+                setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
                 platformClock.instant().toEpochMilli()
         )
@@ -623,6 +635,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
+    private fun readNetworkParameters() {
+        val file = configuration.baseDirectory / "network-parameters"
+        networkParameters = file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
+        log.info(networkParameters.toString())
+        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
+    }
+
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
@@ -678,22 +697,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
 
-        val (id, singleName) = if (notaryConfig == null) {
-            // Node's main identity
+        val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
+            // Node's main identity or if it's a single node notary
             Pair("identity", myLegalName)
         } else {
             val notaryId = notaryConfig.run {
                 NotaryService.constructId(validating, raft != null, bftSMaRt != null, custom)
             }
-            if (!notaryConfig.isClusterConfig) {
-                // Node's notary identity
-                Pair(notaryId, myLegalName.copy(commonName = notaryId))
-            } else {
-                // The node is part of a distributed notary whose identity must already be generated beforehand
-                Pair(notaryId, null)
-            }
+            // The node is part of a distributed notary whose identity must already be generated beforehand.
+            Pair(notaryId, null)
         }
-
         // TODO: Integrate with Key management service?
         val privateKeyAlias = "$id-private-key"
 
@@ -731,7 +744,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
         }
 
-        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates)
+        val certPath = X509CertificateFactory().generateCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
 

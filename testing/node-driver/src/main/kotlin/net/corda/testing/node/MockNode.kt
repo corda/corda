@@ -38,7 +38,11 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -143,6 +147,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
+    private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
     private val serializationEnv = setGlobalSerialization(initialiseSerialization)
     private val sharedUserCount = AtomicInteger(0)
@@ -159,29 +164,32 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode> get() {
-        return when (notaryNodes.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryNodes[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryNode: StartedNode<MockNode>
+        get() {
+            return when (notaryNodes.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryNodes[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentity: Party get() {
-        return defaultNotaryNode.info.legalIdentities[1] // TODO Resolve once network parameters is merged back in
-    }
+    val defaultNotaryIdentity: Party
+        get() {
+            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
-        return defaultNotaryNode.info.legalIdentitiesAndCerts[1] // TODO Resolve once network parameters is merged back in
-    }
+    val defaultNotaryIdentityAndCert: PartyAndCertificate
+        get() {
+            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
@@ -207,7 +215,20 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     init {
         filesystem.getPath("/nodes").createDirectory()
+        val notaryInfos = generateNotaryIdentities()
+        // The network parameters must be serialised before starting any of the nodes
+        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
         notaryNodes = createNotaries()
+    }
+
+    private fun generateNotaryIdentities(): List<NotaryInfo> {
+        return notarySpecs.mapIndexed { index, spec ->
+            val identity = ServiceIdentityGenerator.generateToDisk(
+                    dirs = listOf(baseDirectory(nextNodeId + index)),
+                    serviceName = spec.name,
+                    serviceId = "identity")
+            NotaryInfo(identity, spec.validating)
+        }
     }
 
     private fun createNotaries(): List<StartedNode<MockNode>> {
@@ -245,6 +266,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
 
         override fun start(): StartedNode<MockNode> {
+            mockNet.networkParameters.install(configuration.baseDirectory)
             val started: StartedNode<MockNode> = uncheckedCast(super.start())
             advertiseNodeToNetwork(started)
             return started

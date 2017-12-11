@@ -13,6 +13,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
+import net.corda.core.node.services.NotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
@@ -21,11 +22,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.chooseIdentity
+import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -54,19 +57,26 @@ class BFTNotaryServiceTests {
 
         notary = ServiceIdentityGenerator.generateToDisk(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH")
-        )
+                CordaX500Name("BFT", "Zurich", "CH"),
+                NotaryService.constructId(validating = false, bft = true))
+
+        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notary, false))))
 
         val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
 
-        replicaIds.forEach { replicaId ->
-            mockNet.createNode(MockNodeParameters(configOverrides = {
+        val nodes = replicaIds.map { replicaId ->
+            mockNet.createUnstartedNode(MockNodeParameters(configOverrides = {
                 val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
                 doReturn(notary).whenever(it).notary
             }))
-        }
+        } + mockNet.createUnstartedNode()
 
-        node = mockNet.createNode()
+        // MockNetwork doesn't support BFT clusters, so we create all the nodes we need unstarted, and then install the
+        // network-parameters in their directories before they're started.
+        node = nodes.map { node ->
+            networkParameters.install(mockNet.baseDirectory(node.id))
+            node.start()
+        }.last()
     }
 
     /** Failure mode is the redundant replica gets stuck in startup, so we can't dispose it cleanly at the end. */

@@ -53,7 +53,6 @@ interface NetworkMapCacheBase {
      *
      * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced.
      */
-    // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
     val notaryIdentities: List<Party>
     // DOCEND 1
 
@@ -117,7 +116,7 @@ interface NetworkMapCacheBase {
     fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
     // DOCEND 2
 
-    /** Checks whether a given party is an advertised notary identity. */
+    /** Returns true if and only if the given [Party] is a notary, which is defined by the network parameters. */
     fun isNotary(party: Party): Boolean = party in notaryIdentities
 
     /**
