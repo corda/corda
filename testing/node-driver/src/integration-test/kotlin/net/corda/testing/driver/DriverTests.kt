@@ -4,12 +4,17 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.addressMustBeBound
+import net.corda.testing.internal.addressMustNotBeBound
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.json.simple.JSONObject
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
@@ -59,11 +64,25 @@ class DriverTests : IntegrationTest() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, extraSystemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
+        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
+        }
+    }
+
+    @Test
+    fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
+        driver(jmxPolicy = JmxPolicy(true)) {
+            // start another node so we gain access to node JMX metrics
+            startNode(providedName = DUMMY_REGULATOR.name).getOrThrow()
+
+            val webAddress = NetworkHostAndPort("localhost", 7006)
+            // request access to some JMX metrics via Jolokia HTTP/JSON
+            val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
+            val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
+            assertThat(versionAsJson.getValue("status")).isEqualTo(200)
         }
     }
 
@@ -77,7 +96,7 @@ class DriverTests : IntegrationTest() {
         }
 
         val baseDirectory = driver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
-            (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
+            baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }

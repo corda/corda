@@ -210,8 +210,8 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
 
-    private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
-    private val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_NOTARY_KEY)
+    private val issuerServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
 
     private lateinit var moveTX: SignedTransaction
 

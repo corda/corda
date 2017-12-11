@@ -1,13 +1,14 @@
 package net.corda.core.contracts
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.UpgradeCommand
-import net.corda.testing.ALICE
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.node.ServicesForResolution
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
-import net.corda.testing.node.MockServices
-import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -23,7 +24,9 @@ class DummyContractV2Tests {
 
     @Test
     fun `upgrade from v1`() {
-        val services = MockServices()
+        val services = rigorousMock<ServicesForResolution>().also {
+            doReturn(rigorousMock<CordappProvider>()).whenever(it).cordappProvider
+        }
         val contractUpgrade = DummyContractV2()
         val v1State = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
         val v1Ref = StateRef(SecureHash.randomSHA256(), 0)

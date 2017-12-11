@@ -20,6 +20,7 @@ import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import java.nio.file.Path
 
@@ -29,7 +30,7 @@ import java.nio.file.Path
  */
 @JvmOverloads
 fun ledger(
-        services: ServiceHub = MockServices(),
+        services: ServiceHub = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name),
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
     return LedgerDSL(TestLedgerDSLInterpreter(services)).also { dsl(it) }
@@ -45,7 +46,7 @@ fun transaction(
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages)) {
+) = ledger(services = MockServices(cordappPackages, makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 

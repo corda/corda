@@ -8,7 +8,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
 
 class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
     private val keyStore = storePath.read { loadKeyStore(it, storePassword) }
@@ -18,7 +17,7 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
         // Assume key password = store password.
         val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         // Create new keys and store in keystore.
-        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
+        val cert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
         val certPath = X509CertificateFactory().delegate.generateCertPath(listOf(cert.cert) + clientCertPath)
         require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
         // TODO: X509Utilities.validateCertificateChain()

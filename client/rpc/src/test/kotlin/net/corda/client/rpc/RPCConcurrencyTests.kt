@@ -1,15 +1,15 @@
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.messaging.RPCOps
-import net.corda.core.utilities.millis
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.millis
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.internal.RPCDriverExposedDSLInterface
+import net.corda.testing.internal.RPCDriverDSL
 import net.corda.testing.internal.rpcDriver
 import net.corda.testing.internal.testThreadFactory
 import org.apache.activemq.artemis.utils.collections.ConcurrentHashSet
@@ -20,7 +20,10 @@ import org.junit.runners.Parameterized
 import rx.Observable
 import rx.subjects.UnicastSubject
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 @RunWith(Parameterized::class)
 class RPCConcurrencyTests : AbstractRPCTest() {
@@ -84,7 +87,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         }
     }
 
-    private fun RPCDriverExposedDSLInterface.testProxy(): TestProxy<TestOps> {
+    private fun RPCDriverDSL.testProxy(): TestProxy<TestOps> {
         return testProxy<TestOps>(
                 TestOpsImpl(pool),
                 clientConfiguration = RPCClientConfiguration.default.copy(

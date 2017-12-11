@@ -36,8 +36,8 @@ class AttachmentDemoTest : IntegrationTest() {
                     invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed)
             )))
             val (nodeA, nodeB) = listOf(
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g", logLevel = "INFO"),
-                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g", logLevel = "INFO")
+                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
+                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g")
             ).map { it.getOrThrow() }
             startWebserver(nodeB).getOrThrow()
 

@@ -1,6 +1,7 @@
 package com.r3.corda.enterprise.perftestcordapp.contracts.asset
 
 
+import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.enterprise.perftestcordapp.*
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCash
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashBy
@@ -21,6 +22,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
@@ -32,6 +34,7 @@ import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.doReturn
 import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
@@ -104,7 +107,7 @@ class CashTests {
     @Before
     fun setUp() = withTestSerialization {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset","com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, MEGA_CORP_KEY)
+        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset","com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
@@ -844,8 +847,9 @@ class CashTests {
     // Double spend.
     @Test
     fun chainCashDoubleSpendFailsWith() = withTestSerialization {
-        val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), MEGA_CORP.name, MEGA_CORP_KEY)
-
+        val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+        }, MEGA_CORP.name, MEGA_CORP_KEY)
         ledger(mockService) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)

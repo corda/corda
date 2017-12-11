@@ -10,6 +10,8 @@ import java.io.File
  */
 class Cordformation : Plugin<Project> {
     internal companion object {
+        const val CORDFORMATION_TYPE = "cordformationInternal"
+
         /**
          * Gets a resource file from this plugin's JAR file.
          *
@@ -31,5 +33,8 @@ class Cordformation : Plugin<Project> {
 
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
+        Utils.createRuntimeConfiguration(CORDFORMATION_TYPE, project)
+        val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
+        project.dependencies.add(CORDFORMATION_TYPE, "org.jolokia:jolokia-jvm:$jolokiaVersion:agent")
     }
 }

@@ -13,7 +13,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.testing.*
-import net.corda.testing.driver.poll
+import net.corda.testing.internal.poll
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
@@ -70,8 +70,8 @@ class RPCStabilityTests : IntegrationTest() {
         val executor = Executors.newScheduledThreadPool(1)
         fun startAndStop() {
             rpcDriver {
-                val server = startRpcServer<RPCOps>(ops = DummyOps)
-                startRpcClient<RPCOps>(server.get().broker.hostAndPort!!).get()
+                val server = startRpcServer<RPCOps>(ops = DummyOps).get()
+                startRpcClient<RPCOps>(server.broker.hostAndPort!!).get()
             }
         }
         repeat(5) {
@@ -238,6 +238,7 @@ class RPCStabilityTests : IntegrationTest() {
                 override val protocolVersion = 0
                 override fun ping() = "pong"
             }
+
             val serverFollower = shutdownManager.follower()
             val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
@@ -355,7 +356,7 @@ class RPCStabilityTests : IntegrationTest() {
 
 }
 
-fun RPCDriverExposedDSLInterface.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
+fun RPCDriverDSL.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
     pollUntilTrue("number of RPC clients to become $expected") {
         val clientAddresses = server.broker.serverControl.addressNames.filter { it.startsWith(RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX) }
         clientAddresses.size == expected

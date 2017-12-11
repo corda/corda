@@ -16,7 +16,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -52,158 +52,24 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 
-interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
-    /**
-     * Starts an In-VM RPC server. Note that only a single one may be started.
-     *
-     * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
-     * @param configuration The RPC server configuration.
-     * @param ops The server-side implementation of the RPC interface.
-     */
-    fun <I : RPCOps> startInVmRpcServer(
-            rpcUser: User = rpcTestUser,
-            nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
-            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
-            ops: I
-    ): CordaFuture<RpcServerHandle>
-
-    /**
-     * Starts an In-VM RPC client.
-     *
-     * @param rpcOpsClass The [Class] of the RPC interface.
-     * @param username The username to authenticate with.
-     * @param password The password to authenticate with.
-     * @param configuration The RPC client configuration.
-     */
-    fun <I : RPCOps> startInVmRpcClient(
-            rpcOpsClass: Class<I>,
-            username: String = rpcTestUser.username,
-            password: String = rpcTestUser.password,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default
-    ): CordaFuture<I>
-
-    /**
-     * Starts an In-VM Artemis session connecting to the RPC server.
-     *
-     * @param username The username to authenticate with.
-     * @param password The password to authenticate with.
-     */
-    fun startInVmArtemisSession(
-            username: String = rpcTestUser.username,
-            password: String = rpcTestUser.password
-    ): ClientSession
-
-    /**
-     * Starts a Netty RPC server.
-     *
-     * @param serverName The name of the server, to be used for the folder created for Artemis files.
-     * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
-     * @param configuration The RPC server configuration.
-     * @param ops The server-side implementation of the RPC interface.
-     */
-    fun <I : RPCOps> startRpcServer(
-            serverName: String = "driver-rpc-server-${random63BitValue()}",
-            rpcUser: User = rpcTestUser,
-            nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
-            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
-            customPort: NetworkHostAndPort? = null,
-            ops: I
-    ): CordaFuture<RpcServerHandle>
-
-    /**
-     * Starts a Netty RPC client.
-     *
-     * @param rpcOpsClass The [Class] of the RPC interface.
-     * @param rpcAddress The address of the RPC server to connect to.
-     * @param username The username to authenticate with.
-     * @param password The password to authenticate with.
-     * @param configuration The RPC client configuration.
-     */
-    fun <I : RPCOps> startRpcClient(
-            rpcOpsClass: Class<I>,
-            rpcAddress: NetworkHostAndPort,
-            username: String = rpcTestUser.username,
-            password: String = rpcTestUser.password,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default
-    ): CordaFuture<I>
-
-    /**
-     * Starts a Netty RPC client in a new JVM process that calls random RPCs with random arguments.
-     *
-     * @param rpcOpsClass The [Class] of the RPC interface.
-     * @param rpcAddress The address of the RPC server to connect to.
-     * @param username The username to authenticate with.
-     * @param password The password to authenticate with.
-     */
-    fun <I : RPCOps> startRandomRpcClient(
-            rpcOpsClass: Class<I>,
-            rpcAddress: NetworkHostAndPort,
-            username: String = rpcTestUser.username,
-            password: String = rpcTestUser.password
-    ): CordaFuture<Process>
-
-    /**
-     * Starts a Netty Artemis session connecting to an RPC server.
-     *
-     * @param rpcAddress The address of the RPC server.
-     * @param username The username to authenticate with.
-     * @param password The password to authenticate with.
-     */
-    fun startArtemisSession(
-            rpcAddress: NetworkHostAndPort,
-            username: String = rpcTestUser.username,
-            password: String = rpcTestUser.password
-    ): ClientSession
-
-    fun startRpcBroker(
-            serverName: String = "driver-rpc-server-${random63BitValue()}",
-            rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
-            customPort: NetworkHostAndPort? = null
-    ): CordaFuture<RpcBrokerHandle>
-
-    fun startInVmRpcBroker(
-            rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
-    ): CordaFuture<RpcBrokerHandle>
-
-    fun <I : RPCOps> startRpcServerWithBrokerRunning(
-            rpcUser: User = rpcTestUser,
-            nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
-            ops: I,
-            brokerHandle: RpcBrokerHandle
-    ): RpcServerHandle
-}
-
-inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startInVmRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
 ) = startInVmRpcClient(I::class.java, username, password, configuration)
 
-inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRandomRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSL.startRandomRpcClient(
         hostAndPort: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password
 ) = startRandomRpcClient(I::class.java, hostAndPort, username, password)
 
-inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         rpcAddress: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
 ) = startRpcClient(I::class.java, rpcAddress, username, password, configuration)
-
-interface RPCDriverInternalDSLInterface : DriverDSLInternalInterface, RPCDriverExposedDSLInterface
 
 data class RpcBrokerHandle(
         val hostAndPort: NetworkHostAndPort?,
@@ -223,6 +89,7 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
 private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
@@ -235,26 +102,29 @@ fun <A> rpcDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
-        dsl: RPCDriverExposedDSLInterface.() -> A
-) = genericDriver(
+        jmxPolicy: JmxPolicy = JmxPolicy(),
+        dsl: RPCDriverDSL.() -> A
+) : A {
+    return genericDriver(
         driverDsl = RPCDriverDSL(
-                DriverDSL(
+                DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        extraSystemProperties = systemProperties,
+                        systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs
+                        notarySpecs = notarySpecs,
+                        jmxPolicy = jmxPolicy
                 ), externalTrace
         ),
         coerce = { it },
         dsl = dsl,
         initialiseSerialization = false
-)
+)}
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
@@ -276,8 +146,8 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
 }
 
 data class RPCDriverDSL(
-        private val driverDSL: DriverDSL, private val externalTrace: Trace?
-) : DriverDSLInternalInterface by driverDSL, RPCDriverInternalDSLInterface {
+        private val driverDSL: DriverDSLImpl, private val externalTrace: Trace?
+) : InternalDriverDSL by driverDSL {
     private companion object {
         val notificationAddress = "notifications"
 
@@ -340,12 +210,20 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startInVmRpcServer(
-            rpcUser: User,
-            nodeLegalName: CordaX500Name,
-            maxFileSize: Int,
-            maxBufferedBytesPerClient: Long,
-            configuration: RPCServerConfiguration,
+    /**
+     * Starts an In-VM RPC server. Note that only a single one may be started.
+     *
+     * @param rpcUser The single user who can access the server through RPC, and their permissions.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param configuration The RPC server configuration.
+     * @param ops The server-side implementation of the RPC interface.
+     */
+    fun <I : RPCOps> startInVmRpcServer(
+            rpcUser: User = rpcTestUser,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
+            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I
     ): CordaFuture<RpcServerHandle> {
         return startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient).map { broker ->
@@ -353,7 +231,20 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startInVmRpcClient(rpcOpsClass: Class<I>, username: String, password: String, configuration: RPCClientConfiguration): CordaFuture<I> {
+    /**
+     * Starts an In-VM RPC client.
+     *
+     * @param rpcOpsClass The [Class] of the RPC interface.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @param configuration The RPC client configuration.
+     */
+    fun <I : RPCOps> startInVmRpcClient(
+            rpcOpsClass: Class<I>,
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password,
+            configuration: RPCClientConfiguration = RPCClientConfiguration.default
+    ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
@@ -364,7 +255,16 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun startInVmArtemisSession(username: String, password: String): ClientSession {
+    /**
+     * Starts an In-VM Artemis session connecting to the RPC server.
+     *
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     */
+    fun startInVmArtemisSession(
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password
+    ): ClientSession {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(inVmClientTransportConfiguration)
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(username, password, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
@@ -376,14 +276,23 @@ data class RPCDriverDSL(
         return session
     }
 
-    override fun <I : RPCOps> startRpcServer(
-            serverName: String,
-            rpcUser: User,
-            nodeLegalName: CordaX500Name,
-            maxFileSize: Int,
-            maxBufferedBytesPerClient: Long,
-            configuration: RPCServerConfiguration,
-            customPort: NetworkHostAndPort?,
+    /**
+     * Starts a Netty RPC server.
+     *
+     * @param serverName The name of the server, to be used for the folder created for Artemis files.
+     * @param rpcUser The single user who can access the server through RPC, and their permissions.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param configuration The RPC server configuration.
+     * @param ops The server-side implementation of the RPC interface.
+     */
+    fun <I : RPCOps> startRpcServer(
+            serverName: String = "driver-rpc-server-${random63BitValue()}",
+            rpcUser: User = rpcTestUser,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
+            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
+            customPort: NetworkHostAndPort? = null,
             ops: I
     ): CordaFuture<RpcServerHandle> {
         return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
@@ -391,12 +300,21 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startRpcClient(
+    /**
+     * Starts a Netty RPC client.
+     *
+     * @param rpcOpsClass The [Class] of the RPC interface.
+     * @param rpcAddress The address of the RPC server to connect to.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @param configuration The RPC client configuration.
+     */
+    fun <I : RPCOps> startRpcClient(
             rpcOpsClass: Class<I>,
             rpcAddress: NetworkHostAndPort,
-            username: String,
-            password: String,
-            configuration: RPCClientConfiguration
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password,
+            configuration: RPCClientConfiguration = RPCClientConfiguration.default
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
@@ -408,13 +326,37 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): CordaFuture<Process> {
+    /**
+     * Starts a Netty RPC client in a new JVM process that calls random RPCs with random arguments.
+     *
+     * @param rpcOpsClass The [Class] of the RPC interface.
+     * @param rpcAddress The address of the RPC server to connect to.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     */
+    fun <I : RPCOps> startRandomRpcClient(
+            rpcOpsClass: Class<I>,
+            rpcAddress: NetworkHostAndPort,
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password
+    ): CordaFuture<Process> {
         val process = ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
         driverDSL.shutdownManager.registerProcessShutdown(process)
         return doneFuture(process)
     }
 
-    override fun startArtemisSession(rpcAddress: NetworkHostAndPort, username: String, password: String): ClientSession {
+    /**
+     * Starts a Netty Artemis session connecting to an RPC server.
+     *
+     * @param rpcAddress The address of the RPC server.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     */
+    fun startArtemisSession(
+            rpcAddress: NetworkHostAndPort,
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password
+    ): ClientSession {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(createNettyClientTransportConfiguration(rpcAddress))
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(username, password, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -427,12 +369,12 @@ data class RPCDriverDSL(
         return session
     }
 
-    override fun startRpcBroker(
-            serverName: String,
-            rpcUser: User,
-            maxFileSize: Int,
-            maxBufferedBytesPerClient: Long,
-            customPort: NetworkHostAndPort?
+    fun startRpcBroker(
+            serverName: String = "driver-rpc-server-${random63BitValue()}",
+            rpcUser: User = rpcTestUser,
+            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            customPort: NetworkHostAndPort? = null
     ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
@@ -452,7 +394,11 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun startInVmRpcBroker(rpcUser: User, maxFileSize: Int, maxBufferedBytesPerClient: Long): CordaFuture<RpcBrokerHandle> {
+    fun startInVmRpcBroker(
+            rpcUser: User = rpcTestUser,
+            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
+    ): CordaFuture<RpcBrokerHandle> {
         return driverDSL.executorService.fork {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
             val server = EmbeddedActiveMQ()
@@ -471,10 +417,10 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startRpcServerWithBrokerRunning(
-            rpcUser: User,
-            nodeLegalName: CordaX500Name,
-            configuration: RPCServerConfiguration,
+    fun <I : RPCOps> startRpcServerWithBrokerRunning(
+            rpcUser: User = rpcTestUser,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
+            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I,
             brokerHandle: RpcBrokerHandle
     ): RpcServerHandle {
@@ -482,17 +428,13 @@ data class RPCDriverDSL(
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             isUseGlobalPools = false
         }
-        val userService = object : RPCUserService {
-            override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
-            override val users: List<User> get() = listOf(rpcUser)
-            override val id: AuthServiceId = AuthServiceId("RPC_DRIVER")
-        }
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,
                 rpcUser.password,
                 locator,
-                userService,
+                rpcSecurityManager,
                 nodeLegalName,
                 configuration
         )
