@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 description "Generates a summary of the artifact's public API"
 

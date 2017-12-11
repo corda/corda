@@ -17,7 +17,6 @@ import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -224,19 +223,16 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceServices: MockServices
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
-
-    private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
-    private val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
-
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_NOTARY_KEY)
+    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
     private lateinit var moveTX: SignedTransaction
-
-    //    @Test
-    @Ignore
-    fun `issue move and then redeem`() = withTestSerialization {
+    @Test
+    fun `issue move and then redeem`() {
         val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(ALICE_KEY),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
-                initialIdentityName = MEGA_CORP.name)
+                listOf("net.corda.finance.contracts"),
+                MEGA_CORP.name)
         val databaseAlice = aliceDatabaseAndServices.first
         aliceServices = aliceDatabaseAndServices.second
         aliceVaultService = aliceServices.vaultService
@@ -248,7 +244,8 @@ class CommercialPaperTestsGeneric {
         val bigCorpDatabaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(BIG_CORP_KEY),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
-                initialIdentityName = MEGA_CORP.name)
+                listOf("net.corda.finance.contracts"),
+                MEGA_CORP.name)
         val databaseBigCorp = bigCorpDatabaseAndServices.first
         bigCorpServices = bigCorpDatabaseAndServices.second
         bigCorpVaultService = bigCorpServices.vaultService

@@ -1,6 +1,7 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -49,9 +50,8 @@ class TransactionSerializationTests {
     val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY), fakeStateRef)
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
-
-    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, MEGA_CORP_KEY)
-    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+    val notaryServices = MockServices(listOf("net.corda.core.serialization"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before
@@ -88,14 +88,14 @@ class TransactionSerializationTests {
         assertFailsWith(IllegalArgumentException::class) {
             stx.copy(sigs = emptyList())
         }
-
+        val DUMMY_KEY_2 = generateKeyPair()
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)
-            val dummyServices = MockServices(DUMMY_KEY_2)
+            val dummyServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
             stx.copy(sigs = stx2.sigs).verifyRequiredSignatures()

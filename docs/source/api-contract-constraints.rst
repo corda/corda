@@ -1,15 +1,15 @@
-Contract Constraints
-====================
+API: Contract Constraints
+=========================
 
 A basic understanding of contract key concepts, which can be found :doc:`here </key-concepts-contracts>`,
 is required reading for this page.
 
 Transaction states specify a constraint over the contract that will be used to verify it.  For a transaction to be
-valid, the verify() function associated with each state must run successfully. However, for this to be secure, it is
-not sufficient to specify the verify() function by name as there may exist multiple different implementations with the
-same method signature and enclosing class. Contract constraints solve this problem by allowing a contract developer to
-constrain which verify() functions out of the universe of implementations can be used.
-(ie the universe is everything that matches the signature and contract constraints restricts this universe to a subset.)
+valid, the ``verify`` function associated with each state must run successfully. However, for this to be secure, it is
+not sufficient to specify the ``verify`` function by name as there may exist multiple different implementations with
+the same method signature and enclosing class. Contract constraints solve this problem by allowing a contract developer
+to constrain which ``verify`` functions out of the universe of implementations can be used (i.e. the universe is
+everything that matches the signature and contract constraints restricts this universe to a subset).
 
 A typical constraint is the hash of the CorDapp JAR that contains the contract and states but will in future releases
 include constraints that require specific signers of the JAR, or both the signer and the hash. Constraints can be
@@ -20,12 +20,13 @@ constructs a ``TransactionState`` without specifying the constraint parameter a 
 (``AutomaticHashConstraint``) is used. This default will be automatically resolved to a specific
 ``HashAttachmentConstraint`` that contains the hash of the attachment which contains the contract of that
 ``TransactionState``. This automatic resolution occurs when a ``TransactionBuilder`` is converted to a
-``WireTransaction``. This reduces the boilerplate involved in finding a specific hash constraint when building a transaction.
+``WireTransaction``. This reduces the boilerplate involved in finding a specific hash constraint when building a
+transaction.
 
 It is possible to specify the constraint explicitly with any other class that implements the ``AttachmentConstraint``
 interface. To specify a hash manually the ``HashAttachmentConstraint`` can be used and to not provide any constraint
 the ``AlwaysAcceptAttachmentConstraint`` can be used - though this is intended for testing only. An example below
-shows how to construct a ``TransactionState`` with an explicitly specified hash constraint from within a flow;
+shows how to construct a ``TransactionState`` with an explicitly specified hash constraint from within a flow:
 
 .. sourcecode:: java
 
@@ -42,12 +43,11 @@ shows how to construct a ``TransactionState`` with an explicitly specified hash 
      LedgerTransaction ltx = wtx.toLedgerTransaction(serviceHub)
      ltx.verify() // Verifies both the attachment constraints and contracts
 
-
 This mechanism exists both for integrity and security reasons. It is important not to verify against the wrong contract,
 which could happen if the wrong version of the contract is attached. More importantly when resolving transaction chains
 there will, in a future release, be attachments loaded from the network into the attachment sandbox that are used
-to verify the transaction chain. Ensuring the attachment used is the correct one ensures that the verification will
-not be tamperable by providing a fake contract.
+to verify the transaction chain. Ensuring the attachment used is the correct one ensures that the verification is
+tamper-proof by providing a fake contract.
 
 CorDapps as attachments
 -----------------------
@@ -55,10 +55,10 @@ CorDapps as attachments
 CorDapp JARs (:doc:`cordapp-overview`) that are installed to the node and contain classes implementing the ``Contract``
 interface are automatically loaded into the ``AttachmentStorage`` of a node at startup.
 
-After CorDapps are loaded into the attachment store the node creates a link between contract classes and the
-attachment that they were loaded from. This makes it possible to find the attachment for any given contract.
-This is how the automatic resolution of attachments is done by the ``TransactionBuilder`` and how, when verifying
-the constraints and contracts, attachments are associated with their respective contracts.
+After CorDapps are loaded into the attachment store the node creates a link between contract classes and the attachment
+that they were loaded from. This makes it possible to find the attachment for any given contract. This is how the
+automatic resolution of attachments is done by the ``TransactionBuilder`` and how, when verifying the constraints and
+contracts, attachments are associated with their respective contracts.
 
 Implementations
 ---------------
@@ -95,7 +95,7 @@ to specify JAR URLs in the case that the CorDapp(s) involved in testing already 
 MockNetwork/MockNode
 ********************
 
-The most simple way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to use the
+The simplest way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to use the
 ``cordappPackages`` constructor parameter (Kotlin) or the ``setCordappPackages`` method on ``MockNetworkParameters`` (Java)
 when creating the MockNetwork. This will cause the ``AbstractNode`` to use the named packages as sources for CorDapps. All files
 within those packages will be zipped into a JAR and added to the attachment store and loaded as CorDapps by the

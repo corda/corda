@@ -4,12 +4,17 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.addressMustBeBound
+import net.corda.testing.internal.addressMustNotBeBound
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.json.simple.JSONObject
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
@@ -68,6 +73,20 @@ class DriverTests : IntegrationTest() {
     }
 
     @Test
+    fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
+        driver(jmxPolicy = JmxPolicy(true)) {
+            // start another node so we gain access to node JMX metrics
+            startNode(providedName = DUMMY_REGULATOR.name).getOrThrow()
+
+            val webAddress = NetworkHostAndPort("localhost", 7006)
+            // request access to some JMX metrics via Jolokia HTTP/JSON
+            val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
+            val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
+            assertThat(versionAsJson.getValue("status")).isEqualTo(200)
+        }
+    }
+
+    @Test
     fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
@@ -77,7 +96,7 @@ class DriverTests : IntegrationTest() {
         }
 
         val baseDirectory = driver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
-            (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
+            baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }

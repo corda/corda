@@ -3,8 +3,11 @@ package net.corda.test.spring
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.contextLogger
-import net.corda.testing.driver.*
-import net.corda.testing.internal.ProcessUtilities
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.WebserverHandle
+import net.corda.testing.internal.*
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,22 +16,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
-
-interface SpringDriverExposedDSLInterface : DriverDSLExposedInterface {
-
-    /**
-     * Starts a Spring Boot application, passes the RPC connection data as parameters the process.
-     * Returns future which will complete after (and if) the server passes healthcheck.
-     * @param clazz Class with main method which is expected to run Spring application
-     * @param handle Corda Node handle this webapp is expected to connect to
-     * @param checkUrl URL path to use for server readiness check - uses [okhttp3.Response.isSuccessful] as qualifier
-     *
-     * TODO:  Rather then expecting a given clazz to contain main method which start Spring app our own simple class can do this
-     */
-    fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle>
-}
-
-interface SpringDriverInternalDSLInterface : DriverDSLInternalInterface, SpringDriverExposedDSLInterface
 
 fun <A> springDriver(
         defaultParameters: DriverParameters = DriverParameters(),
@@ -42,29 +29,40 @@ fun <A> springDriver(
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        dsl: SpringDriverExposedDSLInterface.() -> A
-) = genericDriver(
-        defaultParameters = defaultParameters,
-        isDebug = isDebug,
-        driverDirectory = driverDirectory,
-        portAllocation = portAllocation,
-        debugPortAllocation = debugPortAllocation,
-        systemProperties = systemProperties,
-        useTestClock = useTestClock,
-        initialiseSerialization = initialiseSerialization,
-        startNodesInProcess = startNodesInProcess,
-        extraCordappPackagesToScan = extraCordappPackagesToScan,
-        notarySpecs = notarySpecs,
-        driverDslWrapper = { driverDSL:DriverDSL -> SpringBootDriverDSL(driverDSL) },
-        coerce = { it }, dsl = dsl
-)
+        dsl: SpringBootDriverDSL.() -> A
+): A {
+    return genericDriver(
+            defaultParameters = defaultParameters,
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            initialiseSerialization = initialiseSerialization,
+            startNodesInProcess = startNodesInProcess,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            notarySpecs = notarySpecs,
+            driverDslWrapper = { driverDSL: DriverDSLImpl -> SpringBootDriverDSL(driverDSL) },
+            coerce = { it }, dsl = dsl
+    )
+}
 
-data class SpringBootDriverDSL(private val driverDSL: DriverDSL) : DriverDSLInternalInterface by driverDSL, SpringDriverInternalDSLInterface {
+data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDriverDSL by driverDSL {
     companion object {
         private val log = contextLogger()
     }
 
-    override fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {
+    /**
+     * Starts a Spring Boot application, passes the RPC connection data as parameters the process.
+     * Returns future which will complete after (and if) the server passes healthcheck.
+     * @param clazz Class with main method which is expected to run Spring application
+     * @param handle Corda Node handle this webapp is expected to connect to
+     * @param checkUrl URL path to use for server readiness check - uses [okhttp3.Response.isSuccessful] as qualifier
+     *
+     * TODO:  Rather then expecting a given clazz to contain main method which start Spring app our own simple class can do this
+     */
+    fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {
         val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val process = startApplication(handle, debugPort, clazz)
         driverDSL.shutdownManager.registerProcessShutdown(process)

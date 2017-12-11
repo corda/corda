@@ -68,21 +68,28 @@ path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
+:database: Database configuration:
+
+        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
+        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
 :database:  This section is used to configure JDBC and Hibernate related properties:
 
-        :initDatabase: Boolean on whether to initialise the database or just validate the schema. Defaults to true.
-
-        :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
-             (the value is passed to Hibernate property 'hibernate.hbm2ddl.auto').
+        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
 
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
+        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+        :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
+             (the value is passed to Hibernate property 'hibernate.hbm2ddl.auto').
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
@@ -169,8 +176,7 @@ path to the node's base directory.
     Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
     for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``
 
-:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials
-        and permissions as RPC subsystem. It has one required parameter.
+:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
     :port: The port to start SSH server on
 
@@ -184,3 +190,6 @@ path to the node's base directory.
         :privateKeyFile: Path to the private key file for SSH authentication. The private key must not have a passphrase.
         :publicKeyFile: Path to the public key file for SSH authentication.
         :sshPort: Port to be used for SSH connection, default ``22``.
+
+:exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
+    Default Jolokia access url is http://127.0.0.1:7005/jolokia/
