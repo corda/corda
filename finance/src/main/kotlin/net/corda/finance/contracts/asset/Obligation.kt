@@ -6,10 +6,8 @@ import net.corda.finance.contracts.NetType
 import net.corda.finance.contracts.NettableState
 import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.VisibleForTesting
@@ -22,7 +20,6 @@ import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
 import net.corda.finance.utils.sumObligationsOrNull
 import net.corda.finance.utils.sumObligationsOrZero
-import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -791,8 +788,3 @@ fun <T : Any> Obligation.State<T>.ownedBy(owner: AbstractParty) = copy(beneficia
 
 @Suppress("unused")
 fun <T : Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
-
-/** A randomly generated key. */
-val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
-/** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party(CordaX500Name(organisation = "Snake Oil Issuer", locality = "London", country = "GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }

@@ -6,13 +6,13 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
+import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.testing.SerializationEnvironmentRule;
 import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
@@ -21,13 +21,21 @@ import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.NodeTestUtils.ledger;
 import static net.corda.testing.NodeTestUtils.transaction;
 import static net.corda.testing.TestConstants.*;
-import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
+import static org.mockito.Mockito.doReturn;
 
 public class CommercialPaperTest {
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{123});
-    private final MockServices ledgerServices = new MockServices(makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), getMINI_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY())), getMEGA_CORP().getName());
+    private final MockServices ledgerServices;
+
+    {
+        IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
+        doReturn(getMEGA_CORP()).when(identityService).partyFromKey(getMEGA_CORP_PUBKEY());
+        doReturn(null).when(identityService).partyFromKey(getBIG_CORP_PUBKEY());
+        doReturn(null).when(identityService).partyFromKey(getALICE_PUBKEY());
+        ledgerServices = new MockServices(identityService, getMEGA_CORP().getName());
+    }
 
     // DOCSTART 1
     private ICommercialPaperState getPaper() {

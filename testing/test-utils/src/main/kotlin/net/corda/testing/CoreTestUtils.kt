@@ -16,7 +16,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -69,8 +68,6 @@ val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
 
 val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
-val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
-
 val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MegaCorp", locality = "London", country = "GB"), MEGA_CORP_PUBKEY)
 val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
 val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
@@ -89,9 +86,6 @@ val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
-
-val DUMMY_CASH_ISSUER_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_CASH_ISSUER.party as Party)
-
 val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)

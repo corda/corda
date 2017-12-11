@@ -1,7 +1,11 @@
 package net.corda.finance.contracts
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
@@ -12,6 +16,7 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.*
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
@@ -21,6 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.math.BigInteger
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertFailsWith
@@ -84,6 +90,10 @@ class CommercialPaperTestsGeneric {
         @Parameterized.Parameters
         @JvmStatic
         fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
+
+        private val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        private val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
+        private val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
     }
 
     @Parameterized.Parameter
@@ -92,7 +102,12 @@ class CommercialPaperTestsGeneric {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
-    private val ledgerServices = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+        doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
+    }, MEGA_CORP.name)
+
     @Test
     fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` issuer

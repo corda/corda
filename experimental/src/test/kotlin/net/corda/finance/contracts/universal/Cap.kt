@@ -1,20 +1,31 @@
 package net.corda.finance.contracts.universal
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    MockServices(listOf("net.corda.finance.contracts.universal"), makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name).transaction(DUMMY_NOTARY, script)
+    MockServices(listOf("net.corda.finance.contracts.universal"), rigorousMock<IdentityServiceInternal>().also {
+        listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
+            doReturn(null).whenever(it).partyFromKey(party.owningKey)
+        }
+    }, MEGA_CORP.name).transaction(DUMMY_NOTARY, script)
 }
 
 class Cap {

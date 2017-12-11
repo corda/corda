@@ -1,5 +1,7 @@
 package net.corda.docs.tutorial.testdsl
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.utilities.days
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
@@ -8,9 +10,9 @@ import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.Rule
 import org.junit.Test
 
@@ -18,7 +20,12 @@ class CommercialPaperTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val ledgerServices = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(BIG_CORP_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
+    }, MEGA_CORP.name)
+
     // DOCSTART 1
     fun getPaper(): ICommercialPaperState = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
