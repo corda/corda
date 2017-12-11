@@ -1,6 +1,5 @@
 package net.corda.core.identity
 
-import net.corda.core.CordaOID
 import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
@@ -21,7 +20,7 @@ class PartyAndCertificate(val certPath: CertPath) {
         val certs = certPath.certificates
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         certificate = certs[0] as X509Certificate
-        val roleExtension = IdentityRoleExtension.get(certificate)
+        val roleExtension = IdentityRoleExtension.extract(certificate)
         val role = roleExtension?.role
         if (role!= Role.WELL_KNOWN_IDENTITY
                 && role != Role.CONFIDENTIAL_IDENTITY) {
@@ -48,10 +47,10 @@ class PartyAndCertificate(val certPath: CertPath) {
         val validator = CertPathValidator.getInstance("PKIX")
         val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
         // Apply Corda-specific validity rules to the chain
-        var parentRole: Role? = IdentityRoleExtension.get(result.trustAnchor.trustedCert)?.role
+        var parentRole: Role? = IdentityRoleExtension.extract(result.trustAnchor.trustedCert)?.role
         for (certIdx in (0 until certPath.certificates.size).reversed()) {
             val certificate = certPath.certificates[certIdx]
-            val extension = IdentityRoleExtension.get(certificate)
+            val extension = IdentityRoleExtension.extract(certificate)
             if (parentRole != null) {
                 if (extension == null) {
                     throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
