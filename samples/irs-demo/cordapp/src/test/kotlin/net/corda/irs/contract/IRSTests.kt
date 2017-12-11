@@ -26,7 +26,6 @@ import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
@@ -223,7 +222,12 @@ class IRSTests {
     private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
     private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
     private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-    private val ledgerServices get() = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)
+    private val ledgerServices
+        get() = MockServices(rigorousMock<IdentityServiceInternal>().also {
+            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
+        }, MEGA_CORP.name)
+
     @Test
     fun ok() {
         trade().verifies()

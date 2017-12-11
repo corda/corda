@@ -21,9 +21,6 @@ import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.asset.DUMMY_OBLIGATION_ISSUER
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
@@ -51,6 +48,13 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 class VaultQueryTests {
+    private companion object {
+        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
+        val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+        val DUMMY_OBLIGATION_ISSUER = Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), entropyToKeyPair(BigInteger.valueOf(10)).public)
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

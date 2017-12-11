@@ -5,9 +5,12 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
@@ -22,9 +25,9 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.Rule
 import org.junit.Test
+import java.math.BigInteger
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -34,6 +37,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ObligationTests {
+    companion object {
+        private val DUMMY_OBLIGATION_ISSUER = Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), entropyToKeyPair(BigInteger.valueOf(10)).public)
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -57,12 +64,15 @@ class ObligationTests {
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
     private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
     private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_NOTARY_KEY)
-    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+    private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(CHARLIE.owningKey)
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }, MEGA_CORP.name)
-    private val ledgerServices get() = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)
+        doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
+    }
+    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), identityService, MEGA_CORP.name)
+    private val ledgerServices get() = MockServices(identityService, MEGA_CORP.name)
     private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {
