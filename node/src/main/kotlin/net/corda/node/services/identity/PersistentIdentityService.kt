@@ -1,7 +1,6 @@
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
@@ -14,8 +13,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -126,10 +125,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         }
 
         // Ensure we record the first identity of the same name, first
-        val wellKnownCert: Certificate = identity.certPath.certificates.single { it ->
-            val extension = IdentityRoleExtension.extract(it)
-            extension?.role == CertRole.WELL_KNOWN_IDENTITY
-        }
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it) == CertRole.WELL_KNOWN_IDENTITY }
         if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
             val idx = certificates.lastIndexOf(wellKnownCert)

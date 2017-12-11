@@ -1,6 +1,5 @@
 package net.corda.core.identity
 
-import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
@@ -20,8 +19,7 @@ class PartyAndCertificate(val certPath: CertPath) {
         val certs = certPath.certificates
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         certificate = certs[0] as X509Certificate
-        val roleExtension = IdentityRoleExtension.extract(certificate)
-        val role = roleExtension?.role
+        val role = CertRole.extract(certificate)
         require(role?.isIdentity ?: false) { "Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role" }
     }
 
@@ -44,19 +42,19 @@ class PartyAndCertificate(val certPath: CertPath) {
         val validator = CertPathValidator.getInstance("PKIX")
         val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
         // Apply Corda-specific validity rules to the chain
-        var parentRole: CertRole? = IdentityRoleExtension.extract(result.trustAnchor.trustedCert)?.role
+        var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)
         for (certIdx in (0 until certPath.certificates.size).reversed()) {
             val certificate = certPath.certificates[certIdx]
-            val extension = IdentityRoleExtension.extract(certificate)
+            val role = CertRole.extract(certificate)
             if (parentRole != null) {
-                if (extension == null) {
+                if (role == null) {
                     throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
                 }
-                if (extension.role.parent != parentRole) {
-                    throw CertPathValidatorException("Expected certificate $certificate to have parent ${extension.role.parent} but was $parentRole")
+                if (role.parent != parentRole) {
+                    throw CertPathValidatorException("Expected certificate $certificate to have parent ${role.parent} but was $parentRole")
                 }
             }
-            parentRole = extension?.role
+            parentRole = role
         }
         return result
     }

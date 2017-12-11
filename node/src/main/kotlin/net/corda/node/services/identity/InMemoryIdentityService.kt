@@ -1,7 +1,6 @@
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.cert
@@ -62,10 +61,7 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
         }
 
         // Ensure we record the first identity of the same name, first
-        val wellKnownCert: Certificate = identity.certPath.certificates.single { it ->
-            val extension = IdentityRoleExtension.extract(it)
-            extension?.role == CertRole.WELL_KNOWN_IDENTITY
-        }
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it) == CertRole.WELL_KNOWN_IDENTITY }
         if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
             val idx = certificates.lastIndexOf(wellKnownCert)

@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CertRole
@@ -231,7 +230,7 @@ object X509Utilities {
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
 
         if (role != null) {
-            builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, IdentityRoleExtension(role))
+            builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, role)
         }
         if (nameConstraints != null) {
             builder.addExtension(Extension.nameConstraints, true, nameConstraints)
