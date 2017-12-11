@@ -45,7 +45,7 @@ class NotaryChangeTests {
         val oldNotaryName = DUMMY_NOTARY.name.copy(organisation = "Old Dummy Notary")
         mockNet = MockNetwork(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name), NotarySpec(oldNotaryName)),
-                cordappPackages = listOf("net.corda.testing.contracts")
+                cordappPackages = setOf("net.corda.testing.contracts")
         )
         clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))

@@ -12,7 +12,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    net.corda.testing.transaction(cordappPackages = listOf("net.corda.finance.contracts.universal"), dsl = script)
+    net.corda.testing.transaction(cordappPackages = setOf("net.corda.finance.contracts.universal"), dsl = script)
 }
 
 class Cap {

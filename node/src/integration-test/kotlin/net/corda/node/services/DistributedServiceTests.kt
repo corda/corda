@@ -41,7 +41,7 @@ class DistributedServiceTests {
         )
 
         driver(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                extraCordappPackagesToScan = setOf("net.corda.finance.contracts"),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.id), rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
             alice = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser)).getOrThrow()

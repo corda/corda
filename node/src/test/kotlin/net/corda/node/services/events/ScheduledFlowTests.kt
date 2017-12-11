@@ -97,7 +97,7 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = setOf("net.corda.testing.contracts"))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity

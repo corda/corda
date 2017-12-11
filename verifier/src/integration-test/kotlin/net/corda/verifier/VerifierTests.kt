@@ -43,7 +43,7 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with requestor`() {
-        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
+        verifierDriver(extraCordappPackagesToScan = setOf("net.corda.finance.contracts")) {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
@@ -60,7 +60,7 @@ class VerifierTests {
 
     @Test
     fun `single verification fails`() {
-        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
+        verifierDriver(extraCordappPackagesToScan = setOf("net.corda.finance.contracts")) {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             // Generate transactions as per usual, but then remove attachments making transaction invalid.
             val transactions = generateTransactions(1).map { it.copy(attachments = emptyList()) }
@@ -136,7 +136,7 @@ class VerifierTests {
     @Test
     fun `single verifier works with a node`() {
         verifierDriver(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                extraCordappPackagesToScan = setOf("net.corda.finance.contracts"),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess))
         ) {
             val aliceNode = startNode(providedName = ALICE.name).getOrThrow()

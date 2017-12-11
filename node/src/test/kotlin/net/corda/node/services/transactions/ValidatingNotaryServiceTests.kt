@@ -36,7 +36,7 @@ class ValidatingNotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = MockNetwork(cordappPackages = setOf("net.corda.testing.contracts"))
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         notaryServices = mockNet.defaultNotaryNode.services
         aliceServices = aliceNode.services

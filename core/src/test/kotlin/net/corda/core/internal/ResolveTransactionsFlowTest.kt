@@ -38,7 +38,7 @@ class ResolveTransactionsFlowTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = MockNetwork(cordappPackages = setOf("net.corda.testing.contracts"))
         notaryNode = mockNet.defaultNotaryNode
         megaCorpNode = mockNet.createPartyNode(MEGA_CORP.name)
         miniCorpNode = mockNet.createPartyNode(MINI_CORP.name)

@@ -36,7 +36,7 @@ class DummyRPCFlow : FlowLogic<Unit>() {
 
 class CordappLoaderTest {
     private companion object {
-        val testScanPackages = listOf("net.corda.node.internal.cordapp")
+        val testScanPackages = setOf("net.corda.node.internal.cordapp")
         val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
         val isolatedFlowName = "net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator"
     }

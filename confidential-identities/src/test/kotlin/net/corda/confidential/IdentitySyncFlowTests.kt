@@ -32,7 +32,7 @@ class IdentitySyncFlowTests {
         mockNet = MockNetwork(
                 networkSendManuallyPumped = false,
                 threadPerNode = true,
-                cordappPackages = listOf("net.corda.finance.contracts.asset")
+                cordappPackages = setOf("net.corda.finance.contracts.asset")
         )
     }
 

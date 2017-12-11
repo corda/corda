@@ -103,7 +103,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database), identityService)).whenever(it).networkMapCache
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
-                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
+                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(setOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
                 doReturn(NodeVaultService(testClock, kms, validatedTransactions, database.hibernateConfig)).whenever(it).vaultService
                 doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
 

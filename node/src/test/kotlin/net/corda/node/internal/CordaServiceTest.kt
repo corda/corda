@@ -79,7 +79,7 @@ class CordaServiceTest {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.node.internal","net.corda.finance"))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = setOf("net.corda.node.internal","net.corda.finance"))
         nodeA = mockNet.createNode()
         mockNet.startNodes()
     }

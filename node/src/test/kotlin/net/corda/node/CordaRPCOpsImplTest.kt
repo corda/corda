@@ -75,7 +75,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = MockNetwork(cordappPackages = setOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))

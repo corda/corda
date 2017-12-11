@@ -65,7 +65,7 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true)) {
+        driver(portAllocation = portAllocation, extraCordappPackagesToScan = setOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true)) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE.name, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to "true"))
             val bob = startNode(providedName = BOB.name, rpcUsers = listOf(user))

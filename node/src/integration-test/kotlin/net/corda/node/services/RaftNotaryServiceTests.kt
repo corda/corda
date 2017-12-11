@@ -33,7 +33,7 @@ class RaftNotaryServiceTests {
     fun `detect double spend`() {
         driver(
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
+                extraCordappPackagesToScan = setOf("net.corda.testing.contracts"),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
             val bankA = startNode(providedName = DUMMY_BANK_A.name).map { (it as NodeHandle.InProcess).node }.getOrThrow()

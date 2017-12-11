@@ -44,7 +44,7 @@ import kotlin.test.fail
 
 class VaultWithCashTest {
     companion object {
-        private val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        private val cordappPackages = setOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
     }
 
     @Rule

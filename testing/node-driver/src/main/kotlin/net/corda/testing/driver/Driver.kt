@@ -162,6 +162,7 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
  *      startJmxHttpServer: indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote JMX monitoring using HTTP/JSON.
  *      jmxHttpServerPortAllocation: the port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP. Defaults to incremental.
+ * @param extraCordappPackagesToScan Additional names of the packages that will be used for construction of [CordappLoader] for a given node.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -177,7 +178,7 @@ fun <A> driver(
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
-        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        extraCordappPackagesToScan: Set<String> = defaultParameters.extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: DriverDSL.() -> A
 ): A {
@@ -228,9 +229,8 @@ data class DriverParameters(
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-        val extraCordappPackagesToScan: List<String> = emptyList(),
+        val extraCordappPackagesToScan: Set<String> = emptySet(),
         val jmxPolicy: JmxPolicy = JmxPolicy()
-
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -241,7 +241,7 @@ data class DriverParameters(
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
     fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean) = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
-    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: Set<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
     fun setJmxPolicy(jmxPolicy: JmxPolicy) = copy(jmxPolicy = jmxPolicy)
 }

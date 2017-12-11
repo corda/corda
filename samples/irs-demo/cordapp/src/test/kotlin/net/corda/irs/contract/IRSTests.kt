@@ -219,9 +219,10 @@ class IRSTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
-    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+    private val megaCorpServices = MockServices(setOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+    private val miniCorpServices = MockServices(setOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
+    private val notaryServices = MockServices(setOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+
     @Test
     fun ok() {
         trade().verifies()
@@ -317,7 +318,7 @@ class IRSTests {
      */
     @Test
     fun generateIRSandFixSome() {
-        val services = MockServices(listOf("net.corda.irs.contract"), rigorousMock<IdentityServiceInternal>().also {
+        val services = MockServices(setOf("net.corda.irs.contract"), rigorousMock<IdentityServiceInternal>().also {
             listOf(MEGA_CORP, MINI_CORP).forEach { party ->
                 doReturn(party).whenever(it).partyFromKey(party.owningKey)
             }

@@ -24,7 +24,7 @@ class FxTransactionBuildTutorialTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance"))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = setOf("net.corda.finance"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)

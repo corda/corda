@@ -76,7 +76,7 @@ open class Node(configuration: NodeConfiguration,
         val scanPackagesSeparator = ","
         private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
-                CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
+                CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator).toSet())
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
         }
     }

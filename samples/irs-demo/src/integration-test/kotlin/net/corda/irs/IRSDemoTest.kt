@@ -49,7 +49,7 @@ class IRSDemoTest {
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = rpcUsers)),
                 isDebug = true,
-                extraCordappPackagesToScan = listOf("net.corda.irs")
+                extraCordappPackagesToScan = setOf("net.corda.irs")
         ) {
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = rpcUsers),

@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
 // TODO Some of the logic here duplicates what's in the driver
-abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
+abstract class NodeBasedTest(private val cordappPackages: Set<String> = emptySet()) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
@@ -113,7 +113,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(
-        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : Node(
+        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: Set<String>) : Node(
         configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

@@ -107,7 +107,7 @@ class NodePerformanceTests {
         driver(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = setOf("net.corda.finance")
         ) {
             val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
             val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.node.services.monitoringService.metrics)
