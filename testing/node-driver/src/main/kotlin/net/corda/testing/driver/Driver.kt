@@ -173,7 +173,7 @@ fun <A> driver(
         driverDirectory: Path = defaultParameters.driverDirectory,
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
-        extraSystemProperties: Map<String, String> = defaultParameters.extraSystemProperties,
+        systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
@@ -187,7 +187,7 @@ fun <A> driver(
             driverDsl = DriverDSLImpl(
                     portAllocation = portAllocation,
                     debugPortAllocation = debugPortAllocation,
-                    extraSystemProperties = extraSystemProperties,
+                    systemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
                     isDebug = isDebug,
@@ -224,7 +224,7 @@ data class DriverParameters(
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        val extraSystemProperties: Map<String, String> = emptyMap(),
+        val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
@@ -238,7 +238,7 @@ data class DriverParameters(
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
     fun setPortAllocation(portAllocation: PortAllocation) = copy(portAllocation = portAllocation)
     fun setDebugPortAllocation(debugPortAllocation: PortAllocation) = copy(debugPortAllocation = debugPortAllocation)
-    fun setExtraSystemProperties(extraSystemProperties: Map<String, String>) = copy(extraSystemProperties = extraSystemProperties)
+    fun setSystemProperties(systemProperties: Map<String, String>) = copy(systemProperties = systemProperties)
     fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)

@@ -110,7 +110,7 @@ fun <A> rpcDriver(
                 DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        extraSystemProperties = systemProperties,
+                        systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         isDebug = isDebug,
