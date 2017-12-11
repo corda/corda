@@ -1,5 +1,7 @@
 package net.corda.core.transactions
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.requireThat
@@ -7,9 +9,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -49,7 +51,10 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+    }, MEGA_CORP.name)
+
     @Test
     fun `state can be encumbered`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
