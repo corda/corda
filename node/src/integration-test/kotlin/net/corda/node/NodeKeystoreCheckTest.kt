@@ -8,15 +8,21 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.*
 import net.corda.testing.driver.driver
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class NodeKeystoreCheckTest {
+class NodeKeystoreCheckTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+    }
+
     @Test
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
         driver(startNodesInProcess = true) {

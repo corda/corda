@@ -21,6 +21,7 @@ import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.sql.DriverManager
 import java.sql.Statement
@@ -28,6 +29,10 @@ import java.util.*
 import kotlin.test.assertFailsWith
 
 abstract class UserAuthServiceTest : NodeBasedTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+    }
 
     protected lateinit var node: StartedNode<Node>
     protected lateinit var client: CordaRPCClient
