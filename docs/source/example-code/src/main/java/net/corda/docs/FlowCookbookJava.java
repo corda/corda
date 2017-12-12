@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.testing.TestConstants.getALICE_KEY;
+import static net.corda.core.crypto.Crypto.generateKeyPair;
 
 @SuppressWarnings("unused")
 public class FlowCookbookJava {
@@ -107,9 +107,7 @@ public class FlowCookbookJava {
         @Override
         public Void call() throws FlowException {
             // We'll be using a dummy public key for demonstration purposes.
-            // These are built in to Corda, and are generally used for writing
-            // tests.
-            PublicKey dummyPubKey = getALICE_KEY().getPublic();
+            PublicKey dummyPubKey = generateKeyPair().getPublic();
 
             /*---------------------------
              * IDENTIFYING OTHER NODES *

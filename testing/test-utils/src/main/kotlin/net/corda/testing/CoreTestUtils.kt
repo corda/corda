@@ -15,7 +15,6 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.x500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -33,7 +32,6 @@ import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.nio.file.Files
-import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -55,40 +53,6 @@ import java.util.concurrent.atomic.AtomicInteger
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
  *   - The Int.DOLLARS syntax doesn't work from Java.  Use the DOLLARS(int) function instead.
  */
-
-// TODO: Refactor these dummies to work with the new identities framework.
-
-// A few dummy values for testing.
-val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
-
-val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
-
-val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
-
-val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
-val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MegaCorp", locality = "London", country = "GB"), MEGA_CORP_PUBKEY)
-val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
-val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
-
-val BOC_NAME: CordaX500Name = CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB")
-val BOC_KEY: KeyPair by lazy { generateKeyPair() }
-val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOC_NAME, BOC_PUBKEY)
-val BOC: Party get() = BOC_IDENTITY.party
-
-val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US"), BIG_CORP_PUBKEY)
-val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
-val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
-
-val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
-val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -120,8 +84,7 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
     return (freePort..freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
 }
 
-@JvmOverloads
-fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguration = object : SSLConfiguration {
+fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration = object : SSLConfiguration {
     override val certificatesDirectory = Files.createTempDirectory("certs")
     override val keyStorePassword: String get() = "cordacadevpass"
     override val trustStorePassword: String get() = "trustpass"

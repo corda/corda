@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
@@ -19,13 +20,17 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class LedgerTransactionQueryTests {
+    companion object {
+        private val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val keyPair = generateKeyPair()
     private val services = MockServices(rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(keyPair.public)
-    }, MEGA_CORP.name, keyPair)
+    }, CordaX500Name("MegaCorp", "London", "GB"), keyPair)
     private val identity: Party = services.myInfo.singleIdentity()
 
     @Before

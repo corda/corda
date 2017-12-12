@@ -2,9 +2,7 @@ package net.corda.finance.contracts.universal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
@@ -12,20 +10,19 @@ import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 
+internal val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
     MockServices(listOf("net.corda.finance.contracts.universal"), rigorousMock<IdentityServiceInternal>().also {
         listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
             doReturn(null).whenever(it).partyFromKey(party.owningKey)
         }
-    }, MEGA_CORP.name).transaction(DUMMY_NOTARY, script)
+    }, CordaX500Name("MegaCorp", "London", "GB")).transaction(DUMMY_NOTARY, script)
 }
 
 class Cap {

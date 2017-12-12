@@ -2,72 +2,76 @@ package net.corda.finance.contracts.asset;
 
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
-import net.corda.core.utilities.OpaqueBytes;
+import net.corda.core.identity.CordaX500Name;
+import net.corda.core.identity.Party;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.testing.DummyCommandData;
 import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.TestIdentity;
 import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
 
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
-import static net.corda.testing.CoreTestUtils.*;
+import static net.corda.testing.CoreTestUtils.rigorousMock;
 import static net.corda.testing.NodeTestUtils.transaction;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY_NAME;
 import static org.mockito.Mockito.doReturn;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL
  */
 public class CashTestsJava {
-    private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
-    private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
-    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), new AnonymousParty(getMEGA_CORP_PUBKEY()));
-    private final Cash.State outState = new Cash.State(inState.getAmount(), new AnonymousParty(getMINI_CORP_PUBKEY()));
+    private static final Party DUMMY_NOTARY = new TestIdentity(getDUMMY_NOTARY_NAME(), 20L).getParty();
+    private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
+    private static final TestIdentity MINI_CORP = new TestIdentity(new CordaX500Name("MiniCorp", "London", "GB"));
+    private final PartyAndReference defaultIssuer = MEGA_CORP.ref((byte) 1);
+    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), new AnonymousParty(MEGA_CORP.getPubkey()));
+    private final Cash.State outState = new Cash.State(inState.getAmount(), new AnonymousParty(MINI_CORP.getPubkey()));
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
 
     @Test
     public void trivial() {
         IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
-        doReturn(getMEGA_CORP()).when(identityService).partyFromKey(getMEGA_CORP_PUBKEY());
-        doReturn(getMINI_CORP()).when(identityService).partyFromKey(getMINI_CORP_PUBKEY());
-        transaction(new MockServices(identityService, getMEGA_CORP().getName()), getDUMMY_NOTARY(), tx -> {
+        doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPubkey());
+        doReturn(MINI_CORP.getParty()).when(identityService).partyFromKey(MINI_CORP.getPubkey());
+        transaction(new MockServices(identityService, MEGA_CORP.getName()), DUMMY_NOTARY, tx -> {
             tx.attachment(Cash.PROGRAM_ID);
 
             tx.input(Cash.PROGRAM_ID, inState);
 
             tx.tweak(tw -> {
-                tw.output(Cash.PROGRAM_ID, new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getMINI_CORP_PUBKEY())));
-                tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
+                tw.output(Cash.PROGRAM_ID, new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(MINI_CORP.getPubkey())));
+                tw.command(MEGA_CORP.getPubkey(), new Cash.Commands.Move());
                 return tw.failsWith("the amounts balance");
             });
 
             tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, outState);
-                tw.command(getMEGA_CORP_PUBKEY(), DummyCommandData.INSTANCE);
+                tw.command(MEGA_CORP.getPubkey(), DummyCommandData.INSTANCE);
                 // Invalid command
                 return tw.failsWith("required net.corda.finance.contracts.asset.Cash.Commands.Move command");
             });
             tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, outState);
-                tw.command(getMINI_CORP_PUBKEY(), new Cash.Commands.Move());
+                tw.command(MINI_CORP.getPubkey(), new Cash.Commands.Move());
                 return tw.failsWith("the owning keys are a subset of the signing keys");
             });
             tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, outState);
                 // issuedBy() can't be directly imported because it conflicts with other identically named functions
                 // with different overloads (for some reason).
-                tw.output(Cash.PROGRAM_ID, outState.issuedBy(getMINI_CORP()));
-                tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
+                tw.output(Cash.PROGRAM_ID, outState.issuedBy(MINI_CORP.getParty()));
+                tw.command(MEGA_CORP.getPubkey(), new Cash.Commands.Move());
                 return tw.failsWith("at least one cash input");
             });
 
             // Simple reallocation works.
             return tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, outState);
-                tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
+                tw.command(MEGA_CORP.getPubkey(), new Cash.Commands.Move());
                 return tw.verifies();
             });
         });

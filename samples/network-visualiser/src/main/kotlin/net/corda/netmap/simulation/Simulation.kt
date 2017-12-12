@@ -9,7 +9,7 @@ import net.corda.finance.utils.CityDatabase
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.DUMMY_REGULATOR
+import net.corda.testing.TestIdentity
 import net.corda.testing.node.*
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -35,11 +35,12 @@ internal val MockNode.place get() = configuration.myLegalName.locality.let { Cit
 abstract class Simulation(val networkSendManuallyPumped: Boolean,
                           runAsync: Boolean,
                           latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
-    companion object {
-        private val defaultParams // The get() is necessary so that entropyRoot isn't shared.
+    private companion object {
+        val defaultParams // The get() is necessary so that entropyRoot isn't shared.
             get() = MockNodeParameters(configOverrides = {
                 doReturn(makeTestDataSourceProperties(it.myLegalName.organisation)).whenever(it).dataSourceProperties
             })
+        val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
     }
 
     init {

@@ -49,8 +49,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
-    companion object {
-        private val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
+    private companion object {
+        val ALICE_KEY = TestIdentity(ALICE_NAME, 70).key
+        val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }
 
     @Rule
