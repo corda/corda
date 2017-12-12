@@ -1,10 +1,3 @@
-ext {
-    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
-    // aligned with the corresponding Corda release.
-    corda_dependency_version = '3.0-NETWORKMAP-20171204.134345-6'
-}
-
-version "$corda_dependency_version"
 
 description 'Network management module encapsulating components such as Doorman, HSM Signing Service and Network Map'
 
@@ -59,12 +52,12 @@ dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    compile "net.corda:corda-node-api:$corda_dependency_version"
+    compile "net.corda:corda-node-api:$corda_release_version"
 
     // TODO remove this when AMQP P2P serialization context is supported.
-    compile "net.corda:corda-rpc:$corda_dependency_version"
-    testCompile "net.corda:corda-node-driver:$corda_dependency_version"
-    testCompile "net.corda:corda-test-common:$corda_dependency_version"
+    compile "net.corda:corda-rpc:$corda_release_version"
+    testCompile "net.corda:corda-node-driver:$corda_release_version"
+    testCompile "net.corda:corda-test-common:$corda_release_version"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -94,9 +87,9 @@ dependencies {
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
-    testRuntime "net.corda:corda-rpc:$corda_dependency_version"
+    testRuntime "net.corda:corda-rpc:$corda_release_version"
     testCompile "com.spotify:docker-client:8.9.1"
-    integrationTestRuntime "net.corda:corda-rpc:$corda_dependency_version"
+    integrationTestRuntime "net.corda:corda-rpc:$corda_release_version"
 
     compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {
         // The jira client includes jersey-core 1.5 which breaks everything.

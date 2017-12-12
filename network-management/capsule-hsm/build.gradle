@@ -14,7 +14,7 @@ task buildHsmJAR(type: FatCapsule, dependsOn: 'jar') {
     applicationClass 'com.r3.corda.networkmanage.hsm.MainKt'
     archiveName "hsm-${version}.jar"
     capsuleManifest {
-        applicationVersion = corda_dependency_version
+        applicationVersion = corda_release_version
         systemProperties['visualvm.display.name'] = 'HSM Signing Service'
         minJavaVersion = '1.8.0'
         jvmArgs = ['-XX:+UseG1GC']
