@@ -3,7 +3,6 @@ package net.corda.finance.contracts
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -26,7 +25,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.math.BigInteger
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertFailsWith
@@ -91,9 +89,9 @@ class CommercialPaperTestsGeneric {
         @JvmStatic
         fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
 
-        private val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
-        private val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
-        private val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+        private val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        private val DUMMY_CASH_ISSUER_IDENTITY get() = dummyCashIssuer.identity
+        private val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
     }
 
     @Parameterized.Parameter
@@ -243,7 +241,7 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
     private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_NOTARY_KEY)
-    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
+    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, dummyCashIssuer.key)
     private lateinit var moveTX: SignedTransaction
     @Test
     fun `issue move and then redeem`() {
