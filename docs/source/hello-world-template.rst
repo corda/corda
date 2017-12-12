@@ -65,11 +65,9 @@ Clean up
 --------
 To prevent build errors later on, we should delete the following files before we begin:
 
-* Java:
-    * ``cordapp/src/main/java/com/template/TemplateClient.java``
+* Java: ``cordapp/src/main/java/com/template/TemplateClient.java``
 
-* Kotlin:
-    * ``cordapp/src/main/kotlin/com/template/TemplateClient.kt``
+* Kotlin: ``cordapp/src/main/kotlin/com/template/TemplateClient.kt``
 
 Progress so far
 ---------------

@@ -124,13 +124,7 @@ If the flow worked, it should have recorded a new IOU in the vaults of both Part
 
 We can check the contents of each node's vault by running:
 
-.. container:: codeset
-
-    .. code-block:: java
-
-        run vaultQuery contractStateType: com.template.state.IOUState
-
-    .. code-block:: kotlin
+.. code-block:: base
 
         run vaultQuery contractStateType: com.template.IOUState
 

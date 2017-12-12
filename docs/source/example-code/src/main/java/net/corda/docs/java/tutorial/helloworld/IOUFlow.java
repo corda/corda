@@ -1,6 +1,7 @@
 package net.corda.docs.java.tutorial.helloworld;
 
 import co.paralleluniverse.fibers.Suspendable;
+import com.template.TemplateContract;
 import net.corda.core.flows.*;
 
 // DOCSTART 01
@@ -12,7 +13,7 @@ import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import net.corda.core.utilities.ProgressTracker;
 
-import static net.corda.docs.java.tutorial.helloworld.TemplateContract.TEMPLATE_CONTRACT_ID;
+import static com.template.TemplateContract.TEMPLATE_CONTRACT_ID;
 
 // Replace TemplateFlow's definition with:
 @InitiatingFlow
