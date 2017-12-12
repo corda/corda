@@ -95,22 +95,21 @@ fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
     }
 }
 
-private fun createTestSerializationEnv(label: String) = object : SerializationEnvironmentImpl(
-        SerializationFactoryImpl().apply {
-            registerScheme(KryoClientSerializationScheme())
-            registerScheme(KryoServerSerializationScheme())
-            registerScheme(AMQPClientSerializationScheme(emptyList()))
-            registerScheme(AMQPServerSerializationScheme(emptyList()))
-        },
-        AMQP_P2P_CONTEXT,
-        KRYO_RPC_SERVER_CONTEXT,
-        KRYO_RPC_CLIENT_CONTEXT,
-        AMQP_STORAGE_CONTEXT,
-        KRYO_CHECKPOINT_CONTEXT) {
-    override fun toString() = "testSerializationEnv($label)"
+private fun createTestSerializationEnv(label: String): SerializationEnvironmentImpl {
+    val factory = SerializationFactoryImpl().apply {
+        registerScheme(KryoClientSerializationScheme())
+        registerScheme(KryoServerSerializationScheme())
+        registerScheme(AMQPClientSerializationScheme(emptyList()))
+        registerScheme(AMQPServerSerializationScheme(emptyList()))
+    }
+    return object : SerializationEnvironmentImpl(
+            factory,
+            AMQP_P2P_CONTEXT,
+            KRYO_RPC_SERVER_CONTEXT,
+            KRYO_RPC_CLIENT_CONTEXT,
+            AMQP_STORAGE_CONTEXT,
+            KRYO_CHECKPOINT_CONTEXT
+    ) {
+        override fun toString() = "testSerializationEnv($label)"
+    }
 }
-
-private const val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
-
-// TODO: Remove usages of this function when we fully switched to AMQP
-private fun isAmqpEnabled(): Boolean = java.lang.Boolean.getBoolean(AMQP_ENABLE_PROP_NAME)
