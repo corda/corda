@@ -222,6 +222,12 @@ class IRSTests {
     private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
     private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
     private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+    private val ledgerServices
+        get() = MockServices(rigorousMock<IdentityServiceInternal>().also {
+            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
+        }, MEGA_CORP.name)
+
     @Test
     fun ok() {
         trade().verifies()
@@ -391,8 +397,7 @@ class IRSTests {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
-
-        return ledger {
+        return ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement", singleIRS())
@@ -417,6 +422,10 @@ class IRSTests {
                 this.verifies()
             }
         }
+    }
+
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+        ledgerServices.transaction(DUMMY_NOTARY, script)
     }
 
     @Test
@@ -656,8 +665,7 @@ class IRSTests {
         val bd1 = BigDecimal("0.0063518")
 
         val irs = singleIRS()
-
-        return ledger {
+        return ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement1",

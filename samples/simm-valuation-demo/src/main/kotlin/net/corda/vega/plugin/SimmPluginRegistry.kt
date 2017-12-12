@@ -10,6 +10,7 @@ import com.opengamma.strata.market.curve.CurveName
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities
 import com.opengamma.strata.market.param.CurrencyParameterSensitivity
 import com.opengamma.strata.market.param.TenorDateParameterMetadata
+import com.opengamma.strata.market.param.ParameterMetadata
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
@@ -34,6 +35,7 @@ class SimmPluginRegistry : SerializationWhitelist {
             DoubleArray::class.java,
             CurveName::class.java,
             TenorDateParameterMetadata::class.java,
-            Tenor::class.java
+            Tenor::class.java,
+            ParameterMetadata::class.java
     )
 }

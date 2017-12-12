@@ -50,7 +50,7 @@ class X509NameConstraintsTest {
 
         val nameConstraints = NameConstraints(acceptableNames, arrayOf())
         val pathValidator = CertPathValidator.getInstance("PKIX")
-        val certFactory = X509CertificateFactory().delegate
+        val certFactory = X509CertificateFactory()
 
         assertFailsWith(CertPathValidatorException::class) {
             val (keystore, trustStore) = makeKeyStores(X500Name("CN=Bank B"), nameConstraints)

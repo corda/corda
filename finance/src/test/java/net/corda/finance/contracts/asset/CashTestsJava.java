@@ -3,8 +3,10 @@ package net.corda.finance.contracts.asset;
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.utilities.OpaqueBytes;
+import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.testing.DummyCommandData;
 import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -12,6 +14,8 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.NodeTestUtils.transaction;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
+import static org.mockito.Mockito.doReturn;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL
@@ -26,7 +30,10 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
-        transaction(tx -> {
+        IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
+        doReturn(getMEGA_CORP()).when(identityService).partyFromKey(getMEGA_CORP_PUBKEY());
+        doReturn(getMINI_CORP()).when(identityService).partyFromKey(getMINI_CORP_PUBKEY());
+        transaction(new MockServices(identityService, getMEGA_CORP().getName()), getDUMMY_NOTARY(), tx -> {
             tx.attachment(Cash.PROGRAM_ID);
 
             tx.input(Cash.PROGRAM_ID, inState);

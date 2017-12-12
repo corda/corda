@@ -6,8 +6,10 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.IdentityService
@@ -22,8 +24,6 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.asset.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
@@ -48,6 +48,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
 import org.junit.*
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Instant
 import java.util.*
 import javax.persistence.EntityManager
@@ -55,6 +56,12 @@ import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 
 class HibernateConfigurationTest {
+    private companion object {
+        val DUMMY_CASH_ISSUER_NAME = CordaX500Name("Snake Oil Issuer", "London", "GB")
+        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        val DUMMY_CASH_ISSUER = Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public)
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -91,7 +98,7 @@ class HibernateConfigurationTest {
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
             doReturn(null).whenever(mock).wellKnownPartyFromAnonymous(any<AbstractParty>())
-            listOf(DUMMY_CASH_ISSUER_IDENTITY.party, DUMMY_NOTARY).forEach {
+            listOf(DUMMY_CASH_ISSUER, DUMMY_NOTARY).forEach {
                 doReturn(it).whenever(mock).wellKnownPartyFromAnonymous(it)
                 doReturn(it).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }

@@ -1,24 +1,41 @@
 package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NodeStartup
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getX509Certificate
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.CompatibilityZoneParams
 import net.corda.testing.internal.addressMustBeBound
 import net.corda.testing.internal.addressMustNotBeBound
+import net.corda.testing.internal.internalDriver
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.json.simple.JSONObject
+import org.junit.Rule
 import org.junit.ClassRule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import javax.ws.rs.GET
+import javax.ws.rs.POST
+import javax.ws.rs.Path
+import javax.ws.rs.core.Response
+import javax.ws.rs.core.Response.ok
+
 
 class DriverTests : IntegrationTest() {
     companion object {
@@ -95,7 +112,7 @@ class DriverTests : IntegrationTest() {
             assertThat(baseDirectory / "process-id").exists()
         }
 
-        val baseDirectory = driver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
+        val baseDirectory = internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
             baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()

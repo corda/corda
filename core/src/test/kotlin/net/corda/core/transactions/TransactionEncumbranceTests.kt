@@ -1,5 +1,7 @@
 package net.corda.core.transactions
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.requireThat
@@ -7,10 +9,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MINI_CORP
-import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.ledger
+import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.*
+import net.corda.testing.node.MockServices
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -50,9 +51,13 @@ class TransactionEncumbranceTests {
         }
     }
 
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+    }, MEGA_CORP.name)
+
     @Test
     fun `state can be encumbered`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 input(Cash.PROGRAM_ID, state)
@@ -66,7 +71,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `state can transition if encumbrance rules are met`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", state)
@@ -87,7 +92,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `state cannot transition if the encumbrance contract fails to verify`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", state)
@@ -108,7 +113,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `state must be consumed along with its encumbrance`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1, contractState = state)
@@ -127,7 +132,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `state cannot be encumbered by itself`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Cash.PROGRAM_ID)
                 input(Cash.PROGRAM_ID, state)
@@ -140,7 +145,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `encumbrance state index must be valid`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 input(Cash.PROGRAM_ID, state)
@@ -154,7 +159,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `correct encumbrance state must be provided`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(Cash.PROGRAM_ID, "state encumbered by some other state", encumbrance = 1, contractState = state)

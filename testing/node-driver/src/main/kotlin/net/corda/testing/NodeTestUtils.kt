@@ -10,6 +10,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.Origin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
@@ -18,22 +19,19 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import java.nio.file.Path
 
 /**
- * Creates and tests a ledger built by the passed in dsl. The provided services can be customised, otherwise a default
- * of a freshly built [MockServices] is used.
+ * Creates and tests a ledger built by the passed in dsl.
  */
-@JvmOverloads
-fun ledger(
-        services: ServiceHub = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name),
+fun ServiceHub.ledger(
+        notary: Party,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    return LedgerDSL(TestLedgerDSLInterpreter(services)).also { dsl(it) }
+    return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply(dsl)
 }
 
 /**
@@ -41,13 +39,11 @@ fun ledger(
  *
  * @see LedgerDSLInterpreter._transaction
  */
-@JvmOverloads
-fun transaction(
-        transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
-        cordappPackages: List<String> = emptyList(),
+fun ServiceHub.transaction(
+        notary: Party,
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages, makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)) {
-    dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
+) = ledger(notary) {
+    dsl(TransactionDSL(TestTransactionDSLInterpreter(interpreter, TransactionBuilder(notary)), notary))
 }
 
 fun testNodeConfiguration(

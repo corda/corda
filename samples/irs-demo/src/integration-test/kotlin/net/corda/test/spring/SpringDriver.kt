@@ -27,7 +27,7 @@ fun <A> springDriver(
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        notarySpecs: List<NotarySpec>,
+        notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringBootDriverDSL.() -> A
 ): A {
@@ -91,7 +91,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
             log.debug("Retrying webserver info at ${handle.webAddress}")
         }
 
-        throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL ${url}")
+        throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL $url")
     }
 
     private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {

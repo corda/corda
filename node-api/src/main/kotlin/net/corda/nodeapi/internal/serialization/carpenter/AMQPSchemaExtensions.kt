@@ -6,6 +6,7 @@ import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.RestrictedType
 import net.corda.nodeapi.internal.serialization.amqp.Field as AMQPField
 import net.corda.nodeapi.internal.serialization.amqp.Schema as AMQPSchema
+import net.corda.core.serialization.SerializationContext
 
 fun AMQPSchema.carpenterSchema(classloader: ClassLoader): CarpenterMetaSchema {
     val rtn = CarpenterMetaSchema.newInstance()
@@ -34,7 +35,7 @@ fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
  *  b) add the class to the dependency tree in [carpenterSchemas] if it cannot be instantiated
  *     at this time
  *
- *  @param classloader the class loader provided dby the [SerializationContext]
+ *  @param classloader the class loader provided by the [SerializationContext]
  *  @param carpenterSchemas structure that holds the dependency tree and list of classes that
  *  need constructing
  *  @param force by default a schema is not added to [carpenterSchemas] if it already exists
@@ -121,7 +122,8 @@ val typeStrToType: Map<Pair<String, Boolean>, Class<out Any?>> = mapOf(
 
 fun AMQPField.getTypeAsClass(classloader: ClassLoader) = typeStrToType[Pair(type, mandatory)] ?: when (type) {
     "string" -> String::class.java
-    "*" -> classloader.loadClass(requires[0])
+    "binary" -> ByteArray::class.java
+    "*" -> if (requires.isEmpty()) Any::class.java else classloader.loadClass(requires[0])
     else -> classloader.loadClass(type)
 }
 
