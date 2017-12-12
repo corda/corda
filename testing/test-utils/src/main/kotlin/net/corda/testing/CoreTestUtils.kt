@@ -6,6 +6,7 @@ package net.corda.testing
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -30,6 +31,7 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.mockito.Mockito.mock
 import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
+import java.math.BigInteger
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
@@ -149,6 +151,14 @@ fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
  */
 fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): PartyAndCertificate {
     return getTestPartyAndCertificate(Party(name, publicKey))
+}
+
+class TestIdentity @JvmOverloads constructor(val name: CordaX500Name, entropy: Long? = null) {
+    val key = if (entropy != null) entropyToKeyPair(BigInteger.valueOf(entropy)) else generateKeyPair()
+    val pubkey get() = key.public!!
+    val party = Party(name, pubkey)
+    val identity by lazy { getTestPartyAndCertificate(party) } // Often not needed.
+    fun ref(vararg bytes: Byte) = party.ref(*bytes)
 }
 
 @Suppress("unused")

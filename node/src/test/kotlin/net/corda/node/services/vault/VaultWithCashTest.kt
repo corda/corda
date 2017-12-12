@@ -1,7 +1,6 @@
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -32,7 +31,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -42,10 +40,8 @@ import kotlin.test.fail
 class VaultWithCashTest {
     private companion object {
         val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
-        val DUMMY_CASH_ISSUER_NAME = CordaX500Name("Snake Oil Issuer", "London", "GB")
-        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
-        val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public))
-        val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
     }
 
     @Rule
@@ -64,13 +60,13 @@ class VaultWithCashTest {
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(generateKeyPair(), DUMMY_NOTARY_KEY),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, DUMMY_NOTARY_IDENTITY)),
                 cordappPackages,
                 MEGA_CORP.name)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
         notaryServices = MockServices(cordappPackages, rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
