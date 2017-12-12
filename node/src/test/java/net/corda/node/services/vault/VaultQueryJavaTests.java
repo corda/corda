@@ -7,8 +7,6 @@ import net.corda.core.contracts.*;
 import net.corda.core.crypto.CryptoUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
-import net.corda.core.identity.Party;
-import net.corda.core.identity.PartyAndCertificate;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultQueryException;
@@ -25,6 +23,7 @@ import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.TestIdentity;
 import net.corda.testing.contracts.DummyLinearContract;
 import net.corda.testing.contracts.VaultFiller;
 import net.corda.testing.node.MockServices;
@@ -36,16 +35,13 @@ import rx.Observable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyPair;
 import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static net.corda.core.crypto.CryptoUtils.entropyToKeyPair;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
@@ -56,10 +52,8 @@ import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
-    private static final CordaX500Name DUMMY_CASH_ISSUER_NAME = new CordaX500Name("Snake Oil Issuer", "London", "GB");
-    private static final KeyPair DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10));
-    private static final PartyAndCertificate DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(new Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.getPublic()));
-    private static final PartyAndReference DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.getParty().ref((byte) 1);
+    private static final TestIdentity DUMMY_CASH_ISSUER_INFO = new TestIdentity(new CordaX500Name("Snake Oil Issuer", "London", "GB"), (long) 10);
+    private static final PartyAndReference DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_INFO.ref((byte) 1);
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private VaultFiller vaultFiller;
@@ -70,13 +64,13 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), DUMMY_CASH_ISSUER_IDENTITY, getDUMMY_NOTARY_IDENTITY()));
+        IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), DUMMY_CASH_ISSUER_INFO.getIdentity(), getDUMMY_NOTARY_IDENTITY()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 Arrays.asList(getMEGA_CORP_KEY(), getDUMMY_NOTARY_KEY()),
                 identitySvc,
                 cordappPackages,
                 getMEGA_CORP().getName());
-        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, getBOC_KEY());
+        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, getBOC_KEY());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, getDUMMY_NOTARY(), getDUMMY_NOTARY_KEY());
@@ -469,13 +463,13 @@ public class VaultQueryJavaTests {
                 assertThat(results.getOtherResults().get(1)).isEqualTo(CryptoUtils.toStringShort(getBOC_PUBKEY()));
                 assertThat(results.getOtherResults().get(2)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(3)).isEqualTo(300L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_KEY.getPublic()));
+                assertThat(results.getOtherResults().get(4)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPubkey()));
                 assertThat(results.getOtherResults().get(5)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(6)).isEqualTo(200L);
                 assertThat(results.getOtherResults().get(7)).isEqualTo(CryptoUtils.toStringShort(getBOC_PUBKEY()));
                 assertThat(results.getOtherResults().get(8)).isEqualTo("USD");
                 assertThat(results.getOtherResults().get(9)).isEqualTo(100L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_KEY.getPublic()));
+                assertThat(results.getOtherResults().get(10)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPubkey()));
                 assertThat(results.getOtherResults().get(11)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {
