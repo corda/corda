@@ -10,6 +10,8 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -32,10 +34,10 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.*
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -59,6 +61,7 @@ import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -173,6 +176,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         validateKeystore()
     }
 
+    private inline fun signNodeInfo(nodeInfo: NodeInfo, sign: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
+        // For now we assume the node has only one identity (excluding any composite ones)
+        val owningKey = nodeInfo.legalIdentities.single { it.owningKey !is CompositeKey }.owningKey
+        val serialised = nodeInfo.serialize()
+        val signature = sign(owningKey, serialised)
+        return SignedNodeInfo(serialised, listOf(signature))
+    }
+
     open fun generateNodeInfo() {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
@@ -184,11 +195,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             // a code smell.
             val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-            val identityKeypair = keyPairs.first { it.public == info.legalIdentities.first().owningKey }
-            val serialisedNodeInfo = info.serialize()
-            val signature = identityKeypair.sign(serialisedNodeInfo)
-            // TODO: Signed data might not be sufficient for multiple identities, as it only contains one signature.
-            NodeInfoWatcher.saveToFile(configuration.baseDirectory, SignedData(serialisedNodeInfo, signature))
+            val signedNodeInfo = signNodeInfo(info) { publicKey, serialised ->
+                val privateKey = keyPairs.single { it.public == publicKey }.private
+                privateKey.sign(serialised.bytes)
+            }
+            NodeInfoWatcher.saveToFile(configuration.baseDirectory, signedNodeInfo)
         }
     }
 
@@ -247,9 +258,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.updateNodeInfo(services.myInfo) {
-            val serialisedNodeInfo = it.serialize()
-            val signature = services.keyManagementService.sign(serialisedNodeInfo.bytes, it.legalIdentities.first().owningKey)
-            SignedData(serialisedNodeInfo, signature)
+            signNodeInfo(it) { publicKey, serialised ->
+                services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
+            }
         }
         networkMapUpdater.subscribeToNetworkMap()
 

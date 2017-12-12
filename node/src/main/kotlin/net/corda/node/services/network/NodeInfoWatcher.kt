@@ -2,7 +2,6 @@ package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -10,6 +9,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
@@ -41,14 +41,14 @@ class NodeInfoWatcher(private val nodePath: Path,
         private val logger = contextLogger()
         /**
          * Saves the given [NodeInfo] to a path.
-         * The node is 'encoded' as a SignedData<NodeInfo>, signed with the owning key of its first identity.
+         * The node is 'encoded' as a SignedNodeInfo, signed with the owning key of its first identity.
          * The name of the written file will be "nodeInfo-" followed by the hash of the content. The hash in the filename
          * is used so that one can freely copy these files without fearing to overwrite another one.
          *
          * @param path the path where to write the file, if non-existent it will be created.
          * @param signedNodeInfo the signed NodeInfo.
          */
-        fun saveToFile(path: Path, signedNodeInfo: SignedData<NodeInfo>) {
+        fun saveToFile(path: Path, signedNodeInfo: SignedNodeInfo) {
             try {
                 path.createDirectories()
                 signedNodeInfo.serialize()
@@ -85,7 +85,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                 .flatMapIterable { loadFromDirectory() }
     }
 
-    fun saveToFile(signedNodeInfo: SignedData<NodeInfo>) = Companion.saveToFile(nodePath, signedNodeInfo)
+    fun saveToFile(signedNodeInfo: SignedNodeInfo) = Companion.saveToFile(nodePath, signedNodeInfo)
 
     /**
      * Loads all the files contained in a given path and returns the deserialized [NodeInfo]s.
@@ -118,7 +118,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     private fun processFile(file: Path): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
-            val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()
+            val signedData = file.readAll().deserialize<SignedNodeInfo>()
             signedData.verified()
         } catch (e: Exception) {
             logger.warn("Exception parsing NodeInfo from file. $file", e)

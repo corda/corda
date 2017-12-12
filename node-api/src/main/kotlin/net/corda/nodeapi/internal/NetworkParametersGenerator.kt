@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal
 
 import com.typesafe.config.ConfigFactory
-import net.corda.core.crypto.SignedData
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -78,7 +77,7 @@ class NetworkParametersGenerator {
     private fun processFile(file: Path): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
-            val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()
+            val signedData = file.readAll().deserialize<SignedNodeInfo>()
             signedData.verified()
         } catch (e: Exception) {
             logger.warn("Exception parsing NodeInfo from file. $file", e)
