@@ -17,7 +17,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
     companion object {
         const val DUMMY_FLOW = "StartFlow.net.corda.flows.DummyFlow"
         const val ALL_ALLOWED = "ALL"
-        val FOO_LOW = Permissions.startFlow<Foo>()
     }
 
     class Foo : FlowLogic<Unit>() {
@@ -72,7 +71,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
             val proxy = testProxyFor(adminUser)
             proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
             proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
-            println(FOO_LOW)
         }
     }
 
@@ -89,7 +87,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
     @Test
     fun `joe user is not allowed to use OtherFlow`() {
         rpcDriver {
-            val joeUser = userOf("joe", setOf(DUMMY_FLOW, FOO_LOW))
+            val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
             assertNotAllowed {
                 proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
