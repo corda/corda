@@ -1,7 +1,7 @@
 Code style guide
 ================
 
-This document explains the coding style used in the R3 prototyping repository. You will be expected to follow these
+This document explains the coding style used in the Corda repository. You will be expected to follow these
 recommendations when submitting patches for review. Please take the time to read them and internalise them, to save
 time during code review.
 
