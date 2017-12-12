@@ -3,7 +3,6 @@ package net.corda.irs.api
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
@@ -44,10 +43,8 @@ class NodeInterestRatesTest {
         EURIBOR 2016-03-15 1M = 0.123
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
-
-    private val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    private val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
-    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_CASH_ISSUER.name, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+    private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
     // This is safe because MockServices only ever have a single identity
     private val identity = services.myInfo.singleIdentity()
 
@@ -244,7 +241,7 @@ class NodeInterestRatesTest {
     }
 
     private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
-            TransactionState(1000.DOLLARS.CASH issuedBy DUMMY_CASH_ISSUER ownedBy ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
+            TransactionState(1000.DOLLARS.CASH issuedBy dummyCashIssuer.party ownedBy ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
 
     private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }

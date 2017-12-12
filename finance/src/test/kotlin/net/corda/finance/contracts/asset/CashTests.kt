@@ -3,7 +3,6 @@ package net.corda.finance.contracts.asset
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.node.ServiceHub
@@ -30,13 +29,12 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.util.*
 import kotlin.test.*
 
 class CashTests {
     companion object {
-        private val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), entropyToKeyPair(BigInteger.valueOf(10)).public))
+        private val DUMMY_CASH_ISSUER_IDENTITY = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).identity
     }
 
     @Rule

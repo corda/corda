@@ -6,7 +6,6 @@ import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.packageName
@@ -43,7 +42,6 @@ import org.junit.Rule
 import org.junit.Test
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
-import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -54,10 +52,9 @@ import kotlin.test.assertTrue
 class NodeVaultServiceTest {
     private companion object {
         val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
-        val DUMMY_CASH_ISSUER_NAME = CordaX500Name("Snake Oil Issuer", "London", "GB")
-        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
-        val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public))
-        val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        val DUMMY_CASH_ISSUER_IDENTITY get() = dummyCashIssuer.identity
+        val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
     }
 
     @Rule
@@ -84,7 +81,7 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
         bocServices = MockServices(cordappPackages, rigorousMock(), BOC_NAME, BOC_KEY)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
