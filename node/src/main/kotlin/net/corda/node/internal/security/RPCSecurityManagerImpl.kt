@@ -1,11 +1,14 @@
 package net.corda.node.internal.security
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.Cache
 import com.google.common.primitives.Ints
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.context.AuthServiceId
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
@@ -149,19 +152,26 @@ private object RPCPermissionResolver : PermissionResolver {
     private val ACTION_START_FLOW = "startflow"
     private val ACTION_INVOKE_RPC = "invokerpc"
     private val ACTION_ALL = "all"
-
-    private val FLOW_RPC_CALLS = setOf("startFlowDynamic", "startTrackedFlowDynamic")
+    private val FLOW_RPC_CALLS = setOf(
+            "startFlowDynamic",
+            "startTrackedFlowDynamic",
+            "startFlow",
+            "startTrackedFlow")
 
     override fun resolvePermission(representation: String): Permission {
-
-        val action = representation.substringBefore(SEPARATOR).toLowerCase()
+    	val action = representation.substringBefore(SEPARATOR).toLowerCase()
         when (action) {
             ACTION_INVOKE_RPC -> {
                 val rpcCall = representation.substringAfter(SEPARATOR, "")
-                require(representation.count { it == SEPARATOR } == 1) {
+                require(representation.count { it == SEPARATOR } == 1 && !rpcCall.isEmpty()) {
                     "Malformed permission string"
                 }
-                return RPCPermission(setOf(rpcCall))
+                val permitted = when(rpcCall) {
+                    "startFlow" -> setOf("startFlowDynamic", rpcCall)
+                    "startTrackedFlow" -> setOf("startTrackedFlowDynamic", rpcCall)
+                    else -> setOf(rpcCall)
+                }
+                return RPCPermission(permitted)
             }
             ACTION_START_FLOW -> {
                 val targetFlow = representation.substringAfter(SEPARATOR, "")

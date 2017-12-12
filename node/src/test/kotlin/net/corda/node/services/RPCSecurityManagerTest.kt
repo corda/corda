@@ -3,7 +3,6 @@ package net.corda.node.services
 import net.corda.core.context.AuthServiceId
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
@@ -27,55 +26,41 @@ class RPCSecurityManagerTest {
 
     @Test
     fun `Generic RPC call authorization`() {
-        val rpcUser = User(
-                username = "rpcUser",
-                password = "password",
+        checkUserPermissions(
+                permitted = setOf(arrayListOf("nodeInfo"), arrayListOf("notaryIdentities")),
                 permissions = setOf(
                         Permissions.invokeRpc(CordaRPCOps::nodeInfo),
                         Permissions.invokeRpc(CordaRPCOps::notaryIdentities)))
-        val userRealms = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser),id = AuthServiceId("TEST"))
-        val permitted = setOf(arrayListOf("nodeInfo"), arrayListOf("notaryIdentities"))
-        val subjects = listOf(
-                userRealms.authenticate("rpcUser", Password("password")),
-                userRealms.tryAuthenticate("rpcUser", Password("password"))!!,
-                userRealms.buildSubject("rpcUser"))
-        for (subject in subjects) {
-            checkUserPermissions(subject, permitted)
-        }
     }
 
     @Test
     fun `Flow invocation authorization`() {
-        val flowUser = User(
-            username = "flowUser",
-            password = "password2",
-            permissions = setOf(Permissions.startFlow<DummyFlow>()))
-        val userRealms = RPCSecurityManagerImpl.fromUserList(users = listOf(flowUser),id = AuthServiceId("TEST"))
-        val permitted = setOf(
+        checkUserPermissions(
+            permissions = setOf(Permissions.startFlow<DummyFlow>()),
+            permitted = setOf(
                 arrayListOf("startTrackedFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow"),
-                arrayListOf("startFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow"))
-        val subjects = listOf(
-                userRealms.authenticate("flowUser", Password("password2")),
-                userRealms.tryAuthenticate("flowUser", Password("password2"))!!,
-                userRealms.buildSubject("flowUser"))
-        for (subject in subjects) {
-            checkUserPermissions(subject, permitted)
-        }
+                arrayListOf("startFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow")))
+    }
+
+    @Test
+    fun `Check startFlow RPC permission implies startFlowDynamic`() {
+        checkUserPermissions(
+                permissions = setOf(Permissions.invokeRpc("startFlow")),
+                permitted = setOf(arrayListOf("startFlow"), arrayListOf("startFlowDynamic")))
+    }
+
+    @Test
+    fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
+        checkUserPermissions(
+                permitted = setOf(arrayListOf("startTrackedFlow"), arrayListOf("startTrackedFlowDynamic")),
+                permissions = setOf(Permissions.invokeRpc("startTrackedFlow")))
     }
 
     @Test
     fun `Admin authorization`() {
-        val userRealms = RPCSecurityManagerImpl.fromUserList(
-                users = listOf(User(username = "admin", password = "admin", permissions = setOf("all"))),
-                id = AuthServiceId("TEST"))
-        val permitted = allActions.map { arrayListOf(it) }.toSet()
-        val subjects = listOf(
-                userRealms.authenticate("admin", Password("admin")),
-                userRealms.tryAuthenticate("admin", Password("admin"))!!,
-                userRealms.buildSubject("admin"))
-        for (subject in subjects) {
-            checkUserPermissions(subject, permitted)
-        }
+        checkUserPermissions(
+            permissions = setOf("all"),
+            permitted = allActions.map { arrayListOf(it) }.toSet())
     }
 
     @Test
@@ -120,9 +105,12 @@ class RPCSecurityManagerTest {
         val userRealm = RPCSecurityManagerImpl.fromUserList(
                 users = listOf(User("user", "password", emptySet())),
                 id = AuthServiceId("TEST"))
-
         val subject = userRealm.buildSubject("foo")
-        checkUserPermissions(subject, emptySet())
+        for (action in allActions) {
+            assert(!subject.isPermitted(action)) {
+                "Invalid subject should not be allowed to call $action"
+            }
+        }
     }
 
     private fun configWithRPCUsername(username: String) {
@@ -130,25 +118,37 @@ class RPCSecurityManagerTest {
                 users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
     }
 
-    private fun checkUserPermissions(subject: AuthorizingSubject, permitted: Set<ArrayList<String>>) {
-        for (request in permitted) {
-            val call = request.first()
-            val args = request.drop(1).toTypedArray()
-            assert(subject.isPermitted(request.first(), *args)) {
-                "User ${subject.principal} should be permitted ${call} with target '${request.toList()}'"
+    private fun checkUserPermissions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
+        val user = User(username = "user", password = "password", permissions = permissions)
+        val userRealms = RPCSecurityManagerImpl.fromUserList(users = listOf(user), id = AuthServiceId("TEST"))
+        val disabled = allActions.filter { !permitted.contains(listOf(it)) }
+        for (subject in listOf(
+                userRealms.authenticate("user", Password("password")),
+                userRealms.tryAuthenticate("user", Password("password"))!!,
+                userRealms.buildSubject("user"))) {
+            for (request in permitted) {
+                val call = request.first()
+                val args = request.drop(1).toTypedArray()
+                assert(subject.isPermitted(request.first(), *args)) {
+                    "User ${subject.principal} should be permitted ${call} with target '${request.toList()}'"
+                }
+                if (args.isEmpty()) {
+                    assert(subject.isPermitted(request.first(), "XXX")) {
+                        "User ${subject.principal} should be permitted ${call} with any target"
+                    }
+                }
             }
-        }
 
-        val disabled = allActions.filter {!permitted.contains(listOf(it))}
-        disabled.forEach {
-            assert(!subject.isPermitted(it)) {
-                "User ${subject.principal} should not be permitted $it"
+            disabled.forEach {
+                assert(!subject.isPermitted(it)) {
+                    "Permissions $permissions should not allow to call $it"
+                }
             }
-        }
 
-        disabled.filter {!permitted.contains(listOf(it, "foo"))}.forEach {
-            assert(!subject.isPermitted(it, "foo")) {
-                "User ${subject.principal} should not be permitted $it with target 'foo'"
+            disabled.filter { !permitted.contains(listOf(it, "foo")) }.forEach {
+                assert(!subject.isPermitted(it, "foo")) {
+                    "Permissions $permissions should not allow to call $it with argument 'foo'"
+                }
             }
         }
     }
@@ -162,7 +162,8 @@ class RPCSecurityManagerTest {
     }
 
     companion object {
-        private val allActions = CordaRPCOps::class.members.filterIsInstance<KFunction<*>>().map { it.name }.toSet()
+        private val allActions = CordaRPCOps::class.members.filterIsInstance<KFunction<*>>().map { it.name }.toSet() +
+                setOf("startFlow", "startTrackedFlow")
     }
 
     private abstract class DummyFlow : FlowLogic<Unit>()
