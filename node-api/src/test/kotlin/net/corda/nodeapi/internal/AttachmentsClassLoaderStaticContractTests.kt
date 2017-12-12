@@ -13,7 +13,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.*
-import net.corda.testing.node.MockAttachmentStorage
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test

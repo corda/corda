@@ -6,7 +6,7 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.internal.demorun.*
+import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = CustomNotaryCordform().deployNodes()

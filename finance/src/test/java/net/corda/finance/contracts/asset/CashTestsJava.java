@@ -13,7 +13,7 @@ import org.junit.Test;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.testing.CoreTestUtils.*;
-import static net.corda.testing.NodeTestUtils.transaction;
+import static net.corda.testing.node.NodeTestUtils.transaction;
 import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
 import static org.mockito.Mockito.doReturn;
 

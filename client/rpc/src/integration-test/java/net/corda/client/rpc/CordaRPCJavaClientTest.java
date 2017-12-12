@@ -12,7 +12,7 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.nodeapi.internal.config.User;
 import net.corda.testing.CoreTestUtils;
-import net.corda.testing.internal.NodeBasedTest;
+import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

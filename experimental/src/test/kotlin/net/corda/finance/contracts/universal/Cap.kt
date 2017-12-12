@@ -2,9 +2,6 @@ package net.corda.finance.contracts.universal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
@@ -12,11 +9,10 @@ import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.transaction
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 

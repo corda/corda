@@ -25,7 +25,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.MockAttachmentStorage
+import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.rigorousMock
 import net.corda.testing.withTestSerialization
 import org.junit.Assert.assertEquals

@@ -13,8 +13,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.node.MockAttachmentStorage
-import net.corda.testing.node.MockCordappProvider
+import net.corda.testing.services.MockAttachmentStorage
+import net.corda.testing.services.MockCordappProvider
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey

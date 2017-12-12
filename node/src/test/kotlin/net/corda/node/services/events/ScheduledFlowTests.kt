@@ -24,6 +24,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before

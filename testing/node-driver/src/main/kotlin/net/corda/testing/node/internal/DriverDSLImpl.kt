@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.testing.node.internal
 
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
@@ -47,11 +47,11 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.*
-import net.corda.testing.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
-import net.corda.testing.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
+import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.setGlobalSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request

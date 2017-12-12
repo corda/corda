@@ -14,7 +14,7 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.BOC
-import net.corda.testing.internal.demorun.*
+import net.corda.testing.node.internal.demorun.*
 import java.util.*
 import kotlin.system.exitProcess
 

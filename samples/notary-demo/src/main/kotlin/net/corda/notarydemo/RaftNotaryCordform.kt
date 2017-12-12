@@ -4,7 +4,6 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.node.services.NotaryService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NotaryConfig
@@ -13,7 +12,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.testing.internal.demorun.*
+import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = RaftNotaryCordform().deployNodes()

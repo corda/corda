@@ -9,6 +9,7 @@ import net.corda.finance.issuedBy
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

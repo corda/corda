@@ -9,11 +9,10 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE
 import net.corda.testing.rigorousMock
-import net.corda.testing.testNodeConfiguration
+import net.corda.testing.node.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule

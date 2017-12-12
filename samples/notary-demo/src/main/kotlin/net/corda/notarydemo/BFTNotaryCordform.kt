@@ -13,7 +13,7 @@ import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.testing.internal.demorun.*
+import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = BFTNotaryCordform().deployNodes()
