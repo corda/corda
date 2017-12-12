@@ -26,8 +26,9 @@ import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.*
-import net.corda.testing.internal.NodeBasedTest
+import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.messaging.SimpleMQClient
+import net.corda.testing.node.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.SimpleString

@@ -1,6 +1,5 @@
 package net.corda.node.utilities.registration
 
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
@@ -15,9 +14,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.testing.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.internalDriver
+import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

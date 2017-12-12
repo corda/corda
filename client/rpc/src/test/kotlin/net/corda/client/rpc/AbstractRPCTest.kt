@@ -7,10 +7,10 @@ import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.internal.RPCDriverDSL
-import net.corda.testing.internal.rpcTestUser
-import net.corda.testing.internal.startInVmRpcClient
-import net.corda.testing.internal.startRpcClient
+import net.corda.testing.node.internal.RPCDriverDSL
+import net.corda.testing.node.internal.rpcTestUser
+import net.corda.testing.node.internal.startInVmRpcClient
+import net.corda.testing.node.internal.startRpcClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.junit.Rule
 import org.junit.runners.Parameterized

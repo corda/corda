@@ -1,9 +1,10 @@
-package net.corda.testing.internal.performance
+package net.corda.testing.node.internal.performance
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
 import com.google.common.base.Stopwatch
-import net.corda.testing.internal.ShutdownManager
+import net.corda.testing.internal.performance.Rate
+import net.corda.testing.node.internal.ShutdownManager
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.CountDownLatch
