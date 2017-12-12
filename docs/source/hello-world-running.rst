@@ -180,6 +180,11 @@ parts:
 * The ``IOUState``, representing IOUs on the ledger
 * The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
 
+After completing this tutorial, your CorDapp should look like this:
+
+* Java: https://github.com/corda/corda-tut1-solution-java
+* Kotlin: https://github.com/corda/corda-tut1-solution-kotlin
+
 Next steps
 ----------
 There are a number of improvements we could make to this CorDapp:
