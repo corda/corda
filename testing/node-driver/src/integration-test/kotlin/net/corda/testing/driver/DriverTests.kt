@@ -8,13 +8,13 @@ import net.corda.core.internal.readLines
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
+import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.node.internal.addressMustBeBound
+import net.corda.testing.node.internal.addressMustNotBeBound
+import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.DUMMY_NOTARY_NAME
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.http.HttpApi
-import net.corda.testing.internal.addressMustBeBound
-import net.corda.testing.internal.addressMustNotBeBound
-import net.corda.testing.internal.internalDriver
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.json.simple.JSONObject

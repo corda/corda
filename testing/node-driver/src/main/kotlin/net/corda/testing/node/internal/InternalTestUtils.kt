@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.testing.node.internal
 
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture

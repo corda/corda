@@ -6,12 +6,12 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.internal.RPCDriverDSL
+import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.internal.performance.div
-import net.corda.testing.internal.performance.startPublishingFixedRateInjector
-import net.corda.testing.internal.performance.startReporter
-import net.corda.testing.internal.performance.startTightLoopInjector
-import net.corda.testing.internal.rpcDriver
+import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
+import net.corda.testing.node.internal.performance.startReporter
+import net.corda.testing.node.internal.performance.startTightLoopInjector
+import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.measure
 import org.junit.Ignore
 import org.junit.Test

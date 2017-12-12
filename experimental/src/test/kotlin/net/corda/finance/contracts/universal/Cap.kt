@@ -10,6 +10,7 @@ import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.transaction
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test

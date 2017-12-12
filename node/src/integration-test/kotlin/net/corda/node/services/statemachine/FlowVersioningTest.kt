@@ -7,8 +7,10 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.testing.chooseIdentity
+import net.corda.testing.node.internal.NodeBasedTest
+import net.corda.testing.node.startFlow
 import net.corda.testing.*
-import net.corda.testing.internal.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 

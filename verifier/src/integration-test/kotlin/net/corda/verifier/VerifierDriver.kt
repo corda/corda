@@ -26,8 +26,8 @@ import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.*
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientProducer

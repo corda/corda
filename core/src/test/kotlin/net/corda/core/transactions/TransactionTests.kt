@@ -6,7 +6,6 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.node.MockAttachment
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
@@ -112,7 +111,7 @@ class TransactionTests {
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
         val commands = emptyList<CommandWithParties<CommandData>>()
-        val attachments = listOf<Attachment>(ContractAttachment(MockAttachment(), DummyContract.PROGRAM_ID))
+        val attachments = listOf<Attachment>(ContractAttachment(rigorousMock(), DummyContract.PROGRAM_ID))
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt: PrivacySalt = PrivacySalt()

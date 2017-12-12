@@ -10,9 +10,9 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.testing.node.internal.demorun.*
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
-import net.corda.testing.internal.demorun.*
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = RaftNotaryCordform().deployNodes()

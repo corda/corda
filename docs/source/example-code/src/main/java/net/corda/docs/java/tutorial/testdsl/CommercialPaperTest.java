@@ -21,9 +21,9 @@ import static net.corda.core.crypto.Crypto.generateKeyPair;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
+import static net.corda.testing.node.NodeTestUtils.ledger;
+import static net.corda.testing.node.NodeTestUtils.transaction;
 import static net.corda.testing.CoreTestUtils.rigorousMock;
-import static net.corda.testing.NodeTestUtils.ledger;
-import static net.corda.testing.NodeTestUtils.transaction;
 import static net.corda.testing.TestConstants.*;
 import static org.mockito.Mockito.doReturn;
 

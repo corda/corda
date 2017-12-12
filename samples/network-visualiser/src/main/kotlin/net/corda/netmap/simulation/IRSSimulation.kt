@@ -24,7 +24,7 @@ import net.corda.irs.flows.FixingFlow
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.startFlow
+import net.corda.testing.node.startFlow
 import rx.Observable
 import java.time.LocalDate
 import java.util.*
