@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -23,7 +24,6 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
-import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import java.security.PublicKey
@@ -87,9 +87,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
     @Suspendable
     override fun call() {
         // We'll be using a dummy public key for demonstration purposes.
-        // These are built in to Corda, and are generally used for writing
-        // tests.
-        val dummyPubKey: PublicKey = ALICE_PUBKEY
+        val dummyPubKey: PublicKey = generateKeyPair().public
 
         /**--------------------------
          * IDENTIFYING OTHER NODES *

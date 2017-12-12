@@ -23,6 +23,11 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class DBTransactionStorageTests {
+    private companion object {
+        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).pubkey
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

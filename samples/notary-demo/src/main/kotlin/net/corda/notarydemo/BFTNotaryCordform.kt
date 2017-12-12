@@ -11,8 +11,8 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.internal.demorun.*
 import java.nio.file.Paths
 
@@ -29,13 +29,13 @@ class BFTNotaryCordform : CordformDefinition() {
     init {
         nodesDirectory = Paths.get("build", "nodes", "nodesBFT")
         node {
-            name(ALICE.name)
+            name(ALICE_NAME)
             p2pPort(10002)
             rpcPort(10003)
             rpcUsers(notaryDemoUser)
         }
         node {
-            name(BOB.name)
+            name(BOB_NAME)
             p2pPort(10005)
             rpcPort(10006)
         }

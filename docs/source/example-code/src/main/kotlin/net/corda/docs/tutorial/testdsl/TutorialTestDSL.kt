@@ -2,6 +2,8 @@ package net.corda.docs.tutorial.testdsl
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.days
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
@@ -17,6 +19,18 @@ import org.junit.Rule
 import org.junit.Test
 
 class CommercialPaperTest {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val BIG_CORP_PUBKEY = generateKeyPair().public
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.pubkey
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
