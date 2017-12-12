@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.services.AttachmentStorage
@@ -32,7 +33,8 @@ class AttachmentsClassLoaderTests {
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated.jar")
         private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
-
+        private val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        private val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
         private fun SerializationContext.withAttachmentStorage(attachmentStorage: AttachmentStorage): SerializationContext {
             return withTokenContext(SerializeAsTokenContextImpl(attachmentStorage) {}).withProperty(attachmentsClassLoaderEnabledPropertyName, true)
         }

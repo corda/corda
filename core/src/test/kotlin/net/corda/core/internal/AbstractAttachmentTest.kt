@@ -1,7 +1,7 @@
 package net.corda.core.internal
 
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.AfterClass
@@ -29,8 +29,8 @@ class AbstractAttachmentTest {
         @BeforeClass
         @JvmStatic
         fun beforeClass() {
-            execute("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", "RSA", "-alias", "alice", "-keypass", "alicepass", "-dname", ALICE.toString())
-            execute("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", "RSA", "-alias", "bob", "-keypass", "bobpass", "-dname", BOB.toString())
+            execute("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", "RSA", "-alias", "alice", "-keypass", "alicepass", "-dname", ALICE_NAME.toString())
+            execute("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", "RSA", "-alias", "bob", "-keypass", "bobpass", "-dname", BOB_NAME.toString())
             (dir / "_signable1").writeLines(listOf("signable1"))
             (dir / "_signable2").writeLines(listOf("signable2"))
             (dir / "_signable3").writeLines(listOf("signable3"))
@@ -76,10 +76,10 @@ class AbstractAttachmentTest {
     fun `one signer`() {
         execute("jar", "cvf", "attachment.jar", "_signable1", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(listOf(ALICE.name), load("attachment.jar").signers.map { it.name }) // We only reused ALICE's distinguished name, so the keys will be different.
+        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name }) // We only reused ALICE's distinguished name, so the keys will be different.
         (dir / "my-dir").createDirectory()
         execute("jar", "uvf", "attachment.jar", "my-dir")
-        assertEquals(listOf(ALICE.name), load("attachment.jar").signers.map { it.name }) // Unsigned directory is irrelevant.
+        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name }) // Unsigned directory is irrelevant.
     }
 
     @Test
@@ -87,17 +87,17 @@ class AbstractAttachmentTest {
         execute("jar", "cvf", "attachment.jar", "_signable1", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")
-        assertEquals(listOf(ALICE.name, BOB.name), load("attachment.jar").signers.map { it.name })
+        assertEquals(listOf(ALICE_NAME, BOB_NAME), load("attachment.jar").signers.map { it.name })
     }
 
     @Test
     fun `a party must sign all the files in the attachment to be a signer`() {
         execute("jar", "cvf", "attachment.jar", "_signable1")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(listOf(ALICE.name), load("attachment.jar").signers.map { it.name })
+        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name })
         execute("jar", "uvf", "attachment.jar", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")
-        assertEquals(listOf(BOB.name), load("attachment.jar").signers.map { it.name }) // ALICE hasn't signed the new file.
+        assertEquals(listOf(BOB_NAME), load("attachment.jar").signers.map { it.name }) // ALICE hasn't signed the new file.
         execute("jar", "uvf", "attachment.jar", "_signable3")
         assertEquals(emptyList(), load("attachment.jar").signers) // Neither party has signed the new file.
     }
@@ -107,7 +107,7 @@ class AbstractAttachmentTest {
         (dir / "volatile").writeLines(listOf("volatile"))
         execute("jar", "cvf", "attachment.jar", "volatile")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(listOf(ALICE.name), load("attachment.jar").signers.map { it.name })
+        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name })
         (dir / "volatile").writeLines(listOf("garbage"))
         execute("jar", "uvf", "attachment.jar", "volatile", "_signable1") // ALICE's signature on volatile is now bad.
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")

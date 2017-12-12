@@ -18,7 +18,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.driver.driver
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
@@ -49,7 +49,7 @@ fun main(args: Array<String>) {
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
     driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true) {
-        val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
+        val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2

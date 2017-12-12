@@ -26,8 +26,8 @@ public class FlowsInJavaTest {
 
     @Before
     public void setUp() throws Exception {
-        aliceNode = mockNet.createPartyNode(TestConstants.getALICE().getName());
-        bobNode = mockNet.createPartyNode(TestConstants.getBOB().getName());
+        aliceNode = mockNet.createPartyNode(TestConstants.getALICE_NAME());
+        bobNode = mockNet.createPartyNode(TestConstants.getBOB_NAME());
         bob = singleIdentity(bobNode.getInfo());
     }
 

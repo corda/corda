@@ -3,17 +3,15 @@ package net.corda.core.internal
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.node.internal.StartedNode
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MINI_CORP
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.singleIdentity
-import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,8 +38,8 @@ class ResolveTransactionsFlowTest {
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         notaryNode = mockNet.defaultNotaryNode
-        megaCorpNode = mockNet.createPartyNode(MEGA_CORP.name)
-        miniCorpNode = mockNet.createPartyNode(MINI_CORP.name)
+        megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
+        miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))
         megaCorpNode.registerInitiatedFlow(TestResponseFlow::class.java)
         miniCorpNode.registerInitiatedFlow(TestResponseFlow::class.java)
         notary = mockNet.defaultNotaryIdentity

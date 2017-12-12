@@ -10,17 +10,16 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testing.ALICE_NAME
 import java.net.ConnectException
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.assertj.core.api.Assertions.assertThat
 import java.util.regex.Pattern
-import kotlin.reflect.jvm.jvmName
 
 class SSHServerTest {
 
@@ -28,8 +27,8 @@ class SSHServerTest {
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver() {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user))
+        driver {
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             node.getOrThrow()
 
             val session = JSch().getSession("u", "localhost", 2222)
@@ -50,7 +49,7 @@ class SSHServerTest {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 
@@ -70,7 +69,7 @@ class SSHServerTest {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 
@@ -93,7 +92,7 @@ class SSHServerTest {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
         driver(isDebug = true) {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 
@@ -105,7 +104,7 @@ class SSHServerTest {
             assertTrue(session.isConnected)
 
             val channel = session.openChannel("exec") as ChannelExec
-            channel.setCommand("start FlowICannotRun otherParty: \"O=Alice Corp,L=Madrid,C=ES\"")
+            channel.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
             channel.connect()
             val response = String(Streams.readAll(channel.inputStream))
 
@@ -123,7 +122,7 @@ class SSHServerTest {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
         driver(isDebug = true) {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 

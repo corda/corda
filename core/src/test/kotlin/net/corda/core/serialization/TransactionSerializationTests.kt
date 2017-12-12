@@ -3,6 +3,7 @@ package net.corda.core.serialization
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
@@ -19,6 +20,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionSerializationTests {
+    private companion object {
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_KEY get() = megaCorp.key
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
