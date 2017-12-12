@@ -1,4 +1,4 @@
-package net.corda.test.node
+package net.corda.testing.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.jackson.JacksonSupport
@@ -11,8 +11,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.driver.driver
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlow
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
