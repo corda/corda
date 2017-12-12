@@ -56,4 +56,3 @@ project(':hsm-tool').with {
     projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
 }
 include 'perftestcordapp'
-
