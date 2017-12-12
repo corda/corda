@@ -36,6 +36,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before

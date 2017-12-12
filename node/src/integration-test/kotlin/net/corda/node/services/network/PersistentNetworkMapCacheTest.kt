@@ -10,7 +10,7 @@ import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.TestIdentity
 import net.corda.testing.chooseIdentity
-import net.corda.testing.internal.NodeBasedTest
+import net.corda.testing.node.internal.NodeBasedTest
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals

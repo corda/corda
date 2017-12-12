@@ -19,7 +19,7 @@ import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.attachmentsClassLoaderEnabledPropertyName
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import net.corda.testing.*
-import net.corda.testing.node.MockAttachmentStorage
+import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.*
 import org.junit.Rule

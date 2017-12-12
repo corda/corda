@@ -4,8 +4,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.WebserverHandle
-import net.corda.testing.internal.addressMustBeBound
-import net.corda.testing.internal.addressMustNotBeBound
+import net.corda.testing.node.internal.addressMustBeBound
+import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.util.concurrent.Executors

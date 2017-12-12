@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.testing.node.internal
 
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.internal.KryoClientSerializationScheme

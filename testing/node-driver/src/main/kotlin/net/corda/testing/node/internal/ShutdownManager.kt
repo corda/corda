@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.testing.node.internal
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.ThreadBox

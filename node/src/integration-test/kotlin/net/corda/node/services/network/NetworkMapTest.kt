@@ -2,12 +2,12 @@ package net.corda.node.services.network
 
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.seconds
+import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
-import net.corda.testing.internal.CompatibilityZoneParams
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.internalDriver
+import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
