@@ -1,9 +1,11 @@
 package net.corda.node.utilities.registration
 
+import com.google.common.net.HostAndPort
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -18,6 +20,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.internalDriver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
@@ -41,13 +44,12 @@ class NodeRegistrationTest {
     private val registrationHandler = RegistrationHandler(rootCertAndKeyPair)
 
     private lateinit var server: NetworkMapServer
-    private lateinit var compatibilityZone: CompatibilityZoneParams
+    private lateinit var serverHostAndPort: NetworkHostAndPort
 
     @Before
     fun startServer() {
         server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), registrationHandler)
-        val address = server.start()
-        compatibilityZone = CompatibilityZoneParams(URL("http://$address"), rootCert = rootCertAndKeyPair.certificate.cert)
+        serverHostAndPort = server.start()
     }
 
     @After
@@ -59,6 +61,7 @@ class NodeRegistrationTest {
     // starting a second node hangs so that needs to be fixed.
     @Test
     fun `node registration correct root cert`() {
+        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = rootCertAndKeyPair.certificate.cert)
         internalDriver(
                 portAllocation = portAllocation,
                 notarySpecs = emptyList(),
@@ -66,6 +69,23 @@ class NodeRegistrationTest {
         ) {
             startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
             assertThat(registrationHandler.idsPolled).contains("Alice")
+        }
+    }
+
+    @Test
+    fun `node registration wrong root cert`() {
+        val someCert = createSelfKeyAndSelfSignedCertificate().certificate.cert
+        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = someCert)
+        internalDriver(
+                portAllocation = portAllocation,
+                notarySpecs = emptyList(),
+                compatibilityZone = compatibilityZone,
+                // Changing the content of the truststore makes the node fail in a number of ways if started out process.
+                startNodesInProcess = true
+        ) {
+            assertThatThrownBy {
+                startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
+            }.isInstanceOf(WrongRootCertException::class.java)
         }
     }
 

@@ -9,9 +9,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.getX509Certificate
-import net.corda.nodeapi.internal.crypto.loadKeyStore
+import net.corda.node.services.config.createKeystoreForCordaNode
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE
 import net.corda.testing.rigorousMock
 import net.corda.testing.testNodeConfiguration
@@ -33,6 +32,15 @@ class NetworkRegistrationHelperTest {
     private val requestId = SecureHash.randomSHA256().toString()
     private lateinit var config: NodeConfiguration
 
+    private val identities = listOf("CORDA_CLIENT_CA",
+            "CORDA_INTERMEDIATE_CA",
+            "CORDA_ROOT_CA")
+            .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
+    private val certs = identities.map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
+            .map { it.cert }.toTypedArray()
+
+    private val certService = mockRegistrationResponse(*certs)
+
     @Before
     fun init() {
         config = testNodeConfiguration(baseDirectory = tempFolder.root.toPath(), myLegalName = ALICE.name)
@@ -40,21 +48,13 @@ class NetworkRegistrationHelperTest {
 
     @Test
     fun `successful registration`() {
-        val identities = listOf("CORDA_CLIENT_CA",
-                "CORDA_INTERMEDIATE_CA",
-                "CORDA_ROOT_CA")
-                .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
-        val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
-                .map { it.cert }.toTypedArray()
-
-        val certService = mockRegistrationResponse(*certs)
-
-        config.rootCertFile.parent.createDirectories()
-        X509Utilities.saveCertificateAsPEMFile(certs.last(), config.rootCertFile)
-
         assertFalse(config.nodeKeystore.exists())
         assertFalse(config.sslKeystore.exists())
-        assertFalse(config.trustStoreFile.exists())
+        config.trustStoreFile.parent.createDirectories()
+        loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
+            it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, certs.last())
+            it.save(config.trustStoreFile, config.trustStorePassword)
+        }
 
         NetworkRegistrationHelper(config, certService).buildKeystore()
 
@@ -97,33 +97,21 @@ class NetworkRegistrationHelperTest {
     }
 
     @Test
-    fun `rootCertFile doesn't exist`() {
-        val certService = rigorousMock<NetworkRegistrationService>()
-
+    fun `missing truststore`() {
         assertThatThrownBy {
-            NetworkRegistrationHelper(config, certService)
-        }.hasMessageContaining(config.rootCertFile.toString())
+            NetworkRegistrationHelper(config, certService).buildKeystore()
+        }.hasMessageContaining("This file must contain the root CA cert of your compatibility zone. Please contact your CZ operator.")
+                .isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
-    fun `root cert in response doesn't match expected`() {
-        val identities = listOf("CORDA_CLIENT_CA",
-                "CORDA_INTERMEDIATE_CA",
-                "CORDA_ROOT_CA")
-                .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
-        val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
-                .map { it.cert }.toTypedArray()
-
-        val certService = mockRegistrationResponse(*certs)
-
-        config.rootCertFile.parent.createDirectories()
-        X509Utilities.saveCertificateAsPEMFile(
-                X509Utilities.createSelfSignedCACertificate(
-                        CordaX500Name("CORDA_ROOT_CA", "R3 Ltd", "London", "GB"),
-                        Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)).cert,
-                config.rootCertFile
-        )
-
+    fun `wrong root cert in truststore`() {
+        val someCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name("Foo", "MU", "GB"), Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)).cert
+        config.trustStoreFile.parent.createDirectories()
+        loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
+            it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, someCert)
+            it.save(config.trustStoreFile, config.trustStorePassword)
+        }
         assertThatThrownBy {
             NetworkRegistrationHelper(config, certService).buildKeystore()
         }.isInstanceOf(WrongRootCertException::class.java)

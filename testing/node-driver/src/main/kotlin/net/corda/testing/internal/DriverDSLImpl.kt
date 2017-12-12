@@ -39,6 +39,9 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.save
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_BANK_A
@@ -220,8 +223,11 @@ class DriverDSLImpl(
         )
         val configuration = config.parseAsNodeConfiguration()
 
-        configuration.rootCertFile.parent.createDirectories()
-        X509Utilities.saveCertificateAsPEMFile(rootCert, configuration.rootCertFile)
+        configuration.trustStoreFile.parent.createDirectories()
+        loadOrCreateKeyStore(configuration.trustStoreFile, configuration.trustStorePassword).also {
+            it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
+            it.save(configuration.trustStoreFile, configuration.trustStorePassword)
+        }
 
         return if (startNodesInProcess) {
             // This is a bit cheating, we're not starting a full node, we're just calling the code nodes call
