@@ -19,12 +19,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
         const val ALL_ALLOWED = "ALL"
     }
 
-    class Foo : FlowLogic<Unit>() {
-        override fun call() {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-    }
-
     /*
      * RPC operation.
      */
@@ -95,7 +89,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
             assertNotAllowed {
                 proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
             }
-            proxy.validatePermission("startFlowDynamic", "net.corda.client.rpc.RPCPermissionsTests\$Foo")
         }
     }
 
