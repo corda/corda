@@ -103,7 +103,7 @@ class AttachmentTests {
             }
         })
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
-        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
+        val alice = aliceNode.info.singleIdentity()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         val attachment = fakeAttachment()
