@@ -21,8 +21,8 @@ To run from the command line in Windows:
    ``samples\irs-demo\build``
 2. Run ``gradlew.bat samples:irs-demo:web:deployWebapps`` to install configs and tools for running webservers
 3. Run ``cd samples\irs-demo`` to change current working directory
-4. Run ``cordapp\build\nodes\runnodes`` to open up several 3 terminals for each nodes
-5. Run ``web\build\webapps\webapps`` to open up several 3 terminals for each nodes' webservers
+4. Run ``cordapp\build\nodes\runnodes.bat`` to open up several 3 terminals for each nodes
+5. Run ``web\build\webapps\webapps.bat`` to open up several 3 terminals for each nodes' webservers
 
 This demo also has a web app. To use this, run nodes and then navigate to http://localhost:10007/ and 
 http://localhost:10010/ to see each node's view of the ledger.
