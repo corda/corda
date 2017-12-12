@@ -125,7 +125,6 @@ data class NodeConfigurationImpl(
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
-        require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }

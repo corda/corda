@@ -30,6 +30,17 @@ dependencies {
     // Integration test helpers
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
     integrationTestCompile "junit:junit:$junit_version"
+
+    // Jetty dependencies for NetworkMapClient test.
+    // Web stuff: for HTTP[S] servlets
+    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    compile "javax.servlet:javax.servlet-api:3.1.0"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 }
 
 task integrationTest(type: Test) {

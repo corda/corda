@@ -44,6 +44,7 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import sun.security.ec.ECPublicKeyImpl
 import sun.security.provider.certpath.X509CertPath
+import sun.security.x509.X509CertImpl
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
@@ -75,6 +76,7 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
+            addDefaultSerializer(X509Certificate::class.java, X509CertificateSerializer)
 
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
@@ -108,7 +110,6 @@ object DefaultKryoCustomizer {
             register(FileInputStream::class.java, InputStreamSerializer)
             register(CertPath::class.java, CertPathSerializer)
             register(X509CertPath::class.java, CertPathSerializer)
-            register(X509Certificate::class.java, X509CertificateSerializer)
             register(BCECPrivateKey::class.java, PrivateKeySerializer)
             register(BCECPublicKey::class.java, publicKeySerializer)
             register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)

@@ -38,7 +38,7 @@ object TestNodeInfoFactory {
     }
 
     private fun buildCertPath(vararg certificates: Certificate): CertPath {
-        return X509CertificateFactory().delegate.generateCertPath(certificates.asList())
+        return X509CertificateFactory().generateCertPath(*certificates)
     }
 
     private fun X509CertificateHolder.toX509Certificate(): X509Certificate {

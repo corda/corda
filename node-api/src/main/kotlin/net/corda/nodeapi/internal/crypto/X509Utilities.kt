@@ -4,8 +4,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.cert
 import net.corda.core.internal.read
-import net.corda.core.internal.write
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -27,10 +27,8 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.io.pem.PemReader
-import java.io.FileWriter
 import java.io.InputStream
 import java.math.BigInteger
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
@@ -153,7 +151,7 @@ object X509Utilities {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
-        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates.toList())
+        val certPath = X509CertificateFactory().generateCertPath(*certificates)
         val pathValidator = CertPathValidator.getInstance("PKIX")
         pathValidator.validate(certPath, params)
     }
@@ -164,7 +162,7 @@ object X509Utilities {
      * @param file Target file.
      */
     @JvmStatic
-    fun saveCertificateAsPEMFile(x509Certificate: X509CertificateHolder, file: Path) {
+    fun saveCertificateAsPEMFile(x509Certificate: X509Certificate, file: Path) {
         JcaPEMWriter(file.toFile().writer()).use {
             it.writeObject(x509Certificate)
         }
@@ -176,14 +174,14 @@ object X509Utilities {
      * @return The X509Certificate that was encoded in the file.
      */
     @JvmStatic
-    fun loadCertificateFromPEMFile(file: Path): X509CertificateHolder {
-        val cert = file.read {
+    fun loadCertificateFromPEMFile(file: Path): X509Certificate {
+        return file.read {
             val reader = PemReader(it.reader())
             val pemObject = reader.readPemObject()
-            X509CertificateHolder(pemObject.content)
+            val certHolder = X509CertificateHolder(pemObject.content)
+            certHolder.isValidOn(Date())
+            certHolder.cert
         }
-        cert.isValidOn(Date())
-        return cert
     }
 
     /**
@@ -310,8 +308,17 @@ object X509Utilities {
  */
 class X509CertificateFactory {
     val delegate: CertificateFactory = CertificateFactory.getInstance("X.509")
+
     fun generateCertificate(input: InputStream): X509Certificate {
         return delegate.generateCertificate(input) as X509Certificate
+    }
+
+    fun generateCertPath(certificates: List<Certificate>): CertPath {
+        return delegate.generateCertPath(certificates)
+    }
+
+    fun generateCertPath(vararg certificates: Certificate): CertPath {
+        return delegate.generateCertPath(certificates.asList())
     }
 }
 
