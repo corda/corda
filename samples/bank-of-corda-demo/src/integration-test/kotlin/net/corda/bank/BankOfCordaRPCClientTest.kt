@@ -4,6 +4,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
@@ -28,7 +29,7 @@ class BankOfCordaRPCClientTest {
                     startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
-                    startNode(providedName = BOC.name, rpcUsers = listOf(bocManager)),
+                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bocManager)),
                     startNode(providedName = BIGCORP_NAME, rpcUsers = listOf(bigCorpCFO))
             ).map { it.getOrThrow() }
 
@@ -52,7 +53,7 @@ class BankOfCordaRPCClientTest {
             // Kick-off actual Issuer Flow
             val anonymous = true
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
-                    1000.DOLLARS, BIG_CORP_PARTY_REF,
+                    1000.DOLLARS, OpaqueBytes.of(1),
                     bigCorporation,
                     anonymous,
                     defaultNotaryIdentity).returnValue.getOrThrow()

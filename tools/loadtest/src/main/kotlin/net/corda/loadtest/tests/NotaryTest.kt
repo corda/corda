@@ -18,13 +18,16 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger("NotaryTest")
 private val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
 private val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
+private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
 
 data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTransaction, val node: NodeConnection)
 
 val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
-            val issuerServices = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name, dummyCashIssuer.key)
+            val issuerServices = MockServices(makeTestIdentityService(listOf(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity)), megaCorp.name, dummyCashIssuer.key)
             val generateTx = Generator.pickOne(simpleNodes).flatMap { node ->
                 Generator.int().map {
                     val issueBuilder = DummyContract.generateInitial(it, notary.info.legalIdentities[0], DUMMY_CASH_ISSUER) // TODO notary choice

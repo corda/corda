@@ -1,49 +1,33 @@
 package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.copyTo
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
 import net.corda.node.internal.NodeStartup
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.getX509Certificate
-import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_REGULATOR
+import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.http.HttpApi
-import net.corda.testing.internal.CompatibilityZoneParams
 import net.corda.testing.internal.addressMustBeBound
 import net.corda.testing.internal.addressMustNotBeBound
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.internal.internalDriver
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
 import org.junit.Rule
 import org.json.simple.JSONObject
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
-import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import javax.ws.rs.GET
-import javax.ws.rs.POST
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.ok
-
 
 class DriverTests {
-
     companion object {
+        private val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
         private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
         @AfterClass
         @JvmStatic
@@ -71,7 +55,7 @@ class DriverTests {
     @Test
     fun `simple node startup and shutdown`() {
         val handle = driver {
-            val regulator = startNode(providedName = DUMMY_REGULATOR.name)
+            val regulator = startNode(providedName = DUMMY_REGULATOR_NAME)
             nodeMustBeUp(regulator)
         }
         nodeMustBeDown(handle)
@@ -80,7 +64,7 @@ class DriverTests {
     @Test
     fun `random free port allocation`() {
         val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
-            val nodeInfo = startNode(providedName = DUMMY_BANK_A.name)
+            val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
         nodeMustBeDown(nodeHandle)
@@ -92,7 +76,7 @@ class DriverTests {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val baseDirectory = startNode(providedName = DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
+            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
@@ -103,8 +87,7 @@ class DriverTests {
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
         driver(jmxPolicy = JmxPolicy(true)) {
             // start another node so we gain access to node JMX metrics
-            startNode(providedName = DUMMY_REGULATOR.name).getOrThrow()
-
+            startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             val webAddress = NetworkHostAndPort("localhost", 7006)
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
@@ -122,8 +105,8 @@ class DriverTests {
             assertThat(baseDirectory / "process-id").exists()
         }
 
-        val baseDirectory = internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
-            baseDirectory(DUMMY_NOTARY.name)
+        val baseDirectory = internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME))) {
+            baseDirectory(DUMMY_NOTARY_NAME)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }

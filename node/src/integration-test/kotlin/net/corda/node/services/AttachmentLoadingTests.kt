@@ -52,7 +52,8 @@ class AttachmentLoadingTests {
         val flowInitiatorClass: Class<out FlowLogic<*>> =
                 Class.forName("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator", true, URLClassLoader(arrayOf(isolatedJAR)))
                         .asSubclass(FlowLogic::class.java)
-
+        val DUMMY_BANK_A = TestIdentity(DUMMY_BANK_A_NAME, 40).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         private fun DriverDSL.createTwoNodes(): List<NodeHandle> {
             return listOf(
                     startNode(providedName = bankAName),

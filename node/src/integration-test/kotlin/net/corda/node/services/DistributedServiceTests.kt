@@ -45,9 +45,9 @@ class DistributedServiceTests {
 
         driver(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
-            alice = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser)).getOrThrow()
+            alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
             notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as NodeHandle.OutOfProcess }
 

@@ -3,6 +3,7 @@ package net.corda.irs.api
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
@@ -32,6 +33,14 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 class NodeInterestRatesTest {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val MEGA_CORP_KEY = generateKeyPair()
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.pubkey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

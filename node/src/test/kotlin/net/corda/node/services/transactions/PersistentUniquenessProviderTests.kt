@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.UniquenessException
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -18,8 +19,7 @@ class PersistentUniquenessProviderTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-
-    private val identity = MEGA_CORP
+    private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val txID = SecureHash.randomSHA256()
 
     private lateinit var database: CordaPersistence

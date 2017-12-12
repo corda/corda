@@ -12,10 +12,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
-import net.corda.testing.ALICE
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.*
 import net.corda.testing.node.NotarySpec
 import org.junit.Rule
 import org.junit.Test
@@ -44,7 +41,7 @@ class VerifierTests {
     @Test
     fun `single verifier works with requestor`() {
         verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
-            val aliceFuture = startVerificationRequestor(ALICE.name)
+            val aliceFuture = startVerificationRequestor(ALICE_NAME)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
             startVerifier(alice)
@@ -61,7 +58,7 @@ class VerifierTests {
     @Test
     fun `single verification fails`() {
         verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
-            val aliceFuture = startVerificationRequestor(ALICE.name)
+            val aliceFuture = startVerificationRequestor(ALICE_NAME)
             // Generate transactions as per usual, but then remove attachments making transaction invalid.
             val transactions = generateTransactions(1).map { it.copy(attachments = emptyList()) }
             val alice = aliceFuture.get()
@@ -76,7 +73,7 @@ class VerifierTests {
     @Test
     fun `multiple verifiers work with requestor`() {
         verifierDriver {
-            val aliceFuture = startVerificationRequestor(ALICE.name)
+            val aliceFuture = startVerificationRequestor(ALICE_NAME)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
             val numberOfVerifiers = 4
@@ -96,7 +93,7 @@ class VerifierTests {
     @Test
     fun `verification redistributes on verifier death`() {
         verifierDriver {
-            val aliceFuture = startVerificationRequestor(ALICE.name)
+            val aliceFuture = startVerificationRequestor(ALICE_NAME)
             val numberOfTransactions = 100
             val transactions = generateTransactions(numberOfTransactions)
             val alice = aliceFuture.get()
@@ -124,7 +121,7 @@ class VerifierTests {
     @Test
     fun `verification request waits until verifier comes online`() {
         verifierDriver {
-            val aliceFuture = startVerificationRequestor(ALICE.name)
+            val aliceFuture = startVerificationRequestor(ALICE_NAME)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
             val futures = transactions.map { alice.verifyTransaction(it) }
@@ -137,9 +134,9 @@ class VerifierTests {
     fun `single verifier works with a node`() {
         verifierDriver(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess))
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, verifierType = VerifierType.OutOfProcess))
         ) {
-            val aliceNode = startNode(providedName = ALICE.name).getOrThrow()
+            val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()
             val notaryNode = defaultNotaryNode.getOrThrow()
             val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
             startVerifier(notaryNode)
