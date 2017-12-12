@@ -2,6 +2,7 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.days
@@ -33,9 +34,10 @@ fun freshCertificate(identityService: IdentityServiceInternal,
                      issuer: PartyAndCertificate,
                      issuerSigner: ContentSigner,
                      revocationEnabled: Boolean = false): PartyAndCertificate {
+    require(CertRole.Companion.extract(issuer.certificate) == CertRole.WELL_KNOWN_IDENTITY)
     val issuerCert = issuer.certificate.toX509CertHolder()
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCert)
-    val ourCertificate = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, issuerCert.subject,
+    val ourCertificate = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_IDENTITY, issuerCert.subject,
             issuerSigner, issuer.name, subjectPublicKey, window)
     val ourCertPath = X509CertificateFactory().generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
