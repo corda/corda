@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.config.parseAs
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*

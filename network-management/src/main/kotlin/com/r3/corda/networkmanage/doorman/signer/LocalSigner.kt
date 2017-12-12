@@ -33,7 +33,7 @@ class LocalSigner(private val caKeyPair: KeyPair, private val caCertPath: Array<
         val nameConstraints = NameConstraints(
                 arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject))),
                 arrayOf())
-        val clientCertificate = X509Utilities.createCertificate(CertificateType.CLIENT_CA,
+        val clientCertificate = X509Utilities.createCertificate(CertificateType.NODE_CA,
                 caCertPath.first().toX509CertHolder(),
                 caKeyPair,
                 CordaX500Name.parse(request.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),

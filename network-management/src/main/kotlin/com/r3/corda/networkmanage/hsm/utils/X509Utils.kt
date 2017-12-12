@@ -181,7 +181,7 @@ object X509Utilities {
         val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = null).x500Name))), arrayOf())
         val issuerCertificate = caCertAndKey.certificate
         val issuerKeyPair = caCertAndKey.keyPair
-        val certificateType = CertificateType.CLIENT_CA
+        val certificateType = CertificateType.NODE_CA
         val validityWindow = getCertificateValidityWindow(0, validDays, issuerCertificate.notBefore, issuerCertificate.notAfter)
         val serial = BigInteger.valueOf(random63BitValue(provider))
         val subject = CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Name

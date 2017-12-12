@@ -7,7 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.exists
 import net.corda.core.utilities.days
 import net.corda.core.utilities.parsePublicKeyBase58
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.NotaryInfo
 import java.nio.file.Path
