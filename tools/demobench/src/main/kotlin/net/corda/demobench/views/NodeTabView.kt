@@ -204,14 +204,15 @@ class NodeTabView : Fragment() {
 
     private fun Pane.nodeNameField() = textfield(model.legalName) {
         minWidth = textWidth
-        validator {
-            if (it == null) {
+        validator { rawName ->
+            val normalizedName: String? = rawName?.let(LegalNameValidator::normalize)
+            if (normalizedName == null) {
                 error("Node name is required")
-            } else if (nodeController.nameExists(LegalNameValidator.normalize(it))) {
+            } else if (nodeController.nameExists(normalizedName)) {
                 error("Node with this name already exists")
             } else {
                 try {
-                    LegalNameValidator.validateOrganization(LegalNameValidator.normalize(it))
+                    LegalNameValidator.validateOrganization(normalizedName, LegalNameValidator.Validation.MINIMAL)
                     null
                 } catch (e: IllegalArgumentException) {
                     error(e.message)

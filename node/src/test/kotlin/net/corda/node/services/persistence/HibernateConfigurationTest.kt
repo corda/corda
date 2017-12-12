@@ -57,9 +57,7 @@ import javax.persistence.criteria.CriteriaBuilder
 
 class HibernateConfigurationTest {
     private companion object {
-        val DUMMY_CASH_ISSUER_NAME = CordaX500Name("Snake Oil Issuer", "London", "GB")
-        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
-        val DUMMY_CASH_ISSUER = Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public)
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
     }
 
     @Rule
@@ -92,13 +90,13 @@ class HibernateConfigurationTest {
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
         bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
         notaryServices = MockServices(cordappPackages, rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
             doReturn(null).whenever(mock).wellKnownPartyFromAnonymous(any<AbstractParty>())
-            listOf(DUMMY_CASH_ISSUER, DUMMY_NOTARY).forEach {
+            listOf(dummyCashIssuer.party, DUMMY_NOTARY).forEach {
                 doReturn(it).whenever(mock).wellKnownPartyFromAnonymous(it)
                 doReturn(it).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }

@@ -5,12 +5,10 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
@@ -29,7 +27,6 @@ import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -40,7 +37,7 @@ import kotlin.test.assertTrue
 
 class ObligationTests {
     companion object {
-        private val DUMMY_OBLIGATION_ISSUER = Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), entropyToKeyPair(BigInteger.valueOf(10)).public)
+        private val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
     }
 
     @Rule
