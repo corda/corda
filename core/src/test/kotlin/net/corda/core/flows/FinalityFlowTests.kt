@@ -17,6 +17,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FinalityFlowTests {
+    companion object {
+        private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
+    }
+
     private lateinit var mockNet: MockNetwork
     private lateinit var aliceServices: StartedNodeServices
     private lateinit var bobServices: StartedNodeServices

@@ -19,6 +19,11 @@ class TransactionTests {
         val DUMMY_KEY_1 = generateKeyPair()
         val DUMMY_KEY_2 = generateKeyPair()
         val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_KEY get() = dummyNotary.key
     }
 
     @Rule

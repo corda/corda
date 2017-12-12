@@ -15,6 +15,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.node.internal.FlowStarterImpl
 import net.corda.node.internal.cordapp.CordappLoader
@@ -50,9 +51,11 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
-    companion object {
-        private val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
-        private val myInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
+    private companion object {
+        val ALICE_KEY = TestIdentity(ALICE_NAME, 70).key
+        val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val myInfo = NodeInfo(listOf(NetworkHostAndPort("mockHost", 30000)), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
     }
 
     @Rule

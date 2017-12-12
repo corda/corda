@@ -47,13 +47,13 @@ class IRSDemoTest {
     fun `runs IRS demo`() {
         springDriver(
                 useTestClock = true,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = rpcUsers)),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),
                 isDebug = true,
                 extraCordappPackagesToScan = listOf("net.corda.irs")
         ) {
             val (nodeA, nodeB) = listOf(
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = rpcUsers),
-                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = rpcUsers)
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = rpcUsers),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers)
             ).map { it.getOrThrow() }
             val controller = defaultNotaryNode.getOrThrow()
 

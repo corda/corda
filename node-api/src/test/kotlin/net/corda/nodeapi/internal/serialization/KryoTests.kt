@@ -14,8 +14,9 @@ import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.TestIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
@@ -31,6 +32,10 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class KryoTests {
+    companion object {
+        private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).pubkey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

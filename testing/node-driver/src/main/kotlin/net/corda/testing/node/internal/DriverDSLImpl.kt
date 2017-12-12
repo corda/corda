@@ -42,10 +42,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.*
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -585,13 +583,7 @@ class DriverDSLImpl(
         internal val log = contextLogger()
 
         private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toConfig().root().unwrapped())
-
-        private val names = arrayOf(
-                ALICE.name,
-                BOB.name,
-                DUMMY_BANK_A.name
-        )
-
+        private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
          * in demo application like NodeExplorer.

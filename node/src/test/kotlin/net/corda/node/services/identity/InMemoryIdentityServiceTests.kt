@@ -22,8 +22,16 @@ import kotlin.test.assertNull
  * Tests for the in memory identity service.
  */
 class InMemoryIdentityServiceTests {
-    companion object {
-        private fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toSet(), DEV_TRUST_ROOT)
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val bob = TestIdentity(BOB_NAME, 80)
+        val ALICE get() = alice.party
+        val ALICE_IDENTITY get() = alice.identity
+        val ALICE_PUBKEY get() = alice.pubkey
+        val BOB get() = bob.party
+        val BOB_IDENTITY get() = bob.identity
+        val BOB_PUBKEY get() = bob.pubkey
+        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toSet(), DEV_TRUST_ROOT)
     }
 
     @Test

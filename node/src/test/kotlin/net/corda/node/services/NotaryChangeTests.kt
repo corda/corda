@@ -39,16 +39,16 @@ class NotaryChangeTests {
 
     @Before
     fun setUp() {
-        val oldNotaryName = DUMMY_REGULATOR.name
+        val oldNotaryName = CordaX500Name("Regulator A", "Paris", "FR")
         mockNet = MockNetwork(
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name), NotarySpec(oldNotaryName)),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME), NotarySpec(oldNotaryName)),
                 cordappPackages = listOf("net.corda.testing.contracts")
         )
         clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         clientA = clientNodeA.info.singleIdentity()
         oldNotaryNode = mockNet.notaryNodes[1]
-        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY.name)!!
+        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY_NAME)!!
         oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
     }
 

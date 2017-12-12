@@ -63,7 +63,7 @@ class ArtemisMessagingTests {
         securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = temporaryFolder.root.toPath(),
-                myLegalName = ALICE.name)
+                myLegalName = ALICE_NAME)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())

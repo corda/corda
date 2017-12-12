@@ -18,6 +18,8 @@ class CompatibleTransactionTests {
     private companion object {
         val DUMMY_KEY_1 = generateKeyPair()
         val DUMMY_KEY_2 = generateKeyPair()
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }
 
     @Rule

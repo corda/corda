@@ -9,7 +9,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
@@ -36,12 +36,12 @@ class BootTests {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val alice = startNode(providedName = ALICE.name).get()
+            val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()
             // Start second Alice, should fail
             assertThatThrownBy {
-                startNode(providedName = ALICE.name).getOrThrow()
+                startNode(providedName = ALICE_NAME).getOrThrow()
             }
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
             val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count()

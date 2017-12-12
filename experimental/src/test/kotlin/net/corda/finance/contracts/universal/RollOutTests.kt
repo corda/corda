@@ -1,7 +1,6 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.Frequency
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
