@@ -9,7 +9,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.NodeInfoFilesCopier
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException

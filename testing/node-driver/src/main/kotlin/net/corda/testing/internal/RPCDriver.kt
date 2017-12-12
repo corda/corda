@@ -25,7 +25,8 @@ import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
-import net.corda.testing.driver.*
+import net.corda.testing.driver.JmxPolicy
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -90,6 +91,7 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 private val globalPortAllocation = PortAllocation.Incremental(10000)
 private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
 private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
+
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
@@ -106,25 +108,27 @@ fun <A> rpcDriver(
         dsl: RPCDriverDSL.() -> A
 ) : A {
     return genericDriver(
-        driverDsl = RPCDriverDSL(
-                DriverDSLImpl(
-                        portAllocation = portAllocation,
-                        debugPortAllocation = debugPortAllocation,
-                        systemProperties = systemProperties,
-                        driverDirectory = driverDirectory.toAbsolutePath(),
-                        useTestClock = useTestClock,
-                        isDebug = isDebug,
-                        startNodesInProcess = startNodesInProcess,
-                        waitForNodesToFinish = waitForNodesToFinish,
-                        extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs,
-                        jmxPolicy = jmxPolicy
-                ), externalTrace
-        ),
-        coerce = { it },
-        dsl = dsl,
-        initialiseSerialization = false
-)}
+            driverDsl = RPCDriverDSL(
+                    DriverDSLImpl(
+                            portAllocation = portAllocation,
+                            debugPortAllocation = debugPortAllocation,
+                            systemProperties = systemProperties,
+                            driverDirectory = driverDirectory.toAbsolutePath(),
+                            useTestClock = useTestClock,
+                            isDebug = isDebug,
+                            startNodesInProcess = startNodesInProcess,
+                            waitForNodesToFinish = waitForNodesToFinish,
+                            extraCordappPackagesToScan = extraCordappPackagesToScan,
+                            notarySpecs = notarySpecs,
+                            jmxPolicy = jmxPolicy,
+                            compatibilityZone = null
+                    ), externalTrace
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = false
+    )
+}
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
@@ -132,6 +136,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
         return validate(user, password)
     }
+
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
         return validate(user, password)
     }

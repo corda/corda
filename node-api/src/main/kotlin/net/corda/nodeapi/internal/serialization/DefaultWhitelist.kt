@@ -6,6 +6,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import rx.exceptions.OnErrorNotImplementedException
+import sun.security.x509.X509CertImpl
 import java.util.*
 
 /**
@@ -58,6 +59,9 @@ object DefaultWhitelist : SerializationWhitelist {
                     java.util.LinkedHashMap::class.java,
                     BitSet::class.java,
                     OnErrorNotImplementedException::class.java,
-                    StackTraceElement::class.java
-            )
+                    StackTraceElement::class.java,
+
+                    // Implementation of X509Certificate.
+                    X509CertImpl::class.java
+                    )
 }

@@ -36,7 +36,9 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                             "InvokeRpc.wellKnownPartyFromX500Name",
                                                                              "InvokeRpc.attachmentExists",
+                                                                             "InvokeRpc.openAttachment",
                                                                              "InvokeRpc.uploadAttachment",
                                                                              "InvokeRpc.internalVerifiedTransactionsFeed"]]]
 

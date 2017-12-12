@@ -27,6 +27,7 @@ class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: Ne
     }
 
     fun stop() = synchronized(this) {
+        rpcServer?.close()
         artemis.stop()
     }
 }
