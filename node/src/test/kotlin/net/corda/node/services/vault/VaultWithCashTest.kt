@@ -21,7 +21,9 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
-import net.corda.testing.contracts.*
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
@@ -56,6 +58,7 @@ class VaultWithCashTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+    private val servicesKey = generateKeyPair()
     lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     lateinit var issuerServices: MockServices
@@ -68,7 +71,7 @@ class VaultWithCashTest {
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf(generateKeyPair(), dummyNotary.keyPair),
+                listOf(servicesKey, dummyNotary.keyPair),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
                 cordappPackages,
                 MEGA_CORP.name)
@@ -98,8 +101,7 @@ class VaultWithCashTest {
 
             val state = w[0].state.data
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(services.key.public, state.owner.owningKey)
-
+            assertEquals(servicesKey.public, state.owner.owningKey)
             assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
             assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
         }

@@ -47,7 +47,7 @@ import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.setGlobalSerialization
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils

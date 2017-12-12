@@ -15,6 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
+import net.corda.testing.dsl.*
 
 /**
  * Creates and tests a ledger built by the passed in dsl.

@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.internal
 
 import net.corda.core.internal.packageName
 import org.apache.logging.log4j.Level

@@ -54,7 +54,7 @@ open class MockServices private constructor(
         override val validatedTransactions: WritableTransactionStorage,
         override val identityService: IdentityServiceInternal,
         private val initialIdentityName: CordaX500Name,
-        val keys: Array<out KeyPair>
+        private val keys: Array<out KeyPair>
 ) : ServiceHub, StateLoader by validatedTransactions {
     companion object {
         @JvmStatic
@@ -115,8 +115,6 @@ open class MockServices private constructor(
     constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptyList(), identityService, initialIdentityName, *keys)
     constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(identityService, initialIdentityName, generateKeyPair())
 
-    val key: KeyPair get() = keys.first()
-
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             validatedTransactions.addTransaction(it)
@@ -132,7 +130,7 @@ open class MockServices private constructor(
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo
         get() {
-            val identity = getTestPartyAndCertificate(initialIdentityName, key.public)
+            val identity = getTestPartyAndCertificate(initialIdentityName, keys.first().public)
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)

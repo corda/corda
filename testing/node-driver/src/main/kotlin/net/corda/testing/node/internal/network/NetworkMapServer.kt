@@ -1,4 +1,4 @@
-package net.corda.testing.node.network
+package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash

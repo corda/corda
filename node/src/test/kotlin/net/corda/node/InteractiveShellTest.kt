@@ -17,7 +17,7 @@ import net.corda.node.internal.configureDatabase
 import net.corda.testing.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

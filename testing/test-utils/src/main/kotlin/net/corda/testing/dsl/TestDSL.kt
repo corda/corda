@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.dsl
 
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
@@ -12,9 +12,9 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.contracts.DummyContract
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
+import net.corda.testing.dummyCommand
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*

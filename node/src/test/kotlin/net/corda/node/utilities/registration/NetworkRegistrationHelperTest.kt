@@ -14,7 +14,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.getX509Certificate
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.ALICE_NAME
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule

@@ -1,6 +1,4 @@
-@file:JvmName("VaultFiller")
-
-package net.corda.testing.contracts
+package net.corda.testing.internal.vault
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto

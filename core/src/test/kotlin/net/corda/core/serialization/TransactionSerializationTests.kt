@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
@@ -124,8 +125,7 @@ class TransactionSerializationTests {
     @Test
     fun storeAndLoadWhenSigning() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
-        ptx.verifySignaturesExcept(notaryServices.key.public)
-
+        ptx.verifySignaturesExcept(DUMMY_NOTARY_KEY.public)
         val stored = ptx.serialize()
         val loaded = stored.deserialize()
 

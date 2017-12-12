@@ -16,26 +16,20 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.x500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.cert.X509CertificateHolder
-import org.mockito.Mockito.mock
-import org.mockito.internal.stubbing.answers.ThrowsException
-import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -83,7 +77,7 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort until freePort + numberToAlloc).map { NetworkHostAndPort(hostName, it) }
+    return (0 until numberToAlloc).map { NetworkHostAndPort(hostName, freePort + it) }
 }
 
 fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration = object : SSLConfiguration {
@@ -126,20 +120,6 @@ class TestIdentity @JvmOverloads constructor(val name: CordaX500Name, entropy: L
     fun ref(vararg bytes: Byte): PartyAndReference = party.ref(*bytes)
 }
 
-@Suppress("unused")
-inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
-    function()
-} else {
-    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason")
-}
-
-@Suppress("unused")
-inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit) = if (AMQP_ENABLED) {
-    function()
-} else {
-    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
-}
-
 /**
  * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
  * TODO: Should be removed after multiple identities are introduced.
@@ -156,25 +136,3 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
-
-/**
- * A method on a mock was called, but no behaviour was previously specified for that method.
- * You can use [com.nhaarman.mockito_kotlin.doReturn] or similar to specify behaviour, see Mockito documentation for details.
- */
-class UndefinedMockBehaviorException(message: String) : RuntimeException(message)
-
-inline fun <reified T : Any> rigorousMock() = rigorousMock(T::class.java)
-/**
- * Create a Mockito mock that has [UndefinedMockBehaviorException] as the default behaviour of all abstract methods,
- * and [org.mockito.invocation.InvocationOnMock.callRealMethod] as the default for all concrete methods.
- * @param T the type to mock. Note if you want concrete methods of a Kotlin interface to be invoked,
- * it won't work unless you mock a (trivial) abstract implementation of that interface instead.
- */
-fun <T> rigorousMock(clazz: Class<T>): T = mock(clazz) {
-    if (Modifier.isAbstract(it.method.modifiers)) {
-        // Use ThrowsException to hack the stack trace, and lazily so we can customise the message:
-        ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it. Args: ${Arrays.toString(it.arguments)}")).answer(it)
-    } else {
-        it.callRealMethod()
-    }
-}

@@ -9,8 +9,8 @@ import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.amqpSpecific
-import net.corda.testing.kryoSpecific
+import net.corda.testing.internal.amqpSpecific
+import net.corda.testing.internal.kryoSpecific
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Rule

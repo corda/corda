@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.dsl
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
