@@ -15,6 +15,4 @@ interface SSLConfiguration {
 interface NodeSSLConfiguration : SSLConfiguration {
     val baseDirectory: Path
     override val certificatesDirectory: Path get() = baseDirectory / "certificates"
-    // TODO This will be removed. Instead we will just check against the truststore, which will be provided out-of-band, along with its password
-    val rootCertFile: Path get() = certificatesDirectory / "rootcert.pem"
 }
