@@ -1,10 +1,12 @@
 package net.corda.docs.java.tutorial.helloworld;
 
-// DOCSTART 01
 import co.paralleluniverse.fibers.Suspendable;
+import net.corda.core.flows.*;
+
+// DOCSTART 01
+// Add these imports:
 import net.corda.core.contracts.Command;
 import net.corda.core.contracts.CommandData;
-import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -12,6 +14,7 @@ import net.corda.core.utilities.ProgressTracker;
 
 import static net.corda.docs.java.tutorial.helloworld.TemplateContract.TEMPLATE_CONTRACT_ID;
 
+// Replace TemplateFlow's definition with:
 @InitiatingFlow
 @StartableByRPC
 public class IOUFlow extends FlowLogic<Void> {

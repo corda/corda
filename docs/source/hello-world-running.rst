@@ -107,9 +107,15 @@ commands.
 
 We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
 
-.. code:: bash
+.. container:: codeset
 
-    start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
+    .. code-block:: java
+
+        start IOUFlow arg0: 99, arg1: "O=PartyB,L=New York,C=US"
+
+    .. code-block:: kotlin
+
+        start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
 This single command will cause PartyA and PartyB to automatically agree an IOU. This is one of the great advantages of
 the flow framework - it allows you to reduce complex negotiation and update processes into a single function call.

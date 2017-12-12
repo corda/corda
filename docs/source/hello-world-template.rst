@@ -41,34 +41,35 @@ https://docs.corda.net/tutorial-cordapp.html#opening-the-example-cordapp-in-inte
 
 Template structure
 ------------------
-The template has a number of files, but we can ignore most of them. To implement our IOU CorDapp in Java, we'll only
-need to modify two files. For Kotlin, we'll simply be modifying the ``App.kt`` file:
+The template has a number of files, but we can ignore most of them. We will only be modifying the following files:
 
 .. container:: codeset
 
     .. code-block:: java
 
         // 1. The state
-        src/main/java/com/template/TemplateState.java
+        cordapp-contracts-states/src/main/java/com/template/TemplateState.java
 
         // 2. The flow
-        src/main/java/com/template/TemplateFlow.java
+        cordapp/src/main/java/com/template/TemplateFlow.java
 
     .. code-block:: kotlin
 
-        src/main/kotlin/com/template/App.kt
+        // 1. The state
+        cordapp-contracts-states/src/main/kotlin/com/template/StatesAndContracts.kt
+
+        // 2. The flow
+        cordapp/src/main/kotlin/com/template/App.kt
 
 Clean up
 --------
 To prevent build errors later on, we should delete the following files before we begin:
 
 * Java:
-    * ``src/main/java/com/template/TemplateClient.java``
-    * ``src/test/java/com/template/FlowTests.java``
+    * ``cordapp/src/main/java/com/template/TemplateClient.java``
 
 * Kotlin:
-    * ``src/main/kotlin/com/template/TemplateClient.kt``
-    * ``src/test/kotlin/com/template/FlowTests.kt``
+    * ``cordapp/src/main/kotlin/com/template/TemplateClient.kt``
 
 Progress so far
 ---------------
