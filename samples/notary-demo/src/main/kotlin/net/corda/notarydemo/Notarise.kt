@@ -10,7 +10,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.testing.BOB
+import net.corda.testing.BOB_NAME
 import java.util.concurrent.Future
 
 fun main(args: Array<String>) {
@@ -31,7 +31,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val counterparty by lazy {
         val parties = rpc.networkMapSnapshot()
         parties.fold(ArrayList<PartyAndCertificate>()) { acc, elem ->
-            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB.name })
+            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB_NAME })
             acc
         }.single().party
     }

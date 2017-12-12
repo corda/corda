@@ -9,9 +9,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.createKeystoreForCordaNode
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.ALICE
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getX509Certificate
+import net.corda.nodeapi.internal.crypto.loadKeyStore
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.rigorousMock
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -43,7 +45,7 @@ class NetworkRegistrationHelperTest {
 
     @Before
     fun init() {
-        config = testNodeConfiguration(baseDirectory = tempFolder.root.toPath(), myLegalName = ALICE.name)
+        config = testNodeConfiguration(baseDirectory = tempFolder.root.toPath(), myLegalName = ALICE_NAME)
     }
 
     @Test

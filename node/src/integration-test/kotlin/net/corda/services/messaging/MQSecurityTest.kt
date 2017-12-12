@@ -9,6 +9,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
@@ -49,7 +50,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Before
     fun start() {
-        alice = startNode(ALICE.name, rpcUsers = extraRPCUsers + rpcUser)
+        alice = startNode(ALICE_NAME, rpcUsers = extraRPCUsers + rpcUser)
         attacker = createAttacker()
         startAttacker(attacker)
     }
@@ -84,7 +85,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `create queue for peer which has not been communicated with`() {
-        val bob = startNode(BOB.name)
+        val bob = startNode(BOB_NAME)
         assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
     }
 
@@ -134,7 +135,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: NetworkHostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
+    fun clientTo(target: NetworkHostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))): SimpleMQClient {
         val client = SimpleMQClient(target, sslConfiguration)
         clients += client
         return client
@@ -212,7 +213,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     private fun startBobAndCommunicateWithAlice(): Party {
-        val bob = startNode(BOB.name)
+        val bob = startNode(BOB_NAME)
         bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created

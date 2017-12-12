@@ -6,6 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
@@ -13,8 +14,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.internal.configureDatabase
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_IDENTITY
+import net.corda.testing.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.rigorousMock
@@ -26,6 +26,10 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class InteractiveShellTest {
+    companion object {
+        private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+    }
+
     @Before
     fun setup() {
         InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
@@ -48,7 +52,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY))
+    private val ids = makeTestIdentityService(listOf(megaCorp.identity))
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {
@@ -90,5 +94,5 @@ class InteractiveShellTest {
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test
-    fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
+    fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())
 }

@@ -21,6 +21,11 @@ import kotlin.test.assertEquals
  * transaction size limit (which should only consider the hashes).
  */
 class LargeTransactionsTest {
+    private companion object {
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class SendLargeTransactionFlow(private val hash1: SecureHash,
