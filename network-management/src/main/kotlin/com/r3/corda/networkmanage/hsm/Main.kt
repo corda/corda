@@ -15,6 +15,9 @@ import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStor
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.security.Security
+
 
 fun main(args: Array<String>) {
     run(parseParameters(*args))
@@ -22,6 +25,11 @@ fun main(args: Array<String>) {
 
 fun run(parameters: Parameters) {
     parameters.run {
+        // Ensure the BouncyCastle provider is installed
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(BouncyCastleProvider())
+        }
+
         // Create DB connection.
         checkNotNull(dataSourceProperties)
         val database = configureDatabase(dataSourceProperties, databaseConfig)
