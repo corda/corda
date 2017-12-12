@@ -134,7 +134,7 @@ class RegistrationWebServiceTest : TestBase() {
                 val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair)
                 certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
                     val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, X500Name("CN=LegalName, L=London")))), arrayOf())
-                    val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
+                    val clientCert = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
                     buildCertPath(clientCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
                 }
                 true

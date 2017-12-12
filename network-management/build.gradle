@@ -79,6 +79,9 @@ dependencies {
     // Hibernate audit plugin
     compile "org.hibernate:hibernate-envers:5.2.11.Final"
 
+    testCompile project(':test-utils')
+    testCompile project(':node-driver')
+
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
