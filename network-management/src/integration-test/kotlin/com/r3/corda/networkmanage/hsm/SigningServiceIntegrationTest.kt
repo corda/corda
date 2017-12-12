@@ -89,6 +89,7 @@ class SigningServiceIntegrationTest {
         }
     }
 
+    // TODO: fix me (see commented out code in this test)
     @Ignore
     @Test
     fun `Signing service signs approved CSRs`() {
@@ -127,7 +128,6 @@ class SigningServiceIntegrationTest {
                     // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
                 }
             }
-            // TODO: fix me:
 //            config.rootCaCertFile.parent.createDirectories()
 //            X509Utilities.saveCertificateAsPEMFile(rootCACert, config.rootCaCertFile)
             NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()

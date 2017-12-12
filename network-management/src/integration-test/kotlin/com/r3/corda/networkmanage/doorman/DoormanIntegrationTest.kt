@@ -44,6 +44,7 @@ class DoormanIntegrationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    // TODO: fix me (see commented out code in this test)
     @Ignore
     @Test
     fun `initial registration`() {
@@ -61,7 +62,6 @@ class DoormanIntegrationTest {
             whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             whenever(it.emailAddress).thenReturn("iTest@R3.com")
         }
-        // TODO: fix me
 //        config.rootCaCertFile.parent.createDirectories()
 //        X509Utilities.saveCertificateAsPEMFile(rootCertAndKey.certificate.toX509Certificate(), config.rootCaCertFile)
         
@@ -95,6 +95,7 @@ class DoormanIntegrationTest {
         doorman.close()
     }
 
+    // TODO: fix me (see commented out code in this test)
     @Ignore
     @Test
     fun `nodeInfo is published to the network map`() {
@@ -113,7 +114,6 @@ class DoormanIntegrationTest {
             whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             whenever(it.emailAddress).thenReturn("iTest@R3.com")
         }
-        // TODO: fix me
 //        config.rootCaCertFile.parent.createDirectories()
 //        X509Utilities.saveCertificateAsPEMFile(rootCertAndKey.certificate.toX509Certificate(), config.rootCaCertFile)
 
