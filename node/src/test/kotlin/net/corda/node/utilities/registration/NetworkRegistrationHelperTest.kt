@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.crypto.getX509Certificate
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.rigorousMock
-import net.corda.testing.node.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule
@@ -45,7 +44,14 @@ class NetworkRegistrationHelperTest {
 
     @Before
     fun init() {
-        config = testNodeConfiguration(baseDirectory = tempFolder.root.toPath(), myLegalName = ALICE_NAME)
+        abstract class AbstractNodeConfiguration : NodeConfiguration
+        config = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(ALICE_NAME).whenever(it).myLegalName
+            doReturn("").whenever(it).emailAddress
+        }
     }
 
     @Test
