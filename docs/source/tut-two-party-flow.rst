@@ -17,7 +17,7 @@ We'll do this by modifying the flow we wrote in the previous tutorial.
 
 Verifying the transaction
 -------------------------
-In ``IOUFlow.java``/``IOUFlow.kt``, change the imports block to the following:
+In ``IOUFlow.java``/``App.kt``, change the imports block to the following:
 
 .. container:: codeset
 
@@ -31,7 +31,8 @@ In ``IOUFlow.java``/``IOUFlow.kt``, change the imports block to the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-And update ``IOUFlow.call`` by changing the code following the creation of the ``TransactionBuilder`` as follows:
+And update ``IOUFlow.call`` by changing the code following the retrieval of the notary's identity from the network as
+follows:
 
 .. container:: codeset
 
@@ -137,6 +138,11 @@ defined in ``IOUContract``. We can now re-run our updated CorDapp, using the
 Our CorDapp now imposes restrictions on the issuance of IOUs. Most importantly, IOU issuance now requires agreement
 from both the lender and the borrower before an IOU can be created on the ledger. This prevents either the lender or
 the borrower from unilaterally updating the ledger in a way that only benefits themselves.
+
+After completing this tutorial, your CorDapp should look like this:
+
+* Java: https://github.com/corda/corda-tut2-solution-java
+* Kotlin: https://github.com/corda/corda-tut2-solution-kotlin
 
 You should now be ready to develop your own CorDapps. You can also find a list of sample CorDapps
 `here <https://www.corda.net/samples/>`_. As you write CorDapps, you'll also want to learn more about the

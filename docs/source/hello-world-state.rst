@@ -24,6 +24,17 @@ interface is defined as follows:
             val participants: List<AbstractParty>
         }
 
+The first thing you'll probably notice about this interface declaration is that its not written in Java or another
+common language. The core Corda platform, including the interface declaration above, is entirely written in Kotlin.
+
+Learning some Kotlin will be very useful for understanding how Corda works internally, and usually only takes an
+experienced Java developer a day or so to pick up. However, learning Kotlin isn't essential. Because Kotlin code
+compiles down to JVM bytecode, CorDapps written in other JVM languages can interoperate with Corda.
+
+If you do want to dive into Kotlin, there's an official
+`getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
+`Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
+
 We can see that the ``ContractState`` interface has a single field, ``participants``. ``participants`` is a list of the
 entities for which this state is relevant.
 
@@ -58,7 +69,7 @@ later is often as simple as adding an additional property to your class definiti
 
 Defining IOUState
 -----------------
-Let's get started by opening ``TemplateState.java`` (for Java) or ``App.kt`` (for Kotlin) and updating
+Let's get started by opening ``TemplateState.java`` (for Java) or ``StatesAndContracts.kt`` (for Kotlin) and updating
 ``TemplateState`` to define an ``IOUState``:
 
 .. container:: codeset
