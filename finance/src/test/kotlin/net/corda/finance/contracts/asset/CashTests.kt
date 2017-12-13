@@ -3,7 +3,6 @@ package net.corda.finance.contracts.asset
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
@@ -99,10 +98,9 @@ class CashTests {
         }, MINI_CORP.name, MINI_CORP_KEY)
         val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf(generateKeyPair()),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
                 listOf("net.corda.finance.contracts.asset"),
-                CordaX500Name("Me", "London", "GB"))
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                TestIdentity(CordaX500Name("Me", "London", "GB")))
         database = databaseAndServices.first
         ourServices = databaseAndServices.second
 

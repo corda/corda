@@ -124,8 +124,7 @@ class TransactionSerializationTests {
     @Test
     fun storeAndLoadWhenSigning() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
-        ptx.verifySignaturesExcept(notaryServices.key.public)
-
+        ptx.verifySignaturesExcept(DUMMY_NOTARY_KEY.public)
         val stored = ptx.serialize()
         val loaded = stored.deserialize()
 

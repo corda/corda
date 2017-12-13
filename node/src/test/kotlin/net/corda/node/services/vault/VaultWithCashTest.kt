@@ -56,6 +56,7 @@ class VaultWithCashTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+    private val servicesKey = generateKeyPair()
     lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     lateinit var issuerServices: MockServices
@@ -68,10 +69,10 @@ class VaultWithCashTest {
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf(generateKeyPair(), dummyNotary.key),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
                 cordappPackages,
-                MEGA_CORP.name)
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
+                TestIdentity(MEGA_CORP.name, servicesKey),
+                dummyNotary.key)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -98,8 +99,7 @@ class VaultWithCashTest {
 
             val state = w[0].state.data
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(services.key.public, state.owner.owningKey)
-
+            assertEquals(servicesKey.public, state.owner.owningKey)
             assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
             assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
         }

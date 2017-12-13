@@ -32,6 +32,7 @@ import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.nio.file.Files
+import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -116,8 +117,10 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
     return getTestPartyAndCertificate(Party(name, publicKey))
 }
 
-class TestIdentity @JvmOverloads constructor(val name: CordaX500Name, entropy: Long? = null) {
-    val key = if (entropy != null) entropyToKeyPair(BigInteger.valueOf(entropy)) else generateKeyPair()
+class TestIdentity(val name: CordaX500Name, val key: KeyPair) {
+    constructor(name: CordaX500Name, entropy: Long) : this(name, entropyToKeyPair(BigInteger.valueOf(entropy)))
+    constructor(name: CordaX500Name) : this(name, generateKeyPair())
+
     val pubkey get() = key.public!!
     val party = Party(name, pubkey)
     val identity by lazy { getTestPartyAndCertificate(party) } // Often not needed.
