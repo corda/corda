@@ -147,10 +147,9 @@ Authentication/authorisation data
 The ``dataSource`` field defines the data provider supplying credentials and permissions for users. It currently exists
 in two forms, identified by the subfield ``type``:
 
- * **INMEMORY:** a list of user credentials and permissions hard-coded in configuration in the ``users`` field
-   (see example above)
+ :INMEMORY: A list of user credentials and permissions hard-coded in configuration in the ``users`` field (see example above)
 
- * **DB:** An external RDBMS accessed via the JDBC connection described by ``connection``. The current implementation
+ :DB: An external RDBMS accessed via the JDBC connection described by ``connection``. The current implementation
   expect the database to store data according to the following schema:
 
        - Table ``users`` containing columns ``username`` and ``password``. The ``username`` column *must have unique values*.
@@ -160,17 +159,15 @@ in two forms, identified by the subfield ``type``:
 
    Unlike the ``INMEMORY`` case, in the user database permissions are assigned to *roles* rather than individual users.
 
-  .. note:: There is no prescription on the SQL type of the columns, although our tests were conducted on ``username`` and
-    ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type. and it is allowed to have extra columns
-    besides the one expected by the implementation.
+  .. note:: There is no prescription on the SQL type of the columns (although our tests were conducted on ``username`` and
+    ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type). It is also allowed to have extra columns
+    in addition to the one expected by the implementation.
 
 Password encryption
 ^^^^^^^^^^^^^^^^^^^
 
-Storing passwords in plain text is discouraged in production environment where security is critical. Corda supports
-reading passwords stored using the `Apache Shiro fully reversible Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_.
-Passwords are assumed to be in plain format by default. To specify a different format we use the field ``passwordEncryption``,
-e.g.:
+Storing passwords in plain text is discouraged in production environment where security is critical. Passwords are assumed
+to be in plain format by default, unless a different format is specified in the ``passwordEncryption`` field, like:
 
 .. container:: codeset
 
@@ -178,7 +175,9 @@ e.g.:
 
         passwordEncryption = SHIRO_1_CRYPT
 
-Hash encrypted password based on the ``SHIRO_1_CRYPT`` format can be produced with the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_
+Currently ``SHIRO_1_CRYPT`` is the only non-plain supported format. This is the `Apache Shiro fully reversible
+Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_.
+Hash encrypted password based on this format can be generated with the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_
 
 Caching users data
 ^^^^^^^^^^^^^^^^^^
@@ -200,7 +199,7 @@ for example:
         }
 
 This will enable a non persistent cache containing in the node's memory with maximum number of entries set to ``capacity``
-with extries expiring and refreshed after ``expiryTimeSecs`` number of seconds.
+with entries expiring and refreshed after ``expiryTimeSecs`` number of seconds.
 
 Observables
 -----------
