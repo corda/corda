@@ -8,7 +8,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
-import net.corda.testing.ALICE_NAME
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.ClassRule
@@ -19,7 +18,7 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
         const val EVIL: Long = 666
 
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), DUMMY_NOTARY.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     @StartableByRPC
