@@ -1,14 +1,11 @@
 package net.corda.node.internal.security
 
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.Cache
 import com.google.common.primitives.Ints
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.context.AuthServiceId
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
@@ -98,8 +95,8 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                 // Setup optional cache layer if configured
                 it.cacheManager = config.options?.cache?.let {
                     GuavaCacheManager(
-                            timeToLiveSeconds = it.expiryTimeInSecs,
-                            maxSize = it.capacity)
+                            timeToLiveSeconds = it.expireTimeSecs,
+                            maxSize = it.maxEntries)
                 }
             }
         }
