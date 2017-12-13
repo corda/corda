@@ -18,9 +18,15 @@ import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
-
+import javax.crypto.Cipher
 
 fun main(args: Array<String>) {
+    // Grabbed from https://stackoverflow.com/questions/7953567/checking-if-unlimited-cryptography-is-available
+    if (Cipher.getMaxAllowedKeyLength("AES") < 256) {
+        System.err.println("Unlimited Strength Jurisdiction Policy Files must be installed, see http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html")
+        System.exit(1)
+    }
+
     try {
         run(parseParameters(*args))
     } catch (e: ShowHelpException) {

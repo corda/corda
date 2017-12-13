@@ -110,3 +110,6 @@ TODO
 /sgx-jvm/avian/
 /sgx-jvm/linux-sgx/
 /sgx-jvm/jvm-enclave/proguard.jar
+
+# HSM keys
+*.key
