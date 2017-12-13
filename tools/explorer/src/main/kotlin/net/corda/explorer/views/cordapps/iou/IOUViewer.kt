@@ -4,7 +4,9 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
+import net.corda.core.utilities.Try
 import net.corda.explorer.model.CordaView
+import net.corda.explorer.model.MembershipListModel
 import tornadofx.*
 
 class IOUViewer : CordaView("IOU") {
@@ -24,4 +26,10 @@ class IOUViewer : CordaView("IOU") {
             }
         }
     }
+
+    fun isEnabledForNode(): Boolean = Try.on {
+                // Assuming if the model can be initialized - the CorDapp is installed
+                val allParties = MembershipListModel().allParties
+                allParties[0]
+            }.isSuccess
 }

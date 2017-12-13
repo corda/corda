@@ -65,7 +65,18 @@ class Main : App(MainView::class) {
         if (!isLoggedIn) {
             stage.hide()
             loginView.login()
+            addOptionalViews()
+            (find(primaryView) as MainView).initializeControls()
             stage.show()
+        }
+    }
+
+    private fun addOptionalViews() {
+        val iouView = find<IOUViewer>()
+        Models.get<CordaViewModel>(Main::class).apply {
+            if (iouView.isEnabledForNode()) {
+                registerView(iouView)
+            }
         }
     }
 
@@ -105,7 +116,6 @@ class Main : App(MainView::class) {
             registerView<StateMachineViewer>()
             // CordApps Views.
             registerView<CashViewer>()
-            registerView<IOUViewer>()
             // Tools.
             registerView<Network>()
             registerView<Settings>()

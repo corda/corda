@@ -48,7 +48,7 @@ class MainView : View(WINDOW_TITLE) {
     private val menuItemArrowCSS = "sidebar-menu-item-arrow"
     private val menuItemSelectedCSS = "$menuItemCSS-selected"
 
-    init {
+    fun initializeControls() {
         // Header
         userButton.textProperty().bind(myIdentity.map { it?.let { PartyNameFormatter.short.format(it.name) } })
         exit.setOnAction {
