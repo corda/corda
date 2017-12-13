@@ -1,2 +1,3 @@
 rootProject.name = 'remote-attestation'
 include 'attestation-server'
+include 'host'
