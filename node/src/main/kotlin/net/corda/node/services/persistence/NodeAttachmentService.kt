@@ -20,6 +20,7 @@ import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.hibernate.annotations.DynamicUpdate
 import java.io.*
 import java.nio.file.Paths
 import java.sql.Blob
@@ -60,6 +61,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}attachments",
             indexes = arrayOf(Index(name = "content_hash_idx", columnList = "content_hash")))
+    @DynamicUpdate
     class DBAttachment(
             @Id
             @Column(name = "att_id", updatable = false, nullable = false)
