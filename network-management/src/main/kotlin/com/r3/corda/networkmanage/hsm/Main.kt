@@ -2,6 +2,7 @@ package com.r3.corda.networkmanage.hsm
 
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
+import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
@@ -20,7 +21,12 @@ import java.security.Security
 
 
 fun main(args: Array<String>) {
-    run(parseParameters(*args))
+    try {
+        run(parseParameters(*args))
+    } catch (e: ShowHelpException) {
+        e.errorMessage?.let(::println)
+        e.parser.printHelpOn(System.out)
+    }
 }
 
 fun run(parameters: Parameters) {
