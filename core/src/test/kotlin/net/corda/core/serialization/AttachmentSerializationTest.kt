@@ -25,6 +25,7 @@ import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.ZipEntry
@@ -55,9 +56,18 @@ private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: Str
  */
 private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     val session = currentDBSession()
-    val attachment = session.get<NodeAttachmentService.DBAttachment>(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
+
+    val criteriaBuilder = session.criteriaBuilder
+    val criteriaQuery = criteriaBuilder.createQuery(NodeAttachmentService.DBAttachment::class.java)
+    val root = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
+    criteriaQuery.select(root)
+    criteriaQuery.where(criteriaBuilder.equal(root.get<String>(NodeAttachmentService.DBAttachment::contentHash.name), attachmentId.toString()))
+    val query = session.createQuery(criteriaQuery)
+
+    val attachment = query.singleResult
+    val blob = session.lobHelper.createBlob(ByteArrayInputStream(data), -1)
     attachment?.let {
-        attachment.content = data
+        attachment.content = blob
         session.save(attachment)
     }
 }

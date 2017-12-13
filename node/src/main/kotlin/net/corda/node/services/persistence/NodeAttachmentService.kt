@@ -22,6 +22,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.io.*
 import java.nio.file.Paths
+import java.sql.Blob
 import java.time.Instant
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
@@ -58,15 +59,19 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}attachments",
-            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
+            indexes = arrayOf(Index(name = "content_hash_idx", columnList = "content_hash")))
     class DBAttachment(
             @Id
-            @Column(name = "att_id")
-            var attId: String,
+            @Column(name = "att_id", updatable = false, nullable = false)
+            @GeneratedValue
+            var attId: Long? = null,
 
             @Column(name = "content")
             @Lob
-            var content: ByteArray,
+            var content: Blob,
+
+            @Column(name = "content_hash")
+            var contentHash: String? = null,
 
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
@@ -173,12 +178,20 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
     }
 
-    override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-        attachment?.let {
-            return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
+    override fun openAttachment(contentHash: SecureHash): Attachment? {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+        criteriaQuery.select(root)
+        criteriaQuery.where(criteriaBuilder.equal(root.get<String>(DBAttachment::contentHash.name), contentHash.toString()))
+        val query = session.createQuery(criteriaQuery)
+        return if (query.resultList.size > 0) {
+            val bytes = query.resultList.first().content.binaryStream.readBytes()
+            AttachmentImpl(contentHash, { bytes }, checkAttachmentsOnLoad)
+        } else {
+            null
         }
-        return null
     }
 
     override fun importAttachment(jar: InputStream): AttachmentId {
@@ -189,21 +202,13 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         return import(jar, uploader, filename)
     }
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        checkIsAValidJAR(ByteArrayInputStream(bytes))
-        val id = SecureHash.SHA256(hs.hash().asBytes())
-        return Pair(id, bytes)
-    }
-
     override fun hasAttachment(attachmentId: AttachmentId): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
         val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
         criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), attachmentId.toString()))
+        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::contentHash.name), attachmentId.toString()))
         return (session.createQuery(criteriaQuery).singleResult > 0)
     }
 
@@ -211,23 +216,32 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         require(jar !is JarInputStream)
 
-        // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
-        // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
-        // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+        // Two-phase insert so we can handle attachments larger than RAM.
+        // Pipe stream into the database without knowing its hash, which we will learn only once
         // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
         // set the hash field of the new attachment record.
+        val session = currentDBSession()
 
-        val (id, bytes) = getAttachmentIdAndBytes(jar)
-        if (!hasAttachment(id)) {
-            checkIsAValidJAR(ByteArrayInputStream(bytes))
-            val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename)
-            session.save(attachment)
-            attachmentCount.inc()
-            log.info("Stored new attachment $id")
-            return id
+        val hs = HashingInputStream(Hashing.sha256(), jar)
+
+        val blob = session.lobHelper.createBlob(hs, -1)
+        val attachment = DBAttachment(content = blob, uploader = uploader, filename = filename)
+        val id = session.save(attachment)
+        session.flush()
+        session.evict(attachment)
+
+        val contentHash = SecureHash.SHA256(hs.hash().asBytes())
+        val rereadAttachment = session.get(DBAttachment::class.java, id)
+
+        if (hasAttachment(contentHash)) {
+            session.delete(rereadAttachment)
+            throw java.nio.file.FileAlreadyExistsException(contentHash.toString())
         } else {
-            throw java.nio.file.FileAlreadyExistsException(id.toString())
+            checkIsAValidJAR(rereadAttachment.content.binaryStream)
+            rereadAttachment.contentHash = contentHash.toString()
+            attachmentCount.inc()
+            log.info("Stored new attachment $contentHash")
+            return contentHash
         }
     }
 
@@ -260,7 +274,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         // execution
         val results = query.resultList
 
-        return results.map { AttachmentId.parse(it.attId) }
+        return results.map { AttachmentId.parse(it.contentHash!!) }
     }
 
 
