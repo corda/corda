@@ -51,6 +51,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     private val clients = ArrayList<SimpleMQClient>()
 
     override fun setUp() {
+        super.init()
         super.setUp()
         alice = startNode(ALICE.name, rpcUsers = extraRPCUsers + rpcUser)
         attacker = createAttacker()
