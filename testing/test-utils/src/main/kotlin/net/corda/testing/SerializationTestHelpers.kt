@@ -55,25 +55,6 @@ interface GlobalSerializationEnvironment : SerializationEnvironment {
     fun unset()
 }
 
-/** @param inheritable whether new threads inherit the environment, use sparingly. */
-fun <T> withTestSerialization(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
-    return createTestSerializationEnv("<context>").asContextEnv(inheritable, callable)
-}
-
-/**
- * For example your test class uses [SerializationEnvironmentRule] but you want to turn it off for one method.
- * Use sparingly, ideally a test class shouldn't mix serializers init mechanisms.
- */
-fun <T> withoutTestSerialization(callable: () -> T): T {
-    val (property, env) = listOf(_contextSerializationEnv, _inheritableContextSerializationEnv).map { Pair(it, it.get()) }.single { it.second != null }
-    property.set(null)
-    try {
-        return callable()
-    } finally {
-        property.set(env)
-    }
-}
-
 /**
  * Should only be used by Driver and MockNode.
  * @param armed true to install, false to do nothing and return a dummy env.
@@ -109,8 +90,3 @@ private fun createTestSerializationEnv(label: String) = object : SerializationEn
         KRYO_CHECKPOINT_CONTEXT) {
     override fun toString() = "testSerializationEnv($label)"
 }
-
-private const val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
-
-// TODO: Remove usages of this function when we fully switched to AMQP
-private fun isAmqpEnabled(): Boolean = java.lang.Boolean.getBoolean(AMQP_ENABLE_PROP_NAME)
