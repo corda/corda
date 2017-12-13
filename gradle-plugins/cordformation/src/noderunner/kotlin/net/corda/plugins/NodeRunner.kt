@@ -122,7 +122,7 @@ private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: I
 end tell""")
         }
         OS.WINDOWS -> {
-            listOf("cmd", "/C", "start ${command.joinToString(" ")}")
+            listOf("cmd", "/C", "start ${command.joinToString(" ") { windowsSpaceEscape(it) }}")
         }
         OS.LINUX -> {
             // Start shell to keep window open unless java terminated normally or due to SIGTERM:
@@ -136,12 +136,11 @@ end tell""")
     })
 
     private fun unixCommand() = command.map(::quotedFormOf).joinToString(" ")
-    override fun getJavaPath(): String {
-        val path = File(File(System.getProperty("java.home"), "bin"), "java").path
-        // Replace below is to fix an issue with spaces in paths on Windows.
-        // Quoting the entire path does not work, only the space or directory within the path.
-        return if (os == OS.WINDOWS) path.replace(" ", "\" \"") else path
-    }
+    override fun getJavaPath(): String = File(File(System.getProperty("java.home"), "bin"), "java").path
+
+    // Replace below is to fix an issue with spaces in paths on Windows.
+    // Quoting the entire path does not work, only the space or directory within the path.
+    private fun windowsSpaceEscape(s:String) = s.replace(" ", "\" \"")
 }
 
 private fun quotedFormOf(text: String) = "'${text.replace("'", "'\\''")}'" // Suitable for UNIX shells.
