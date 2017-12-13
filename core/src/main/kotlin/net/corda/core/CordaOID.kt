@@ -1,7 +1,5 @@
 package net.corda.core
 
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-
 /**
  * OIDs used for the Corda platform. Entries MUST NOT be removed from this file; if an OID is incorrectly assigned it
  * should be marked deprecated.
