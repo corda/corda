@@ -16,14 +16,15 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.*
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.InternalDriverDSL
+import net.corda.testing.node.internal.InternalDriverDSL
 import net.corda.testing.internal.performance.div
-import net.corda.testing.internal.performance.startPublishingFixedRateInjector
-import net.corda.testing.internal.performance.startReporter
-import net.corda.testing.internal.performance.startTightLoopInjector
+import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
+import net.corda.testing.node.internal.performance.startReporter
+import net.corda.testing.node.internal.performance.startTightLoopInjector
 import net.corda.testing.node.NotarySpec
 import org.junit.Before
 import org.junit.ClassRule
@@ -128,7 +129,7 @@ class NodePerformanceTests : IntegrationTest() {
     fun `self pay rate`() {
         val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
         driver(
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
                 portAllocation = PortAllocation.Incremental(20000)

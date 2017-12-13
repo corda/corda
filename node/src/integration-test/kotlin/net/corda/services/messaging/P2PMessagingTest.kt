@@ -19,6 +19,8 @@ import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -120,7 +122,7 @@ class P2PMessagingTest : IntegrationTest() {
     }
 
     private fun DriverDSL.startAlice(): StartedNode<Node> {
-        return startNode(providedName = ALICE.name, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
+        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
                 .map { (it as NodeHandle.InProcess).node }
                 .getOrThrow()
     }

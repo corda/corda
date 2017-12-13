@@ -1,6 +1,6 @@
 @file:JvmName("NodeTestUtils")
 
-package net.corda.testing
+package net.corda.testing.node
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -19,6 +19,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties

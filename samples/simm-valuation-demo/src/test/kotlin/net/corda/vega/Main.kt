@@ -1,9 +1,7 @@
 package net.corda.vega
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_BANK_C
+import net.corda.testing.*
 import net.corda.testing.driver.driver
 
 /**
@@ -14,9 +12,9 @@ import net.corda.testing.driver.driver
 fun main(args: Array<String>) {
     driver(isDebug = true, waitForAllNodesToFinish = true) {
         val (nodeA, nodeB, nodeC) = listOf(
-                startNode(providedName = DUMMY_BANK_A.name),
-                startNode(providedName = DUMMY_BANK_B.name),
-                startNode(providedName = DUMMY_BANK_C.name)
+                startNode(providedName = DUMMY_BANK_A_NAME),
+                startNode(providedName = DUMMY_BANK_B_NAME),
+                startNode(providedName = DUMMY_BANK_C_NAME)
         ).map { it.getOrThrow() }
 
         startWebserver(nodeA)

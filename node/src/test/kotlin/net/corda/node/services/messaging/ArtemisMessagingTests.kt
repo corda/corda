@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -66,7 +67,7 @@ class ArtemisMessagingTests {
         securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = temporaryFolder.root.toPath(),
-                myLegalName = ALICE.name)
+                myLegalName = ALICE_NAME)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())

@@ -44,8 +44,8 @@ class IntegrationTestingTutorial : IntegrationTest() {
                     invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val (alice, bob) = listOf(
-                    startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser))
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(bobUser))
             ).transpose().getOrThrow()
 
             // END 1

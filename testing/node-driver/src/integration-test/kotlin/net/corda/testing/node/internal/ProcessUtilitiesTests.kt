@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.testing.node.internal
 
 import org.apache.commons.io.FileUtils
 import org.junit.Rule

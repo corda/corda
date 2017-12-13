@@ -18,6 +18,11 @@ import kotlin.test.assertTrue
  * Tests for the version 2 dummy contract, to cover ensuring upgrade transactions are built correctly.
  */
 class DummyContractV2Tests {
+    private companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

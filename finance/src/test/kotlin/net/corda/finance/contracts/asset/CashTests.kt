@@ -3,7 +3,6 @@ package net.corda.finance.contracts.asset
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.node.ServiceHub
@@ -25,24 +24,46 @@ import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.transaction
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.util.*
 import kotlin.test.*
 
 class CashTests {
-    companion object {
-        private val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), entropyToKeyPair(BigInteger.valueOf(10)).public))
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).pubkey
+        val charlie = TestIdentity(CHARLIE_NAME, 90)
+        val DUMMY_CASH_ISSUER_IDENTITY = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).identity
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.pubkey
+        val CHARLIE get() = charlie.party
+        val CHARLIE_IDENTITY get() = charlie.identity
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
+        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_IDENTITY get() = megaCorp.identity
+        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MINI_CORP get() = miniCorp.party
+        val MINI_CORP_IDENTITY get() = miniCorp.identity
+        val MINI_CORP_KEY get() = miniCorp.key
+        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
     }
 
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
+    private val defaultRef = OpaqueBytes.of(1)
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
     private val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
@@ -94,7 +115,7 @@ class CashTests {
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
-            val vaultFiller = VaultFiller(ourServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random)
+            val vaultFiller = VaultFiller(ourServices, dummyNotary, rngFactory = ::Random)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)

@@ -1,4 +1,4 @@
-package net.corda.testing.node
+package net.corda.testing.services
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp

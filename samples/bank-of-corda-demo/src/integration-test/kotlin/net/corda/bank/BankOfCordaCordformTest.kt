@@ -3,7 +3,7 @@ package net.corda.bank
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.testing.*
-import net.corda.testing.internal.demorun.deployNodesThen
+import net.corda.testing.node.internal.demorun.deployNodesThen
 import org.junit.ClassRule
 import org.junit.Test
 

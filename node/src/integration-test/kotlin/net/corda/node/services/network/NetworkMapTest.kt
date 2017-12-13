@@ -2,12 +2,12 @@ package net.corda.node.services.network
 
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.seconds
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.internalDriver
+import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -37,9 +37,8 @@ class NetworkMapTest {
     @Test
     fun `nodes can see each other using the http network map`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
-            val alice = startNode(providedName = ALICE.name)
-            val bob = startNode(providedName = BOB.name)
-
+            val alice = startNode(providedName = ALICE_NAME)
+            val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
             val bobNode = bob.get()
@@ -53,14 +52,13 @@ class NetworkMapTest {
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
-            val alice = startNode(providedName = ALICE.name)
+            val alice = startNode(providedName = ALICE_NAME)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
 
             notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
             aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
-
-            val bob = startNode(providedName = BOB.name)
+            val bob = startNode(providedName = BOB_NAME)
             val bobNode = bob.get()
 
             // Wait for network map client to poll for the next update.
@@ -75,9 +73,8 @@ class NetworkMapTest {
     @Test
     fun `nodes process network map remove updates correctly`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
-            val alice = startNode(providedName = ALICE.name)
-            val bob = startNode(providedName = BOB.name)
-
+            val alice = startNode(providedName = ALICE_NAME)
+            val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
             val bobNode = bob.get()

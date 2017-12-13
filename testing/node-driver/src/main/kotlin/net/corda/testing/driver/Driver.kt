@@ -14,10 +14,10 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.internal.DriverDSLImpl
-import net.corda.testing.internal.genericDriver
-import net.corda.testing.internal.getTimestampAsDirectoryName
+import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.genericDriver
+import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -229,7 +229,7 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
-        val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
+        val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy()
 ) {

@@ -6,8 +6,8 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.internal.rpcDriver
-import net.corda.testing.internal.startRpcClient
+import net.corda.testing.node.internal.rpcDriver
+import net.corda.testing.node.internal.startRpcClient
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test

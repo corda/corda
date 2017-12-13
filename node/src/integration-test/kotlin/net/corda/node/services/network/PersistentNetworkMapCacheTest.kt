@@ -8,6 +8,11 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.testing.*
 import net.corda.testing.internal.NodeBasedTest
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.TestIdentity
+import net.corda.testing.chooseIdentity
+import net.corda.testing.node.internal.NodeBasedTest
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
@@ -15,6 +20,10 @@ import kotlin.test.assertEquals
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
+
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_REGULATOR, ALICE, BOB).map { it.toDatabaseSchemaName() }.toTypedArray())
     }

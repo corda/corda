@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.testing.node.internal
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
@@ -18,6 +18,7 @@ import net.corda.testing.IntegrationTest
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.getFreeLocalPorts
+import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import org.apache.logging.log4j.Level
 import org.junit.After

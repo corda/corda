@@ -17,6 +17,7 @@ import static net.corda.testing.CoreTestUtils.singleIdentity;
 import static net.corda.testing.NodeTestUtils.startFlow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
+import static net.corda.testing.node.NodeTestUtils.startFlow;
 
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork();
@@ -26,8 +27,8 @@ public class FlowsInJavaTest {
 
     @Before
     public void setUp() throws Exception {
-        aliceNode = mockNet.createPartyNode(TestConstants.getALICE().getName());
-        bobNode = mockNet.createPartyNode(TestConstants.getBOB().getName());
+        aliceNode = mockNet.createPartyNode(TestConstants.getALICE_NAME());
+        bobNode = mockNet.createPartyNode(TestConstants.getBOB_NAME());
         bob = singleIdentity(bobNode.getInfo());
     }
 

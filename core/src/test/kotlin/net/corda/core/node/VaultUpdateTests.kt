@@ -5,14 +5,18 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.TestIdentity
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 
 class VaultUpdateTests {
-    val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
+    private companion object {
+        val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
 
     object DummyContract : Contract {
 

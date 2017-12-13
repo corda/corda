@@ -24,7 +24,7 @@ import net.corda.testing.*
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.MockAttachmentStorage
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
 import org.junit.ClassRule
 import org.junit.Test
@@ -53,7 +53,8 @@ class AttachmentLoadingTests : IntegrationTest() {
         val flowInitiatorClass: Class<out FlowLogic<*>> =
                 Class.forName("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator", true, URLClassLoader(arrayOf(isolatedJAR)))
                         .asSubclass(FlowLogic::class.java)
-
+        val DUMMY_BANK_A = TestIdentity(DUMMY_BANK_A_NAME, 40).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         private fun DriverDSL.createTwoNodes(): List<NodeHandle> {
             return listOf(
                     startNode(providedName = bankAName),

@@ -26,6 +26,8 @@ import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.ledger
+import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
@@ -34,6 +36,17 @@ import java.util.*
 import kotlin.test.assertEquals
 
 private val DUMMY_PARTY = Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public)
+private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).pubkey
+private val DUMMY_NOTARY get() = dummyNotary.party
+private val DUMMY_NOTARY_KEY get() = dummyNotary.key
+private val MEGA_CORP get() = megaCorp.party
+private val MEGA_CORP_KEY get() = megaCorp.key
+private val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+private val MINI_CORP get() = miniCorp.party
+private val MINI_CORP_KEY get() = miniCorp.key
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {

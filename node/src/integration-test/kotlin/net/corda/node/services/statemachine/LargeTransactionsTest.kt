@@ -23,6 +23,10 @@ import kotlin.test.assertEquals
  */
 class LargeTransactionsTest : IntegrationTest() {
     companion object {
+        private companion object {
+            val BOB = TestIdentity(BOB_NAME, 80).party
+            val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        }
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_NOTARY).map { it.toDatabaseSchemaName() }.toTypedArray())
     }

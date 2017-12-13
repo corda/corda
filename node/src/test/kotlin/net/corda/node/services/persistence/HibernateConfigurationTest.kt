@@ -6,7 +6,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -48,7 +47,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
 import org.junit.*
 import java.math.BigDecimal
-import java.math.BigInteger
 import java.time.Instant
 import java.util.*
 import javax.persistence.EntityManager
@@ -57,9 +55,13 @@ import javax.persistence.criteria.CriteriaBuilder
 
 class HibernateConfigurationTest {
     private companion object {
-        val DUMMY_CASH_ISSUER_NAME = CordaX500Name("Snake Oil Issuer", "London", "GB")
-        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
-        val DUMMY_CASH_ISSUER = Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public)
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val bankOfCorda = TestIdentity(BOC_NAME)
+        val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val BOC get() = bankOfCorda.party
+        val BOC_KEY get() = bankOfCorda.key
     }
 
     @Rule
@@ -92,15 +94,15 @@ class HibernateConfigurationTest {
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
         bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
+        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
             doReturn(null).whenever(mock).wellKnownPartyFromAnonymous(any<AbstractParty>())
-            listOf(DUMMY_CASH_ISSUER, DUMMY_NOTARY).forEach {
-                doReturn(it).whenever(mock).wellKnownPartyFromAnonymous(it)
-                doReturn(it).whenever(mock).wellKnownPartyFromX500Name(it.name)
+            listOf(dummyCashIssuer, dummyNotary).forEach {
+                doReturn(it.party).whenever(mock).wellKnownPartyFromAnonymous(it.party)
+                doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
         val schemaService = NodeSchemaService()
@@ -110,7 +112,7 @@ class HibernateConfigurationTest {
             // `consumeCash` expects we can self-notarise transactions
             services = object : MockServices(cordappPackages, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
-            }, BOB_NAME, generateKeyPair(), DUMMY_NOTARY_KEY) {
+            }, BOB_NAME, generateKeyPair(), dummyNotary.key) {
                 override val vaultService = makeVaultService(database.hibernateConfig, schemaService)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -122,7 +124,7 @@ class HibernateConfigurationTest {
 
                 override fun jdbcSession() = database.createSession()
             }
-            vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random)
+            vaultFiller = VaultFiller(services, dummyNotary, notary, ::Random)
             hibernatePersister = services.hibernatePersister
         }
 

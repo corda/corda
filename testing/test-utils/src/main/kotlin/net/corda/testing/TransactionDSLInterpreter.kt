@@ -101,7 +101,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      */
     fun input(contractClassName: ContractClassName, state: ContractState) {
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary)) {
-            output(contractClassName, null, DUMMY_NOTARY, null, AlwaysAcceptAttachmentConstraint, state)
+            output(contractClassName, null, notary, null, AlwaysAcceptAttachmentConstraint, state)
         }
         input(transaction.outRef<ContractState>(0).ref)
     }

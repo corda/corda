@@ -40,20 +40,17 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.NotaryInfo
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.nodeapi.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.setGlobalSerialization
-import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
-import org.slf4j.Logger
-import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -129,7 +126,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                  private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
+                  private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                   private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)

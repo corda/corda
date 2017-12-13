@@ -13,8 +13,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.BOC
-import net.corda.testing.internal.demorun.*
+import net.corda.testing.node.internal.demorun.*
+import net.corda.testing.BOC_NAME
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -33,7 +33,7 @@ class BankOfCordaCordform : CordformDefinition() {
             rpcPort(10003)
         }
         node {
-            name(CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB"))
+            name(BOC_NAME)
             extraConfig = mapOf("issuableCurrencies" to listOf("USD"))
             p2pPort(10005)
             rpcPort(BOC_RPC_PORT)
@@ -101,7 +101,7 @@ object IssueCash {
     }
 
     private fun createParams(amount: Amount<Currency>, notaryName: CordaX500Name): IssueRequestParams {
-        return IssueRequestParams(amount, BIGCORP_NAME, "1", BOC.name, notaryName)
+        return IssueRequestParams(amount, BIGCORP_NAME, "1", BOC_NAME, notaryName)
     }
 
     private fun printHelp(parser: OptionParser) {

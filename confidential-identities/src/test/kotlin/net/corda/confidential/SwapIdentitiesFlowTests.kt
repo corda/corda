@@ -1,14 +1,11 @@
 package net.corda.confidential
 
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
-import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.startFlow
 import org.junit.Test
 import kotlin.test.*
 
@@ -24,8 +21,8 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `issue key`() {
         // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.services.myInfo.singleIdentity()
 
@@ -60,9 +57,9 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `verifies identity name`() {
         // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
-        val charlieNode = mockNet.createPartyNode(CHARLIE.name)
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
         val bob: Party = bobNode.services.myInfo.singleIdentity()
         val notBob = charlieNode.database.transaction {
             charlieNode.services.keyManagementService.freshKeyAndCert(charlieNode.services.myInfo.chooseIdentityAndCert(), false)
@@ -83,8 +80,8 @@ class SwapIdentitiesFlowTests {
     fun `verifies signature`() {
         // Set up values we'll need
         val notaryNode = mockNet.defaultNotaryNode
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
         val alice: PartyAndCertificate = aliceNode.info.singleIdentityAndCert()
         val bob: PartyAndCertificate = bobNode.info.singleIdentityAndCert()
         val notary: PartyAndCertificate = mockNet.defaultNotaryIdentityAndCert

@@ -13,6 +13,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.*
+import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
@@ -30,8 +31,8 @@ class CordappScanningDriverTest : IntegrationTest() {
         // The driver will automatically pick up the annotated flows below
         driver {
             val (alice, bob) = listOf(
-                    startNode(providedName = ALICE.name, rpcUsers = listOf(user)),
-                    startNode(providedName = BOB.name)).transpose().getOrThrow()
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
+                    startNode(providedName = BOB_NAME)).transpose().getOrThrow()
             val initiatedFlowClass = alice.rpcClientToNode()
                     .start(user.username, user.password)
                     .proxy

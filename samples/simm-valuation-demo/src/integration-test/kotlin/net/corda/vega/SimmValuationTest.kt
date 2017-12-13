@@ -4,6 +4,8 @@ import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
+import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.testing.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
@@ -20,8 +22,8 @@ class SimmValuationTest : IntegrationTest() {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate: LocalDate = LocalDate.parse("2016-06-06")
-        val nodeALegalName = DUMMY_BANK_A.name
-        val nodeBLegalName = DUMMY_BANK_B.name
+        val nodeALegalName = DUMMY_BANK_A_NAME
+        val nodeBLegalName = DUMMY_BANK_B_NAME
         val testTradeId = "trade1"
 
         @ClassRule @JvmField
