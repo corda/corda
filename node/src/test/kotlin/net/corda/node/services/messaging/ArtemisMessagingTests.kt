@@ -1,5 +1,7 @@
 package net.corda.node.services.messaging
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
@@ -12,12 +14,12 @@ import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -61,9 +63,16 @@ class ArtemisMessagingTests {
     @Before
     fun setUp() {
         securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
-        config = testNodeConfiguration(
-                baseDirectory = temporaryFolder.root.toPath(),
-                myLegalName = ALICE_NAME)
+        abstract class AbstractNodeConfiguration : NodeConfiguration
+        config = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
+            doReturn(ALICE_NAME).whenever(it).myLegalName
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn("").whenever(it).exportJMXto
+            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+        }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())

@@ -22,14 +22,13 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -41,11 +40,14 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.rigorousMock
 import net.corda.testing.setGlobalSerialization
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
@@ -384,9 +386,9 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
-        val config = testNodeConfiguration(
-                baseDirectory = baseDirectory(id).createDirectories(),
-                myLegalName = parameters.legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
+        val config = mockNodeConfiguration().also {
+            doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
+            doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
@@ -471,4 +473,24 @@ open class MessagingServiceSpy(val messagingService: MessagingService) : Messagi
  */
 fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
     internals.setMessagingServiceSpy(messagingServiceSpy)
+}
+
+private fun mockNodeConfiguration(): NodeConfiguration {
+    abstract class AbstractNodeConfiguration : NodeConfiguration
+    return rigorousMock<AbstractNodeConfiguration>().also {
+        doReturn("cordacadevpass").whenever(it).keyStorePassword
+        doReturn("trustpass").whenever(it).trustStorePassword
+        doReturn(emptyList<User>()).whenever(it).rpcUsers
+        doReturn(null).whenever(it).notary
+        doReturn(DatabaseConfig()).whenever(it).database
+        doReturn("").whenever(it).emailAddress
+        doReturn("").whenever(it).exportJMXto
+        doReturn(true).whenever(it).devMode
+        doReturn(null).whenever(it).compatibilityZoneURL
+        doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+        doReturn(VerifierType.InMemory).whenever(it).verifierType
+        doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+        doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
+        doReturn(null).whenever(it).devModeOptions
+    }
 }

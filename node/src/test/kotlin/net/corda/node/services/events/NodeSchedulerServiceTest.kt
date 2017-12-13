@@ -30,6 +30,7 @@ import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
@@ -42,7 +43,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -97,7 +97,10 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
         val identityService = makeTestIdentityService()
         kms = MockKeyManagementService(identityService, ALICE_KEY)
-        val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))
+        val configuration = rigorousMock<NodeConfiguration>().also {
+            doReturn(true).whenever(it).devMode
+            doReturn(null).whenever(it).devModeOptions
+        }
         val validatedTransactions = MockTransactionStorage()
         database.transaction {
             services = rigorousMock<Services>().also {
