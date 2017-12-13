@@ -46,7 +46,7 @@ interface ICommercialPaperTestTemplate {
 private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
 private val MEGA_CORP get() = megaCorp.party
 private val MEGA_CORP_IDENTITY get() = megaCorp.identity
-private val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+private val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
 
 class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = JavaCommercialPaper.State(
@@ -105,13 +105,13 @@ class CommercialPaperTestsGeneric {
         private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         private val ALICE get() = alice.party
-        private val ALICE_KEY get() = alice.key
-        private val ALICE_PUBKEY get() = alice.pubkey
+        private val ALICE_KEY get() = alice.keyPair
+        private val ALICE_PUBKEY get() = alice.publicKey
         private val DUMMY_NOTARY get() = dummyNotary.party
         private val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
         private val MINI_CORP get() = miniCorp.party
         private val MINI_CORP_IDENTITY get() = miniCorp.identity
-        private val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        private val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Parameterized.Parameter
@@ -260,8 +260,8 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceServices: MockServices
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
-    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.key)
-    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, dummyCashIssuer.key)
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
+    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, dummyCashIssuer.keyPair)
     private lateinit var moveTX: SignedTransaction
     @Test
     fun `issue move and then redeem`() {

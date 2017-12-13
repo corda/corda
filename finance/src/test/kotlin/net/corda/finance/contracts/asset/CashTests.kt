@@ -37,27 +37,27 @@ import kotlin.test.*
 class CashTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
-        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).pubkey
+        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).publicKey
         val charlie = TestIdentity(CHARLIE_NAME, 90)
         val DUMMY_CASH_ISSUER_IDENTITY = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).identity
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
         val CHARLIE get() = charlie.party
         val CHARLIE_IDENTITY get() = charlie.identity
         val DUMMY_NOTARY get() = dummyNotary.party
         val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
-        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
         val MEGA_CORP get() = megaCorp.party
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_KEY get() = megaCorp.key
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
         val MINI_CORP_IDENTITY get() = miniCorp.identity
-        val MINI_CORP_KEY get() = miniCorp.key
-        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        val MINI_CORP_KEY get() = miniCorp.keyPair
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Rule

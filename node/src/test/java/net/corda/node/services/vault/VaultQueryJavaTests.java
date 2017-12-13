@@ -72,11 +72,11 @@ public class VaultQueryJavaTests {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
-                Arrays.asList(MEGA_CORP.getKey(), DUMMY_NOTARY.getKey()),
+                Arrays.asList(MEGA_CORP.getKeyPair(), DUMMY_NOTARY.getKeyPair()),
                 identitySvc,
                 cordappPackages,
                 MEGA_CORP.getName());
-        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, BOC.getKey());
+        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);
@@ -466,16 +466,16 @@ public class VaultQueryJavaTests {
                 assertThat(results.getOtherResults()).hasSize(12);
 
                 assertThat(results.getOtherResults().get(0)).isEqualTo(400L);
-                assertThat(results.getOtherResults().get(1)).isEqualTo(CryptoUtils.toStringShort(BOC.getPubkey()));
+                assertThat(results.getOtherResults().get(1)).isEqualTo(CryptoUtils.toStringShort(BOC.getPublicKey()));
                 assertThat(results.getOtherResults().get(2)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(3)).isEqualTo(300L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPubkey()));
+                assertThat(results.getOtherResults().get(4)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPublicKey()));
                 assertThat(results.getOtherResults().get(5)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(6)).isEqualTo(200L);
-                assertThat(results.getOtherResults().get(7)).isEqualTo(CryptoUtils.toStringShort(BOC.getPubkey()));
+                assertThat(results.getOtherResults().get(7)).isEqualTo(CryptoUtils.toStringShort(BOC.getPublicKey()));
                 assertThat(results.getOtherResults().get(8)).isEqualTo("USD");
                 assertThat(results.getOtherResults().get(9)).isEqualTo(100L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPubkey()));
+                assertThat(results.getOtherResults().get(10)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPublicKey()));
                 assertThat(results.getOtherResults().get(11)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {

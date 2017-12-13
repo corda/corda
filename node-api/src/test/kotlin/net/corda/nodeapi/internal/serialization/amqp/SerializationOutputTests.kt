@@ -49,9 +49,9 @@ class SerializationOutputTests {
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
-        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     data class Foo(val bar: String, val pub: Int)
