@@ -125,15 +125,11 @@ structure like in the old ``rpcUsers`` format, by specifying a ``dataSource`` of
             authService = {
                 dataSource = {
                     type = "INMEMORY",
-                    users =[
+                    users = [
                         {
-                            username = "user1"
-                            password = "password"
-                            permissions = [
-                                "StartFlow.net.corda.flows.ExampleFlow1",
-                                "StartFlow.net.corda.flows.ExampleFlow2",
-                                ...
-                            ]
+                            username = "<username>",
+                            password = "<password>",
+                            permissions = ["<permission 1>", "<permission 2>", ...]
                         },
                         ...
                     ]
@@ -160,14 +156,14 @@ in two forms, identified by the subfield ``type``:
    Unlike the ``INMEMORY`` case, in the user database permissions are assigned to *roles* rather than individual users.
 
   .. note:: There is no prescription on the SQL type of the columns (although our tests were conducted on ``username`` and
-    ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type). It is also allowed to have extra columns
-    in addition to the one expected by the implementation.
+    ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type). It is also possible to have extra columns
+    in each table alongside the expected ones.
 
 Password encryption
 ^^^^^^^^^^^^^^^^^^^
 
 Storing passwords in plain text is discouraged in production environment where security is critical. Passwords are assumed
-to be in plain format by default, unless a different format is specified in the ``passwordEncryption`` field, like:
+to be in plain format by default, unless a different format is specified ny the ``passwordEncryption`` field, like:
 
 .. container:: codeset
 
@@ -175,9 +171,10 @@ to be in plain format by default, unless a different format is specified in the 
 
         passwordEncryption = SHIRO_1_CRYPT
 
-Currently ``SHIRO_1_CRYPT`` is the only non-plain supported format. This is the `Apache Shiro fully reversible
-Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_.
-Hash encrypted password based on this format can be generated with the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_
+``SHIRO_1_CRYPT`` identifies the `Apache Shiro fully reversible
+Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_,
+currently the only non-plain password hash-encryption format supported by Corda. Passwords can be hash-encrypted in this
+format using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
 
 Caching users data
 ^^^^^^^^^^^^^^^^^^
@@ -198,8 +195,8 @@ for example:
              }
         }
 
-This will enable a non persistent cache containing in the node's memory with maximum number of entries set to ``capacity``
-with entries expiring and refreshed after ``expiryTimeSecs`` number of seconds.
+This will enable a non-persistent cache contained in the node's memory with maximum number of entries set to ``maxEntries``
+with entries expiring and refreshed after ``expireAfterSecs`` number of seconds.
 
 Observables
 -----------
