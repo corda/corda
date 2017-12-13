@@ -1,12 +1,14 @@
 package net.corda.docs.java.tutorial.twoparty;
 
-// DOCSTART 01
-import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.CommandData;
-import net.corda.core.contracts.CommandWithParties;
 import net.corda.core.contracts.Contract;
-import net.corda.core.identity.Party;
 import net.corda.core.transactions.LedgerTransaction;
+
+// DOCSTART 01
+// Add these imports:
+import com.google.common.collect.ImmutableList;
+import net.corda.core.contracts.CommandWithParties;
+import net.corda.core.identity.Party;
 
 import java.security.PublicKey;
 import java.util.List;
@@ -14,7 +16,10 @@ import java.util.List;
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 
+// Replace TemplateContract's definition with:
 public class IOUContract implements Contract {
+    public static final String IOU_CONTRACT_ID = "com.template.IOUContract";
+
     // Our Create command.
     public static class Create implements CommandData {
     }

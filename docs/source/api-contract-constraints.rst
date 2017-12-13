@@ -95,15 +95,9 @@ to specify JAR URLs in the case that the CorDapp(s) involved in testing already 
 MockNetwork/MockNode
 ********************
 
-<<<<<<< HEAD:docs/source/key-concepts-contract-constraints.rst
 The most simple way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to make a call
 to ``setCordappPackages`` before the MockNetwork/Node are created and then ``unsetCordappPackages`` after the test
 has finished. These calls will cause the ``AbstractNode`` to use the named packages as sources for CorDapps. All files
-=======
-The simplest way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to use the
-``cordappPackages`` constructor parameter (Kotlin) or the ``setCordappPackages`` method on ``MockNetworkParameters`` (Java)
-when creating the MockNetwork. This will cause the ``AbstractNode`` to use the named packages as sources for CorDapps. All files
->>>>>>> 6c02c91ec... Removes old network diagram. Consolidates two sections on node naming. Moves contract constraints to API section.:docs/source/api-contract-constraints.rst
 within those packages will be zipped into a JAR and added to the attachment store and loaded as CorDapps by the
 ``CordappLoader``. An example of this usage would be:
 
