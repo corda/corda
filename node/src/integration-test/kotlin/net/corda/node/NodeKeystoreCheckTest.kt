@@ -8,8 +8,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.IntegrationTest
+import net.corda.testing.IntegrationTestSchemas
 import net.corda.testing.driver.driver
+import net.corda.testing.toDatabaseSchemaName
 import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Path
@@ -20,7 +23,7 @@ import kotlin.test.assertTrue
 class NodeKeystoreCheckTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
     @Test

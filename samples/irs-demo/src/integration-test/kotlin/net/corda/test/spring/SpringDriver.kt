@@ -7,8 +7,8 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.WebserverHandle
-import net.corda.testing.internal.*
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.ConnectException
@@ -27,7 +27,7 @@ fun <A> springDriver(
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        notarySpecs: List<NotarySpec>,
+        notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringBootDriverDSL.() -> A
 ): A {
@@ -91,7 +91,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
             log.debug("Retrying webserver info at ${handle.webAddress}")
         }
 
-        throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL ${url}")
+        throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL $url")
     }
 
     private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {

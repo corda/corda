@@ -6,6 +6,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import rx.exceptions.OnErrorNotImplementedException
+import sun.security.x509.X509CertImpl
 import java.util.*
 
 /**
@@ -49,8 +50,8 @@ object DefaultWhitelist : SerializationWhitelist {
                     java.time.YearMonth::class.java,
                     java.time.MonthDay::class.java,
                     java.time.Period::class.java,
-                    java.time.DayOfWeek::class.java, // No custom serialiser but it's an enum.
-                    java.time.Month::class.java, // No custom serialiser but it's an enum.
+                    java.time.DayOfWeek::class.java, // No custom serializer but it's an enum.
+                    java.time.Month::class.java, // No custom serializer but it's an enum.
 
                     java.util.Collections.emptyMap<Any, Any>().javaClass,
                     java.util.Collections.emptySet<Any>().javaClass,
@@ -58,6 +59,9 @@ object DefaultWhitelist : SerializationWhitelist {
                     java.util.LinkedHashMap::class.java,
                     BitSet::class.java,
                     OnErrorNotImplementedException::class.java,
-                    StackTraceElement::class.java
-            )
+                    StackTraceElement::class.java,
+
+                    // Implementation of X509Certificate.
+                    X509CertImpl::class.java
+                    )
 }

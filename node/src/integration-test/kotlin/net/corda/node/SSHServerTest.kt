@@ -4,39 +4,41 @@ import co.paralleluniverse.fibers.Suspendable
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.toHex
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.ALICE
-import net.corda.testing.driver.driver
-import org.bouncycastle.util.io.Streams
-import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.*
+import net.corda.nodeapi.internal.config.User
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.IntegrationTest
+import net.corda.testing.IntegrationTestSchemas
+import net.corda.testing.driver.driver
+import net.corda.testing.toDatabaseSchemaName
+import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.util.io.Streams
+import org.junit.ClassRule
+import org.junit.Test
 import java.net.ConnectException
+import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.ClassRule
-import java.util.regex.Pattern
-import kotlin.reflect.jvm.jvmName
 
 class SSHServerTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver() {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user))
+        driver {
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             node.getOrThrow()
 
             val session = JSch().getSession("u", "localhost", 2222)
@@ -57,7 +59,7 @@ class SSHServerTest : IntegrationTest() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 
@@ -77,7 +79,7 @@ class SSHServerTest : IntegrationTest() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 
@@ -100,7 +102,7 @@ class SSHServerTest : IntegrationTest() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
         driver(isDebug = true) {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 
@@ -112,7 +114,7 @@ class SSHServerTest : IntegrationTest() {
             assertTrue(session.isConnected)
 
             val channel = session.openChannel("exec") as ChannelExec
-            channel.setCommand("start FlowICannotRun otherParty: \"O=Alice Corp,L=Madrid,C=ES\"")
+            channel.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
             channel.connect()
             val response = String(Streams.readAll(channel.inputStream))
 
@@ -130,7 +132,7 @@ class SSHServerTest : IntegrationTest() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
         driver(isDebug = true) {
-            val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user),
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
 

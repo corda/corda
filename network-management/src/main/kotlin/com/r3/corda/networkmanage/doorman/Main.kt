@@ -5,13 +5,13 @@ import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.MonitoringWebService
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
@@ -192,7 +192,7 @@ fun generateRootKeyPair(rootStorePath: Path, rootKeystorePass: String?, rootPriv
     rootStore.save(rootStorePath, rootKeystorePassword)
 
     // TODO: remove this once we create truststore for nodes.
-    X509Utilities.saveCertificateAsPEMFile(selfSignCert, rootStorePath.parent / "rootcert.pem")
+    X509Utilities.saveCertificateAsPEMFile(selfSignCert.toX509Certificate(), rootStorePath.parent / "rootcert.pem")
 
     println("Root CA keypair and certificate stored in ${rootStorePath.toAbsolutePath()}.")
     println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
@@ -304,7 +304,6 @@ private fun initialiseSerialization() {
     val context = KRYO_P2P_CONTEXT
     nodeSerializationEnv = SerializationEnvironmentImpl(
             SerializationFactoryImpl().apply {
-                registerScheme(KryoClientSerializationScheme())
                 registerScheme(AMQPClientSerializationScheme())
             },
             context)

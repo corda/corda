@@ -9,14 +9,10 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.BOC
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.chooseIdentity
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.poll
+import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -28,7 +24,7 @@ import java.util.concurrent.Executors
 class TraderDemoTest : IntegrationTest() {
     companion object {
         @ClassRule  @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A, DUMMY_BANK_B, BOC, DUMMY_NOTARY)
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, BOC_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
     @Test
@@ -41,9 +37,9 @@ class TraderDemoTest : IntegrationTest() {
                 all()))
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val (nodeA, nodeB, bankNode) = listOf(
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = BOC.name, rpcUsers = listOf(bankUser))
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
+                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
             ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
             nodeA.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {

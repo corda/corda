@@ -14,17 +14,16 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.InternalDriverDSL
 import net.corda.testing.internal.performance.div
-import net.corda.testing.internal.performance.startPublishingFixedRateInjector
-import net.corda.testing.internal.performance.startReporter
-import net.corda.testing.internal.performance.startTightLoopInjector
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.InternalDriverDSL
+import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
+import net.corda.testing.node.internal.performance.startReporter
+import net.corda.testing.node.internal.performance.startTightLoopInjector
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Ignore
@@ -32,8 +31,6 @@ import org.junit.Test
 import java.lang.management.ManagementFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.streams.toList
-
 
 private fun checkQuasarAgent() {
     if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
@@ -44,9 +41,10 @@ private fun checkQuasarAgent() {
 @Ignore("Run these locally")
 class NodePerformanceTests : IntegrationTest() {
      companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
-                DUMMY_BANK_A.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }
 
     @StartableByRPC
@@ -128,7 +126,7 @@ class NodePerformanceTests : IntegrationTest() {
     fun `self pay rate`() {
         val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
         driver(
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
                 portAllocation = PortAllocation.Incremental(20000)
@@ -153,7 +151,7 @@ class NodePerformanceTests : IntegrationTest() {
     fun `single pay`() {
         val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
         driver(
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
                 portAllocation = PortAllocation.Incremental(20000)

@@ -1,5 +1,9 @@
 package net.corda.docs.tutorial.testdsl
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.days
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
@@ -8,14 +12,35 @@ import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.ledger
+import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
 
 class CommercialPaperTest {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val BIG_CORP_PUBKEY = generateKeyPair().public
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.pubkey
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(BIG_CORP_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
+    }, MEGA_CORP.name)
 
     // DOCSTART 1
     fun getPaper(): ICommercialPaperState = CommercialPaper.State(
@@ -30,7 +55,7 @@ class CommercialPaperTest {
     @Test
     fun simpleCP() {
         val inState = getPaper()
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(CP_PROGRAM_ID)
                 input(CP_PROGRAM_ID, inState)
@@ -44,7 +69,7 @@ class CommercialPaperTest {
     @Test
     fun simpleCPMove() {
         val inState = getPaper()
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 input(CP_PROGRAM_ID, inState)
                 command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
@@ -59,7 +84,7 @@ class CommercialPaperTest {
     @Test
     fun simpleCPMoveFails() {
         val inState = getPaper()
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 input(CP_PROGRAM_ID, inState)
                 command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
@@ -74,7 +99,7 @@ class CommercialPaperTest {
     @Test
     fun simpleCPMoveSuccess() {
         val inState = getPaper()
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 input(CP_PROGRAM_ID, inState)
                 command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
@@ -90,7 +115,7 @@ class CommercialPaperTest {
     // DOCSTART 6
     @Test
     fun `simple issuance with tweak`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 output(CP_PROGRAM_ID, "paper", getPaper()) // Some CP is issued onto the ledger by MegaCorp.
                 attachments(CP_PROGRAM_ID)
@@ -111,7 +136,7 @@ class CommercialPaperTest {
     // DOCSTART 7
     @Test
     fun `simple issuance with tweak and top level transaction`() {
-        transaction {
+        ledgerServices.transaction(DUMMY_NOTARY) {
             output(CP_PROGRAM_ID, "paper", getPaper()) // Some CP is issued onto the ledger by MegaCorp.
             attachments(CP_PROGRAM_ID)
             tweak {
@@ -131,8 +156,7 @@ class CommercialPaperTest {
     @Test
     fun `chain commercial paper`() {
         val issuer = MEGA_CORP.ref(123)
-
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)
@@ -165,7 +189,7 @@ class CommercialPaperTest {
     @Test
     fun `chain commercial paper double spend`() {
         val issuer = MEGA_CORP.ref(123)
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)
@@ -207,7 +231,7 @@ class CommercialPaperTest {
     @Test
     fun `chain commercial tweak`() {
         val issuer = MEGA_CORP.ref(123)
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)

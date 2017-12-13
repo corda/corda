@@ -1,31 +1,51 @@
 package com.r3.enclaves.verify
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import com.r3.enclaves.txverify.MockContractAttachment
 import com.r3.enclaves.txverify.NativeSgxApi
 import com.r3.enclaves.txverify.TransactionVerificationRequest
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.testing.MEGA_CORP_PUBKEY
-import net.corda.testing.MINI_CORP_PUBKEY
-import net.corda.testing.ledger
+import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.TestIdentity
+import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.ledger
+import net.corda.testing.rigorousMock
 import org.junit.Ignore
 import org.junit.Test
+import java.math.BigInteger
 import kotlin.test.assertNull
 
 class NativeSgxApiTest {
-
     companion object {
         val enclavePath = "../sgx-jvm/jvm-enclave/enclave/build/cordaenclave.signed.so"
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
+        val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).pubkey
     }
+
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(NativeSgxApiTest.MEGA_CORP).whenever(it).partyFromKey(NativeSgxApiTest.MEGA_CORP_PUBKEY)
+    }, NativeSgxApiTest.MEGA_CORP.name)
 
     @Ignore("The SGX code is not part of the standard build yet")
     @Test
     fun `verification of valid transaction works`() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             // Issue a couple of cash states and spend them.
             val wtx1 = transaction {
                 attachments(Cash.PROGRAM_ID)

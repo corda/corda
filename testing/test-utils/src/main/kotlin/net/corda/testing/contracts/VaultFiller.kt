@@ -18,11 +18,7 @@ import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.CommodityContract
-import net.corda.testing.chooseIdentity
-import net.corda.testing.chooseIdentityAndCert
-import net.corda.testing.dummyCommand
-import net.corda.testing.singleIdentity
-import java.security.KeyPair
+import net.corda.testing.*
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -37,9 +33,8 @@ import java.util.*
  */
 class VaultFiller @JvmOverloads constructor(
         private val services: ServiceHub,
-        private val defaultNotary: Party,
-        private val defaultNotaryKeyPair: KeyPair,
-        private val altNotary: Party = defaultNotary,
+        private val defaultNotary: TestIdentity,
+        private val altNotary: Party = defaultNotary.party,
         private val rngFactory: () -> Random = { Random(0L) }) {
     companion object {
         fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
@@ -71,10 +66,6 @@ class VaultFiller @JvmOverloads constructor(
         }
     }
 
-    init {
-        require(defaultNotary.owningKey == defaultNotaryKeyPair.public) { "Default notary public keys must match." }
-    }
-
     @JvmOverloads
     fun fillWithSomeTestDeals(dealIds: List<String>,
                               issuerServices: ServiceHub = services,
@@ -84,12 +75,12 @@ class VaultFiller @JvmOverloads constructor(
 
         val transactions: List<SignedTransaction> = dealIds.map {
             // Issue a deal state
-            val dummyIssue = TransactionBuilder(notary = defaultNotary).apply {
+            val dummyIssue = TransactionBuilder(notary = defaultNotary.party).apply {
                 addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)), DUMMY_DEAL_PROGRAM_ID)
                 addCommand(dummyCommand())
             }
             val stx = issuerServices.signInitialTransaction(dummyIssue)
-            return@map services.addSignature(stx, defaultNotaryKeyPair.public)
+            return@map services.addSignature(stx, defaultNotary.pubkey)
         }
         services.recordTransactions(transactions)
         // Get all the StateAndRefs of all the generated transactions.
@@ -110,11 +101,11 @@ class VaultFiller @JvmOverloads constructor(
                                      linearTimestamp: Instant = now()): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
-        val issuerKey = defaultNotaryKeyPair
+        val issuerKey = defaultNotary.key
         val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
         val transactions: List<SignedTransaction> = (1..numberToCreate).map {
             // Issue a Linear state
-            val dummyIssue = TransactionBuilder(notary = defaultNotary).apply {
+            val dummyIssue = TransactionBuilder(notary = defaultNotary.party).apply {
                 addOutputState(DummyLinearContract.State(
                         linearId = UniqueIdentifier(externalId),
                         participants = participants.plus(me),

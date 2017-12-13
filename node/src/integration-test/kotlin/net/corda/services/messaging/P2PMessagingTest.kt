@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class P2PMessagingTest : IntegrationTest() {
      private companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
 
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }
@@ -120,7 +120,7 @@ class P2PMessagingTest : IntegrationTest() {
     }
 
     private fun DriverDSL.startAlice(): StartedNode<Node> {
-        return startNode(providedName = ALICE.name, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
+        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
                 .map { (it as NodeHandle.InProcess).node }
                 .getOrThrow()
     }

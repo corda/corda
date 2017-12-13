@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
@@ -22,6 +23,8 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.ledger
+import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -33,6 +36,25 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ObligationTests {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val bob = TestIdentity(BOB_NAME, 80)
+        val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.pubkey
+        val BOB get() = bob.party
+        val BOB_PUBKEY get() = bob.pubkey
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MINI_CORP get() = miniCorp.party
+        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -54,14 +76,17 @@ class ObligationTests {
             beneficiary = CHARLIE
     )
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
-    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
-    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_NOTARY_KEY)
-    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), miniCorp)
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.key)
+    private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(CHARLIE.owningKey)
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }, MEGA_CORP.name)
-
+        doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
+    }
+    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), identityService, MEGA_CORP.name)
+    private val ledgerServices get() = MockServices(identityService, MEGA_CORP.name)
     private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {
@@ -72,6 +97,10 @@ class ObligationTests {
             output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB))
             output(Obligation.PROGRAM_ID, "Alice's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
         }
+    }
+
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+        ledgerServices.transaction(DUMMY_NOTARY, script)
     }
 
     @Test
@@ -347,7 +376,7 @@ class ObligationTests {
     @Test
     fun `close-out netting`() {
         // Try netting out two obligations
-        ledger(mockService) {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -363,7 +392,7 @@ class ObligationTests {
 
         // Try netting out two obligations, with the third uninvolved obligation left
         // as-is
-        ledger(mockService) {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -379,7 +408,7 @@ class ObligationTests {
         }
 
         // Try having outputs mis-match the inputs
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -393,7 +422,7 @@ class ObligationTests {
         }
 
         // Have the wrong signature on the transaction
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -409,7 +438,7 @@ class ObligationTests {
     @Test
     fun `payment netting`() {
         // Try netting out two obligations
-        ledger(mockService) {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -424,7 +453,7 @@ class ObligationTests {
 
         // Try netting out two obligations, but only provide one signature. Unlike close-out netting, we need both
         // signatures for payment netting
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -437,7 +466,7 @@ class ObligationTests {
         }
 
         // Multilateral netting, A -> B -> C which can net down to A -> C
-        ledger(mockService) {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -452,7 +481,7 @@ class ObligationTests {
         }
 
         // Multilateral netting without the key of the receiving party
-        ledger(mockService) {
+        mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -469,7 +498,7 @@ class ObligationTests {
     @Test
     fun `cash settlement`() {
         // Try settling an obligation
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
@@ -485,7 +514,7 @@ class ObligationTests {
 
         // Try partial settling of an obligation
         val halfAMillionDollars = 500000.DOLLARS `issued by` defaultIssuer
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
@@ -501,7 +530,7 @@ class ObligationTests {
 
         // Make sure we can't settle an obligation that's defaulted
         val defaultedObligation: Obligation.State<Currency> = (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)).copy(lifecycle = Lifecycle.DEFAULTED)
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, defaultedObligation) // Alice's defaulted $1,000,000 obligation to Bob
@@ -514,7 +543,7 @@ class ObligationTests {
         }
 
         // Make sure settlement amount must match the amount leaving the ledger
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
@@ -538,7 +567,7 @@ class ObligationTests {
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Obligation.PROGRAM_ID)
                 output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ obligation to Bob", oneUnitFcojObligation between Pair(ALICE, BOB))
@@ -560,7 +589,7 @@ class ObligationTests {
     @Test
     fun `payment default`() {
         // Try defaulting an obligation without a time-window.
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
@@ -584,7 +613,7 @@ class ObligationTests {
         }
 
         // Try defaulting an obligation that is now in the past
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Obligation.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)

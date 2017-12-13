@@ -20,7 +20,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.chooseIdentity
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.junit.Assume.assumeFalse
@@ -36,9 +35,9 @@ import kotlin.test.assertNotNull
 class NodeStatePersistenceTests : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A)
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
                 .map { it.toDatabaseSchemaNames("", "_10000","_10003","_10006") }.flatten().toTypedArray(),
-                DUMMY_NOTARY.toDatabaseSchemaName())
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
     @Test
     fun `persistent state survives node restart`() {

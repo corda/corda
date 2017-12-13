@@ -13,10 +13,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.node.MockAttachmentStorage
-import net.corda.testing.node.MockCordappProvider
+import net.corda.testing.services.MockAttachmentStorage
+import net.corda.testing.services.MockCordappProvider
 import java.io.InputStream
-import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import kotlin.collections.component1
@@ -133,9 +132,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.setTimeWindow(data)
     }
 
-    override fun tweak(
-            dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-    ) = dsl(TransactionDSL(copy()))
+    override fun _tweak(dsl: TransactionDSLInterpreter.() -> EnforceVerifyOrFail) = copy().dsl()
 
     override fun _attachment(contractClassName: ContractClassName) {
         (services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage)
@@ -205,11 +202,9 @@ data class TestLedgerDSLInterpreter private constructor(
 
     private fun <R> interpretTransactionDsl(
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> R
+            dsl: TestTransactionDSLInterpreter.() -> R
     ): TestTransactionDSLInterpreter {
-        val transactionInterpreter = TestTransactionDSLInterpreter(this, transactionBuilder)
-        dsl(TransactionDSL(transactionInterpreter))
-        return transactionInterpreter
+        return TestTransactionDSLInterpreter(this, transactionBuilder).apply { dsl() }
     }
 
     fun transactionName(transactionHash: SecureHash): String? {
@@ -227,10 +222,10 @@ data class TestLedgerDSLInterpreter private constructor(
     private fun <R> recordTransactionWithTransactionMap(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> R,
+            dsl: TestTransactionDSLInterpreter.() -> R,
             transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
             /** If set to true, will add dummy components to [transactionBuilder] to make it valid. */
-            fillTransaction: Boolean = false
+            fillTransaction: Boolean
     ): WireTransaction {
         val transactionLocation = getCallerLocation()
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
@@ -259,27 +254,22 @@ data class TestLedgerDSLInterpreter private constructor(
      */
     private fun fillTransaction(transactionBuilder: TransactionBuilder) {
         if (transactionBuilder.commands().isEmpty()) transactionBuilder.addCommand(dummyCommand())
-        if (transactionBuilder.inputStates().isEmpty() && transactionBuilder.outputStates().isEmpty()) {
-            transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE), DummyContract.PROGRAM_ID)
-        }
     }
 
     override fun _transaction(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, transactionWithLocations)
+            dsl: TestTransactionDSLInterpreter.() -> EnforceVerifyOrFail
+    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, transactionWithLocations, false)
 
     override fun _unverifiedTransaction(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> Unit
-    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations, fillTransaction = true)
+            dsl: TestTransactionDSLInterpreter.() -> Unit
+    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations, true)
 
-    override fun tweak(
-            dsl: LedgerDSL<TestTransactionDSLInterpreter,
-                    LedgerDSLInterpreter<TestTransactionDSLInterpreter>>.() -> Unit) =
-            dsl(LedgerDSL(copy()))
+    override fun _tweak(dsl: LedgerDSLInterpreter<TestTransactionDSLInterpreter>.() -> Unit) =
+            copy().dsl()
 
     override fun attachment(attachment: InputStream): SecureHash {
         return services.attachments.importAttachment(attachment)
@@ -324,40 +314,3 @@ data class TestLedgerDSLInterpreter private constructor(
     val transactionsToVerify: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
     val transactionsUnverified: List<WireTransaction> get() = nonVerifiedTransactionWithLocations.values.map { it.transaction }
 }
-
-/**
- * Expands all [CompositeKey]s present in PublicKey iterable to set of single [PublicKey]s.
- * If an element of the set is a single PublicKey it gives just that key, if it is a [CompositeKey] it returns all leaf
- * keys for that composite element.
- */
-val Iterable<PublicKey>.expandedCompositeKeys: Set<PublicKey>
-    get() = flatMap { it.keys }.toSet()
-
-/**
- * Signs all transactions passed in.
- * @param transactionsToSign Transactions to be signed.
- * @param extraKeys extra keys to sign transactions with.
- * @return List of [SignedTransaction]s.
- */
-fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
-    check(wtx.requiredSigningKeys.isNotEmpty())
-    val signatures = ArrayList<TransactionSignature>()
-    val keyLookup = HashMap<PublicKey, KeyPair>()
-
-    (ALL_TEST_KEYS + extraKeys).forEach {
-        keyLookup[it.public] = it
-    }
-    wtx.requiredSigningKeys.expandedCompositeKeys.forEach {
-        val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
-        signatures += key.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it).schemeNumberID)))
-    }
-    SignedTransaction(wtx, signatures)
-}
-
-/**
- * Signs all transactions in the ledger.
- * @param extraKeys extra keys to sign transactions with.
- * @return List of [SignedTransaction]s.
- */
-fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
-        vararg extraKeys: KeyPair) = signAll(this.interpreter.wireTransactions, extraKeys.toList())

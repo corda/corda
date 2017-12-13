@@ -4,10 +4,7 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
+import net.corda.core.identity.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -27,7 +24,9 @@ import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.transaction
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -36,10 +35,35 @@ import java.util.*
 import kotlin.test.*
 
 class CashTests {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).pubkey
+        val charlie = TestIdentity(CHARLIE_NAME, 90)
+        val DUMMY_CASH_ISSUER_IDENTITY = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).identity
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.pubkey
+        val CHARLIE get() = charlie.party
+        val CHARLIE_IDENTITY get() = charlie.identity
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
+        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_IDENTITY get() = megaCorp.identity
+        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MINI_CORP get() = miniCorp.party
+        val MINI_CORP_IDENTITY get() = miniCorp.identity
+        val MINI_CORP_KEY get() = miniCorp.key
+        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
+    private val defaultRef = OpaqueBytes.of(1)
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
     private val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
@@ -86,12 +110,12 @@ class CashTests {
         ourIdentity = ourServices.myInfo.singleIdentity()
         miniCorpAnonymised = miniCorpServices.myInfo.singleIdentityAndCert().party.anonymise()
         (miniCorpServices.myInfo.legalIdentitiesAndCerts + megaCorpServices.myInfo.legalIdentitiesAndCerts + notaryServices.myInfo.legalIdentitiesAndCerts).forEach { identity ->
-            ourServices.identityService.verifyAndRegisterIdentity(identity)
+            ourServices.identityService.verifyAndRegisterIdentity(identity) // TODO: Configure a mock identity service instead.
         }
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
-            val vaultFiller = VaultFiller(ourServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random)
+            val vaultFiller = VaultFiller(ourServices, dummyNotary, rngFactory = ::Random)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
@@ -111,6 +135,15 @@ class CashTests {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+        MockServices(rigorousMock<IdentityServiceInternal>().also {
+            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
+            doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
+            doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
+        }, MEGA_CORP.name).transaction(DUMMY_NOTARY, script)
     }
 
     @Test
@@ -779,7 +812,7 @@ class CashTests {
         val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         }, MEGA_CORP.name, MEGA_CORP_KEY)
-        ledger(mockService) {
+        mockService.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",

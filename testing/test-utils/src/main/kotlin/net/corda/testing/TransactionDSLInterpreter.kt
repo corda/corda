@@ -73,7 +73,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * Creates a local scoped copy of the transaction.
      * @param dsl The transaction DSL to be interpreted using the copy.
      */
-    fun tweak(dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail): EnforceVerifyOrFail
+    fun _tweak(dsl: TransactionDSLInterpreter.() -> EnforceVerifyOrFail): EnforceVerifyOrFail
 
     /**
      * Attaches an attachment containing the named contract to the transaction
@@ -82,7 +82,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun _attachment(contractClassName: ContractClassName)
 }
 
-class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T) : TransactionDSLInterpreter by interpreter {
+class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private val notary: Party) : TransactionDSLInterpreter by interpreter {
     /**
      * Looks up the output label and adds the found state as an input.
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
@@ -100,8 +100,8 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T) : Transa
      * @param state The state to be added.
      */
     fun input(contractClassName: ContractClassName, state: ContractState) {
-        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
-            output(contractClassName, null, DUMMY_NOTARY, null, AlwaysAcceptAttachmentConstraint, state)
+        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary)) {
+            output(contractClassName, null, notary, null, AlwaysAcceptAttachmentConstraint, state)
         }
         input(transaction.outRef<ContractState>(0).ref)
     }
@@ -116,13 +116,13 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T) : Transa
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, encumbrance: Int, contractState: ContractState) =
-            output(contractClassName, label, DUMMY_NOTARY, encumbrance, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, encumbrance, AutomaticHashConstraint, contractState)
 
     /**
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, contractState: ContractState) =
-            output(contractClassName, label, DUMMY_NOTARY, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, null, AutomaticHashConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
@@ -134,13 +134,13 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T) : Transa
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, encumbrance: Int, contractState: ContractState) =
-            output(contractClassName, null, DUMMY_NOTARY, encumbrance, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, encumbrance, AutomaticHashConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, contractState: ContractState) =
-            output(contractClassName, null, DUMMY_NOTARY, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, null, AutomaticHashConstraint, contractState)
 
     /**
      * Adds a command to the transaction.
@@ -155,6 +155,10 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T) : Transa
     @JvmOverloads
     fun timeWindow(time: Instant, tolerance: Duration = 30.seconds) =
             timeWindow(TimeWindow.withTolerance(time, tolerance))
+
+    /** Creates a local scoped copy of the transaction. */
+    fun tweak(dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) =
+            _tweak { TransactionDSL(this, notary).dsl() }
 
     /**
      * @see TransactionDSLInterpreter._attachment

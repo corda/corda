@@ -14,11 +14,10 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.internal.InProcessNode
-import net.corda.testing.internal.DriverDSLImpl
-import net.corda.testing.internal.genericDriver
-import net.corda.testing.internal.getTimestampAsDirectoryName
+import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.genericDriver
+import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -180,7 +179,7 @@ fun <A> driver(
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
+        jmxPolicy: JmxPolicy = defaultParameters.jmxPolicy,
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -195,7 +194,8 @@ fun <A> driver(
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    jmxPolicy = jmxPolicy
+                    jmxPolicy = jmxPolicy,
+                    compatibilityZone = null
             ),
             coerce = { it },
             dsl = dsl,
@@ -229,10 +229,9 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
-        val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
+        val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy()
-
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -243,7 +242,7 @@ data class DriverParameters(
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
     fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean) = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
-    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
+    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setJmxPolicy(jmxPolicy: JmxPolicy) = copy(jmxPolicy = jmxPolicy)
 }

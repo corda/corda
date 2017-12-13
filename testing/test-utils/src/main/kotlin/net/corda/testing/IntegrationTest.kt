@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.testing.database.DbScriptRunner.runDbScript
 import org.junit.After
@@ -67,9 +68,9 @@ class IntegrationTestSchemas(vararg var list : String) : ExternalResource() {
     }
 }
 
-fun Party.toDatabaseSchemaName() = this.name.organisation.replace(" ", "").replace("-", "_")
+fun CordaX500Name.toDatabaseSchemaName() = this.organisation.replace(" ", "").replace("-", "_")
 
-fun Party.toDatabaseSchemaNames(vararg postfixes: String): List<String> {
+fun CordaX500Name.toDatabaseSchemaNames(vararg postfixes: String): List<String> {
     val nodeName = this.toDatabaseSchemaName()
     return postfixes.map { "$nodeName$it" }
 }

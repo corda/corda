@@ -4,16 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
 import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.StatesNotAvailableException
@@ -31,9 +25,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
@@ -59,8 +50,25 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
-    companion object {
-        private val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+    private companion object {
+        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
+        val bankOfCorda = TestIdentity(BOC_NAME)
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        val BOC get() = bankOfCorda.party
+        val BOC_IDENTITY get() = bankOfCorda.identity
+        val DUMMY_CASH_ISSUER_IDENTITY get() = dummyCashIssuer.identity
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_IDENTITY get() = megaCorp.identity
+        val MINI_CORP get() = miniCorp.party
+        val MINI_CORP_IDENTITY get() = miniCorp.identity
     }
 
     @Rule
@@ -84,11 +92,11 @@ class NodeVaultServiceTest {
                 MEGA_CORP.name)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
+        vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
-        bocServices = MockServices(cordappPackages, rigorousMock(), BOC_NAME, BOC_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
+        bocServices = MockServices(cordappPackages, rigorousMock(), bankOfCorda)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }

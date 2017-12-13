@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.cert.Certificate
@@ -30,6 +31,23 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private val keystorePassword = config.keyStorePassword
     // TODO: Use different password for private key.
     private val privateKeyPassword = config.keyStorePassword
+    private val trustStore: KeyStore
+    private val rootCert: Certificate
+
+    init {
+        require(config.trustStoreFile.exists()) {
+            "${config.trustStoreFile} does not exist. This file must contain the root CA cert of your compatibility zone. " +
+                    "Please contact your CZ operator."
+        }
+        trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
+        val rootCert = trustStore.getCertificate(CORDA_ROOT_CA)
+        require(rootCert != null) {
+            "${config.trustStoreFile} does not contain a certificate with the key $CORDA_ROOT_CA." +
+                    "This file must contain the root CA cert of your compatibility zone. " +
+                    "Please contact your CZ operator."
+        }
+        this.rootCert = rootCert
+    }
 
     /**
      * Ensure the initial keystore for a node is set up.
@@ -74,12 +92,13 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             caKeyStore.addOrReplaceKey(CORDA_CLIENT_CA, keyPair.private, privateKeyPassword.toCharArray(), certificates)
             caKeyStore.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
             caKeyStore.save(config.nodeKeystore, keystorePassword)
-            // Save root certificates to trust store.
-            val trustStore = loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword)
-            // Assumes certificate chain always starts with client certificate and end with root certificate.
-            trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificates.last())
-            trustStore.save(config.trustStoreFile, config.trustStorePassword)
             println("Node private key and certificate stored in ${config.nodeKeystore}.")
+
+            // Check that the root of the signed certificate matches the expected certificate in the truststore.
+            if (rootCert != certificates.last()) {
+                // Assumes certificate chain always starts with client certificate and end with root certificate.
+                throw WrongRootCertException(rootCert, certificates.last(), config.trustStoreFile)
+            }
 
             println("Generating SSL certificate for node messaging service.")
             val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -150,3 +169,17 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         }
     }
 }
+
+/**
+ * Exception thrown when the doorman root certificate doesn't match the expected (out-of-band) root certificate.
+ * This usually means that there has been a Man-in-the-middle attack when contacting the doorman.
+ */
+class WrongRootCertException(expected: Certificate,
+                             actual: Certificate,
+                             expectedFilePath: Path):
+        Exception("""
+            The Root CA returned back from the registration process does not match the expected Root CA
+            expected: $expected
+            actual: $actual
+            the expected certificate is stored in: $expectedFilePath with alias $CORDA_ROOT_CA
+            """.trimMargin())

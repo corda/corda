@@ -13,7 +13,7 @@ import org.junit.Test
 class CashConfigDataFlowTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A)
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
                 .map { it.toDatabaseSchemaNames("","_10000","_10003") }.flatten().toTypedArray())
     }
     @Test

@@ -118,6 +118,16 @@ open class Cordform : DefaultTask() {
     }
 
     /**
+     * The parametersGenerator needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
+     */
+    private fun loadNetworkParamsGenClass(): Class<*> {
+        val plugin = project.convention.getPlugin(JavaPluginConvention::class.java)
+        val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
+        val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
+        return URLClassLoader(urls, javaClass.classLoader).loadClass("net.corda.nodeapi.internal.NetworkParametersGenerator")
+    }
+
+    /**
      * This task action will create and install the nodes based on the node configurations added.
      */
     @TaskAction
@@ -127,6 +137,7 @@ open class Cordform : DefaultTask() {
         installRunScript()
         nodes.forEach(Node::build)
         generateAndInstallNodeInfos()
+        generateAndInstallNetworkParameters()
     }
 
     private fun initializeConfiguration() {
@@ -151,6 +162,16 @@ open class Cordform : DefaultTask() {
                 it.rootDir(directory)
             }
         }
+    }
+
+    private fun generateAndInstallNetworkParameters() {
+        project.logger.info("Generating and installing network parameters")
+        val networkParamsGenClass = loadNetworkParamsGenClass()
+        val nodeDirs = nodes.map(Node::fullPath)
+        val networkParamsGenObject = networkParamsGenClass.newInstance()
+        val runMethod = networkParamsGenClass.getMethod("run", List::class.java).apply { isAccessible = true }
+        // Call NetworkParametersGenerator.run
+        runMethod.invoke(networkParamsGenObject, nodeDirs)
     }
 
     private fun CordformDefinition.getMatchingCordapps(): List<File> {
@@ -193,9 +214,10 @@ open class Cordform : DefaultTask() {
     }
 
     private fun buildNodeProcesses(): Map<Node, Process> {
-        return nodes
-                .map { buildNodeProcess(it) }
-                .toMap()
+        val command = generateNodeInfoCommand()
+        return nodes.map {
+                    it.makeLogDirectory()
+                    buildProcess(it, command, "generate-info.log") }.toMap()
     }
 
     private fun validateNodeProcessess(nodeProcesses: Map<Node, Process>) {
@@ -210,14 +232,13 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private fun buildNodeProcess(node: Node): Pair<Node, Process> {
-        node.makeLogDirectory()
-        val process = ProcessBuilder(generateNodeInfoCommand())
+    private fun buildProcess(node: Node, command: List<String>, logFile: String): Pair<Node, Process> {
+        val process = ProcessBuilder(command)
                 .directory(node.fullPath().toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(node.logFile().toFile())
+                .redirectOutput(node.logFile(logFile).toFile())
                 .addEnvironment("CAPSULE_CACHE_DIR", Node.capsuleCacheDir)
                 .start()
         return Pair(node, process)
@@ -260,7 +281,6 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
-
+    private fun Node.logFile(name: String): Path = this.logDirectory().resolve(name)
     private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }

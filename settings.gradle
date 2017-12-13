@@ -35,7 +35,6 @@ include 'tools:explorer:capsule'
 include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
-include 'tools:jmeter'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
 include 'samples:attachment-demo'
@@ -49,10 +48,12 @@ include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
 include 'samples:business-network-demo'
 include 'cordform-common'
+include 'network-management'
+include 'network-management:capsule'
+include 'network-management:capsule-hsm'
 include 'verify-enclave'
 include 'hsm-tool'
 project(':hsm-tool').with {
     name = 'sgx-hsm-tool'
     projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
 }
-include 'perftestcordapp'

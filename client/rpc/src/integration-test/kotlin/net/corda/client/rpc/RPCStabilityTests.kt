@@ -13,8 +13,8 @@ import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.testing.*
-import net.corda.testing.internal.poll
-import net.corda.testing.internal.*
+import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -26,7 +26,10 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RPCStabilityTests : IntegrationTest() {
@@ -41,7 +44,7 @@ class RPCStabilityTests : IntegrationTest() {
 
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A)
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
                 .map { it.toDatabaseSchemaNames("","_10000","_10003","_10012") }.flatten().toTypedArray())
     }
 

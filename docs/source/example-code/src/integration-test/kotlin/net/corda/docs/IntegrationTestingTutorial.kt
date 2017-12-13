@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 class IntegrationTestingTutorial : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_NOTARY).map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME).map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
     @Test
@@ -44,8 +44,8 @@ class IntegrationTestingTutorial : IntegrationTest() {
                     invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val (alice, bob) = listOf(
-                    startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser))
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(bobUser))
             ).transpose().getOrThrow()
 
             // END 1

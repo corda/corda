@@ -1,8 +1,7 @@
 package net.corda.node.services.config
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -34,11 +33,11 @@ class NodeConfigurationImplTest {
 
     private val testConfiguration = NodeConfigurationImpl(
             baseDirectory = Paths.get("."),
-            myLegalName = ALICE.name,
+            myLegalName = ALICE_NAME,
             emailAddress = "",
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
-            dataSourceProperties = makeTestDataSourceProperties(ALICE.name.organisation),
+            dataSourceProperties = makeTestDataSourceProperties(ALICE_NAME.organisation),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
             useHTTPS = false,

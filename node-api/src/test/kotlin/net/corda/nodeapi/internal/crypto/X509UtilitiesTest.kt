@@ -17,10 +17,7 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.BOB_PUBKEY
-import net.corda.testing.MEGA_CORP
+import net.corda.testing.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -49,6 +46,14 @@ import kotlin.concurrent.thread
 import kotlin.test.*
 
 class X509UtilitiesTest {
+    private companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val bob = TestIdentity(BOB_NAME, 80)
+        val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
+        val BOB get() = bob.party
+        val BOB_PUBKEY get() = bob.pubkey
+    }
+
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
@@ -71,7 +76,7 @@ class X509UtilitiesTest {
     fun `load and save a PEM file certificate`() {
         val tmpCertificateFile = tempFile("cacert.pem")
         val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val caCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Test Cert", organisation = "R3 Ltd", locality = "London", country = "GB"), caKey)
+        val caCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Test Cert", organisation = "R3 Ltd", locality = "London", country = "GB"), caKey).cert
         X509Utilities.saveCertificateAsPEMFile(caCert, tmpCertificateFile)
         val readCertificate = X509Utilities.loadCertificateFromPEMFile(tmpCertificateFile)
         assertEquals(caCert, readCertificate)
@@ -433,7 +438,7 @@ class X509UtilitiesTest {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name.x500Name, BOB_PUBKEY)
-        val expected = X509CertificateFactory().delegate.generateCertPath(listOf(certificate.cert, rootCACert.cert))
+        val expected = X509CertificateFactory().generateCertPath(certificate.cert, rootCACert.cert)
         val serialized = expected.serialize(factory, context).bytes
         val actual: CertPath = serialized.deserialize(factory, context)
         assertEquals(expected, actual)

@@ -14,7 +14,7 @@ import net.corda.nodeapi.internal.config.User;
 import net.corda.testing.CoreTestUtils;
 import net.corda.testing.IntegrationTestKt;
 import net.corda.testing.IntegrationTestSchemas;
-import net.corda.testing.internal.NodeBasedTest;
+import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -31,8 +31,8 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
-import static net.corda.testing.TestConstants.getALICE;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
+import static net.corda.testing.TestConstants.getALICE_NAME;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
@@ -40,8 +40,8 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @ClassRule
-    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(getALICE()),
-            IntegrationTestKt.toDatabaseSchemaName(getDUMMY_NOTARY()));
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(getALICE_NAME()),
+            IntegrationTestKt.toDatabaseSchemaName(getDUMMY_NOTARY_NAME()));
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),
@@ -65,7 +65,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        node = startNode(getALICE().getName(), 1, singletonList(rpcUser));
+        node = startNode(getALICE_NAME(), 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

@@ -48,7 +48,7 @@ private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme
     override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
 }
 
-private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme() {
+private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
         return (byteSequence == AmqpHeaderV1_0 && (target == SerializationContext.UseCase.P2P))
     }

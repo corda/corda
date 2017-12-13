@@ -18,7 +18,7 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
         const val EVIL: Long = 666
 
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), DUMMY_NOTARY.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     @StartableByRPC
@@ -33,7 +33,7 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
     @Test
     fun `closure sent via RPC`() {
         driver(startNodesInProcess = true) {
-            val rpc = startNode(providedName = ALICE.name).getOrThrow().rpc
+            val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(KryoException::class.java)
                     .isThrownBy { rpc.startFlow(::FlowC, packet) }

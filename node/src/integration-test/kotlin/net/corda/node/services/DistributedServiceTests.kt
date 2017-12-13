@@ -13,7 +13,6 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
@@ -34,8 +33,8 @@ class DistributedServiceTests : IntegrationTest() {
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
-                ALICE.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
+                ALICE_NAME.toDatabaseSchemaName())
     }
     private fun setup(testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(
@@ -47,9 +46,9 @@ class DistributedServiceTests : IntegrationTest() {
 
         driver(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.id), rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
-            alice = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser)).getOrThrow()
+            alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
             notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as NodeHandle.OutOfProcess }
 

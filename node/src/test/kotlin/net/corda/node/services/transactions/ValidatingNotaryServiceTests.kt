@@ -5,6 +5,7 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
@@ -19,6 +20,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -68,7 +70,7 @@ class ValidatingNotaryServiceTests {
 
     @Test
     fun `should report error for missing signatures`() {
-        val expectedMissingKey = MEGA_CORP_KEY.public
+        val expectedMissingKey = generateKeyPair().public
         val stx = run {
             val inputState = issueState(aliceServices, alice)
 
