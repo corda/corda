@@ -6,6 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Support for external user credentials data source and password encryption [CORDA-827].
+
 * Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using
   DriverDSL and/or cordformation node runner.
 

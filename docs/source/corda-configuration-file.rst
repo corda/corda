@@ -90,6 +90,9 @@ path to the node's base directory.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
+:security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
+    :doc:`clientrpc` for details.
+
 :webAddress: The host and port on which the webserver will listen if it is started. This is not used by the node itself.
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one

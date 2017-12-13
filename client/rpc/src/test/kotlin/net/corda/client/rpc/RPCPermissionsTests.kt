@@ -1,6 +1,9 @@
 package net.corda.client.rpc
 
+import net.corda.core.flows.FlowLogic
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
+import net.corda.node.services.Permissions
 import net.corda.node.services.messaging.rpcContext
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.node.internal.RPCDriverDSL
