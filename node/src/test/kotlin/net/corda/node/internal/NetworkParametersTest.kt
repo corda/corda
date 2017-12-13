@@ -12,10 +12,7 @@ import net.corda.nodeapi.internal.NetworkParametersCopier
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.MockServices
+import net.corda.testing.node.*
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
@@ -25,7 +22,7 @@ import org.assertj.core.api.Assertions.*
 class NetworkParametersTest {
     private val mockNet = MockNetwork(
             MockNetworkParameters(networkSendManuallyPumped = true),
-            notarySpecs = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY.name)))
+            notarySpecs = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME)))
 
     @After
     fun tearDown() {
@@ -35,7 +32,7 @@ class NetworkParametersTest {
     // Minimum Platform Version tests
     @Test
     fun `node shutdowns when on lower platform version than network`() {
-        val alice = mockNet.createUnstartedNode(MockNodeParameters(legalName = ALICE.name, forcedID = 100, version = MockServices.MOCK_VERSION_INFO.copy(platformVersion = 1)))
+        val alice = mockNet.createUnstartedNode(MockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MockServices.MOCK_VERSION_INFO.copy(platformVersion = 1)))
         val aliceDirectory = mockNet.baseDirectory(100)
         val netParams = testNetworkParameters(
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),
@@ -46,7 +43,7 @@ class NetworkParametersTest {
 
     @Test
     fun `node works fine when on higher platform version`() {
-        val alice = mockNet.createUnstartedNode(MockNodeParameters(legalName = ALICE.name, forcedID = 100, version = MockServices.MOCK_VERSION_INFO.copy(platformVersion = 2)))
+        val alice = mockNet.createUnstartedNode(MockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MockServices.MOCK_VERSION_INFO.copy(platformVersion = 2)))
         val aliceDirectory = mockNet.baseDirectory(100)
         val netParams = testNetworkParameters(
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),

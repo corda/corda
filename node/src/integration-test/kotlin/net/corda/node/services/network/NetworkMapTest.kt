@@ -51,8 +51,8 @@ class NetworkMapTest {
     @Test
     fun `node correctly downloads and saves network parameters file on startup`() {
         internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
-            val aliceDir = baseDirectory(ALICE.name)
-            startNode(providedName = ALICE.name).getOrThrow()
+            val aliceDir = baseDirectory(ALICE_NAME)
+            startNode(providedName = ALICE_NAME).getOrThrow()
             val networkParameters = Files.list(aliceDir).toList().single { NETWORK_PARAMS_FILE_NAME == it.fileName.toString() }
                     .readAll().deserialize<SignedData<NetworkParameters>>().verified()
             assertEquals(NetworkMapServer.stubNetworkParameter, networkParameters)
