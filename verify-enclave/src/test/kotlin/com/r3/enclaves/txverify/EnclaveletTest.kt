@@ -1,29 +1,45 @@
 package com.r3.enclaves.txverify
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.node.MockServices
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class EnclaveletTest {
+    private companion object {
+        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
+        val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+    }
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+    }, MEGA_CORP.name)
+
     @Ignore("Pending Gradle bug: https://github.com/gradle/gradle/issues/2657")
     @Test
     fun success() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             // Issue a couple of cash states and spend them.
             val wtx1 = transaction {
                 attachments(Cash.PROGRAM_ID)
@@ -56,7 +72,7 @@ class EnclaveletTest {
     @Ignore("Pending Gradle bug: https://github.com/gradle/gradle/issues/2657")
     @Test
     fun fail() {
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             // Issue a couple of cash states and spend them.
             val wtx1 = transaction {
                 attachments(Cash.PROGRAM_ID)
