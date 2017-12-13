@@ -110,7 +110,7 @@ object Crypto {
             "ECDSA signature scheme using the secp256r1 (NIST P-256) curve."
     )
 
-    /** EdDSA signature scheme using the ed255519 twisted Edwards curve and SHA512 for message hashing. */
+    /** EdDSA signature scheme using the ed25519 twisted Edwards curve and SHA512 for message hashing. */
     @JvmField
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
