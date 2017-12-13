@@ -30,9 +30,6 @@ sourceSets {
 compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
 
 dependencies {
-    cordaCompile project(':core')
-    cordaCompile project(':client:jfx')
-    cordaCompile project(':node-driver')
     compile project(':core')
     compile project(':client:jfx')
     compile project(':node-driver')
