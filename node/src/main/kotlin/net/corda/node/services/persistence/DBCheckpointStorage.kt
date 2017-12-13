@@ -2,11 +2,13 @@ package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.utilities.debug
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
 import javax.persistence.Column
@@ -18,6 +20,7 @@ import javax.persistence.Lob
  * Simple checkpoint key value storage in DB.
  */
 class DBCheckpointStorage : CheckpointStorage {
+    val log = LoggerFactory.getLogger(this::class.java)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
@@ -35,6 +38,7 @@ class DBCheckpointStorage : CheckpointStorage {
         currentDBSession().saveOrUpdate(DBCheckpoint().apply {
             checkpointId = id.uuid.toString()
             this.checkpoint = checkpoint.bytes
+            log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
         })
     }
 

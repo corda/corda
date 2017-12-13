@@ -48,11 +48,15 @@ abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
         setupTest(rpcProxy!!, context)
     }
 
+    protected open fun additionalFlowResponseProcessing(context: JavaSamplerContext, sample: SampleResult, response: Any?) {
+        // Override this if you want to contribute things from the flow result to the sample.
+    }
+
     override fun runTest(context: JavaSamplerContext): SampleResult {
         val flowInvoke = createFlowInvoke(rpcProxy!!, context)
         val result = SampleResult()
         result.sampleStart()
-        val handle = rpcProxy!!.startFlowDynamic(flowInvoke!!.flowLogicClass, *(flowInvoke!!.args))
+        val handle = rpcProxy!!.startFlowDynamic(flowInvoke.flowLogicClass, *(flowInvoke.args))
         result.sampleLabel = handle.id.toString()
         result.latencyEnd()
         try {
@@ -60,11 +64,14 @@ abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
             result.sampleEnd()
             return result.apply {
                 isSuccessful = true
+                additionalFlowResponseProcessing(context, this, flowResult)
             }
         } catch (e: Exception) {
             result.sampleEnd()
+            e.printStackTrace()
             return result.apply {
                 isSuccessful = false
+                additionalFlowResponseProcessing(context, this, e)
             }
         }
     }
