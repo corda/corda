@@ -33,8 +33,8 @@ class DistributedServiceTests : IntegrationTest() {
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
-                ALICE.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
+                ALICE_NAME.toDatabaseSchemaName())
     }
     private fun setup(testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(

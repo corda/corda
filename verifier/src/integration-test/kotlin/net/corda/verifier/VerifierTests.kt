@@ -25,7 +25,7 @@ import kotlin.test.assertTrue
 class VerifierTests  : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), DUMMY_NOTARY.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
     @Rule
     @JvmField

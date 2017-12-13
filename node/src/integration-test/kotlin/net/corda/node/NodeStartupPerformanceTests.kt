@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 class NodeStartupPerformanceTests : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A).map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME).map { it.toDatabaseSchemaName() }.toTypedArray())
     }
     // Measure the startup time of nodes. Note that this includes an RPC roundtrip, which causes e.g. Kryo initialisation.
     @Test

@@ -13,6 +13,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.ledger
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -24,9 +25,14 @@ import kotlin.test.assertTrue
 
 class EnclaveletTest {
     private companion object {
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
         val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
         val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).pubkey
     }
     @Rule
     @JvmField

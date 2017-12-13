@@ -4,30 +4,33 @@ import co.paralleluniverse.fibers.Suspendable
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.toHex
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.driver.driver
-import org.bouncycastle.util.io.Streams
-import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.*
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.IntegrationTest
+import net.corda.testing.IntegrationTestSchemas
+import net.corda.testing.driver.driver
+import net.corda.testing.toDatabaseSchemaName
+import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.util.io.Streams
+import org.junit.ClassRule
+import org.junit.Test
 import java.net.ConnectException
+import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.ClassRule
-import java.util.regex.Pattern
 
 class SSHServerTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
     @Test()

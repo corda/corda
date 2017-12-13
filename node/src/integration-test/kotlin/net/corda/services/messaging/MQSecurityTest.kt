@@ -18,16 +18,16 @@ import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
-import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.messaging.SimpleMQClient
+import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -45,7 +45,7 @@ import kotlin.test.assertEquals
 abstract class MQSecurityTest : NodeBasedTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), BOB.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName())
     }
     val rpcUser = User("user1", "pass", permissions = emptySet())
     lateinit var alice: StartedNode<Node>

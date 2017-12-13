@@ -19,8 +19,6 @@ import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.*
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -38,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class P2PMessagingTest : IntegrationTest() {
      private companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
 
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }

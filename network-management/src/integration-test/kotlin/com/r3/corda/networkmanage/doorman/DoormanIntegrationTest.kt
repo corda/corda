@@ -21,10 +21,10 @@ import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.testNodeConfiguration
+import net.corda.testing.node.testNodeConfiguration
 import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Ignore
 import org.junit.Rule
@@ -57,7 +57,7 @@ class DoormanIntegrationTest {
         // Start Corda network registration.
         val config = testNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
-                myLegalName = ALICE.name).also {
+                myLegalName = ALICE_NAME).also {
             val doormanHostAndPort = doorman.hostAndPort
             whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             whenever(it.emailAddress).thenReturn("iTest@R3.com")
@@ -77,13 +77,13 @@ class DoormanIntegrationTest {
 
         loadKeyStore(config.nodeKeystore, config.keyStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_CLIENT_CA))
-            assertEquals(ALICE.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subjectX500Principal)
+            assertEquals(ALICE_NAME.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subjectX500Principal)
             assertEquals(listOf(intermediateCACert.cert, rootCACert.cert), getCertificateChain(X509Utilities.CORDA_CLIENT_CA).drop(1).toList())
         }
 
         loadKeyStore(config.sslKeystore, config.keyStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
-            assertEquals(ALICE.name.x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal)
+            assertEquals(ALICE_NAME.x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal)
             assertEquals(listOf(intermediateCACert.cert, rootCACert.cert), getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).drop(2).toList())
         }
 
@@ -110,7 +110,7 @@ class DoormanIntegrationTest {
         // Start Corda network registration.
         val config = testNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
-                myLegalName = ALICE.name).also {
+                myLegalName = ALICE_NAME).also {
             whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             whenever(it.emailAddress).thenReturn("iTest@R3.com")
         }

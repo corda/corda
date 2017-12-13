@@ -7,11 +7,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.testing.*
-import net.corda.testing.internal.NodeBasedTest
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.TestIdentity
-import net.corda.testing.chooseIdentity
 import net.corda.testing.node.internal.NodeBasedTest
 import org.junit.Before
 import org.junit.ClassRule
@@ -25,7 +20,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
 
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_REGULATOR, ALICE, BOB).map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_REGULATOR.name, ALICE.name, BOB.name).map { it.toDatabaseSchemaName() }.toTypedArray())
     }
     private val partiesList = listOf(DUMMY_REGULATOR, ALICE, BOB)
     private val addressesMap = HashMap<CordaX500Name, NetworkHostAndPort>()

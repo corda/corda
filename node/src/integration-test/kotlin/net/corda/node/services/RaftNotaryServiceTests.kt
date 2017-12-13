@@ -16,10 +16,9 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.dummyCommand
-import net.corda.testing.node.startFlow
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.startFlow
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
@@ -30,7 +29,7 @@ class RaftNotaryServiceTests : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas( "RAFTNotaryService_0", "RAFTNotaryService_1", "RAFTNotaryService_2",
-                DUMMY_BANK_A.toDatabaseSchemaName())
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }
     private val notaryName = CordaX500Name(RaftValidatingNotaryService.id, "RAFT Notary Service", "London", "GB")
 

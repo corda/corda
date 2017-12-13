@@ -9,9 +9,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.ALICE
 import net.corda.testing.*
-import net.corda.testing.ALICE_NAME
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
@@ -25,7 +23,7 @@ import kotlin.test.assertEquals
 class BootTests : IntegrationTest() {
      companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A)
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
                 .map { it.toDatabaseSchemaNames("", "_10000","_10003") }.flatten().toTypedArray())
      }
 

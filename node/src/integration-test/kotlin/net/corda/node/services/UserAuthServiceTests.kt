@@ -11,13 +11,15 @@ import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.AuthDataSourceType
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.IntegrationTestSchemas
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.*
+import net.corda.testing.toDatabaseSchemaName
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
 import org.junit.Before
@@ -31,7 +33,7 @@ import kotlin.test.assertFailsWith
 abstract class UserAuthServiceTest : NodeBasedTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
     protected lateinit var node: StartedNode<Node>
