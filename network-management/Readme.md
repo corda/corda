@@ -2,27 +2,34 @@
 # Building the binaries
 
 ## Network management server
-To build a fat jar containing all the doorman code you can simply invoke
+To build a fat jar containing all the doorman code you can simply invoke:
 ```
     ./gradlew network-management:capsule:buildDoormanJAR
 ```
 
-The built file will appear in
+The built file will appear in:
 ```
 network-management/capsule/build/libs/doorman-<VERSION>.jar
 ```
 ## HSM signing server
-To build a fat jar containing all the HSM signer code you can simply invoke
+To build a fat jar containing all the HSM signer code you can simply invoke:
 ```
     ./gradlew network-management:capsule-hsm:buildHsmJAR
 ```
 
-The built file will appear in
+The built file will appear in:
 ```
 network-management/capsule-hsm/build/libs/hsm-<VERSION>.jar
 ```
 
-The binaries can also be obtained from artifactory after deployment in teamcity
+The binaries can also be obtained from artifactory after deployment in TeamCity.
+
+To run the HSM signing server:
+
+```
+cd network-management
+java -jar capsule-hsm/build/libs/hsm-3.0-NETWORKMAP-20171204.134345-6-capsule.jar --configFile hsm.conf
+```
 
 #Configuring network management service
 ### Local signing
