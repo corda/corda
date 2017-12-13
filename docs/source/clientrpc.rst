@@ -71,7 +71,7 @@ Fine grained permissions allow a user to invoke a specific RPC operation, or to 
 RPC security management
 -----------------------
 
-Hard coding user accounts in the `rpcUsers`` field provides a quick way of allowing node's RPC to be accessed by a fixed
+Hard coding user accounts in the ``rpcUsers`` field provides a quick way of allowing node's RPC to be accessed by a fixed
 set of authenticated users but has some obvious shortcomings. To support use cases aiming for higher security and flexibility,
 Corda RPC security system offers additional features such as:
 

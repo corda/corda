@@ -95,7 +95,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                 // Setup optional cache layer if configured
                 it.cacheManager = config.options?.cache?.let {
                     GuavaCacheManager(
-                            timeToLiveSeconds = it.expireTimeSecs,
+                            timeToLiveSeconds = it.expireAfterSecs,
                             maxSize = it.maxEntries)
                 }
             }

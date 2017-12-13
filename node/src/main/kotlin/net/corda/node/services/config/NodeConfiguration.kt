@@ -197,7 +197,7 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         data class Options(val cache: Options.Cache?) {
 
             // Cache parameters
-            data class Cache(val expireTimeSecs: Long, val maxEntries: Long)
+            data class Cache(val expireAfterSecs: Long, val maxEntries: Long)
 
         }
 
