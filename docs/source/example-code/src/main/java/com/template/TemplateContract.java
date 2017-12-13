@@ -1,4 +1,4 @@
-package net.corda.docs.java.tutorial.helloworld;
+package com.template;
 
 import net.corda.core.contracts.CommandData;
 import net.corda.core.contracts.Contract;

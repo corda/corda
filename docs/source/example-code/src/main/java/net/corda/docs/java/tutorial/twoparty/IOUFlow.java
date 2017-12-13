@@ -45,15 +45,14 @@ public class IOUFlow extends FlowLogic<Void> {
         // We retrieve the notary identity from the network map.
         final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
+        // DOCSTART 02
         // We create a transaction builder.
         final TransactionBuilder txBuilder = new TransactionBuilder();
         txBuilder.setNotary(notary);
 
-        // DOCSTART 02
         // We create the transaction components.
         IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
-        String outputContract = IOUContract.class.getName();
-        StateAndContract outputContractAndState = new StateAndContract(outputState, outputContract);
+        StateAndContract outputContractAndState = new StateAndContract(outputState, IOUContract.IOU_CONTRACT_ID);
         List<PublicKey> requiredSigners = ImmutableList.of(getOurIdentity().getOwningKey(), otherParty.getOwningKey());
         Command cmd = new Command<>(new IOUContract.Create(), requiredSigners);
 

@@ -1,16 +1,16 @@
 package net.corda.docs.java.tutorial.twoparty;
 
 // DOCSTART 01
+// Add these imports:
 import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.flows.*;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.utilities.ProgressTracker;
-import net.corda.docs.java.tutorial.helloworld.IOUFlow;
-import net.corda.docs.java.tutorial.helloworld.IOUState;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 
+// Define IOUFlowResponder:
 @InitiatedBy(IOUFlow.class)
 public class IOUFlowResponder extends FlowLogic<Void> {
     private final FlowSession otherPartySession;
