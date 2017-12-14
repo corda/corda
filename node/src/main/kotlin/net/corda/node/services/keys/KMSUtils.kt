@@ -35,7 +35,7 @@ fun freshCertificate(identityService: IdentityServiceInternal,
                      issuerSigner: ContentSigner,
                      revocationEnabled: Boolean = false): PartyAndCertificate {
     val issuerRole = CertRole.extract(issuer.certificate)
-    require(issuerRole == CertRole.WELL_KNOWN_IDENTITY) { "Confidential identities can only be issued from well known identities, provided issuer ${issuer.name} has role $issuerRole" }
+    require(issuerRole == CertRole.WELL_KNOWN_LEGAL_IDENTITY) { "Confidential identities can only be issued from well known identities, provided issuer ${issuer.name} has role $issuerRole" }
     val issuerCert = issuer.certificate.toX509CertHolder()
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCert)
     val ourCertificate = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_IDENTITY, issuerCert.subject,

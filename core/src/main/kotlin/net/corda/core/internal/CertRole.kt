@@ -34,12 +34,11 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
     /** The transport layer security certificate */
     TLS(setOf(NODE_CA), false, false),
     /** A well known (publicly visible) identity of a service */
-    // TODO: Lock this down to INTERMEDIATE_CA only
-    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
+    WELL_KNOWN_SERVICE_IDENTITY(setOf(INTERMEDIATE_CA), true, true),
     /** A well known (publicly visible) identity of a legal entity */
-    WELL_KNOWN_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
+    WELL_KNOWN_LEGAL_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
     /** A confidential (limited visibility) identity */
-    CONFIDENTIAL_IDENTITY(setOf(WELL_KNOWN_IDENTITY), true, false);
+    CONFIDENTIAL_IDENTITY(setOf(WELL_KNOWN_LEGAL_IDENTITY), true, false);
 
     companion object {
         private var cachedRoles: Array<CertRole>? = null
@@ -49,7 +48,7 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
                 cachedRoles = CertRole.values()
             }
             val idVal = id.value
-            require(idVal.compareTo(BigInteger.ZERO) > 0)
+            require(idVal.compareTo(BigInteger.ZERO) > 0) { "Invalid role ID" }
             return try {
                 val ordinal =idVal.intValueExact() - 1
                 cachedRoles!![ordinal]
