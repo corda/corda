@@ -28,7 +28,7 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
-import static net.corda.testing.TestConstants.getALICE_NAME;
+import static net.corda.testing.TestConstants.ALICE_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
@@ -56,7 +56,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
-        node = startNode(getALICE_NAME(), 1, singletonList(rpcUser));
+        node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

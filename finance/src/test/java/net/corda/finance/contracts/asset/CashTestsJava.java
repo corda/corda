@@ -16,14 +16,14 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.testing.node.NodeTestUtils.transaction;
 import static net.corda.testing.CoreTestUtils.rigorousMock;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY_NAME;
+import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
 import static org.mockito.Mockito.doReturn;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL
  */
 public class CashTestsJava {
-    private static final Party DUMMY_NOTARY = new TestIdentity(getDUMMY_NOTARY_NAME(), 20L).getParty();
+    private static final Party DUMMY_NOTARY = new TestIdentity(DUMMY_NOTARY_NAME, 20L).getParty();
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private static final TestIdentity MINI_CORP = new TestIdentity(new CordaX500Name("MiniCorp", "London", "GB"));
     private final PartyAndReference defaultIssuer = MEGA_CORP.ref((byte) 1);

@@ -46,19 +46,19 @@ import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.CoreTestUtils.rigorousMock;
-import static net.corda.testing.TestConstants.getBOC_NAME;
-import static net.corda.testing.TestConstants.getCHARLIE_NAME;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY_NAME;
+import static net.corda.testing.TestConstants.BOC_NAME;
+import static net.corda.testing.TestConstants.CHARLIE_NAME;
+import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
-    private static final TestIdentity BOC = new TestIdentity(getBOC_NAME());
-    private static final Party CHARLIE = new TestIdentity(getCHARLIE_NAME(), 90L).getParty();
+    private static final TestIdentity BOC = new TestIdentity(BOC_NAME);
+    private static final Party CHARLIE = new TestIdentity(CHARLIE_NAME, 90L).getParty();
     private static final TestIdentity DUMMY_CASH_ISSUER_INFO = new TestIdentity(new CordaX500Name("Snake Oil Issuer", "London", "GB"), 10L);
     private static final PartyAndReference DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_INFO.ref((byte) 1);
-    private static final TestIdentity DUMMY_NOTARY = new TestIdentity(getDUMMY_NOTARY_NAME(), 20L);
+    private static final TestIdentity DUMMY_NOTARY = new TestIdentity(DUMMY_NOTARY_NAME, 20L);
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
