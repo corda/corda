@@ -71,7 +71,7 @@ Fine grained permissions allow a user to invoke a specific RPC operation, or to 
 RPC security management
 -----------------------
 
-Setting the ``rpcUsers`` field provides a simple way of granting RPC permissions to a fixed set of users, but has some
+Setting ``rpcUsers`` provides a simple way of granting RPC permissions to a fixed set of users, but has some
 obvious shortcomings. To support use cases aiming for higher security and flexibility, Corda offers additional security
 features such as:
 
@@ -82,8 +82,8 @@ features such as:
    a flexible password hash format conforming to the Modular Crypt Format provided by the `Apache Shiro framework <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_
 
 These features are controlled by a set of options nested in the ``security`` field of ``node.conf``.
-The following example illustrates how to refer to a remote user database storing hash-encrypted passwords with caching in
-node's memory enabled:
+The following example shows how to configure retrieval of users credentials and permissions from a remote database with
+passwords in hash-encrypted format and enable in-memory caching of users data:
 
 .. container:: codeset
 
@@ -133,10 +133,8 @@ of ``INMEMORY`` type:
             }
         }
 
-.. warning:: The ``security`` config structure provides an alternative to ``rpcUsers`` for configuring RPC security, with
-   richer functionalities. A valid configuration cannot specify both ``rpcUsers`` and ``security`` fields, or an exception
-   will be raised at node startup.
-
+.. warning:: A valid configuration cannot specify both the ``rpcUsers`` and ``security`` fields. Doing so will trigger
+   an exception at node startup.
 
 Authentication/authorisation data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -144,17 +142,16 @@ Authentication/authorisation data
 The ``dataSource`` structure defines the data provider supplying credentials and permissions for users. There exist two
 supported types of such data source, identified by the ``dataSource.type`` field:
 
- :INMEMORY: A static list of user credentials and permissions specified by the ``users`` field (see example above)
+ :INMEMORY: A static list of user credentials and permissions specified by the ``users`` field.
 
- :DB: An external RDBMS accessed via the JDBC connection described by ``connection``. The current implementation
+ :DB: An external RDBMS accessed via the JDBC connection described by ``connection``. Note that, unlike the ``INMEMORY``
+  case, in a user database permissions are assigned to *roles* rather than individual users. The current implementation
   expects the database to store data according to the following schema:
 
        - Table ``users`` containing columns ``username`` and ``password``. The ``username`` column *must have unique values*.
        - Table ``user_roles`` containing columns ``username`` and ``role_name`` associating a user to a set of *roles*.
        - Table ``roles_permissions`` containing columns ``role_name`` and ``permission`` associating a role to a set of
          permission strings.
-
-   Unlike the ``INMEMORY`` case, in a user database permissions are assigned to *roles* rather than individual users.
 
   .. note:: There is no prescription on the SQL type of each column (although our tests were conducted on ``username`` and
     ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type). It is also possible to have extra columns
@@ -174,11 +171,11 @@ to be in plain format by default, unless a different format is specified by the 
 
 ``SHIRO_1_CRYPT`` identifies the `Apache Shiro fully reversible
 Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_,
-it is currently the only non-plain password hash-encryption format supported. Passwords can be hash-encrypted in this
-format using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
+it is currently the only non-plain password hash-encryption format supported. Hash-encrypted passwords in this
+format can be produced by using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
 
-Caching users data
-^^^^^^^^^^^^^^^^^^
+Caching user accounts data
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A cache layer on top of the external data source of users credentials and permissions can significantly improve
 performances in some cases, with the disadvantage of causing a (controllable) delay in picking up updates to the underlying data.
