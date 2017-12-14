@@ -44,7 +44,7 @@ CPPFLAGS += -I$(COMMON_DIR)/inc/         \
             -I$(SIM_DIR)/assembly/       \
             -I$(SIM_DIR)/assembly/linux  \
             -I$(LINUX_PSW_DIR)/urts      \
-            -I$(SGX_IPP_INC)
+            -I$(LINUX_PSW_DIR)/urts/linux
 
 CXXFLAGS += -Werror -fPIC
 

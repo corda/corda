@@ -40,6 +40,7 @@ CPPFLAGS += -I$(COMMON_DIR)/inc/           \
             -I$(SIM_DIR)/assembly/         \
             -I$(SIM_DIR)/assembly/linux    \
             -I$(SIM_DIR)/uinst/            \
+            -I$(LINUX_PSW_DIR)/urts/linux  \
             -I$(LINUX_SDK_DIR)/selib
 
 CXXFLAGS += $(ENCLAVE_CXXFLAGS) -Werror -fno-exceptions -fno-rtti

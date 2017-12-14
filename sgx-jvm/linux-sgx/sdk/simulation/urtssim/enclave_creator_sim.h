@@ -48,6 +48,13 @@ public:
     bool get_plat_cap(sgx_misc_attribute_t *se_attr);
     int initialize(sgx_enclave_id_t enclave_id);
     bool use_se_hw() const;
+    bool is_EDMM_supported(sgx_enclave_id_t enclave_id);
+    bool is_driver_compatible();
+    int emodpr(uint64_t addr, uint64_t size, uint64_t flag);
+    int mktcs(uint64_t tcs_addr);
+    int trim_range(uint64_t fromaddr, uint64_t toaddr);
+    int trim_accept(uint64_t addr);
+    int remove_range(uint64_t fromaddr, uint64_t numpages);
 };
 
 #endif

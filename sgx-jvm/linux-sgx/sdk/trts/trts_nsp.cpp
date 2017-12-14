@@ -31,7 +31,7 @@
 
 /* Implement functions:
  *         init_stack_guard() 
- *         do_init_thread()
+ *         enter_enclave()
  *
  *  The functions in this source file will be called during the stack guard initialization.
  *  They cannot be built with '-fstack-protector-strong'. Otherwise, stack guard check will
@@ -46,13 +46,20 @@
 #include "thread_data.h"
 #include "global_data.h"
 #include "trts_internal.h"
+#include "internal/rts.h"
 
-#include "linux/elf_parser.h"
-#define GET_TLS_INFO  elf_tls_info
-
-static void init_stack_guard(void)
+static void init_stack_guard(void *tcs)
 {
     thread_data_t *thread_data = get_thread_data();
+    if( (NULL == thread_data) || ((thread_data->stack_base_addr == thread_data->last_sp) && (0 != g_global_data.thread_policy)))
+    {
+         thread_data = GET_PTR(thread_data_t, tcs, g_global_data.td_template.self_addr);
+    }
+    else
+    {
+        return;
+    }
+
     assert(thread_data != NULL);
 
     size_t tmp_stack_guard = 0;
@@ -64,34 +71,52 @@ static void init_stack_guard(void)
     thread_data->stack_guard = tmp_stack_guard;
 }
 
-extern "C" sgx_status_t do_init_thread(void *tcs)
+extern "C" int enter_enclave(int index, void *ms, void *tcs, int cssa)
 {
-    thread_data_t *thread_data = GET_PTR(thread_data_t, tcs, g_global_data.td_template.self_addr);
-    memcpy_s(thread_data, SE_PAGE_SIZE, const_cast<thread_data_t *>(&g_global_data.td_template), sizeof(thread_data_t));
-    thread_data->last_sp += (size_t)tcs;
-    thread_data->self_addr += (size_t)tcs;
-    thread_data->stack_base_addr += (size_t)tcs;
-    thread_data->stack_limit_addr += (size_t)tcs;
-    thread_data->first_ssa_gpr += (size_t)tcs;
-    thread_data->tls_array += (size_t)tcs;
-    thread_data->tls_addr += (size_t)tcs;
-
-    thread_data->last_sp -= (size_t)STATIC_STACK_SIZE;
-    thread_data->stack_base_addr -= (size_t)STATIC_STACK_SIZE;
-
-    uintptr_t tls_addr = 0;
-    size_t tdata_size = 0;
-
-    if(0 != GET_TLS_INFO(&__ImageBase, &tls_addr, &tdata_size))
+    if(get_enclave_state() == ENCLAVE_CRASHED)
     {
-        return SGX_ERROR_UNEXPECTED;
+        return SGX_ERROR_ENCLAVE_CRASHED;
     }
-    if(tls_addr)
+
+    sgx_status_t error = SGX_ERROR_UNEXPECTED;
+    if(cssa == 0)
     {
-        memset((void *)TRIM_TO_PAGE(thread_data->tls_addr), 0, ROUND_TO_PAGE(thread_data->self_addr - thread_data->tls_addr));
-        memcpy_s((void *)(thread_data->tls_addr), thread_data->self_addr - thread_data->tls_addr, (void *)tls_addr, tdata_size);
+        if(index >= 0)
+        {
+            // Initialize stack guard if necessary
+            init_stack_guard(tcs);
+            error = do_ecall(index, ms, tcs);
+        }
+        else if(index == ECMD_INIT_ENCLAVE)
+        {
+            error = do_init_enclave(ms);
+        }
+        else if(index == ECMD_ORET)
+        {
+            error = do_oret(ms);
+        }
+        else if(index == ECMD_MKTCS)
+        {
+            // Initialize stack guard if necessary
+            init_stack_guard(tcs);
+            error = do_ecall_add_thread(ms, tcs);
+        }
+        else if(index == ECMD_UNINIT_ENCLAVE)
+        {
+            error = do_uninit_enclave(tcs);
+        }
     }
-    init_stack_guard();
-    return SGX_SUCCESS;
+    else if((cssa == 1) && (index == ECMD_EXCEPT))
+    {
+        error = trts_handle_exception(tcs);
+        if (check_static_stack_canary(tcs) != 0)
+        {
+            error = SGX_ERROR_STACK_OVERRUN;
+        }
+    }
+    if(error == SGX_ERROR_UNEXPECTED)
+    {
+        set_enclave_state(ENCLAVE_CRASHED);
+    }
+    return error;
 }
-

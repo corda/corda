@@ -37,17 +37,4 @@
 STATUS SetPublicEcDsaKey
     (   const EcDsaPubKey* pPublicKey );
 
-STATUS ParseCertificateChain
-    (   UINT8 *pCertChain, 
-        UINT32 CertChainLength,
-        SessMgrCertificateFields *certificateFields,
-        UINT8                    *CertWorkBuffer,
-        UINT32                   CertWorkBufferLength,
-        ISSUER_INFO              *RootPublicKey,
-        UINT8                    NumberOfSingleResponses,
-        OCSP_CERT_STATUS_TABLE   *OcspCertStatusTable,
-        CertificateType          CertType,
-        BOOL                     UseFacsimileEpid
-    );
-
 #endif

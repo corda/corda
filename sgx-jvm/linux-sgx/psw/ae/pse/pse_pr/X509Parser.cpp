@@ -50,9 +50,9 @@ X509Parser::~X509Parser(void)
 UINT32 X509Parser::ParseGroupCertificate
     (
     /*in */ const EcDsaPubKey* pSerializedPublicKey,
-    /*in */ const X509_GROUP_CERTIFICATE_VLR* pGroupCertVlr, 
-    /*out*/ UINT32* pGID, 
-    /*out*/ Epid11GroupPubKey* pGroupPubKey 
+    /*in */ const X509_GROUP_CERTIFICATE_VLR* pGroupCertVlr,
+    /*out*/ UINT32* pGID,
+    /*out*/ Epid11GroupPubKey* pGroupPubKey
     )
 {
     STATUS status = X509_GENERAL_ERROR;
@@ -82,7 +82,7 @@ UINT32 X509Parser::ParseGroupCertificate
             //
                 // this is "functional", not buffer overflow check
                     //
-                        (pGroupCertVlr->VlrHeader.PaddedBytes > 3) || 
+                        (pGroupCertVlr->VlrHeader.PaddedBytes > 3) ||
                         //
                         // buffer overflow check: Length can be anything, sizeof is a constant...
                         //
@@ -90,8 +90,8 @@ UINT32 X509Parser::ParseGroupCertificate
                         ) {
                             break;
         }
-        UINT32 X509GroupCertificateSize = pGroupCertVlr->VlrHeader.Length - 
-            sizeof(pGroupCertVlr->VlrHeader) - pGroupCertVlr->VlrHeader.PaddedBytes;
+        UINT32 X509GroupCertificateSize = static_cast<UINT32>(pGroupCertVlr->VlrHeader.Length -
+            sizeof(pGroupCertVlr->VlrHeader) - pGroupCertVlr->VlrHeader.PaddedBytes);
 
 #ifdef DUMP_OCTETS
         OutputOctets("X509GroupCertificate", X509GroupCertificate, X509GroupCertificateSize);
@@ -101,12 +101,12 @@ UINT32 X509Parser::ParseGroupCertificate
         //    EpidGroupCertificate = 0,
         //    VerifierCertificate,
         //    OcspResponderCertificate,
-        //    Others, // OMA DRM 
+        //    Others, // OMA DRM
         //}CertificateType;
         ISSUER_INFO* pRootPublicKey = NULL;
 
         status = ParseCertificateChain(
-            X509GroupCertificate, X509GroupCertificateSize, 
+            X509GroupCertificate, X509GroupCertificateSize,
             certificateFields, certWorkBuffer, certWorkBufferLength, pRootPublicKey, 0,
             NULL, certType, FALSE);
         if (X509_STATUS_SUCCESS != status)
@@ -116,7 +116,7 @@ UINT32 X509Parser::ParseGroupCertificate
         if (certificateFields->serialNumber.length > sizeof(gidArray))
             break;
 
-        int index = sizeof(gidArray)-certificateFields->serialNumber.length;
+        int index = static_cast<int>(sizeof(gidArray)-certificateFields->serialNumber.length);
         memcpy(&gidArray[index], certificateFields->serialNumber.buffer, certificateFields->serialNumber.length);
 
         if(certificateFields->algorithmIdentifierForSubjectPublicKey != X509_intel_sigma_epidGroupPublicKey_epid11)//Only Epid Group Public Key Epid1.1 are permitted to be subject key

@@ -31,7 +31,6 @@
 
 open Printf
 open Util                               (* for failwithf *)
-open List
 
 (* --------------------------------------------------------------------
  * We first introduce a `parse_enclave_ast' function (see below) to
@@ -140,7 +139,7 @@ let is_foreign_array (pt: Ast.parameter_type) =
 let is_naked_func (fd: Ast.func_decl) =
   fd.Ast.rtype = Ast.Void && fd.Ast.plist = []
 
-(*
+(* 
  * If user only defined a trusted function w/o neither parameter nor
  * return value, the generated trusted bridge will not call any tRTS
  * routines.  If the real trusted function doesn't call tRTS function
@@ -193,7 +192,6 @@ let conv_array_to_ptr (pd: Ast.pdecl): Ast.pdecl =
 let retval_name = "retval"
 let retval_declr = { Ast.identifier = retval_name; Ast.array_dims = []; }
 let eid_name = "eid"
-let enclave_id_name = "enclave_id"
 let ms_ptr_name = "pms"
 let ms_struct_val = "ms"
 let mk_ms_member_name (pname: string) = "ms_" ^ pname
@@ -211,8 +209,8 @@ let mk_ubridge_name (file_shortnm: string) (funcname: string) =
   sprintf "%s_%s" file_shortnm funcname
 
 let mk_ubridge_proto (file_shortnm: string) (funcname: string) =
-  sprintf "static sgx_status_t SGX_CDECL %s(sgx_enclave_id_t %s, void* %s)"
-          (mk_ubridge_name file_shortnm funcname) enclave_id_name ms_ptr_name
+  sprintf "static sgx_status_t SGX_CDECL %s(void* %s)"
+          (mk_ubridge_name file_shortnm funcname) ms_ptr_name
 
 (* Common macro definitions. *)
 let common_macros = "#include <stdlib.h> /* for size_t */\n\n\
@@ -238,13 +236,6 @@ let get_theader_name (file_shortnm: string) =
 
 let get_tsource_name (file_shortnm: string) =
   !g_trusted_dir ^ separator_str ^ file_shortnm ^ "_t.c"
-
-let filter_non_enclave_id_params (params: Ast.pdecl list) =
-  filter (fun (p,_) ->
-          match p with
-            Ast.PTVal(_, npattr) -> not npattr.Ast.npa_enclave_id
-          | _ -> true
-         ) params
 
 (* Construct the string of structure definition *)
 let mk_struct_decl (fs: string) (name: string) =
@@ -326,7 +317,7 @@ let get_param_tystr (pt: Ast.parameter_type) =
 (* Generate marshaling structure definition *)
 let gen_marshal_struct (fd: Ast.func_decl) (errno: string) =
     let member_list_str = errno ^
-    let new_param_list = filter_non_enclave_id_params (List.map conv_array_to_ptr fd.Ast.plist) in
+    let new_param_list = List.map conv_array_to_ptr fd.Ast.plist in
     List.fold_left (fun acc (pt, declr) ->
             acc ^ mk_ms_member_decl pt declr) "" new_param_list in
   let struct_name = mk_ms_struct_name fd.Ast.fname in
@@ -335,7 +326,7 @@ let gen_marshal_struct (fd: Ast.func_decl) (errno: string) =
            a marshaling struct. *)
         Ast.Void -> if fd.Ast.plist = [] && errno = "" then ""
                     else mk_struct_decl member_list_str struct_name
-      | _ -> let rv_str = mk_ms_member_decl (Ast.PTVal(fd.Ast.rtype, Ast.default_non_ptr_attr)) retval_declr
+      | _ -> let rv_str = mk_ms_member_decl (Ast.PTVal fd.Ast.rtype) retval_declr
              in mk_struct_decl (rv_str ^ member_list_str) struct_name
 
 let gen_ecall_marshal_struct (tf: Ast.trusted_func) =
@@ -466,7 +457,7 @@ let gen_entry_table (ec: enclave_content) =
  *)
 let gen_tproxy_proto (fd: Ast.func_decl) =
   let parm_list =
-    match filter_non_enclave_id_params fd.Ast.plist with
+    match fd.Ast.plist with
         [] -> ""
       | x :: xs ->
           List.fold_left (fun acc pd ->
@@ -543,8 +534,13 @@ let gen_uheader_preemble (guard: string) (inclist: string)=
 let ms_writer out_chan ec =
   let ms_struct_ecall = List.map gen_ecall_marshal_struct ec.tfunc_decls in
   let ms_struct_ocall = List.map gen_ocall_marshal_struct ec.ufunc_decls in
-    List.iter (fun s -> output_string out_chan (s ^ "\n")) ms_struct_ecall;
-    List.iter (fun s -> output_string out_chan (s ^ "\n")) ms_struct_ocall
+  let output_struct s = 
+    match s with
+        "" -> s
+      | _  -> sprintf "%s\n" s
+  in
+    List.iter (fun s -> output_string out_chan (output_struct s)) ms_struct_ecall;
+    List.iter (fun s -> output_string out_chan (output_struct s)) ms_struct_ocall
 
 
 (* Generate untrusted header for enclave *)
@@ -663,9 +659,7 @@ let add_foreign_array_ptrref
     else arg
 
 let mk_parm_name_ubridge (pt: Ast.parameter_type) (declr: Ast.declarator) =
-  match pt with
-    Ast.PTVal(_, attr) when attr.Ast.npa_enclave_id -> enclave_id_name
-  | _ -> add_foreign_array_ptrref mk_parm_name_raw pt declr
+  add_foreign_array_ptrref mk_parm_name_raw pt declr
 
 let mk_parm_name_ext (pt: Ast.parameter_type) (declr: Ast.declarator) =
   let name = declr.Ast.identifier in
@@ -734,7 +728,7 @@ let fill_ms_field (isptr: bool) (pd: Ast.pdecl) =
   in
     if declr.Ast.array_dims = [] then
       match pt with
-          Ast.PTVal(aty, npattr) -> assignment_str false aty
+          Ast.PTVal(aty)        -> assignment_str false aty
         | Ast.PTPtr(aty, pattr) ->
             if pattr.Ast.pa_isary
             then gen_setup_foreign_array aty
@@ -855,7 +849,7 @@ let gen_check_tbridge_length_overflow (plist: Ast.pdecl list) =
   let gen_check_length (ty: Ast.atype) (attr: Ast.ptr_attr) (declr: Ast.declarator) =
     let name        = declr.Ast.identifier in
     let tmp_ptr_name= mk_tmp_var name in
-
+ 
     let mk_len_size v =
       match v with
         Ast.AString s -> mk_tmp_var s
@@ -866,8 +860,8 @@ let gen_check_tbridge_length_overflow (plist: Ast.pdecl list) =
     let gen_check_overflow cnt size_str =
       let if_statement =
         match cnt with
-            Ast.AString s -> sprintf "\tif ((size_t)%s > (SIZE_MAX / %s)) {\n" (mk_tmp_var s) size_str
-          | Ast.ANumber n -> sprintf "\tif (%d > (SIZE_MAX / %s)) {\n" n size_str
+            Ast.AString s -> sprintf "\tif (%s != 0 &&\n\t\t(size_t)%s > (SIZE_MAX / %s)) {\n" size_str (mk_tmp_var s) size_str
+          | Ast.ANumber n -> sprintf "\tif (%s != 0 &&\n\t\t%d > (SIZE_MAX / %s)) {\n" size_str n size_str
       in
         sprintf "%s\t\tstatus = SGX_ERROR_INVALID_PARAMETER;\n\t\tgoto err;\n\t}" if_statement
     in
@@ -881,7 +875,7 @@ let gen_check_tbridge_length_overflow (plist: Ast.pdecl list) =
       in
         match attr.Ast.pa_size.Ast.ps_count with
           None   -> ""
-        | Some a -> sprintf "%s\n\n" (gen_check_overflow a size_str)
+        | Some a -> sprintf "%s\n\n" (gen_check_overflow a size_str) 
   in
     List.fold_left
       (fun acc (pty, declr) ->
@@ -927,18 +921,26 @@ let gen_parm_ptr_direction_pre (plist: Ast.pdecl list) =
     let in_ptr_dst_name = mk_in_ptr_dst_name attr.Ast.pa_rdonly in_ptr_name in
     let tmp_ptr_name= mk_tmp_var name in
 
-    let check_sizefunc_ptr (fn: string) =
+    let mk_len_count v  =
+      match v with
+        None -> ""
+        |Some a ->
+          match a with
+            Ast.AString s -> sprintf "_tmp_%s * " s
+            | Ast.ANumber n -> sprintf "%d * " n
+    in
+    let check_sizefunc_with_cnt_ptr v fn =
       sprintf "\t\t/* check whether the pointer is modified. */\n\
-\t\tif (%s(%s) != %s) {\n\
+\t\tif (%s%s(%s) != %s) {\n\
 \t\t\tstatus = SGX_ERROR_INVALID_PARAMETER;\n\
 \t\t\tgoto err;\n\
-\t\t}" fn in_ptr_name len_var
+\t\t}" (mk_len_count v) fn in_ptr_name len_var
     in
     let malloc_and_copy pre_indent =
       match attr.Ast.pa_direction with
           Ast.PtrIn | Ast.PtrInOut ->
             let code_template = [
-              sprintf "if (%s != NULL) {" tmp_ptr_name;
+              sprintf "if (%s != NULL && %s != 0) {" tmp_ptr_name len_var;
               sprintf "\t%s = (%s)malloc(%s);" in_ptr_name in_ptr_type len_var;
               sprintf "\tif (%s == NULL) {" in_ptr_name;
               "\t\tstatus = SGX_ERROR_OUT_OF_MEMORY;";
@@ -957,11 +959,11 @@ let gen_parm_ptr_direction_pre (plist: Ast.pdecl list) =
             let s3 =
               match attr.Ast.pa_size.Ast.ps_sizefunc with
                   None   -> s2
-                | Some s -> sprintf "%s\n%s\n" s2 (check_sizefunc_ptr(s))
+                | Some s -> sprintf "%s\n%s\n" s2 (check_sizefunc_with_cnt_ptr attr.Ast.pa_size.Ast.ps_count s)
             in sprintf "%s\t}\n" s3
         | Ast.PtrOut ->
             let code_template = [
-              sprintf "if (%s != NULL) {" tmp_ptr_name;
+              sprintf "if (%s != NULL && %s != 0) {" tmp_ptr_name len_var;
               sprintf "\tif ((%s = (%s)malloc(%s)) == NULL) {" in_ptr_name in_ptr_type len_var;
               "\t\tstatus = SGX_ERROR_OUT_OF_MEMORY;";
               "\t\tgoto err;";
@@ -1252,7 +1254,7 @@ let gen_ocalloc_block (fname: string) (plist: Ast.pdecl list) =
   in
   let s1 = List.fold_left (fun acc pd -> acc ^ do_count_ocalloc_size pd) local_vars_block new_param_list in
      List.fold_left (fun acc s -> acc ^ s) s1 do_gen_ocalloc_block
-
+  
 (* Generate trusted proxy code for a given untrusted function. *)
 let gen_func_tproxy (ufunc: Ast.untrusted_func) (idx: int) =
   let fd = ufunc.Ast.uf_fdecl in
@@ -1293,7 +1295,7 @@ let gen_func_tproxy (ufunc: Ast.untrusted_func) (idx: int) =
       begin
         func_body := local_vars :: !func_body;
         func_body := ocalloc_ms_struct:: !func_body;
-        List.iter (fun pd -> func_body := tproxy_fill_ms_field pd :: !func_body) (filter_non_enclave_id_params fd.Ast.plist);
+        List.iter (fun pd -> func_body := tproxy_fill_ms_field pd :: !func_body) fd.Ast.plist;
         func_body := ocall_with_ms :: !func_body;
         if fd.Ast.rtype <> Ast.Void then func_body := update_retval :: !func_body;
         List.fold_left (fun acc s -> acc ^ "\t" ^ s ^ "\n") func_open (List.rev !func_body) ^ func_close
@@ -1407,9 +1409,9 @@ let start_parsing (fname: string) : Ast.enclave =
       let fullpath = Util.get_file_path fname in
       let preprocessed =
         save_file fullpath;  Preprocessor.processor_macro(fullpath) in
-      let lexbuf =
+      let lexbuf = 
         match preprocessed with
-          | None ->
+          | None -> 
             let chan =  open_in fullpath in
             Lexing.from_channel chan
           | Some(preprocessed_string) -> Lexing.from_string preprocessed_string
@@ -1493,7 +1495,7 @@ let check_priv_funcs (ec: enclave_content) =
  * `ec' is the toplevel `enclave_content' record.
 
  * Here, a tree reduce algorithm is used. `ec' is the root-node, each
- * `import' expression is considerred as a children.
+ * `import' expression is considered as a children.
  *)
 let reduce_import (ec: enclave_content) =
   let combine (ec1: enclave_content) (ec2: enclave_content) =

@@ -38,20 +38,6 @@
 #define N_SIZE_IN_BYTES    384
 #define E_SIZE_IN_BYTES    4
 #define D_SIZE_IN_BYTES    384
-#define P_SIZE_IN_BYTES    192
-#define Q_SIZE_IN_BYTES    192
-#define DMP1_SIZE_IN_BYTES 192
-#define DMQ1_SIZE_IN_BYTES 192
-#define IQMP_SIZE_IN_BYTES 192
-
-#define N_SIZE_IN_UINT     N_SIZE_IN_BYTES/sizeof(unsigned int)
-#define E_SIZE_IN_UINT     E_SIZE_IN_BYTES/sizeof(unsigned int)
-#define D_SIZE_IN_UINT     D_SIZE_IN_BYTES/sizeof(unsigned int)
-#define P_SIZE_IN_UINT     P_SIZE_IN_BYTES/sizeof(unsigned int)
-#define Q_SIZE_IN_UINT     Q_SIZE_IN_BYTES/sizeof(unsigned int)
-#define DMP1_SIZE_IN_UINT  DMP1_SIZE_IN_BYTES/sizeof(unsigned int)
-#define DMQ1_SIZE_IN_UINT  DMQ1_SIZE_IN_BYTES/sizeof(unsigned int)
-#define IQMP_SIZE_IN_UINT  IQMP_SIZE_IN_BYTES/sizeof(unsigned int)
 
 typedef enum _key_type_t
 {
@@ -61,19 +47,8 @@ typedef enum _key_type_t
     PUBLIC_KEY 
 } key_type_t;
 
-typedef struct _rsa_params_t
-{
-    unsigned int n[N_SIZE_IN_UINT];
-    unsigned int e[E_SIZE_IN_UINT];
-    unsigned int d[D_SIZE_IN_UINT];
-    unsigned int p[P_SIZE_IN_UINT];
-    unsigned int q[Q_SIZE_IN_UINT];
-    unsigned int dmp1[DMP1_SIZE_IN_UINT];
-    unsigned int dmq1[DMQ1_SIZE_IN_UINT];
-    unsigned int iqmp[IQMP_SIZE_IN_UINT];
-}rsa_params_t;
+#include <openssl/rsa.h>
 
-
-bool parse_key_file(const char *key_path, rsa_params_t *prsa, int *pkey_type);
+bool parse_key_file(int mode, const char *key_path, RSA **prsa, int *pkey_type);
 
 #endif

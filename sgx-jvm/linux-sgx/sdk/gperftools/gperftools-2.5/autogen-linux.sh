@@ -46,13 +46,13 @@ if [ "$1" = "DEBUG" ]
 then
     COMMON_FLAGS="-ggdb -Og"
 else
-    COMMON_FLAGS="-g -O2"
+    COMMON_FLAGS="-g -O2 -D_FORTIFY_SOURCE=2"
 fi
 
-COMMON_FLAGS="$COMMON_FLAGS -DNO_HEAP_CHECK -DTCMALLOC_SGX -DTCMALLOC_NO_ALIASES -fstack-protector"
+COMMON_FLAGS="$COMMON_FLAGS -DNO_HEAP_CHECK -DTCMALLOC_SGX -DTCMALLOC_NO_ALIASES $2"
 
 ENCLAVE_CFLAGS="$COMMON_FLAGS -ffreestanding -nostdinc -fvisibility=hidden -fPIC"
-ENCLAVE_CXXFLAGS="$ENCLAVE_CFLAGS -nostdinc++"
+ENCLAVE_CXXFLAGS="$ENCLAVE_CFLAGS -nostdinc++ -std=c++11"
 CFLAGS="$CFLAGS $ENCLAVE_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ENCLAVE_CXXFLAGS"
 CPPFLAGS="-I../../../common/inc -I../../../common/inc/tlibc -I../../../common/inc/internal/ -I../../../sdk/tlibcxx/include -I../../../sdk/trts/"

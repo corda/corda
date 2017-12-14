@@ -36,8 +36,14 @@
 #include "se_memory.h"
 #include "se_thread.h"
 #include <assert.h>
+#include "routine.h"
+#include "enclave_creator.h"
+#include "rts.h"
+#include "enclave.h"
 
 extern se_thread_id_t get_thread_id();
+int do_ecall(const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread);
+
 
 
 CTrustThread::CTrustThread(tcs_t *tcs, CEnclave* enclave)
@@ -84,9 +90,12 @@ void CTrustThread::pop_ocall_frame()
 }
 
 
-CTrustThreadPool::CTrustThreadPool()
+CTrustThreadPool::CTrustThreadPool(uint32_t tcs_min_pool)
 {
     m_thread_list = NULL;
+    m_utility_thread = NULL;
+    m_tcs_min_pool = tcs_min_pool;
+    m_need_to_wait_for_new_thread = false;
 }
 
 CTrustThreadPool::~CTrustThreadPool()
@@ -98,6 +107,13 @@ CTrustThreadPool::~CTrustThreadPool()
         delete *it;
     }
     m_free_thread_vector.clear();
+    //destroy unallocated tcs list
+    for(vector<CTrustThread *>::iterator it=m_unallocated_threads.begin(); it!=m_unallocated_threads.end(); it++)
+    {
+        delete *it;
+    }
+    m_unallocated_threads.clear();
+
     //destroy thread cache
     Node<se_thread_id_t, CTrustThread*>* it = m_thread_list, *tmp = NULL;
     while (it != NULL)
@@ -108,6 +124,13 @@ CTrustThreadPool::~CTrustThreadPool()
         delete tmp;
     }
     m_thread_list = NULL;
+
+    if (m_utility_thread)
+    {
+        delete m_utility_thread;
+        m_utility_thread = NULL;
+    }
+
 }
 
 void get_thread_set(vector<se_thread_id_t> &thread_vector);
@@ -121,10 +144,12 @@ inline int CTrustThreadPool::find_thread(vector<se_thread_id_t> &thread_vector, 
 
 inline CTrustThread * CTrustThreadPool::get_free_thread()
 {
+    LockGuard lock(&m_free_thread_mutex);
     if(true == m_free_thread_vector.empty())
     {
         return NULL;
     }
+
     //if there is free tcs, remove it from free list
     CTrustThread *thread_node = m_free_thread_vector.back();
     m_free_thread_vector.pop_back();
@@ -162,12 +187,22 @@ CTrustThread * CTrustThreadPool::get_bound_thread(const se_thread_id_t thread_id
     return trust_thread;
 }
 
-CTrustThread * CTrustThreadPool::add_thread(tcs_t * const tcs, CEnclave * const enclave)
+CTrustThread * CTrustThreadPool::add_thread(tcs_t * const tcs, CEnclave * const enclave, bool is_unallocated)
 {
     CTrustThread *trust_thread = new CTrustThread(tcs, enclave);
     LockGuard lock(&m_thread_mutex);
     //add tcs to free list
-    m_free_thread_vector.push_back(trust_thread);
+    if(!is_unallocated)
+    {
+        if (g_enclave_creator->is_EDMM_supported(enclave->get_enclave_id()) && !m_utility_thread && (enclave->get_dynamic_tcs_list_size() != 0))
+            m_utility_thread = trust_thread;
+        else
+            m_free_thread_vector.push_back(trust_thread);
+    }
+    else
+    {
+        m_unallocated_threads.push_back(trust_thread);
+    }
 
     return trust_thread;
 }
@@ -191,6 +226,26 @@ CTrustThread *CTrustThreadPool::get_bound_thread(const tcs_t *tcs)
     return NULL;
 }
 
+std::vector<CTrustThread *> CTrustThreadPool::get_thread_list()
+{
+    LockGuard lock(&m_thread_mutex);
+
+    vector<CTrustThread *> threads;
+
+    for(vector<CTrustThread *>::iterator it = m_free_thread_vector.begin(); it != m_free_thread_vector.end(); it++)
+    {
+        threads.push_back(*it);
+    }
+
+    Node<se_thread_id_t, CTrustThread*>* it = m_thread_list;
+    while (it != NULL) {
+        threads.push_back(it->value);
+        it = it->next;
+    }
+
+    return threads;
+}
+
 void CTrustThreadPool::reset()
 {
     //get lock at the begin of list walk.
@@ -207,7 +262,7 @@ void CTrustThreadPool::reset()
         //remove from thread cache
         delete tmp;
         trust_thread->reset_ref();
-        m_free_thread_vector.push_back(trust_thread);
+        add_to_free_thread_vector(trust_thread);
     }
     m_thread_list = NULL;
 
@@ -232,7 +287,7 @@ CTrustThread * CTrustThreadPool::_acquire_thread()
     //try to get tcs from thread cache
     se_thread_id_t thread_id = get_thread_id();
     CTrustThread *trust_thread = get_bound_thread(thread_id);
-    if(NULL != trust_thread)
+    if(NULL != trust_thread  && m_utility_thread != trust_thread)
     {
         return trust_thread;
     }
@@ -252,15 +307,52 @@ CTrustThread * CTrustThreadPool::_acquire_thread()
     return trust_thread;
 }
 
-CTrustThread * CTrustThreadPool::acquire_thread()
+CTrustThread * CTrustThreadPool::acquire_thread(bool is_initialize_ecall)
 {
     LockGuard lock(&m_thread_mutex);
     CTrustThread *trust_thread = NULL;
 
-    trust_thread = _acquire_thread();
+    if(is_initialize_ecall == true)
+    {
+        if (m_utility_thread)
+        {
+            trust_thread = m_utility_thread;
+            assert(trust_thread != NULL);
+        }
+        else
+        {
+            trust_thread = _acquire_thread();
+        }
+    }
+    else
+    {
+        trust_thread = _acquire_thread();
+        // for edmm feature, we don't support simulation mode yet
+        // m_utility_thread will be NULL in simulation mode
+        if(NULL == trust_thread && NULL != m_utility_thread)
+        {
+            m_need_to_wait_for_new_thread_cond.lock();
+            m_utility_thread->get_enclave()->fill_tcs_mini_pool_fn();
+            m_need_to_wait_for_new_thread = true;
+            while(m_need_to_wait_for_new_thread != false)
+            {
+                m_need_to_wait_for_new_thread_cond.wait();
+            }
+            m_need_to_wait_for_new_thread_cond.unlock();
+            trust_thread = _acquire_thread();
+        }
+    }
+    
     if(trust_thread)
+    {
         trust_thread->increase_ref();
+    }
 
+    if(is_initialize_ecall != true &&
+       need_to_new_thread() == true)
+    {     
+        m_utility_thread->get_enclave()->fill_tcs_mini_pool_fn();
+    }
     return trust_thread;
 }
 
@@ -271,6 +363,136 @@ void CTrustThreadPool::release_thread(CTrustThread * const trust_thread)
     trust_thread->decrease_ref();
     return;
 }
+
+
+bool CTrustThreadPool::is_dynamic_thread_exist()
+{
+    if (m_unallocated_threads.empty())
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+bool CTrustThreadPool::need_to_new_thread()
+{
+    LockGuard lock(&m_free_thread_mutex);
+    if (m_unallocated_threads.empty())
+    {
+        return false;
+    }
+
+    if(m_tcs_min_pool == 0 && m_free_thread_vector.size() > m_tcs_min_pool)
+    {
+        return false;
+    }
+    
+    if(m_tcs_min_pool != 0 && m_free_thread_vector.size() >= m_tcs_min_pool)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+
+static int make_tcs(size_t tcs)
+{
+    return g_enclave_creator->mktcs(tcs);
+}
+
+struct ms_str
+{
+    void * ms;
+};
+
+#define fastcall __attribute__((regparm(3),noinline,visibility("default")))
+//this function is used to notify GDB scripts
+//GDB is supposed to have a breakpoint on urts_add_tcs to receive debug interupt
+//once the breakpoint has been hit, GDB extracts the address of tcs and sets DBGOPTIN for the tcs
+extern "C" void fastcall urts_add_tcs(tcs_t * const tcs)
+{
+    UNUSED(tcs);
+    SE_TRACE(SE_TRACE_WARNING, "urts_add_tcs %x\n", tcs);
+}
+
+sgx_status_t CTrustThreadPool::new_thread()
+{
+    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+    if(!m_utility_thread)
+    {
+        return ret;
+    }
+    if (m_unallocated_threads.empty())
+    {
+        return SGX_SUCCESS;
+    }
+
+    size_t octbl_buf[ROUND_TO(sizeof(sgx_ocall_table_t) + sizeof(void*), sizeof(size_t)) / sizeof(size_t)];
+    sgx_ocall_table_t *octbl = reinterpret_cast<sgx_ocall_table_t*>(octbl_buf);
+    octbl->count = 1;
+    void **ocalls = octbl->ocall;
+    *ocalls = reinterpret_cast<void*>(make_tcs);
+    CTrustThread *trust_thread = m_unallocated_threads.back();
+    tcs_t *tcsp = trust_thread->get_tcs();
+    struct ms_str ms1;
+    ms1.ms = tcsp;
+    ret = (sgx_status_t)do_ecall(ECMD_MKTCS, octbl, &ms1, m_utility_thread);
+    if (SGX_SUCCESS == ret )
+    {    
+        //add tcs to debug tcs info list
+        trust_thread->get_enclave()->add_thread(trust_thread);
+        add_to_free_thread_vector(trust_thread);
+        m_unallocated_threads.pop_back();
+
+        urts_add_tcs(tcsp);
+    }
+    
+    return ret;
+}
+
+
+void CTrustThreadPool::add_to_free_thread_vector(CTrustThread* it)
+{
+    LockGuard lock(&m_free_thread_mutex);
+    m_free_thread_vector.push_back(it);
+}
+
+sgx_status_t CTrustThreadPool::fill_tcs_mini_pool()
+{
+    sgx_status_t ret = SGX_SUCCESS;
+    bool stop = false;
+
+    while(stop != true)
+    {
+        if(need_to_new_thread() == true)
+        {
+            ret = new_thread();
+            if(ret != SGX_SUCCESS)
+            {
+                stop= true;
+            }
+        }
+        else
+        {
+            stop = true;
+        }
+        
+        m_need_to_wait_for_new_thread_cond.lock();
+        if(m_need_to_wait_for_new_thread == true)
+        {
+            m_need_to_wait_for_new_thread = false;
+            m_need_to_wait_for_new_thread_cond.signal();
+        }
+        m_need_to_wait_for_new_thread_cond.unlock();
+    }
+    
+    return ret;
+}
+
 
 //The return value stand for the number of free trust thread.
 int CThreadPoolBindMode::garbage_collect()
@@ -294,7 +516,7 @@ int CThreadPoolBindMode::garbage_collect()
             //return to free_tcs list
             if(0 == it->value->get_reference())
             {
-                m_free_thread_vector.push_back(it->value);
+                add_to_free_thread_vector(it->value);
                 nr_free++;
             }
             else
@@ -332,7 +554,7 @@ int CThreadPoolUnBindMode::garbage_collect()
         //if the reference is 0, then the trust thread is not in use, so return to free_tcs list
         if(0 == it->value->get_reference())
         {
-            m_free_thread_vector.push_back(it->value);
+            add_to_free_thread_vector(it->value);
             nr_free++;
 
             tmp = it;

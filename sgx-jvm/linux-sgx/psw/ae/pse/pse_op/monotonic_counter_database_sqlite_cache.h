@@ -57,7 +57,6 @@ typedef struct _leaf_cache_t
     uint32_t size;              // list length, should never exceed MAX_LEAF_CACHE_NUM
 } leaf_cache_t;
 
-void initialize_hash_tree_cache();
 void flush_hash_tree_cache();
 pse_op_error_t access_hash_tree_cache(const rpdb_op_t rpdb_op,           // vmc operation type
                                       const cache_op_t cache_op,         // read/update cache

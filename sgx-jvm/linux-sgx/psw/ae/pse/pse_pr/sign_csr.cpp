@@ -47,9 +47,9 @@
 
 static uint8_t CertificateSigningRequestTemplate[] =
 {
-    /*0000h:*/ 0x30, 0x82, 0x01, 0xB9, 
+    /*0000h:*/ 0x30, 0x82, 0x01, 0xB9,
     /* BEGIN -- Certificate Request Info (to be signed)                                                        */
-                                       0x30, 0x82, 0x01, 0x5E, 
+                                       0x30, 0x82, 0x01, 0x5E,
                                                                0x02, 0x01, 0x00, 0x30, 0x81, 0xB7, 0x31, 0x0B,
     /*0010h:*/ 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x0C, 0x02, 0x55, 0x53, 0x31, 0x0B, 0x30, 0x09, 0x06,
     /*0020h:*/ 0x03, 0x55, 0x04, 0x08, 0x0C, 0x02, 0x43, 0x41, 0x31, 0x14, 0x30, 0x12, 0x06, 0x03, 0x55, 0x04,
@@ -57,12 +57,12 @@ static uint8_t CertificateSigningRequestTemplate[] =
     /*0040h:*/ 0x30, 0x18, 0x06, 0x03, 0x55, 0x04, 0x0A, 0x0C, 0x11, 0x49, 0x6E, 0x74, 0x65, 0x6C, 0x20, 0x43,
     /*0050h:*/ 0x6F, 0x72, 0x70, 0x6F, 0x72, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x31, 0x37, 0x30, 0x35, 0x06, 0x03,
     /*0060h:*/ 0x55, 0x04, 0x0B, 0x0C, 0x2E, 0x49, 0x6E, 0x74, 0x65, 0x6C, 0x20, 0x50, 0x53, 0x45, 0x20,
-        /* BEGIN -- organizationalUnitName GUID                                                                */ 
+        /* BEGIN -- organizationalUnitName GUID                                                                */
                                                                                                          0x65,
     /*0070h:*/ 0x66, 0x65, 0x66, 0x65, 0x66, 0x65, 0x66, 0x2D, 0x65, 0x66, 0x65, 0x66, 0x2D, 0x65, 0x66, 0x65,
     /*0080h:*/ 0x66, 0x2D, 0x65, 0x66, 0x65, 0x66, 0x2D, 0x65, 0x66, 0x65, 0x66, 0x65, 0x66, 0x65, 0x66, 0x65,
     /*0090h:*/ 0x66, 0x65, 0x66,
-        /* END -- organizationalUnitName GUID                                                                  */ 
+        /* END -- organizationalUnitName GUID                                                                  */
                                  0x31, 0x16, 0x30, 0x14, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0C, 0x0D, 0x77, 0x77,
     /*00A0h:*/ 0x77, 0x2E, 0x69, 0x6E, 0x74, 0x65, 0x6C, 0x2E, 0x63, 0x6F, 0x6D, 0x31, 0x18, 0x30, 0x16, 0x06,
     /*00B0h:*/ 0x0A, 0x09, 0x92, 0x26, 0x89, 0x93, 0xF2, 0x2C, 0x64, 0x01, 0x01, 0x0C, 0x08, 0x46, 0x46, 0x46,
@@ -78,29 +78,29 @@ static uint8_t CertificateSigningRequestTemplate[] =
     /*0130h:*/ 0x35, 0x30, 0x33, 0x30, 0x0E, 0x06, 0x03, 0x55, 0x1D, 0x0F, 0x01, 0x01, 0xFF, 0x04, 0x04, 0x03,
     /*0140h:*/ 0x02, 0x06, 0xC0, 0x30, 0x0C, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x01, 0x01, 0xFF, 0x04, 0x02, 0x30,
     /*0150h:*/ 0x00, 0x30, 0x13, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x01, 0x09, 0x02, 0x01, 0x01,
-    /*0160h:*/ 0xFF, 0x04, 0x03, 0x0A, 0x01, 
+    /*0160h:*/ 0xFF, 0x04, 0x03, 0x0A, 0x01,
 
 #if !defined(PRODUCT_TYPE)
 #error PRODUCT_TYPE not #defined
 #endif
-                                             PRODUCT_TYPE,  /* product ID */ 
+                                             PRODUCT_TYPE,  /* product ID */
     /* END -- Certificate Request Info (to be signed)                                                          */
-    
+
     /* ecdsaWithSHA256 (1.2.840.10045.4.3.2)                                                                   */
                                                    0x30, 0x0A, 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x04,
     /*0170h:*/ 0x03, 0x02,
-     
+
     /* BEGIN -- Signature data (max 75 bytes)                                                                  */
     /* 0x03 || MM || 0x00 || 0x30 || NN || 0x02 || XX || sigX || 0x02 || YY || sigY                            */
-                           0x03, 0x49, 0x00, 
-                                             0x30, 0x46, 
+                           0x03, 0x49, 0x00,
+                                             0x30, 0x46,
     /*          Signature X ( 0x02 || XX || Sx (max 33bytes, See X.690 8.3 Encoding of an integer value)       */
                                                          0x02, 0x21,
                                                                      0x00, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
     /*0180h:*/ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
-    /*0190h:*/ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 
+    /*0190h:*/ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
     /*          Signature Y ( 0x02 || YY || Sy (max 33bytes, See X.690 8.3 Encoding of an integer value)       */
-                                                                           0x02, 0x21, 
+                                                                           0x02, 0x21,
                                                                                        0x00, 0xaa, 0xaa, 0xaa,
     /*01A0h:*/ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
     /*01B0h:*/ 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa
@@ -221,8 +221,8 @@ ae_error_t SignCSR::GetSignedTemplate(
     /*in */ EcDsaPrivKey* pPrivateKey,
     /*in */ EcDsaPubKey* pPublicKey,
     /*in */ sgx_ecc_state_handle_t csr_ecc_handle,
-    /*out*/ Ipp8u* pSignedTemplate, 
-    /*i/o*/ uint16_t* pnBytes) 
+    /*out*/ Ipp8u* pSignedTemplate,
+    /*i/o*/ uint16_t* pnBytes)
 {
     ae_error_t aeStatus = PSE_PR_INSUFFICIENT_MEMORY_ERROR;
 
@@ -252,9 +252,9 @@ ae_error_t SignCSR::GetSignedTemplate(
             aeStatus = PSE_PR_INTERNAL_ERROR;
             break;
         }
-        if (SGX_SUCCESS == sgx_ecdsa_sign(&pSignedTemplate[nOffset_CSRInfo], nSize_CSRInfo,  
-                          (sgx_ec256_private_t *)pPrivateKey, 
-                          (sgx_ec256_signature_t *)SerializedSignature, 
+        if (SGX_SUCCESS == sgx_ecdsa_sign(&pSignedTemplate[nOffset_CSRInfo], nSize_CSRInfo,
+                          (sgx_ec256_private_t *)pPrivateKey,
+                          (sgx_ec256_signature_t *)SerializedSignature,
                           csr_ecc_handle))
         {
             /* Convert the signature to big endian format */
@@ -281,7 +281,7 @@ ae_error_t SignCSR::GetSignedTemplate(
                 SigBuffer[i++] = LEN_ECDSA_SIG_COMP + 1;
                 SigBuffer[i++] = 0x00;
                 memcpy(&SigBuffer[i], &SerializedSignature[offset], LEN_ECDSA_SIG_COMP);
-                i += LEN_ECDSA_SIG_COMP;
+                i = static_cast<uint16_t>(i + LEN_ECDSA_SIG_COMP);
             }
             else
             {
@@ -296,9 +296,9 @@ ae_error_t SignCSR::GetSignedTemplate(
                     goto exit;
                 }
 
-                SigBuffer[i++] = LEN_ECDSA_SIG_COMP - j;
+                SigBuffer[i++] = static_cast<uint8_t>(LEN_ECDSA_SIG_COMP - j);
                 memcpy(&SigBuffer[i], &SerializedSignature[offset + j], LEN_ECDSA_SIG_COMP - j);
-                i += LEN_ECDSA_SIG_COMP - j;
+                i = static_cast<uint16_t>(i + LEN_ECDSA_SIG_COMP - j);
             }
         }
 
@@ -328,15 +328,15 @@ exit:
         aeStatus = PSE_PR_SIGNING_CSR_ERROR;
     }
 #if 0 //for debugging to verify signature was generated correctly
-    else 
+    else
     {
         uint8_t result;
-        // Convert the signature back to little endian, for verification API 
+        // Convert the signature back to little endian, for verification API
         SwapEndian_32B(SerializedSignature);
         SwapEndian_32B(&(SerializedSignature[32]));
 
-        if ((SGX_SUCCESS != sgx_ecdsa_verify(&pSignedTemplate[nOffset_CSRInfo], nSize_CSRInfo,  
-                          (sgx_ec256_public_t *)pPublicKey, (sgx_ec256_signature_t *)SerializedSignature, 
+        if ((SGX_SUCCESS != sgx_ecdsa_verify(&pSignedTemplate[nOffset_CSRInfo], nSize_CSRInfo,
+                          (sgx_ec256_public_t *)pPublicKey, (sgx_ec256_signature_t *)SerializedSignature,
                           &result, csr_ecc_handle)) || (result != SGX_EC_VALID ))
         {
             aeStatus = PSE_PR_SIGNING_CSR_ERROR;

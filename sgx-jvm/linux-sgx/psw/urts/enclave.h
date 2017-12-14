@@ -53,6 +53,8 @@ public:
     void* get_start_address(){ return m_start_addr;};
     void * get_symbol_address(const char * const symbol);
     sgx_enclave_id_t get_enclave_id();
+    uint32_t get_enclave_version();
+    size_t get_dynamic_tcs_list_size();
     CTrustThreadPool * get_thread_pool() { return m_thread_pool; }
     uint64_t get_size() { return m_size; };
     sgx_status_t ecall(const int proc, const void *ocall_table, void *ms);
@@ -63,8 +65,9 @@ public:
     uint32_t get_ref() { return m_ref; }
     void mark_zombie()  { m_zombie = true; }
     bool is_zombie() { return m_zombie; }
-    sgx_status_t initialize(const se_file_t& file, const sgx_enclave_id_t enclave_id, void * const start_addr, const uint64_t enclave_size, const uint32_t tcs_policy);
-    void add_thread(tcs_t * const tcs);
+    sgx_status_t initialize(const se_file_t& file, const sgx_enclave_id_t enclave_id, void * const start_addr, const uint64_t enclave_size, const uint32_t tcs_policy, const uint32_t enclave_version, const uint32_t tcs_min_pool);
+    void add_thread(tcs_t * const tcs, bool is_unallocated);
+    void add_thread(CTrustThread * const trust_thread);
     const debug_enclave_info_t* get_debug_info();
     void set_dbg_flag(bool dbg_flag) { m_dbg_flag = dbg_flag; }
     bool get_dbg_flag() { return m_dbg_flag; }
@@ -75,8 +78,10 @@ public:
     void pop_ocall_frame(CTrustThread *trust_thread);
     bool update_trust_thread_debug_flag(void*, uint8_t);
     bool update_debug_flag(uint8_t);
+    sgx_status_t fill_tcs_mini_pool();
+    sgx_status_t fill_tcs_mini_pool_fn();
 private:
-    CTrustThread * get_tcs();
+    CTrustThread * get_tcs(bool is_initialize_ecall = false);
     void put_tcs(CTrustThread *trust_thread);
     sgx_status_t error_trts2urts(unsigned int trts_error);
 
@@ -92,6 +97,11 @@ private:
     debug_enclave_info_t    m_enclave_info;
     bool                    m_dbg_flag;
     bool                    m_destroyed;
+    uint32_t                m_version;
+    sgx_ocall_table_t       *m_ocall_table;
+    pthread_t               m_pthread_tid;
+    bool                    m_pthread_is_valid;
+    se_handle_t             m_new_thread_event;
 };
 
 class CEnclavePool: private Uncopyable

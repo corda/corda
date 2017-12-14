@@ -59,10 +59,11 @@ DIR1 := $(LINUX_PSW_DIR)/urts/
 DIR2 := $(LINUX_PSW_DIR)/urts/linux/
 DIR3 := $(LINUX_PSW_DIR)/urts/parser/
 DIR4 := ../
+DIR5 := $(LINUX_PSW_DIR)/../common/src/linux
+DIR6 := $(LINUX_PSW_DIR)/../common/src
 
 LDFLAGS += -L$(COMMON_DIR)/se_wrapper \
            -L$(SIM_DIR)/uae_service_sim/linux
-
 LDFLAGS += -L$(VTUNE_DIR)/sdk/src/ittnotify/ -littnotify -ldl
 
 OBJ1 := enclave.o         \
@@ -81,15 +82,19 @@ OBJ2 := urts.o             \
         misc.o             \
         sig_handler.o      \
         debugger_support.o \
-        get_thread_id.o
+        get_thread_id.o    \
+        urts_trim.o        \
+        urts_emodpr.o
 
 OBJ3 := section.o \
         elfparser.o
 
-OBJ4 := enter_enclave.o
+OBJ4 := enter_enclave.o \
+        xsave_gnu.o
 
 OBJ5 := enclave_creator_sim.o \
-        cpusvn_util.o
+        cpusvn_util.o         \
+        crypto_evp_digest.o
 
 OBJ6 := $(SIM_DIR)/driver_api/driver_api.o \
         $(SIM_DIR)/assembly/linux/lowlib.o \
@@ -102,16 +107,16 @@ OBJ6 := $(SIM_DIR)/driver_api/driver_api.o \
 CPP_OBJ := $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ5)
 OBJ     := $(CPP_OBJ) $(OBJ4)
 
-vpath %.cpp .:$(DIR1):$(DIR2):$(DIR3):$(DIR4)
+vpath %.cpp .:$(DIR1):$(DIR2):$(DIR3):$(DIR4):$(DIR6)
+vpath %.S   .:$(DIR2):$(DIR5)
 
-LDFLAGS +=  -L$(IPP_LIBS_DIR)
-LDFLAGS += -Wl,--version-script=$(LINUX_PSW_DIR)/urts/linux/urts.lds
+LDFLAGS += $(COMMON_LDFLAGS) -Wl,--version-script=$(LINUX_PSW_DIR)/urts/linux/urts.lds
 
 LIBURTSSIM_SHARED := libsgx_urts_sim.so
 LIBURTSSIM_DEBUG := libsgx_urts_sim.so.debug
 LIBURTS_DEPLOY := libsgx_urts_deploy.so
 
-LDLIBS  += -lwrapper $(LD_IPP) -Wl,-Bdynamic -Wl,-Bsymbolic -lsgx_uae_service_sim
+LDLIBS  += -lwrapper -lcrypto -Wl,-Bdynamic -Wl,-Bsymbolic -lsgx_uae_service_sim
 SONAME = $(LIBURTSSIM_SHARED)
 
 .PHONY: all
@@ -122,16 +127,8 @@ ifndef DEBUG
 	$(CP) $(LIBURTSSIM_DEBUG) $|
 endif
 
-ifneq ($(USE_OPT_LIBS), 0)
 $(LIBURTSSIM_SHARED): simasm uinst driver_api wrapper uae_service_sim $(OBJ) $(OBJ6) ittnotify
 	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$(SONAME) $(OBJ) $(OBJ6) $(LDFLAGS) $(LDLIBS) -o $@
-else
--lcrypto_px:
-	$(MAKE) -C $(IPP_LIBS_DIR)
-
-$(LIBURTSSIM_SHARED): simasm uinst driver_api wrapper uae_service_sim $(OBJ) $(OBJ6) -lcrypto_px ittnotify
-	$(CXX) $(CXXFLAGS) -shared -Wl,-soname=$(SONAME) $(OBJ) $(OBJ6) $(LDFLAGS) $(LDLIBS) -o $@
-endif
 
 $(LIBURTSSIM_DEBUG): $(LIBURTSSIM_SHARED)
 ifndef DEBUG
@@ -144,7 +141,7 @@ endif
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
-$(OBJ4): %.o: $(DIR2)/%.S
+$(OBJ4): %.o: %.S
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 $(CPP_OBJ): %.o: %.cpp
@@ -186,7 +183,4 @@ clean::
 	$(MAKE) -C $(SIM_DIR)/assembly/                                        clean
 	$(MAKE) -C $(SIM_DIR)/uinst/                                           clean
 	$(MAKE) -C $(SIM_DIR)/uae_service_sim/linux                            clean
-ifeq ($(USE_OPT_LIBS), 0)
-	$(MAKE) -C $(IPP_LIBS_DIR)                                              clean
-endif
 	$(MAKE) -C $(VTUNE_DIR)/sdk/src/ittnotify/                             clean

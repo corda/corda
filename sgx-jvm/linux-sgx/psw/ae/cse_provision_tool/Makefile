@@ -32,10 +32,12 @@
 TOP_DIR  = ../../..
 include $(TOP_DIR)/buildenv.mk
 
+CXXFLAGS += -fpie -pie
+
 all: cse_provision_tool
 
 cse_provision_tool: cse_provision_tool.o
-	$(CXX) $(CXXFLAGS) -o $@ $< -ldl
+	$(CXX) $(CXXFLAGS) -o $@ $< -ldl $(COMMON_LDFLAGS)
 
 %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@

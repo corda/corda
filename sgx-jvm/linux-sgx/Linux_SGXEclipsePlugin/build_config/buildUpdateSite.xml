@@ -1,4 +1,4 @@
-﻿<project name="update site">
+<project name="update site">
   <!-- ========================================================================= -->
   <!-- Extracts feature zip for update site                                      -->
   <!-- expected properties:                                                      -->

@@ -85,6 +85,9 @@
 #define SE_EGETKEY    1
 #define SE_EENTER     2
 #define SE_EEXIT      4
+#define SE_EACCEPT    5
+#define SE_EMODPE     6
+
 
 #define SE_ECREATE    0
 #define SE_EADD       1

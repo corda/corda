@@ -97,6 +97,7 @@ pve_status_t get_ppid(ppid_t* ppid)
     uint8_t content[16];
     memset(&content, 0, sizeof(content));
     
+
     //generate the mac as PPID
     se_static_assert(sizeof(sgx_cmac_128bit_key_t) == sizeof(sgx_key_128bit_t)); /*size of sgx_cmac_128bit_key_t and sgx_key_128bit_t should be same*/
     se_static_assert(sizeof(sgx_cmac_128bit_tag_t) == sizeof(ppid_t)); /*size of sgx_cmac_128bit_tag_t and ppit_t should be same*/

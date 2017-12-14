@@ -33,8 +33,7 @@ include ../../buildenv.mk
 
 CFLAGS   += $(ENCLAVE_CFLAGS)
 ASFLAGS  := $(CFLAGS)
-CFLAGS   += -std=c99
-CXXFLAGS += $(ENCLAVE_CXXFLAGS) -fno-exceptions -fno-rtti -D_TLIBC_USE_INTEL_FAST_STRING_
+CXXFLAGS += $(ENCLAVE_CXXFLAGS) -fno-exceptions -fno-rtti -Werror
 
 CPPFLAGS += -I.                                \
             -I$(COMMON_DIR)/inc                \
@@ -54,8 +53,7 @@ LIBLONGJMP_OBJS += $(LIBLONGJMP_CPP_SRCS:.cpp=.o)
 LIBLONGJMP_NAME    := libsgx_tsetjmp.a
 
 .PHONY: all
-all: $(LIBLONGJMP_NAME) | $(BUILD_DIR)
-	$(CP) $(LIBLONGJMP_NAME) $|
+all: $(LIBLONGJMP_NAME)
 
 $(LIBLONGJMP_NAME): $(LIBLONGJMP_OBJS)
 	$(AR) rcs $@ $^
@@ -66,9 +64,13 @@ $(LIBLONGJMP_NAME): $(LIBLONGJMP_OBJS)
 %.o: %.S
 	$(CC)  $(ASFLAGS)  $(CPPFLAGS) -c $< -o $@
 
-$(BUILD_DIR):
-	@$(MKDIR) $@
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBLONGJMP_NAME) $(LIBLONGJMP_OBJS) $(BUILD_DIR)/$(LIBLONGJMP_NAME)
+	@$(RM) $(LIBLONGJMP_NAME) $(LIBLONGJMP_OBJS)
+
+
+.PHONY: rebuild
+rebuild:
+	$(MAKE) clean
+	$(MAKE) all

@@ -45,6 +45,27 @@
 #include <assert.h>
 #include <time.h>
 
+#include <openssl/evp.h>
+#include <openssl/err.h>
+
+
+__attribute__((constructor))
+static void init_openssl(void)
+{
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+}
+
+__attribute__((destructor))
+static void cleanup_openssl(void)
+{
+    EVP_cleanup();
+    CRYPTO_cleanup_all_ex_data();
+    ERR_remove_thread_state(NULL);
+    ERR_free_strings();
+}
+
+
 EnclaveCreator* g_enclave_creator = new EnclaveCreatorSim();
 
 int EnclaveCreatorSim::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id, void **start_addr, bool ae)
@@ -214,7 +235,7 @@ int EnclaveCreatorSim::initialize(sgx_enclave_id_t enclave_id)
 
 
     //Since CPUID instruction is NOT supported within enclave, we emuerate the cpu features here and send to tRTS.
-    cpu_sdk_info_t info;
+    system_features_t info;
     info.cpu_features = 0;
     get_cpu_features(&info.cpu_features);
     info.version = SDK_VERSION_1_5;
@@ -237,8 +258,59 @@ bool EnclaveCreatorSim::use_se_hw() const
     return false;
 }
 
-bool EnclaveCreatorSim::get_plat_cap(sgx_misc_attribute_t *se_attr) 
+bool EnclaveCreatorSim::is_EDMM_supported(sgx_enclave_id_t enclave_id)
+{
+    UNUSED(enclave_id);
+    return false;
+}
+
+bool EnclaveCreatorSim::is_driver_compatible()
+{
+    return true;
+}
+
+bool EnclaveCreatorSim::get_plat_cap(sgx_misc_attribute_t *se_attr)
 {
     UNUSED(se_attr);
     return false;
+}
+
+int EnclaveCreatorSim::emodpr(uint64_t addr, uint64_t size, uint64_t flag)
+{
+    UNUSED(addr);
+    UNUSED(size);
+    UNUSED(flag);
+
+    return SGX_SUCCESS;
+}
+
+int EnclaveCreatorSim::mktcs(uint64_t tcs_addr)
+{
+    UNUSED(tcs_addr);
+
+    return SGX_SUCCESS;
+}
+
+int EnclaveCreatorSim::trim_range(uint64_t fromaddr, uint64_t toaddr)
+{
+    UNUSED(fromaddr);
+    UNUSED(toaddr);
+
+    return SGX_SUCCESS;
+
+}
+
+int EnclaveCreatorSim::trim_accept(uint64_t addr)
+{
+    UNUSED(addr);
+
+    return SGX_SUCCESS;
+}
+
+int EnclaveCreatorSim::remove_range(uint64_t fromaddr, uint64_t numpages)
+{
+    UNUSED(fromaddr);
+    UNUSED(numpages);
+
+    return SGX_SUCCESS;
 }

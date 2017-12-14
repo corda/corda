@@ -68,7 +68,9 @@ public:
     uint64_t get_symbol_rva(const char* name) const;
 
     bool get_reloc_bitmap(vector<uint8_t> &bitmap);
-    bool update_global_data(const create_param_t* const create_param,
+    uint32_t get_global_data_size();
+    bool update_global_data(const metadata_t *const metadata,
+                            const create_param_t* const create_param,
                             uint8_t *data,
                             uint32_t *data_size);
 

@@ -22,6 +22,10 @@
 #include "epid/common/errors.h"
 #include "epid/common/bitsupplier.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 /*!
  * \file
  * \brief Intel(R) EPID SDK member API.
@@ -479,4 +483,9 @@ EpidStatus EpidDecompressPrivKey(GroupPubKey const* pub_key,
                                  PrivKey* priv_key);
 
 /*! @} */
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif  // EPID_MEMBER_API_H_

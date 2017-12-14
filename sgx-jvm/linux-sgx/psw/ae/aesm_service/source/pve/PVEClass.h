@@ -100,7 +100,7 @@ public:
         char server_url[MAX_PATH],
         uint16_t& ttl,
         const uint8_t xid[XID_SIZE],
-        uint8_t rsa_signature[PVE_RSA_KEY_BYTES],
+        uint8_t rsa_signature[RSA_3072_KEY_BYTES],
         signed_pek_t& pek);
 };
 #endif

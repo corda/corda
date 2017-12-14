@@ -1,0 +1,28 @@
+<EnclaveConfiguration>
+  <ProdID>0</ProdID>
+  <ISVSVN>0</ISVSVN>
+
+  <!-- If TCSMaxNum == TCSNum == TCSMinPool, there is no dynamic thread -->
+  <!-- If TCSMaxNum is omitted, it defaults to TCSNum -->
+  <!-- According to this setting, there are 10 static threads available -->
+  <TCSMaxNum>10</TCSMaxNum>
+  <TCSNum>10</TCSNum>
+  <TCSMinPool>10</TCSMinPool>
+
+  <TCSPolicy>1</TCSPolicy>
+
+  <!-- Since there's no dynamic thread, only StackMaxSize is relevant here -->
+  <StackMaxSize>0x40000</StackMaxSize>
+
+  <!-- When there's no gap between HeapMinSize and HeapInitSize, or between
+       HeapInitSize and HeapMaxSize, no dynamic heap expansion will occur. -->
+  <!-- In this case, the total available heap is 1 MB-->
+  <HeapMaxSize>0x100000</HeapMaxSize>
+  <HeapInitSize>0x100000</HeapInitSize>
+  <HeapMinSize>0x100000</HeapMinSize>
+
+  <!-- Recommend changing 'DisableDebug' to 1 to make the enclave undebuggable for enclave release -->
+  <DisableDebug>0</DisableDebug>
+  <MiscSelect>0</MiscSelect>
+  <MiscMask>0xFFFFFFFF</MiscMask>
+</EnclaveConfiguration>

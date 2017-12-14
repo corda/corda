@@ -31,7 +31,7 @@
 
 enclave {
     untrusted {
-        [cdecl] void sgx_oc_cpuidex([in, out] int cpuinfo[4], int leaf, int subleaf);
+        [cdecl] void sgx_oc_cpuidex([out] int cpuinfo[4], int leaf, int subleaf);
         
         /* Go outside and wait on my untrusted event */
         [cdecl] int sgx_thread_wait_untrusted_event_ocall([user_check] const void *self);

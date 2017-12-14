@@ -30,10 +30,10 @@
  */
 
 
-#include "ae_ipp.h"
 #include "se_memcpy.h"
 #include "util.h"
 #include "uae_service_internal.h"
+#include "crypto_wrapper.h"
 
 /* This hard code depends on enclaveSinger private key of PvE, an Intel Generic
 Enclave Signing Key currently:
@@ -120,15 +120,18 @@ static sgx_status_t get_launch_token_internal(
     }
     p_token->attributes_le.flags = SGX_FLAGS_INITTED;
     p_token->attributes_le.xfrm = SGX_XFRM_LEGACY;
-
-    IppStatus ipp_ret = ippsHashMessage((const Ipp8u *)&(p_signature->key.modulus),
-        sizeof(p_signature->key.modulus),
-        (Ipp8u *)&(p_token->body.mr_signer), IPP_ALG_HASH_SHA256);
-    if(ipp_ret != ippStsNoErr){
+   
+    unsigned int signer_len = sizeof(p_token->body.mr_signer);
+    sgx_status_t ret = sgx_EVP_Digest(EVP_sha256(), (const uint8_t *)&(p_signature->key.modulus), 
+                sizeof(p_signature->key.modulus), 
+                (uint8_t *)&(p_token->body.mr_signer), 
+                &signer_len);
+    if(ret != SGX_SUCCESS && ret != SGX_ERROR_OUT_OF_MEMORY)
+    {
         return SGX_ERROR_UNEXPECTED;
     }
 
-    return SGX_SUCCESS;
+    return ret;
 }
 
 sgx_status_t get_launch_token(

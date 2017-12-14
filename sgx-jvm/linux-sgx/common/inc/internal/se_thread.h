@@ -42,7 +42,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <pthread.h>
-typedef pthread_mutex_t	se_mutex_t;
+typedef pthread_mutex_t se_mutex_t;
+typedef pthread_cond_t se_cond_t;
 typedef pid_t se_thread_id_t;
 typedef pthread_key_t se_tls_index_t;
 
@@ -57,6 +58,12 @@ void se_mutex_init(se_mutex_t* mutex);
 int se_mutex_lock(se_mutex_t* mutex);
 int se_mutex_unlock(se_mutex_t* mutex);
 int se_mutex_destroy(se_mutex_t* mutex);
+
+void se_thread_cond_init(se_cond_t* cond);
+int se_thread_cond_wait(se_cond_t *cond, se_mutex_t *mutex);
+int se_thread_cond_signal(se_cond_t *cond);
+int se_thread_cond_broadcast(se_cond_t *cond);
+int se_thread_cond_destroy(se_cond_t* cond);
 
 unsigned int se_get_threadid(void);
 

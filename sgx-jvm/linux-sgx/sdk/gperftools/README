@@ -19,12 +19,11 @@ Do the following to enable tcmalloc in Intel(R) SGX:
 
 3. Set the enclave HeapMaxSize equal or larger than 0x900000 in Enclave.config.xml. For example:
    <HeapMaxSize>0x900000</HeapMaxSize>
-
-Intel(R) SGX includes two C++ libs - C++ 11 and C++ stlport.
-Intel(R) SGX tcmalloc build uses one of the C++ libs and can be configured by editing "./gperftools-2.5/autogen-linux.sh".
-1. Build with C++ 11:
+   
+Intel(R) SGX SDK includes a C++ library based on STLPort (sgx_tstdcxx) and a modern one based on libcxx (sgx_tcxx).
+By default, the trusted TCMalloc library uses sgx_tcxx. However, you may change that by editing "./gperftools-2.5/autogen-linux.sh".
+From:
    CPPFLAGS="-I../../../common/inc -I../../../common/inc/tlibc -I../../../common/inc/internal/ -I../../../sdk/tlibcxx/include -I../../../sdk/trts/"
-2. Build with C++ stlport:
+To:
    CPPFLAGS="-I../../../common/inc -I../../../common/inc/tlibc -I../../../common/inc/internal/ -I../../../sdk/tlibstdcxx/stlport -I../../../sdk/trts/"
-
-   NOTE: The target Enclave project's link C++ lib must the same as Intel(R) SGX tcmalloc build C++ lib. Otherwise, the target enclave build will fail.
+Note that if your enclave links with sgx_tcmalloc, you must use the same C++ library you choose to build tcmalloc with. Otherwise, the target enclave build will fail.

@@ -158,6 +158,10 @@ typedef uint64_t si_flags_t;
 #define SI_FLAG_SECS                (0x00<<SI_FLAG_PT_LOW_BIT)      /* SECS */
 #define SI_FLAG_TCS                 (0x01<<SI_FLAG_PT_LOW_BIT)      /* TCS */
 #define SI_FLAG_REG                 (0x02<<SI_FLAG_PT_LOW_BIT)      /* Regular Page */
+#define SI_FLAG_TRIM                (0x04<<SI_FLAG_PT_LOW_BIT)      /* Trim Page */
+#define SI_FLAG_PENDING             0x8
+#define SI_FLAG_MODIFIED            0x10
+#define SI_FLAG_PR                  0x20
 
 #define SI_FLAGS_EXTERNAL           (SI_FLAG_PT_MASK | SI_FLAG_R | SI_FLAG_W | SI_FLAG_X)   /* Flags visible/usable by instructions */
 #define SI_FLAGS_R                  (SI_FLAG_R|SI_FLAG_REG)
@@ -189,6 +193,7 @@ typedef struct _page_info_t
 ****************************************************************************/
 #define SE_KEY_SIZE         384         /* in bytes */
 #define SE_EXPONENT_SIZE    4           /* RSA public key exponent size in bytes */
+
 
 typedef struct _css_header_t {        /* 128 bytes */
     uint8_t  header[12];                /* (0) must be (06000000E100000000000100H) */

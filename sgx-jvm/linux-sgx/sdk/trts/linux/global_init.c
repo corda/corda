@@ -32,12 +32,36 @@
 
 #include "internal/global_init.h"
 #include "linux/elf_parser.h"
+#include "sgx_spinlock.h"
 #include "global_data.h"
 #include "internal/util.h"
 #include "thread_data.h"
 #include "sgx_trts.h"
 #include <assert.h>
 #include <stdlib.h>
+
+typedef void (*cxa_function_t)(void *para);
+
+typedef struct _exit_function_t
+{
+    struct
+    {
+        uintptr_t fun;
+        uintptr_t para;
+        void *dso_handle;
+    } cxa;
+
+    struct _exit_function_t *next;
+} exit_function_t;
+
+static exit_function_t *g_exit_function = NULL;
+static sgx_spinlock_t g_exit_function_lock = SGX_SPINLOCK_INITIALIZER;
+
+static uintptr_t g_exit_function_cookie = 0;
+#define ENC_CXA_FUNC_POINTER(x)  (uintptr_t)(x) ^ g_exit_function_cookie
+#define DEC_CXA_FUNC_POINTER(x)  (cxa_function_t)((x) ^ g_exit_function_cookie)
+#define ENC_CXA_PARA_POINTER(x)  (uintptr_t)(x) ^ g_exit_function_cookie
+#define DEC_CXA_PARA_POINTER(x)  (void *)((x) ^ g_exit_function_cookie)
 
 typedef void (*fp_t)(void);
 
@@ -46,11 +70,71 @@ void *__dso_handle __attribute__((weak)) = &(__dso_handle);
 
 int __cxa_atexit(void (*fun)(void *), void *para, void *dso)
 {
-    (void)(fun);
-    (void)(para);
-    (void)(dso);
+    if(unlikely(g_exit_function_cookie == 0))
+    {
+        uintptr_t rand = 0;
+        do
+        {
+            if(SGX_SUCCESS != sgx_read_rand((unsigned char *)&rand, sizeof(rand)))
+            {
+                return -1;
+            }
+        } while(rand == 0);
+
+        sgx_spin_lock(&g_exit_function_lock);
+        if(g_exit_function_cookie == 0)
+        {
+            g_exit_function_cookie = rand;
+        }
+
+        sgx_spin_unlock(&g_exit_function_lock);
+    }
+
+    if(!sgx_is_within_enclave(fun, 0))
+    {
+        return -1;
+    }
+
+    exit_function_t *exit_function = (exit_function_t *)malloc(sizeof(exit_function_t));
+    if(!exit_function)
+    {
+        return -1;
+    }
+
+    exit_function->cxa.fun = ENC_CXA_FUNC_POINTER(fun);
+    exit_function->cxa.para = ENC_CXA_PARA_POINTER(para);
+    exit_function->cxa.dso_handle = dso;
+
+    sgx_spin_lock(&g_exit_function_lock);
+    exit_function->next = g_exit_function;
+    g_exit_function = exit_function;
+    sgx_spin_unlock(&g_exit_function_lock);
 
     return 0;
+}
+
+int atexit(void (*fun)(void))
+{
+    return __cxa_atexit((void (*)(void *))fun, NULL, __dso_handle);
+}
+
+static void do_atexit_aux(void)
+{
+    sgx_spin_lock(&g_exit_function_lock);
+    exit_function_t *exit_function = g_exit_function;
+    g_exit_function = NULL;
+    sgx_spin_unlock(&g_exit_function_lock);
+
+    while (exit_function != NULL)
+    {
+        cxa_function_t cxa_func = DEC_CXA_FUNC_POINTER(exit_function->cxa.fun);
+        void *para = DEC_CXA_PARA_POINTER(exit_function->cxa.para);
+        cxa_func(para);
+
+        exit_function_t *tmp = exit_function;
+        exit_function = exit_function->next;
+        free(tmp);
+    }
 }
 
 /* auxiliary routines */
@@ -76,8 +160,37 @@ static void do_ctors_aux(void)
     }
 }
 
+/* auxiliary routines */
+static void do_dtors_aux(void)
+{
+    fp_t *p = NULL;
+    uintptr_t uninit_array_addr;
+    size_t uninit_array_size;
+    const void *enclave_start = (const void*)&__ImageBase;
+
+    elf_get_uninit_array(enclave_start, &uninit_array_addr, &uninit_array_size);
+
+    if (uninit_array_addr == 0 || uninit_array_size == 0)
+        return;
+
+    fp_t *fp_start = (fp_t*)(uninit_array_addr + (uintptr_t)(enclave_start));
+    fp_t *fp_end = fp_start + (uninit_array_size / sizeof(fp_t));
+
+    /* traverse .fini_array in reverse order */
+    for (p = fp_end - 1; p >= fp_start; p--)
+    {
+        (*p)();
+    }
+}
+
 void init_global_object(void)
 {
     do_ctors_aux();
+}
+
+void uninit_global_object(void)
+{
+    do_atexit_aux();
+    do_dtors_aux();
 }
 

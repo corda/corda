@@ -50,7 +50,10 @@ OBJS1 := init_enclave.o  \
         trts_veh.o       \
         trts_xsave.o     \
         init_optimized_lib.o \
-        trts_version.o
+        trts_version.o \
+        trts_trim.o \
+        trts_emodpr.o  \
+        trts_add_trim.o
 
 OBJS2 := trts_nsp.o
 

@@ -46,7 +46,9 @@ endif
 LDLIBS += -ldl
 
 ifdef DEBUG
-    CFLAGS += -g -DSE_DEBUG=1
+    CFLAGS += -g -DSE_DEBUG=1 -ffunction-sections -fdata-sections
+else
+    CFLAGS += -O2 -D_FORTIFY_SOURCE=2 -ffunction-sections -fdata-sections
 endif
 
 OBJ1 := se_memory.o se_trace.o
@@ -74,7 +76,7 @@ install: $(TARGET) | $(GDB_OUT_DIR) $(GDB_PLUGINS_FILES)
 	$(CP) $(TARGET) $(BUILD_DIR)
 
 $(TARGET): $(OBJS)
-	$(CC) -shared -o $@ $^ $(LDLIBS) $(CFLAGS) -Wl,--gc-sections
+	$(CC) -shared -o $@ $^ $(LDLIBS) $(CFLAGS) $(COMMON_LDFLAGS) -Wl,--gc-sections
 
 $(OBJ1): %.o: $(COMMON_DIR)/src/%.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@

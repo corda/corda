@@ -93,8 +93,8 @@ typedef struct _thread_data_t
     sys_word_t  first_ssa_gpr;      /* set by urts, relative to TCS */
     sys_word_t  stack_guard;        /* GCC expects start_guard at 0x14 on x86 and 0x28 on x64 */
 
-    sys_word_t reserved;
-    sys_word_t  ssa_frame_size;     /* set by urts, in pages (se_ptrace.c needs to know its offset). */
+    sys_word_t  reserved;
+    sys_word_t  xsave_size;         /* in bytes (se_ptrace.c needs to know its offset).*/
     sys_word_t  last_error;         /* init to be 0. Used by trts. */
 
 #ifdef TD_SUPPORT_MULTI_PLATFORM
@@ -110,6 +110,7 @@ typedef struct _thread_data_t
     intptr_t    exception_flag;
 #endif
     sys_word_t  cxx_thread_info[6];
+    sys_word_t  stack_commit_addr;
 } thread_data_t;
 
 #ifdef __cplusplus

@@ -1,0 +1,27 @@
+<EnclaveConfiguration>
+  <ProdID>0</ProdID>
+  <ISVSVN>0</ISVSVN>
+
+  <!--In this case, there will be 3 static threads available and up to 7 threads
+      can be created dynamically as necessary.
+  -->
+  <TCSNum>10</TCSNum>
+  <TCSMinPool>3</TCSMinPool>
+  <TCSPolicy>1</TCSPolicy>
+
+  <!-- For a static thread, total stack available is 0x40000 bytes. -->
+  <!-- For a dynamic thread, once it is created, total stack available is
+       0x40000 bytes and no stack expansion will occur.
+  -->
+  <StackMaxSize>0x40000</StackMaxSize>
+  <StackMinSize>0x40000</StackMinSize>
+
+  <!-- HeapMinSize is omitted, defaults to 0x1000 -->
+  <!-- HeapInitSize is omitted, defaults to HeapMaxSize -->
+  <HeapMaxSize>0x100000</HeapMaxSize>
+
+  <!-- Recommend changing 'DisableDebug' to 1 to make the enclave undebuggable for enclave release -->
+  <DisableDebug>0</DisableDebug>
+  <MiscSelect>0</MiscSelect>
+  <MiscMask>0xFFFFFFFF</MiscMask>
+</EnclaveConfiguration>

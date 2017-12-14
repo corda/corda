@@ -4858,7 +4858,7 @@ CXXDEPMODE=depmode=$am_cv_CXX_dependencies_compiler_type
 
  if
   test "x$enable_dependency_tracking" != xno \
-  && test "$am_cv_CXX_dependencies_compiler_type" = gcc3; then
+  && (test "$am_cv_CXX_dependencies_compiler_type" = gcc3 || test "$am_cv_CXX_dependencies_compiler_type" = clang); then
   am__fastdepCXX_TRUE=
   am__fastdepCXX_FALSE='#'
 else

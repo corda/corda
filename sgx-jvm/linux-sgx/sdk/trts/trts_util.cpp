@@ -44,13 +44,74 @@ void * get_heap_base(void)
 
 size_t get_heap_size(void)
 {
-    return g_global_data.heap_size;
+    size_t heap_size = g_global_data.heap_size;
+    if (EDMM_supported)
+    {
+        for(uint32_t i = 0; i < g_global_data.layout_entry_num; i++)
+        {
+            if(g_global_data.layout_table[i].entry.id == LAYOUT_ID_HEAP_MAX)
+            {
+                heap_size += ((size_t)g_global_data.layout_table[i].entry.page_count << SE_PAGE_SHIFT);
+            }
+        }
+    }
+    return heap_size;
+}
+
+size_t get_heap_min_size(void)
+{
+    size_t heap_size = 0;
+    for(uint32_t i = 0; i < g_global_data.layout_entry_num; i++)
+    {
+        if(g_global_data.layout_table[i].entry.id == LAYOUT_ID_HEAP_MIN)
+        {
+            heap_size = ((size_t)g_global_data.layout_table[i].entry.page_count << SE_PAGE_SHIFT);
+            break;
+        }
+    }
+    return heap_size;
 }
 
 int * get_errno_addr(void)
 {
     thread_data_t *thread_data = get_thread_data();
     return reinterpret_cast<int *>(&thread_data->last_error);
+}
+
+//tRTS will receive a pointer to an array of uint64_t which indicates the
+//features of the running system. This function can be used to query whether
+//a certain feature (such as EDMM) is supported.
+//It takes as input the pointer to the array and the feature bit location.
+//The feature array coming from uRTS should be dealt with in the following way:
+//Every bit except the MSb in each uint64 represents a certain feature.
+//The MSb of each uint64_t, if set, indicates this is the last uint64_t to
+//search for the feature's existance.
+//For example, if we have two uint64_t elements in the array:
+//array[0]: xxxxxxxxxxxxxxxx array[1] Xxxxxxxxxxxxxxxx
+//MSb of array[1] should already be set to one by uRTS. Shown by capital 'X' here.
+//Features listed in array[0], counting from right-most bit  to left-most bit,
+//have feature shift values 0 ~ 62, while features listed in array[1], have feature
+//shift values 64 ~ 126.
+
+int feature_supported(const uint64_t *feature_set, uint32_t feature_shift)
+{
+    const uint64_t *f_set = feature_set;
+    uint32_t bit_position = 0, i = 0;
+
+    if (!f_set)
+        return 0;
+
+    while (((i+1) << 6) <= feature_shift)
+    {
+        if (f_set[i] & (0x1ULL << 63))
+            return 0;
+        i++;
+    }
+    bit_position = feature_shift - (i << 6);
+    if (f_set[i] & (0x1ULL << bit_position))
+        return 1;
+    else
+        return 0;
 }
 
 bool is_stack_addr(void *address, size_t size)
@@ -67,5 +128,4 @@ bool is_valid_sp(uintptr_t sp)
     return ( !(sp & (sizeof(uintptr_t) - 1))   // sp is expected to be 4/8 bytes aligned
            && is_stack_addr((void*)sp, 0) );   // sp points to the top/bottom of stack are accepted
 }
-
 

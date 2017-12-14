@@ -36,7 +36,6 @@
 #include "sgx_edger8r.h"
 #include "rts.h"
 #include "util.h"
-#include "xsave.h"
 #include "trts_internal.h"
 
 extern "C" sgx_status_t asm_oret(uintptr_t sp, void *ms);
@@ -61,22 +60,18 @@ sgx_status_t sgx_ocall(const unsigned int index, void *ms)
         return SGX_ERROR_OCALL_NOT_ALLOWED;
     }
     // the OCALL index should be within the ocall table range
-    if(static_cast<size_t>(index) >= g_dyn_entry_table.nr_ocall)
+    // -2, -3 and -4 should be allowed to test SDK 2.0 features
+    if((index != 0) &&
+            (index != (unsigned int)EDMM_TRIM) &&
+            (index != (unsigned int)EDMM_TRIM_COMMIT) &&
+            (index != (unsigned int)EDMM_MODPR) &&
+            static_cast<size_t>(index) >= g_dyn_entry_table.nr_ocall)
     {
         return SGX_ERROR_INVALID_FUNCTION;
     }
-    // save and clean extended feature registers
-    uint8_t buffer[FXSAVE_SIZE] = {0};
-    save_and_clean_xfeature_regs(buffer);
 
     // do sgx_ocall
     sgx_status_t status = do_ocall(index, ms);
-
-    // restore extended feature registers
-    restore_xfeature_regs(buffer);
-
-    // clear buffer to avoid secret leaking
-    memset_s(buffer, FXSAVE_SIZE, 0, FXSAVE_SIZE);
 
     return status;
 }

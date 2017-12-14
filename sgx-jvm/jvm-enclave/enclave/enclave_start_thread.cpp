@@ -35,7 +35,11 @@ thread_data_t *start_thread(void (*routine)(void *), void *param) {
         aex_assert(new_thread_map.find(nonce) == new_thread_map.end());
         new_thread_map[nonce] = thread_init_data;
     }
-    request_new_thread(nonce);
+
+    // TODO use MRENCLAVE instead of enclave_id (this is currently not used)
+    uint64_t enclave_id = 0L;
+
+    request_new_thread(enclave_id, nonce);
     sgx_thread_cond_wait(&thread_started, &thread_started_mutex);
     sgx_thread_mutex_guard started_thread_data_map_guard(&started_thread_data_map_mutex);
     auto thread_data_iter = started_thread_data_map.find(nonce);

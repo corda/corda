@@ -41,8 +41,8 @@
   TLV_CIPHER_TEXT(SK, PSID): E+MAC(CIPHER_TLV:PLATFORM_INFO_TLV[:FLAG_TLV])*/
 inline uint32_t estimate_msg1_size(bool performance_rekey)
 {
-    size_t field0_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
-    size_t field1_0_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
+    size_t field0_size = CIPHER_TEXT_TLV_SIZE(RSA_3072_KEY_BYTES);
+    size_t field1_0_size = CIPHER_TEXT_TLV_SIZE(RSA_3072_KEY_BYTES);
     size_t field1_1_size = PLATFORM_INFO_TLV_SIZE();
     size_t field1_2_size = performance_rekey? FLAGS_TLV_SIZE():0;
     size_t field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field1_0_size+field1_1_size+field1_2_size);
@@ -58,7 +58,7 @@ inline uint32_t calc_msg3_size_by_sigrl_count(uint32_t sigrl_count)
     size_t field1_0_size = BLOCK_CIPHER_TEXT_TLV_SIZE(EPID_JOIN_PROOF_TLV_SIZE());
     size_t field1_1_size = MAC_TLV_SIZE(MAC_SIZE);
     size_t field1_2_size = NONCE_TLV_SIZE(NONCE_2_SIZE);
-    size_t field1_3_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
+    size_t field1_3_size = CIPHER_TEXT_TLV_SIZE(RSA_3072_KEY_BYTES);
     size_t field1_4_size = SE_REPORT_TLV_SIZE();
     size_t field3_0_size = EPID_SIGNATURE_TLV_SIZE(sigrl_count);
     size_t field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field1_0_size+field1_1_size+field1_2_size+field1_3_size+field1_4_size);

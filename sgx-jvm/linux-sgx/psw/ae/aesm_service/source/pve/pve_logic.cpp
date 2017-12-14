@@ -250,8 +250,9 @@ aesm_error_t PvEAESMLogic::pve_error_postprocess(ae_error_t ae_error)
     case PVE_EPIDBLOB_ERROR:
         return AESM_EPIDBLOB_ERROR;
     case AE_ENCLAVE_LOST:
-    case AE_SERVER_NOT_AVAILABLE:
         return AESM_NO_DEVICE_ERROR;
+    case AE_SERVER_NOT_AVAILABLE:
+        return AESM_SERVICE_UNAVAILABLE;
     case PVE_INTEGRITY_CHECK_ERROR:
     {
         AESM_LOG_FATAL("%s", g_event_string_table[SGX_EVENT_EPID_PROV_INTEGRITY_ERROR]);

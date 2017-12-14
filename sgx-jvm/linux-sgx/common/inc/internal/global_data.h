@@ -41,15 +41,21 @@
 
 #include "se_types.h"
 #include "thread_data.h"
+#include "metadata.h"
+#include "rts.h"
 
+#define LAYOUT_ENTRY_NUM 38
 typedef struct _global_data_t
 {
     sys_word_t     enclave_size;
     sys_word_t     heap_offset;
     sys_word_t     heap_size;
-    uint32_t       thread_policy;
-    uint32_t       reserved;
+    sys_word_t     thread_policy;
     thread_data_t  td_template;
+    uint8_t        tcs_template[TCS_TEMPLATE_SIZE];
+    uint32_t       layout_entry_num;
+    uint32_t       reserved;
+    layout_t       layout_table[LAYOUT_ENTRY_NUM];
 } global_data_t;
 
 #define ENCLAVE_INIT_NOT_STARTED  0
@@ -62,7 +68,11 @@ extern "C" {
 #endif
 extern SE_DECLSPEC_EXPORT global_data_t const volatile g_global_data;
 extern uint32_t g_enclave_state;
+extern sdk_version_t g_sdk_version;
+extern int EDMM_supported;
 extern uint8_t  __ImageBase;
+extern int g_xsave_enabled;
+
 
 #ifdef __cplusplus
 }

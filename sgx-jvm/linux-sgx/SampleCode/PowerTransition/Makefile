@@ -90,7 +90,7 @@ else
         App_Compile_CFlags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-App_Compile_CXXFlags := -std=c++0x $(App_Compile_CFlags)
+App_Compile_CXXFlags := -std=c++11 $(App_Compile_CFlags)
 App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread
 
 ifneq ($(SGX_MODE), HW)

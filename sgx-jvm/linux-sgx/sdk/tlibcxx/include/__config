@@ -418,15 +418,7 @@ typedef __char32_t char32_t;
 #elif defined(__ANDROID__)
 #define _LIBCPP_HAS_QUICK_EXIT
 #elif defined(__linux__)
-#if !defined(_LIBCPP_HAS_MUSL_LIBC)
-# include <features.h>
-#if __GLIBC_PREREQ(2, 15)
-#define _LIBCPP_HAS_QUICK_EXIT
-#endif
-#if __GLIBC_PREREQ(2, 17)
-#define _LIBCPP_HAS_C11_FEATURES
-#endif
-#else // defined(_LIBCPP_HAS_MUSL_LIBC)
+#if defined(_LIBCPP_HAS_MUSL_LIBC)
 #define _LIBCPP_HAS_QUICK_EXIT
 #define _LIBCPP_HAS_C11_FEATURES
 #endif
@@ -463,6 +455,8 @@ namespace std {
 #if !defined(_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK) && __has_attribute(no_sanitize)
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
+
+#include <__sgx>
 
 #elif defined(__GNUC__)
 

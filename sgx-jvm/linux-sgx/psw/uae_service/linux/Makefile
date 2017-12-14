@@ -51,25 +51,13 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/common \
            -I$(LINUX_PSW_DIR)/ae/inc/internal    \
            -I$(LINUX_SDK_DIR)/tseal
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid     \
+INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid-sdk-3.0.0    \
            -I$(IPC_COMMON_INC_DIR) \
            -I$(UAE_INC_DIR) \
            -I$(IPC_COMMON_PROTO_DIR) \
            -I$(LINUX_PSW_DIR)/ae/aesm_service/source
 
 CXXFLAGS += -fPIC -Werror -g -DPROTOBUF_INLINE_NOT_IN_HEADERS=0
-PROTPBUF_CXXFLAGS := -fstack-protector -fPIC -Wall -Werror
-ifdef DEBUG
-	PROTPBUF_CXXFLAGS += -ggdb -DDEBUG -UNDEBUG
-else
-	PROTPBUF_CXXFLAGS += -O2 -UDEBUG -DNDEBUG
-endif
-ifeq ($(ARCH), x86)
-	PROTPBUF_CXXFLAGS += -m32
-else
-	PROTPBUF_CXXFLAGS += -m64
-endif
-PROTPBUF_CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
 
 EXTERNAL_LIB += -lprotobuf 
  
@@ -125,7 +113,7 @@ SRC :=       AEServicesImpl.cpp \
 
 OBJ := $(C_SRC:.c=.o) $(SRC:.cpp=.o) $(IPC_SRC:.cpp=.o)  $(PROTOBUF_SRC:.cc=.o) 
 
-LDUFLAGS:= -pthread -L$(BUILD_DIR)
+LDUFLAGS:= -pthread $(COMMON_LDFLAGS)
 LDUFLAGS += -Wl,--version-script=uae_service.lds -Wl,--gc-sections
 
 LIBNAME  = libsgx_uae_service.so

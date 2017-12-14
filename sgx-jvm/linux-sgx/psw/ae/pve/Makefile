@@ -33,33 +33,35 @@ TOP_DIR := ../../..
 include ../buildenv.mk
 
 CXXFLAGS  += -Werror
-CFLAGS    += -Werror 
+CFLAGS	  += -Werror 
 AENAME = provision_enclave
 
-LINUX_EPID := $(LINUX_EXTERNAL_DIR)/epid/
+EPID_SDK_DIR := $(LINUX_EXTERNAL_DIR)/epid-sdk-3.0.0/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux 
 
 INCLUDE += -I$(COMMON_DIR)/inc/tlibc                      \
-           -I$(SGX_IPP_INC)/                              \
-           -I$(LINUX_EXTERNAL_DIR)/epid                   \
-           -I$(LINUX_SDK_DIR)/tseal                       \
-           -I$(LINUX_PSW_DIR)/ae/common                   \
-           -I$(LINUX_PSW_DIR)/ae/pve                      \
-           -I$(LINUX_PSW_DIR)/ae/inc/internal
+		   -I$(SGX_IPP_INC)/                              \
+		   -I$(EPID_SDK_DIR)                                \
+		   -I$(LINUX_SDK_DIR)/tseal                       \
+		   -I$(LINUX_PSW_DIR)/ae/common                   \
+		   -I$(LINUX_PSW_DIR)/ae/pve                      \
+		   -I$(LINUX_PSW_DIR)/ae/inc/internal
 
 TCRYPTO_LIBDIR := $(LINUX_SDK_DIR)/tlibcrypto
-EPID_LIBDIR    := $(LINUX_EPID)
+EPID_LIBDIR	   := $(EPID_SDK_DIR)
 
-EXTERNAL_LIB += -L$(EPID_LIBDIR) -lepid \
-                -L$(TCRYPTO_LIBDIR) -lsgx_tcrypto
+EXTERNAL_LIB += -L$(EPID_LIBDIR)/epid/member -lmember \
+				-L$(EPID_LIBDIR)/epid/common -lcommon \
+				-L$(EPID_LIBDIR)/ext/ipp/sources/ippcpepid/src -lippcpepid \
+				-L$(TCRYPTO_LIBDIR) -lsgx_tcrypto
 
 SRC := $(wildcard *.cpp)
 SRC += ipp_bn.cpp                    \
-       ipp_rsa_pub_key.cpp           \
-       se_ecdsa_verify_internal.cpp  \
-       pve_qe_common.cpp             \
-       pve_pub_key.cpp               \
-       pek_pub_key.cpp
+	   ipp_rsa_pub_key.cpp           \
+	   se_ecdsa_verify_internal.cpp  \
+	   pve_qe_common.cpp             \
+	   pve_pub_key.cpp               \
+	   pek_pub_key.cpp
 
 OBJ := $(SRC:.cpp=.o)
 OBJS := $(sort $(OBJ) version.o)
@@ -71,8 +73,9 @@ AENAME_OUT := $(AENAME).so
 all: $(SONAME) 
 
 .PHONY: EPID
-EPID: 
-	$(MAKE) -C $(EPID_LIBDIR)
+EPID:
+	cd $(EPID_SDK_DIR) && ./configure prefix=/usr/local
+	$(MAKE) -C $(EPID_SDK_DIR) 2> /dev/null
 
 $(SONAME): $(OBJS) EPID
 	$(CXX) $(CXXFLAGS) -o $@  $(OBJS)  -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS) -fno-exceptions -fno-rtti $(EXTERNAL_LIB)
@@ -92,6 +95,10 @@ clean:
 	@$(RM) *.so
 	@$(RM) *.map
 	@$(RM) *_t.*
+ifeq ("$(shell test -f $(EPID_SDK_DIR)/Makefile && echo Makefile exists)", "Makefile exists")
+	-$(MAKE) -C $(EPID_SDK_DIR) clean
+endif
+	@$(RM) -r $(EPID_SDK_DIR)/Makefile $(EPID_SDK_DIR)/config.log $(EPID_SDK_DIR)/config.status
 
 .PHONY: rebuild
 rebuild:

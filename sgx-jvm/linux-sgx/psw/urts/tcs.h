@@ -36,7 +36,6 @@
 #include "se_wrapper.h"
 #include "util.h"
 #include "sgx_error.h"
-#include "sgx_eid.h"
 #include "se_debugger_lib.h"
 #include "se_lock.hpp"
 #include <vector>
@@ -44,7 +43,7 @@
 
 using namespace std;
 
-typedef int (*bridge_fn_t)(sgx_enclave_id_t enclave_id, const void*);
+typedef int (*bridge_fn_t)(const void*);
 
 class CEnclave;
 
@@ -74,33 +73,45 @@ private:
 class CTrustThreadPool: private Uncopyable
 {
 public:
-    CTrustThreadPool();
+    CTrustThreadPool(uint32_t tcs_min_pool);
     virtual ~CTrustThreadPool();
-    CTrustThread * acquire_thread();
+    CTrustThread * acquire_thread(bool is_initialize_ecall = false);
     void release_thread(CTrustThread * const trust_thread);
-    CTrustThread *add_thread(tcs_t * const tcs, CEnclave * const enclave);
+    CTrustThread *add_thread(tcs_t * const tcs, CEnclave * const enclave, bool is_unallocated);
     CTrustThread *get_bound_thread(const tcs_t *tcs);
+    std::vector<CTrustThread *> get_thread_list();
     void reset();
     void wake_threads();
+    sgx_status_t new_thread();
+    sgx_status_t fill_tcs_mini_pool();
+    bool need_to_new_thread();
+    bool is_dynamic_thread_exist();
 protected:
     virtual int garbage_collect() = 0;
     inline int find_thread(vector<se_thread_id_t> &thread_vector, se_thread_id_t thread_id);
     inline CTrustThread * get_free_thread();
     int bind_thread(const se_thread_id_t thread_id, CTrustThread * const trust_thread);
     CTrustThread * get_bound_thread(const se_thread_id_t thread_id);
-
+    void add_to_free_thread_vector(CTrustThread* it);
+    
     vector<CTrustThread *>                  m_free_thread_vector;
+    vector<CTrustThread *>                  m_unallocated_threads; 
     Node<se_thread_id_t, CTrustThread *>    *m_thread_list;
-    Mutex                                   m_thread_mutex; //protect both thread_cache list and fress tcs list. The mutex is recursive.
-                                                            //Thread can operate the two list when it get the mutex
+    Mutex                                   m_thread_mutex; //protect thread_cache list. The mutex is recursive.
+                                                            //Thread can operate the list when it get the mutex
+    Mutex                                   m_free_thread_mutex; //protect free threads.
+    Cond                                    m_need_to_wait_for_new_thread_cond;
 private:
     CTrustThread * _acquire_thread();
+    CTrustThread *m_utility_thread;
+    uint64_t     m_tcs_min_pool;
+    bool         m_need_to_wait_for_new_thread;
 };
 
 class CThreadPoolBindMode : public CTrustThreadPool
 {
 public:
-    CThreadPoolBindMode():CTrustThreadPool(){}
+    CThreadPoolBindMode(uint32_t tcs_min_pool):CTrustThreadPool(tcs_min_pool){}
 private:
     virtual int garbage_collect();
 };
@@ -108,7 +119,7 @@ private:
 class CThreadPoolUnBindMode : public CTrustThreadPool
 {
 public:
-    CThreadPoolUnBindMode():CTrustThreadPool(){}
+    CThreadPoolUnBindMode(uint32_t tcs_min_pool):CTrustThreadPool(tcs_min_pool){}
 private:
     virtual int garbage_collect();
 };

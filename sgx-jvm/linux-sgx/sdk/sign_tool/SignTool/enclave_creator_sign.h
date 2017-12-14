@@ -32,7 +32,8 @@
 #ifndef _ENCLAVE_CREATOR_SIGN_H_
 #define _ENCLAVE_CREATOR_SIGN_H_
 
-#include "ippcp.h"
+#include <openssl/evp.h>
+
 
 #include "enclave_creator.h"
 #include "sgx_eid.h"
@@ -52,12 +53,17 @@ public:
     int destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size);
     int initialize(sgx_enclave_id_t enclave_id);
     bool use_se_hw() const;
-
+    bool is_EDMM_supported(sgx_enclave_id_t enclave_id);
+    bool is_driver_compatible();
     int get_enclave_info(uint8_t *hash, int size, uint64_t *quota);
-
+    int emodpr(uint64_t addr, uint64_t size, uint64_t flag);
+    int mktcs(uint64_t tcs_addr);
+    int trim_range(uint64_t fromaddr, uint64_t toaddr);
+    int trim_accept(uint64_t addr);
+    int remove_range(uint64_t fromaddr, uint64_t numpages);
 private:
     uint8_t m_enclave_hash[SGX_HASH_SIZE];
-    IppsHashState  *m_ctx;
+    EVP_MD_CTX  *m_ctx;
     bool m_hash_valid_flag;
     sgx_enclave_id_t m_eid;
     uint64_t m_quota;

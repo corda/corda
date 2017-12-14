@@ -75,7 +75,7 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/inc                        \
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/pve                        \
            -I$(LINUX_PSW_DIR)/ae/pse/pse_op
 
-INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid                            \
+INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid-sdk-3.0.0                  \
            -I$(LINUX_EXTERNAL_DIR)/sqlite/src                      \
            -I$(LINUX_EXTERNAL_DIR)/DALSdk/JHI/linux
 
@@ -89,10 +89,7 @@ INCLUDE += -I$(SGX_IPP_INC) \
 EDGER8R  := $(LINUX_SDK_DIR)/edger8r/linux/_build/Edger8r.native
 
 
-# Disable cxx11 abi
-CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
-
-SQLITECFLAGS := -fPIC -Wall -Wno-unused-const-variable -Werror
+SQLITECFLAGS := -fpie -Wall -Wno-unused-const-variable -Werror
 ifeq ($(CC_BELOW_4_9), 1)
 	SQLITECFLAGS += -fstack-protector
 else
@@ -102,7 +99,7 @@ endif
 ifdef DEBUG
 	SQLITECFLAGS += -ggdb -DDEBUG -UNDEBUG
 else
-	SQLITECFLAGS += -O2 -UDEBUG -DNDEBUG
+	SQLITECFLAGS += -O2 -UDEBUG -DNDEBUG -D_FORTIFY_SOURCE=2
 endif
 ifeq ($(ARCH), x86)
 	SQLITECFLAGS += -m32
@@ -115,8 +112,9 @@ ifdef PROFILE
         CFLAGS += -D_PROFILE_
 endif
 
-CXXFLAGS += -fPIC
-CFLAGS := $(filter-out -fPIC -Werror, $(CFLAGS))
+CXXFLAGS += -fpie
+CFLAGS += -fpie
+CFLAGS := $(filter-out -Werror, $(CFLAGS))
 LINUX_SE_WRAPPER = $(COMMON_DIR)/se_wrapper
 
 ifdef DEBUG 
@@ -280,7 +278,8 @@ OBJ        := $(IPC_SRC:.cpp=.o) \
 
 OBJ        += $(SQLITESRC:.c=.o)
 
-LDUFLAGS := -pthread -L$(BUILD_DIR) $(URTSLIB)
+LDUFLAGS := -pthread -L$(BUILD_DIR) $(URTSLIB) 
+LDUFLAGS += -pie $(COMMON_LDFLAGS)
 
 APPNAME           := aesm_service
 APPNAME_DEBUG     := aesm_service.debug
@@ -313,7 +312,7 @@ messages.pb.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 	$(CXX) $(filter-out -Wshadow, $(CXXFLAGS)) $(INCLUDE) -c $< -o $@
 
 consttime_memequal.o :consttime_memequal.c
-	$(CC) $(filter-out -O2,$(CFLAGS)) -fPIC -O1 $(INCLUDE) -c $< -o $@
+	$(CC) $(filter-out -O2,$(CFLAGS)) -O1 $(INCLUDE) -c $< -o $@
 
 sqlite3.o :sqlite3.c
 	$(CC) $(SQLITECFLAGS) $(INCLUDE) -c $< -o $@

@@ -50,7 +50,8 @@ LDCFLAGS  := -shared -nostdlib -nodefaultlibs -nostartfiles
 
 CPP_SRCS  := $(wildcard ../*.cpp)
 C_SRCS    := $(wildcard *.c)
-ASM_SRCS  := $(wildcard *.S)
+ASM_SRCS  := $(wildcard *.S) \
+             $(COMMON_DIR)/src/linux/xsave_gnu.S
 OBJS      := $(CPP_SRCS:.cpp=.o)
 OBJS      += $(C_SRCS:.c=.o)
 OBJS      += $(ASM_SRCS:.S=.o)
@@ -67,6 +68,7 @@ $(LIBTRTS): $(OBJS) setcontext.o
 	$(AR) rsD $@ $(ARCH)/setcontext.o
 
 %.o: %.S
+	echo $(ASM_SRCS)
 	$(CC) $(CFLAGS) $(TCFLAGS) -c $< -o $@
 
 %.o: %.c

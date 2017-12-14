@@ -70,8 +70,9 @@ pve_status_t gen_prov_msg1_data(const sgx_target_info_t& pce_target_info,
     sgx_report_data_t report_data = {0};
     extended_epid_group_blob_t local_xegb;
     sgx_sha_state_handle_t sha_handle = NULL;
-    uint8_t crypto_suite = ALG_RSA_OAEP_2048;
+    uint8_t crypto_suite = ALG_RSA_OAEP_3072;
 
+    static_assert(sizeof(pek.n) == 384, "pek.n should be 384 bytes");
     sgx_status = verify_xegb_with_default(xegb, &pek_result, local_xegb);
     if(SGX_SUCCESS != sgx_status){
         ret = sgx_error_to_pve_error(sgx_status);

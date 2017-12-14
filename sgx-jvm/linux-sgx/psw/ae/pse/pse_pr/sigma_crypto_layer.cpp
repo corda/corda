@@ -28,9 +28,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
- 
- 
+
+
 #include "sigma_crypto_layer.h"
+#include "sgx_ecc256_internal.h"
 #include "pse_pr_inc.h"
 #include "pse_pr_types.h"
 #include "safe_id.h"
@@ -113,15 +114,15 @@ ae_error_t SigmaCryptoLayer::DeriveSkMk(/* In  */ sgx_ecc_state_handle_t ecc_han
     do
     {
         // Watch for null pointers
-        if (ecc_handle == NULL) 
+        if (ecc_handle == NULL)
         {
             ae_status = PSE_PR_PARAMETER_ERROR;
             break;
         }
 
-        sgx_status_t sgx_status = sgx_ecc256_compute_shared_dhkey512((sgx_ec256_private_t *)m_local_private_key_b_little_endian,
+        sgx_status_t sgx_status = sgx_ecc256_compute_shared_point((sgx_ec256_private_t *)m_local_private_key_b_little_endian,
                                            (sgx_ec256_public_t *)public_key_little_endian,
-                                           (sgx_ec256_dh_shared512_t *)Gab, 
+                                           (sgx_ec256_shared_point_t *)Gab,
                                            ecc_handle);
         if (SGX_SUCCESS != sgx_status)
         {
@@ -187,7 +188,7 @@ ae_error_t SigmaCryptoLayer::calc_s2_hmac(
     p.Update(&s2->OcspReq, sizeof(s2->OcspReq));
     p.Update(s2->Data, nS2VLDataLen);
 
-    //NRG:  SIGMA_HMAC - HMAC_SHA256 of [Gb || Basename || OCSP Req || 
+    //NRG:  SIGMA_HMAC - HMAC_SHA256 of [Gb || Basename || OCSP Req ||
     //          Verifier Cert ||  Sig-RL List ], using SMK
 
     return p.Finalize(hmac);
@@ -202,7 +203,7 @@ ae_error_t SigmaCryptoLayer::calc_s3_hmac(
     p.Update(s3->Ga, sizeof(s3->Ga));
     p.Update(s3->Data, nS3VLDataLen);
 
-    //NRG:  SIGMA_HMAC -- HMAC_SHA256 of [TaskInfo || g^a || 
+    //NRG:  SIGMA_HMAC -- HMAC_SHA256 of [TaskInfo || g^a ||
     //          EPIDCertprvr || EPIDSig(g^a || g^b)], using SMK
 
     return p.Finalize(hmac);
@@ -222,8 +223,8 @@ ae_error_t SigmaCryptoLayer::ComputePR(SIGMA_SECRET_KEY* oldSK, Ipp8u byteToAdd,
         Sk_Wth_Added_Byte[SIGMA_SK_LENGTH] = byteToAdd;
 
         //Compute hmac
-        IppStatus ippstatus = ippsHMAC_Message(Sk_Wth_Added_Byte, 
-            SIGMA_SK_LENGTH+1, (Ipp8u*)m_MK, SIGMA_MK_LENGTH, 
+        IppStatus ippstatus = ippsHMAC_Message(Sk_Wth_Added_Byte,
+            SIGMA_SK_LENGTH+1, (Ipp8u*)m_MK, SIGMA_MK_LENGTH,
             (Ipp8u*)hmac, SIGMA_HMAC_LENGTH, IPP_ALG_HASH_SHA256);
 
         // defense-in-depth, clear secret data
@@ -244,7 +245,7 @@ ae_error_t SigmaCryptoLayer::ComputePR(SIGMA_SECRET_KEY* oldSK, Ipp8u byteToAdd,
 }
 
 
-ae_error_t SigmaCryptoLayer::ComputeId(Ipp8u byteToAdd, 
+ae_error_t SigmaCryptoLayer::ComputeId(Ipp8u byteToAdd,
                                  SHA256_HASH* hash)
 {
     memset(hash, 0, sizeof(*hash));
@@ -254,23 +255,23 @@ ae_error_t SigmaCryptoLayer::ComputeId(Ipp8u byteToAdd,
     p.Update(m_SK, sizeof(SIGMA_SIGN_KEY));
     p.Update(m_MK, sizeof(SIGMA_MAC_KEY));
     p.Update(&byteToAdd, sizeof(Ipp8u));
-        
+
     return p.Finalize(hash);
 }
 
-ae_error_t SigmaCryptoLayer::MsgVerifyPch(Ipp8u* PubKeyPch, int PubKeyPchLen, 
-                                    Ipp8u* EpidParamsCert,  Ipp8u* Msg, int MsgLen, 
-                                    Ipp8u* Bsn, int BsnLen, Ipp8u* Signature, 
+ae_error_t SigmaCryptoLayer::MsgVerifyPch(Ipp8u* PubKeyPch, int PubKeyPchLen,
+                                    Ipp8u* EpidParamsCert,  Ipp8u* Msg, int MsgLen,
+                                    Ipp8u* Bsn, int BsnLen, Ipp8u* Signature,
                                     int SignatureLen,
                                     Ipp8u* PrivRevList, int PrivRL_Len, Ipp8u* SigRevList, int SigRL_Len,
-                                    Ipp8u* GrpRevList, int GrpRL_Len) 
+                                    Ipp8u* GrpRevList, int GrpRL_Len)
 {
     ae_error_t status = AE_FAILURE;
     EpidStatus SafeIdRes = kEpidNoErr;
     Epid11Signature Epid11Sig;
     Epid11Signature *SigPointer = NULL;
     memset_s(&Epid11Sig, sizeof(Epid11Sig), 0, sizeof(Epid11Sig));
-   
+
     UNUSED(EpidParamsCert);
     UNUSED(Bsn);
     UNUSED(BsnLen);
@@ -286,7 +287,7 @@ ae_error_t SigmaCryptoLayer::MsgVerifyPch(Ipp8u* PubKeyPch, int PubKeyPchLen,
         }
 
         // Verify the length of public key and signature buffers
-        if (((size_t)PubKeyPchLen < (SAFEID_CERT_LEN - ECDSA_SIGNATURE_LEN)) || 
+        if (((size_t)PubKeyPchLen < (SAFEID_CERT_LEN - ECDSA_SIGNATURE_LEN)) ||
                                 (SignatureLen < SAFEID_SIG_LEN))
         {
             status = PSE_PR_PARAMETER_ERROR;
@@ -323,17 +324,17 @@ ae_error_t SigmaCryptoLayer::MsgVerifyPch(Ipp8u* PubKeyPch, int PubKeyPchLen,
         //So we must use bigger buffer add 8 bytes to the length
         if(SignatureLen == sizeof(Epid11BasicSignature)){
             memcpy(&Epid11Sig, Signature, SignatureLen);
-            SignatureLen += (2 * sizeof(OctStr32));
+            SignatureLen = static_cast<int>(SignatureLen + sizeof(Epid11Sig.rl_ver) + sizeof(Epid11Sig.n2));
             SigPointer = &Epid11Sig;
         }
         else
         {
             SigPointer = (Epid11Signature *)Signature;
         }
-        
 
-        SafeIdRes = Epid11Verify(ctx, 
-                SigPointer, SignatureLen, 
+
+        SafeIdRes = Epid11Verify(ctx,
+                SigPointer, SignatureLen,
                 Msg, MsgLen);
         status = MapEpidResultToAEError(SafeIdRes);
         if (AE_FAILED(status)){

@@ -41,7 +41,7 @@ public:
 
     static const uint8_t* EpidParamsCert(size_t& nBytes);
     static const uint8_t** EpidVerifyKeys();
-    static const uint32_t EpidVerifyKeyNum();
+    static uint32_t EpidVerifyKeyNum();
 
 private:
 

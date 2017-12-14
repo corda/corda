@@ -41,6 +41,15 @@
 #include "linux-regs.h"
 #include "rts_cmd.h"
 
+
+.macro lea_symbol symbol, reg
+#ifdef __x86_64__
+mov     \symbol@GOTPCREL(%rip), \reg
+#else
+lea     \symbol, \reg
+#endif
+.endm
+
 /* macro for enter_enclave
  * There is no .cfi_xxx to describe unwind information, because we want c++ exception can't across enclave boundary
 */
@@ -48,66 +57,72 @@
 push    %xbp
 mov     %xsp, %xbp
 
-#if defined(__i386__)
-push    %ebx
-push    %esi
-push    %edi
-
-/* These 3 wordsize buffer are used for paddings, so that the
- * stack-boundary can be kept 16-byte aligned.
- *
- * Note that, by default GCC assumes
- *  -mpreferred-stack-boundary=4
- * which results to 16 (2^4) byte alignment of stack boundary.
- *
- *   | parameters     |              <-  previous frame
- * ==+================+======
- *   | return address |  ^
- *   +----------------+  |
- *   | ebp            |  |
- *   +----------------+ 16 bytes     <-  current frame
- *   | ebx            |  |
- *   +----------------+  |
- *   | esi            |  v
- *   +----------------+ ----
- *   | edi            |  4 bytes
- *   +----------------+
- *   | paddings       | 3*4 bytes
- * ==+================+======
- *   | ENCLU          |
- */
-sub    $(3 * SE_WORDSIZE), %esp
-
-#elif defined(__x86_64__)
-push    %rbx
-push    %r12
-push    %r13
-push    %r14
-push    %r15
-/*save 5 parameter*/
-push    %r8
-push    %rcx
-push    %rdx
-push    %rsi
-push    %rdi
-#else
-#   error unknown platform
+/* save GPRs */
+#ifdef __i386__
+sub     $(4 * SE_WORDSIZE), %xsp       /* for xsave, xbx, xdi, xsi */
+mov     %xbx, -2 * SE_WORDSIZE(%xbp)
+mov     %xsi, -3 * SE_WORDSIZE(%xbp)
+mov     %xdi, -4 * SE_WORDSIZE(%xbp)
+#else /* __x86_64__ */
+sub     $(12 * SE_WORDSIZE), %xsp      /* for xsave, params, and non-volatile GPRs */
+mov     %xdi, -10 * SE_WORDSIZE(%xbp)
+mov     %xsi,  -9 * SE_WORDSIZE(%xbp)
+mov     %rdx,  -8 * SE_WORDSIZE(%xbp)
+mov     %rcx,  -7 * SE_WORDSIZE(%xbp)
+mov     %r8,   -6 * SE_WORDSIZE(%xbp)
+mov     %xbx, -11 * SE_WORDSIZE(%xbp)
+mov     %r12,  -5 * SE_WORDSIZE(%xbp)
+mov     %r13,  -4 * SE_WORDSIZE(%xbp)
+mov     %r14,  -3 * SE_WORDSIZE(%xbp)
+mov     %r15,  -2 * SE_WORDSIZE(%xbp)
 #endif
+
+lea_symbol g_xsave_size, %xdi
+xor     %xax, %xax
+movl    (%xdi), %eax
+sub     %xax, %xsp
+mov     %xax, %xcx                     /* xsave size */
+mov     $0x3f, %xax
+not     %xax
+and     %xax, %xsp                     /* xsave requires 64 byte aligned */
+mov     %xsp, -1 * SE_WORDSIZE(%xbp)   /* xsave pointer */
+
+/* shadow space for arguments */
+sub     $(4 * SE_WORDSIZE), %xsp
+
+/* save extended xfeature registers */
+shr     $2, %xcx
+xor     %xax, %xax
+mov     -1 * SE_WORDSIZE(%xbp), %xdi
+cld
+rep stos %eax, %es:(%xdi)
+
+mov     -1 * SE_WORDSIZE(%xbp), %xdi
+mov     %xdi, (%xsp)
+call    save_xregs
 .endm
 
 .macro EENTER_EPILOG
-#if defined(__i386__)
-mov          -SE_WORDSIZE*1(%ebp),  %ebx
-mov          -SE_WORDSIZE*2(%ebp),  %esi
-mov          -SE_WORDSIZE*3(%ebp),  %edi
-#elif defined(__x86_64__)
-mov          -SE_WORDSIZE*1(%rbp),  %rbx
-mov          -SE_WORDSIZE*2(%rbp),  %r12
-mov          -SE_WORDSIZE*3(%rbp),  %r13
-mov          -SE_WORDSIZE*4(%rbp),  %r14
-mov          -SE_WORDSIZE*5(%rbp),  %r15
+/* restore extended xfeature registers */
+mov     -SE_WORDSIZE*1(%xbp), %xdi
+mov     %xdi, (%xsp)
+call    restore_xregs
+mov     %xsi, %xax
+
+/* restore GPRs */
+#ifdef __i386__
+mov     -SE_WORDSIZE*2(%xbp),  %xbx
+mov     -SE_WORDSIZE*3(%xbp),  %xsi
+mov     -SE_WORDSIZE*4(%xbp),  %xdi
 #else
-#   error unknown platform
+mov     -SE_WORDSIZE*11(%xbp),  %xbx
+mov     -SE_WORDSIZE*10(%xbp),  %xdi
+mov     -SE_WORDSIZE*9(%xbp),   %xsi
+mov     -SE_WORDSIZE*5(%rbp),   %r12
+mov     -SE_WORDSIZE*4(%rbp),   %r13
+mov     -SE_WORDSIZE*3(%rbp),   %r14
+mov     -SE_WORDSIZE*2(%rbp),   %r15
+
 #endif
 /* don't need recover rdi, rsi, rdx, rcx */
 mov     %xbp, %xsp

@@ -119,7 +119,7 @@ host_triplet = @host@
 # by default.
 @GCC_TRUE@@I386_TRUE@am__append_4 = -mmmx -fno-omit-frame-pointer
 @HAVE_W_NO_UNUSED_RESULT_TRUE@am__append_5 = -Wno-unused-result
-@HAVE_SIZED_DEALLOCATION_TRUE@am__append_6 = -fsized-deallocation
+#@HAVE_SIZED_DEALLOCATION_TRUE@am__append_6 = -fsized-deallocation
 
 # These are x86-specific, having to do with frame-pointers.  In
 # particular, some x86_64 systems do not insert frame pointers by

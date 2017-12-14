@@ -222,7 +222,7 @@ static ae_error_t gen_msg3_header(const gen_prov_msg3_output_t& msg3_output, con
         // BLOCK_CIPHER_TEXT_TLV_SIZE(0) is needed because IV need to be included for the following MAC tlv
         field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(0)+MAC_TLV_SIZE(MAC_SIZE);
     }
-    field1_size+=NONCE_TLV_SIZE(NONCE_2_SIZE)+CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES)+SE_REPORT_TLV_SIZE();
+    field1_size+=NONCE_TLV_SIZE(NONCE_2_SIZE)+CIPHER_TEXT_TLV_SIZE(RSA_3072_KEY_BYTES)+SE_REPORT_TLV_SIZE();
     size_t total_body_size = NONCE_TLV_SIZE(NONCE_SIZE) + BLOCK_CIPHER_TEXT_TLV_SIZE(field1_size)+MAC_TLV_SIZE(MAC_SIZE);
     if(msg3_output.is_epid_sig_generated){
         total_body_size += BLOCK_CIPHER_TEXT_TLV_SIZE(msg3_output.epid_sig_output_size)+MAC_TLV_SIZE(MAC_SIZE);
@@ -525,7 +525,7 @@ uint32_t CPVEClass::proc_prov_msg2(
             AESM_DBG_ERROR("Fail to generate Field3.3 NONCE TLV  N2 in ProvMsg3:(ae %d)",ret);
             break;
         }
-        tlv_status = tlvs_m3field1.add_cipher_text(msg3_fixed_output.encrypted_pwk2, PVE_RSA_KEY_BYTES, PEK_PUB);
+        tlv_status = tlvs_m3field1.add_cipher_text(msg3_fixed_output.encrypted_pwk2, RSA_3072_KEY_BYTES, PEK_3072_PUB);
         ret = tlv_error_2_pve_error(tlv_status);
         if(AE_SUCCESS != ret){
             AESM_DBG_ERROR("Fail to generate Field3.4 SE Report TLV  in ProvMsg3:(ae %d)",ret);

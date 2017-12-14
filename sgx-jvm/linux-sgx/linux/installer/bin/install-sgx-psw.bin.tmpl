@@ -30,15 +30,18 @@
 #
 #
 
-modinfo isgx &> /dev/null
+grep intel_sgx /lib/modules/$(uname -r)/modules.builtin &> /dev/null
 if [[ $? != "0" ]]; then
-    lsmod | grep isgx &> /dev/null
-    if [[ $? = "0" ]]; then
-        echo "Warning: You did not follow the document to install the driver package"
-        echo
-    else
-        echo "Please install the driver package before the PSW package"
-        exit 4
+    modinfo isgx &> /dev/null
+    if [[ $? != "0" ]]; then
+        lsmod | grep isgx &> /dev/null
+        if [[ $? = "0" ]]; then
+            echo "Warning: You did not follow the document to install the driver package"
+            echo
+        else
+            echo "Please install the driver package before the PSW package"
+            exit 4
+        fi
     fi
 fi
 

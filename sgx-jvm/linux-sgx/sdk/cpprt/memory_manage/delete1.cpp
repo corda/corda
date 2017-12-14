@@ -37,7 +37,7 @@
 #include "internal/se_cdefs.h"
 
 //deallocate the memory block pointed by ptr (if not-null)
-SGX_WEAK void SGXAPI operator delete (void* ptr) throw ()
+SGX_WEAK void SGXAPI operator delete (void* ptr)
 {
 	free(ptr);
 }

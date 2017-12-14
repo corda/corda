@@ -330,7 +330,7 @@ void ecall_cxx11_algorithms_demo()
     printf("[cxx11_algorithms] Some elements in  { 0 1 2 3 4 5 } are even is  %s. \n", are_any_of ? "true" : "false");
 
     bool are_none_of = none_of(begin(v), end(v), [](int e) { return e % 2 == 0; });
-    printf("[cxx11_algorithms] Some elements in  { 0 1 2 3 4 5 } are even is  %s. \n", are_none_of ? "true" : "false");
+    printf("[cxx11_algorithms] None elements in  { 0 1 2 3 4 5 } are even is  %s. \n", are_none_of ? "true" : "false");
 
     printf("\n"); // end of demo
 }
@@ -594,10 +594,10 @@ void ecall_new_container_classes_demo()
     const int searchVal = 3;
     std::unordered_set<int>::const_iterator got = set_of_numbers.find(searchVal);
 
-    if (got == set_of_numbers.end())
+    if (got != set_of_numbers.end())
         printf("[new_container_classes] unordered_set { 0, 1, 2, 3, 4, 5} has value 3.\n");
     else
-        printf("[new_container_classes] unordered_set { 0, 1, 2, 3, 4, 5} it does not have value 3.\n");
+        printf("[new_container_classes] unordered_set { 0, 1, 2, 3, 4, 5} does not have value 3.\n");
 
     // unordered_multiset
     // container used for fast acces that groups non unique elements in buckets based on their hash

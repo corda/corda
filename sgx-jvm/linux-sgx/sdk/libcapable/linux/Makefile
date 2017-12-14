@@ -31,11 +31,15 @@
 
 include ../../../buildenv.mk
 
-CXXFLAGS += -fPIC -Werror -g
-CXXFLAGS += $(ADDED_INC)
+ifndef DEBUG
+CXXFLAGS += -DDISABLE_TRACE
+CFLAGS += -DDISABLE_TRACE
+endif
 
-CFLAGS += -fPIC -Werror -g
-CFLAGS += $(ADDED_INC)
+CXXFLAGS += -fPIC -Werror
+
+CFLAGS += -fPIC -Werror
+LDFLAGS += $(COMMON_LDFLAGS)
 
 INC += -I$(COMMON_DIR)/inc                \
        -I$(COMMON_DIR)/inc/internal       \
@@ -46,7 +50,7 @@ LIB += -L$(BUILD_DIR)
 LIBCAPABLE := libsgx_capable.so
 LIBCAPABLE_STATIC := libsgx_capable.a
 
-OBJ := sgx_capable.o
+OBJ := sgx_capable.o sgx_capable_version.o
 
 .PHONY: all
 all: $(LIBCAPABLE) $(LIBCAPABLE_STATIC) | $(BUILD_DIR)

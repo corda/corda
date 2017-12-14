@@ -190,7 +190,7 @@ static pve_status_t gen_msg3_signature(const proc_prov_msg2_blob_input_t *msg2_b
             &temp1,  //B and K in sigrl entry
             &temp3); //output one NrProof
         if(kEpidNoErr != epid_ret){
-            if(kEpidSigRevokedinSigRl == epid_ret){
+            if(kEpidSigRevokedInSigRl == epid_ret){
                 revoked = true;//if revoked, we could not return revoked status immediately until integrity checking passed
             }else{
                 ret = epid_error_to_pve_error(epid_ret);
@@ -362,6 +362,7 @@ pve_status_t gen_prov_msg3_data(const proc_prov_msg2_blob_input_t *msg2_blob_inp
     uint32_t le_e;
     int i;
     uint8_t le_n[sizeof(pek.n)];
+    static_assert(sizeof(pek.n)==384, "pek.n should be 384 bytes");
     device_id_t *device_id_in_aad= (device_id_t *)(aad+sizeof(GroupId));
     join_proof_with_escrow_t* join_proof_with_escrow=reinterpret_cast<join_proof_with_escrow_t *>(temp_buf+JOIN_PROOF_TLV_HEADER_SIZE);
     se_static_assert(sizeof(join_proof_with_escrow_t)+JOIN_PROOF_TLV_HEADER_SIZE==JOIN_PROOF_TLV_TOTAL_SIZE); /*unmatched hardcoded size*/

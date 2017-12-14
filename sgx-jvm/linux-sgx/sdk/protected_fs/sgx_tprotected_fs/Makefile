@@ -38,8 +38,7 @@ INCLUDE += -I$(COMMON_DIR)/inc/tlibc    \
 
 INCLUDE += -I$(LINUX_SDK_DIR)/tlibcxx/include
 
-
-CXXFLAGS += $(ENCLAVE_CXXFLAGS) -U__STRICT_ANSI__ -Werror 
+CXXFLAGS += $(ENCLAVE_CXXFLAGS) -U__STRICT_ANSI__ -Werror
 #CXXFLAGS += -Wno-unused-local-typedefs -Wno-shadow -Wno-missing-field-initializers -Wno-unused-parameter
 
 SRC := $(wildcard *.cpp)
@@ -55,7 +54,7 @@ all: $(LIBNAME) | $(BUILD_DIR)
 	@$(CP) $< $|
 
 $(LIBNAME): sgx_tprotected_fs_t.h $(OBJ)
-	$(AR) rcsD $@ $^
+	$(AR) rcsD $@ $(OBJ)
 	
 sgx_tprotected_fs_t.h: $(EDGER8R)
 	$(EDGER8R) --header-only --trusted $(COMMON_DIR)/inc/sgx_tprotected_fs.edl --search-path $(COMMON_DIR)/inc

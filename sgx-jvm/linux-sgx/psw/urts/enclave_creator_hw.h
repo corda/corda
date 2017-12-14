@@ -55,11 +55,20 @@ public:
     int destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size);
     int initialize(sgx_enclave_id_t enclave_id);
     bool use_se_hw() const;
+    bool is_EDMM_supported(sgx_enclave_id_t enclave_id);
+    bool is_cpu_edmm() const;
+    bool is_driver_compatible();
     int get_misc_attr(sgx_misc_attribute_t *sgx_misc_attr, metadata_t *metadata, SGXLaunchToken * const lc, uint32_t flag);
     bool get_plat_cap(sgx_misc_attribute_t *se_attr);
+    int emodpr(uint64_t addr, uint64_t size, uint64_t flag);
+    int mktcs(uint64_t tcs_addr);
+    int trim_range(uint64_t fromaddr, uint64_t toaddr);
+    int trim_accept(uint64_t addr);
+    int remove_range(uint64_t fromaddr, uint64_t numpages);
 private:
     virtual bool open_se_device();
     virtual void close_se_device();
+    bool driver_support_edmm();
     int try_init_enclave(sgx_enclave_id_t enclave_id, enclave_css_t *enclave_css, token_t *launch);
     int error_driver2urts(int driver_error);
     se_file_handle_t    m_hdevice;

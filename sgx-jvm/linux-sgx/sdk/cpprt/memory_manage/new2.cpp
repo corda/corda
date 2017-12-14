@@ -37,7 +37,7 @@
 
 //nothrow version.
 //on failure it returns a null pointer instead of throwing an exception.
-SGX_WEAK void* SGXAPI operator new (size_t dwBytes, const std::nothrow_t& nothrow_constant) 
+SGX_WEAK void* SGXAPI operator new (size_t dwBytes, const std::nothrow_t& nothrow_constant)
 {
 	UNUSED(nothrow_constant);
 

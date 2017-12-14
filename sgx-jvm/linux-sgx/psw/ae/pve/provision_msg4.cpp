@@ -227,8 +227,10 @@ pve_status_t proc_prov_msg4_data(const proc_prov_msg4_input_t *msg4_input,
     memcpy(&device_id_in_aad->psvn, &msg4_input->equivalent_psvn, sizeof(psvn_t));
     memset(&device_id_in_aad->ppid, 0 ,sizeof(ppid_t));
 
+
     se_static_assert(sizeof(sgx_aes_gcm_128bit_key_t)==sizeof(pwk2)); /*SK_SIZE should be same as that of sgx_aes_gcm_128bit_key_t*/
     se_static_assert(sizeof(sgx_aes_gcm_128bit_tag_t)==sizeof(msg4_input->member_credential_mac)); /*member_credential_mac size should be same as that of sgx_aes_gcm_128bit_tag_t*/
+
     se_static_assert(HARD_CODED_EPID_MEMBER_WITH_ESCROW_TLV_SIZE == MEMBERSHIP_CREDENTIAL_TLV_TOTAL_SIZE); /*hardcoded size should be matched*/
 
     sgx_status = sgx_rijndael128GCM_decrypt(reinterpret_cast<sgx_aes_gcm_128bit_key_t *>(&pwk2),

@@ -41,8 +41,15 @@
 #define SE_FEATURE_SHIFT 2
 #define SE1_SHIFT 0
 
+// CPUID function 1 
+// ECX[26] enums general support for XSAVE
+// ECX[27] enums XSAVE is enabled or not
 #define XSAVE_SHIFT 26
 #define OSXSAVE_SHIFT 27
+
+// CPUID function 0DH, sub-function 1
+// EAX[1] enums support for compaction extensions to XSAVE
+#define XSAVEC_SHIFT 1
 
 bool try_read_xcr0(uint64_t *value);
 //bool is_se_debug_supported();

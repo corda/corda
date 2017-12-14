@@ -33,16 +33,14 @@
 #include "xsave.h"
 #include "util.h"
 #include "se_detect.h"
-#include "sgx_attributes.h"
+#include "cpuid.h"
+
 
 #define XFRM_YMM_BITMASK   0x00000004
 
-// save_and_clean_xfeature_regs()
-//      do fwait, fxsave, and then clear the upper bits of YMM regs before executing EENTER.
-// Parameters:
-//      buffer - if the pointer is not NULL, save the CPU state to the buffer
-// Return Value:
-//      none
+uint32_t g_xsave_enabled = 0;
+
+extern "C" void set_xsave_info(int xsave_size, int flag);
 
 
 
@@ -51,41 +49,22 @@
 
 
 
-void save_and_clean_xfeature_regs(uint8_t *buffer)
+
+
+// init_xsave_info
+void init_xsave_info()
 {
-    // XCR0 is not supposed to be changed. So query it once.
-    static uint64_t xcr0 = 0;
-    if(xcr0 == 0)
+    int xsave_size = FXSAVE_SIZE; 
+    uint64_t xcr0 = 0;
+    if(try_read_xcr0(&xcr0))
     {
-        if(false == try_read_xcr0(&xcr0))
-        {
-            xcr0 = SGX_XFRM_LEGACY;
-        }
+        // CPUID function 0DH, sub-function 0 
+        // EBX enums the size (in bytes) required by XSAVE for all the components currently set in XCR0
+        int cpu_info[4] = {0};
+        __cpuid(cpu_info, 0xD);
+        xsave_size = cpu_info[1];
+        g_xsave_enabled = 1;
     }
-
-    // do fwait to flush the float-point exceptions
-    do_fwait();
-
-    // do fxsave to save the CPU state before ecall
-    // no need to save the CPU state before oret
-    if(buffer != 0)
-    {
-        uint8_t *buf = (uint8_t*)ROUND_TO((size_t)buffer, FXSAVE_ALIGN_SIZE);
-        do_fxsave(buf);
-    }
-
-    // clean the upper bits of the YMM regs
-    if(xcr0 & XFRM_YMM_BITMASK)
-    {
-        do_vzeroupper();
-    }
+    set_xsave_info(xsave_size, (xcr0 & XFRM_YMM_BITMASK) ? 1 : 0);
 }
 
-void restore_xfeature_regs(const uint8_t *buffer)
-{
-    if (buffer)
-    {
-        uint8_t *buf = (uint8_t*)ROUND_TO((size_t)buffer, FXSAVE_ALIGN_SIZE);
-        do_fxrstor(buf);
-    }
-}

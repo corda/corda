@@ -40,6 +40,7 @@
 #include "epid/common/types.h"
 #include "tlv_common.h"
 
+
 #include "platform_info_blob.h"
 
 struct _cpRSA_public_key;
@@ -49,7 +50,7 @@ class TLVsMsg;
 
 typedef struct _public_key
 {
-    uint8_t n[256];
+    uint8_t n[RSA_3072_KEY_BYTES];
     uint32_t e;
 } public_key_t;
 
@@ -119,7 +120,7 @@ private:
     ae_error_t msg1_create_header(uint32_t cipherTextSize, uint32_t epidGidSize, const upse::Buffer& transactionID, _provision_request_header_t& header);
     ae_error_t msg1_create_seq2_0(const TLVsMsg& seq2_1_tlv_block_cipher_info, TLVsMsg& seq2_0_tlv_cipher_text);
     ae_error_t msg1_create_seq2_1(TLVsMsg& seq2_1_tlv_block_cipher_info);
-    ae_error_t msg1_create_seq3_0(const TLVsMsg& seq3_1_tlv_epid_gid, const _provision_request_header_t& serializedHeader, 
+    ae_error_t msg1_create_seq3_0(const TLVsMsg& seq3_1_tlv_epid_gid, const _provision_request_header_t& serializedHeader,
                                const upse::Buffer& ek1, TLVsMsg& seq3_0_tlv_block_cipher_text, upse::Buffer& mac);
 
     ae_error_t msg2_process(const upse::Buffer& serializedMsg2, upse::Buffer& nonce, upse::Buffer& sigRLBuffer);
@@ -129,7 +130,7 @@ private:
 
     ae_error_t msg3_generate(const upse::Buffer& csrBuffer, const upse::Buffer& quoteBuffer, upse::Buffer& serializedMsg3);
     ae_error_t msg3_create_header(const upse::Buffer& transactionID, uint32_t nonceSize, uint32_t quoteSize, uint32_t epidSigSize, uint32_t csrSize, _provision_request_header_t& header);
-    ae_error_t msg3_seq3_0_create_block_cipher_text_tlv(const TLVsMsg& quote, const TLVsMsg& epidSigTLV, const TLVsMsg& csrTLV, const TLVsMsg& nonceTLV, 
+    ae_error_t msg3_seq3_0_create_block_cipher_text_tlv(const TLVsMsg& quote, const TLVsMsg& epidSigTLV, const TLVsMsg& csrTLV, const TLVsMsg& nonceTLV,
                                                       const _provision_request_header_t& requestHeader, const upse::Buffer& ek2,
                                                       TLVsMsg& blockCipherTextTLV, upse::Buffer& mac);
     ae_error_t msg3_seq3_1_create_quote_tlv(const upse::Buffer& quoteBuffer, TLVsMsg& quoteTLV);
@@ -140,9 +141,9 @@ private:
     ae_error_t msg4_verify_mac(const _provision_response_header_t& header, const TLVsMsg& tlvs);
     ae_error_t msg4_get_certificates(const TLVsMsg& tlvs, std::list< upse::Buffer >& certificateChainList, platform_info_blob_wrapper_t& piBlobWrapper);
 
-    ae_error_t aesGCMEncrypt(const upse::Buffer& iv, const upse::Buffer& keyReader, const upse::Buffer& plainText, 
+    ae_error_t aesGCMEncrypt(const upse::Buffer& iv, const upse::Buffer& keyReader, const upse::Buffer& plainText,
                                 const upse::Buffer& aad, upse::Buffer& encryptedText, upse::Buffer& mac);
-    ae_error_t aesGCMDecrypt(const upse::Buffer& iv, const upse::Buffer& key, const upse::Buffer& cipherText, 
+    ae_error_t aesGCMDecrypt(const upse::Buffer& iv, const upse::Buffer& key, const upse::Buffer& cipherText,
                                 const upse::Buffer& aad, const upse::Buffer& mac, upse::Buffer& plainText);
     ae_error_t aesCMAC(const upse::Buffer& key, const upse::Buffer& message, upse::Buffer& cmac);
 

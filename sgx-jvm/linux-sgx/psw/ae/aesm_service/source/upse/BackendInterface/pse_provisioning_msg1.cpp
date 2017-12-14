@@ -86,7 +86,7 @@ ae_error_t CertificateProvisioningProtocol::msg1_generate(const GroupId gid, ups
 
         // Prepare sequence 3.1 -- EPID GID TLV
         tlv_status = seq3_1_tlv_epid_gid.add_epid_gid(be_gid);
-		status = tlv_error_2_pve_error(tlv_status);
+        status = tlv_error_2_pve_error(tlv_status);
         if (AE_FAILED(status))
             break;
 
@@ -102,14 +102,14 @@ ae_error_t CertificateProvisioningProtocol::msg1_generate(const GroupId gid, ups
             break;
 
         // Prepare sequence 3.0 -- Block Cipher Text TLV with IV and encrypted 3.1
-		upse::Buffer mac;
+        upse::Buffer mac;
         status = msg1_create_seq3_0(seq3_1_tlv_epid_gid, header, EK1, seq3_0_tlv_block_cipher_text, mac);
         if (AE_FAILED(status))
             break;
 
         // Prepare sequence 4.0 -- MAC TLV
         tlv_status = seq4_0_tlv_mac.add_mac(mac.getData());
-		status = tlv_error_2_pve_error(tlv_status);
+        status = tlv_error_2_pve_error(tlv_status);
         if (AE_FAILED(status))
             break;
 
@@ -206,15 +206,15 @@ ae_error_t CertificateProvisioningProtocol::msg1_create_seq2_0(const TLVsMsg& se
         status = blockCipherInfo.Alloc(seq2_1_tlv_block_cipher_info.get_tlv_msg(), seq2_1_tlv_block_cipher_info.get_tlv_msg_size());
         if (AE_FAILED(status))
             break;
-            
+
         upse::BufferReader blockCipherInfoReader(blockCipherInfo);
 
         status = encryptRSA_OAEP_SHA256(public_key, blockCipherInfoReader, encryptedBlockCipherInfo);
         if (AE_FAILED(status))
             break;
 
-        tlv_status = seq2_0_tlv_cipher_text.add_cipher_text(encryptedBlockCipherInfo.getData(), encryptedBlockCipherInfo.getSize(), PEK_PUB);
-		status = tlv_error_2_pve_error(tlv_status);
+        tlv_status = seq2_0_tlv_cipher_text.add_cipher_text(encryptedBlockCipherInfo.getData(), encryptedBlockCipherInfo.getSize(), PEK_3072_PUB);
+        status = tlv_error_2_pve_error(tlv_status);
         if (AE_FAILED(status))
             break;
 
@@ -237,8 +237,8 @@ ae_error_t CertificateProvisioningProtocol::msg1_create_seq2_1(TLVsMsg& seq2_1_t
         if (AE_FAILED(status))
             break;
 
-	    tlv_status = seq2_1_tlv_block_cipher_info.add_block_cipher_info(M1SK.getData());
-		status = tlv_error_2_pve_error(tlv_status);
+        tlv_status = seq2_1_tlv_block_cipher_info.add_block_cipher_info(M1SK.getData());
+        status = tlv_error_2_pve_error(tlv_status);
         if (AE_FAILED(status))
             break;
 
@@ -248,7 +248,7 @@ ae_error_t CertificateProvisioningProtocol::msg1_create_seq2_1(TLVsMsg& seq2_1_t
     return status;
 }
 
-ae_error_t CertificateProvisioningProtocol::msg1_create_seq3_0(const TLVsMsg& seq3_1_tlv_epid_gid, const provision_request_header_t& serializedHeader, 
+ae_error_t CertificateProvisioningProtocol::msg1_create_seq3_0(const TLVsMsg& seq3_1_tlv_epid_gid, const provision_request_header_t& serializedHeader,
                                const upse::Buffer& ek1, TLVsMsg& seq3_0_tlv_block_cipher_text, upse::Buffer& mac)
 {
     //* 3.0 Block Cipher Text TLV (TLV Type, Type, Version, Size, [IV, EncryptedPayload is 3.1])
@@ -282,7 +282,7 @@ ae_error_t CertificateProvisioningProtocol::msg1_create_seq3_0(const TLVsMsg& se
             break;
 
         tlv_status = seq3_0_tlv_block_cipher_text.add_block_cipher_text(M1IV.getData(), encryptedPayload.getData(), encryptedPayload.getSize());
-		status = tlv_error_2_pve_error(tlv_status);
+        status = tlv_error_2_pve_error(tlv_status);
         if (AE_FAILED(status))
             break;
 

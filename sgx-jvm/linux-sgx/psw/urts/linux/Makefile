@@ -54,8 +54,7 @@ INC += -I$(COMMON_DIR)/inc                \
        -I$(VTUNE_DIR)/sdk/src/ittnotify 
 
 LDFLAGS := -lwrapper
-LDFLAGS += -Wl,-Bdynamic -lsgx_uae_service
-
+LDFLAGS += $(COMMON_LDFLAGS) -Wl,-Bdynamic -lsgx_uae_service
 LDFLAGS += -L$(VTUNE_DIR)/sdk/src/ittnotify -littnotify -ldl
 LDFLAGS += -Wl,--version-script=urts.lds -Wl,--gc-sections
 
@@ -63,6 +62,7 @@ DIR1 := $(LINUX_PSW_DIR)/urts/linux
 DIR2 := $(LINUX_PSW_DIR)/urts
 DIR3 := $(LINUX_PSW_DIR)/urts/parser
 DIR4 := $(LINUX_PSW_DIR)/urts/parser/linux
+DIR5 := $(LINUX_PSW_DIR)/../common/src/linux
 
 LIB += -L$(COMMON_DIR)/se_wrapper \
        -L$(BUILD_DIR)
@@ -87,9 +87,12 @@ OBJ2 := urts.o               \
         sig_handler.o        \
         debugger_support.o   \
         get_thread_id.o      \
-        prd_css_util.o
+        prd_css_util.o       \
+        urts_emodpr.o        \
+        urts_trim.o        
 
-OBJ3 := enter_enclave.o
+OBJ3 := enter_enclave.o \
+        xsave_gnu.o
 
 OBJ4 := section.o \
         elfparser.o
@@ -102,6 +105,7 @@ INTERNAL_OBJ := $(OBJ3) $(CPP_OBJ)
 
 
 vpath %.cpp $(DIR1):$(DIR2):$(DIR3):$(DIR4)
+vpath %.S   $(DIR1):$(DIR5)
 
 LIBWRAPPER       := libwrapper.a
 LIBURTS          := libsgx_urts.so

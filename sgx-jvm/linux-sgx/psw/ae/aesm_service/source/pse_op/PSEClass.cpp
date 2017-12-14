@@ -54,10 +54,7 @@
 #include "interface_psda.h"
 
 #define PSDA_CAP_PRTC               0x1
-#define PSDA_CAP_PROTECTED_OUTPUT   0x4
 #define PSDA_CAP_RPDATA             0x8
-
-#define PS_CAP_PROTECTED_OUTPUT     0x4
 
 #define CHECK_ECALL_RET(status,ret)            \
             if((status) == SGX_ERROR_ENCLAVE_LOST)  \
@@ -378,8 +375,6 @@ ae_error_t CPSEClass::get_ps_cap(uint64_t* ps_cap)
     uint32_t psda_cap0 = _ntohl(psda_cap_result_msg.cap_descriptor0);
     if (psda_cap0 & PSDA_CAP_PRTC)
         m_ps_cap |= PS_CAP_TRUSTED_TIME;        // Trusted time service
-    if (psda_cap0 & PSDA_CAP_PROTECTED_OUTPUT)
-        m_ps_cap |= PS_CAP_PROTECTED_OUTPUT;        // Trusted display key exchange
     if (psda_cap0 & PSDA_CAP_RPDATA)        // RPDATA capbility is available
         m_ps_cap |= PS_CAP_MONOTONIC_COUNTER;        // Monotonic counter service
 

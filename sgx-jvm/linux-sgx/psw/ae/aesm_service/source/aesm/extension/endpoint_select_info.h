@@ -87,7 +87,7 @@ private:
     bool _is_white_list_url_valid;        /*Set it to true after reading _config_urls*/
     static ae_error_t read_pek(endpoint_selection_infos_t& es_info); /*read _es_info from persistent storage*/
     static ae_error_t write_pek(const endpoint_selection_infos_t& es_info); /*save _es_info to persistent storage*/
-    ae_error_t verify_signature(const endpoint_selection_infos_t& es_info, uint8_t xid[XID_SIZE], uint8_t rsa_signature[PVE_RSA_KEY_BYTES], uint16_t ttl); /*verify rsa signature in ES protocol result*/
+    ae_error_t verify_signature(const endpoint_selection_infos_t& es_info, uint8_t xid[XID_SIZE], uint8_t rsa_signature[RSA_3072_KEY_BYTES], uint16_t ttl); //verify rsa signature in ES protocol result
 public:
     EndpointSelectionInfo(){
         memset(&_server_urls, 0, sizeof(_server_urls));

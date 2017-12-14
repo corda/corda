@@ -99,7 +99,7 @@ static ae_error_t map_VerifyM8_error_for_return(ae_error_t status)
     {
     case AE_SUCCESS: break;
     case PSE_PR_INSUFFICIENT_MEMORY_ERROR: break;
-    case PSE_PR_PCH_EPID_NO_MEMORY_ERR: 
+    case PSE_PR_PCH_EPID_NO_MEMORY_ERR:
         status = PSE_PR_INSUFFICIENT_MEMORY_ERROR;
         break;
     case PSE_PR_PCH_EPID_SIG_REVOKED_IN_GROUPRL: break;
@@ -110,7 +110,7 @@ static ae_error_t map_VerifyM8_error_for_return(ae_error_t status)
 #else
     switch (status)
     {
-    case PSE_PR_PCH_EPID_OUTOFMEMORY: 
+    case PSE_PR_PCH_EPID_OUTOFMEMORY:
         status = PSE_PR_INSUFFICIENT_MEMORY_ERROR;
         break;
     }
@@ -163,7 +163,7 @@ TEpidSigma11Verifier::~TEpidSigma11Verifier(void)
 
 bool TEpidSigma11Verifier::get_sigRL_info(const EPID11_SIG_RL* pSigRL, uint32_t& sigRL_entries, uint32_t& sigRL_size)
 {
-    if (NULL == pSigRL) 
+    if (NULL == pSigRL)
     {
         // null sigRL is acceptable
         sigRL_entries = 0;
@@ -171,7 +171,8 @@ bool TEpidSigma11Verifier::get_sigRL_info(const EPID11_SIG_RL* pSigRL, uint32_t&
         return true;
     }
 
-    uint32_t entries = *(uint32_t*)pSigRL->entries;
+    uint32_t entries = 0;
+    memcpy(&entries, pSigRL->entries, sizeof(entries));
     entries = SwapEndian_DW(entries);
     if (entries > MAX_SIGRL_ENTRIES)            // invalid sigRL
         return false;
@@ -192,7 +193,8 @@ bool TEpidSigma11Verifier::get_privRL_info(const EPID11_PRIV_RL* pPrivRL, uint32
         return true;
     }
 
-    uint32_t entries = *(uint32_t*)pPrivRL->entries;
+    uint32_t entries = 0;
+    memcpy(&entries, pPrivRL->entries, sizeof(entries));
     entries = SwapEndian_DW(entries);
     if (entries > MAX_PRIVRL_ENTRIES)       // invalid privRL
         return false;
@@ -224,13 +226,13 @@ bool TEpidSigma11Verifier::get_privRL_info(const EPID11_PRIV_RL* pPrivRL, uint32
 //                                      |<-M6: OCSPResp-----------------------|
 //  uCheckOCSPResponseForExpiration     |                     |               |
 //                                      |                     |               |
-//  tGenM7 (enclave call)               Send S1, Receive S2                    
+//  tGenM7 (enclave call)               Send S1, Receive S2
 //                                      |                     |               |
 //  uExchangeS2AndS3WithME              |--M7: SIGMA S2------>|               |
 //                                      |<-M8: SIGMA S3-------|               |
 //  uGetGroupIdFromME                   |                     |               |
 //                                      |                     |               |
-//  tVerifyM8 (enclave call)            Send S3, Receive updated pairing blob  
+//  tVerifyM8 (enclave call)            Send S3, Receive updated pairing blob
 //                                      |                     |               |
 //  uSavePairingBlob                    |                     |               |
 
@@ -238,14 +240,14 @@ bool TEpidSigma11Verifier::get_privRL_info(const EPID11_PRIV_RL* pPrivRL, uint32
 ae_error_t TEpidSigma11Verifier::GenM7
     (
     /*in */ const SIGMA_S1_MESSAGE*      pS1,
-    /*in */ const EPID11_SIG_RL*         pSigRL, 
-    /*in */ const UINT8*                 pOcspResp, 
+    /*in */ const EPID11_SIG_RL*         pSigRL,
+    /*in */ const UINT8*                 pOcspResp,
     /*in */ UINT32 nLen_OcspResp,
     /*in */ const UINT8*                 pVerifierCert,
     /*in */ UINT32 nLen_VerifierCert,
     /*in */ const pairing_blob_t* pPairingBlob,
     /*in */ UINT32 nMax_S2,
-    /*out*/ SIGMA_S2_MESSAGE* pS2, 
+    /*out*/ SIGMA_S2_MESSAGE* pS2,
     /*out*/ UINT32* pnLen_S2
     )
 {
@@ -319,17 +321,17 @@ ae_error_t TEpidSigma11Verifier::GenM7
         uint8_t Publickey_little_endian[SIGMA_SESSION_PUBKEY_LENGTH];
         uint8_t Privatekey_b_little_endian[SIGMA_SESSION_PRIVKEY_LENGTH];
         if (SGX_SUCCESS != sgx_ecc256_create_key_pair((sgx_ec256_private_t *)Privatekey_b_little_endian,
-                                                (sgx_ec256_public_t*)Publickey_little_endian, sigma_ecc_handle)) 
-        { 
-            break; 
+                                                (sgx_ec256_public_t*)Publickey_little_endian, sigma_ecc_handle))
+        {
+            break;
         }
-        m_sigmaAlg.set_prv_key_b_le(Privatekey_b_little_endian); 
+        m_sigmaAlg.set_prv_key_b_le(Privatekey_b_little_endian);
         // clear buffer containing secrets
         memset_s(Privatekey_b_little_endian, sizeof(Privatekey_b_little_endian), 0, sizeof(Privatekey_b_little_endian));
 
         /* Convert to big endian for m_localPublicKey_gb_big_endian */
         SwapEndian_32B(&(Publickey_little_endian[0]));
-        SwapEndian_32B(&(Publickey_little_endian[32]));        
+        SwapEndian_32B(&(Publickey_little_endian[32]));
         m_sigmaAlg.set_pub_key_gb_be(Publickey_little_endian);
 
         //        OutputOctets("::GenM7:: g^a (BE)", m_remotePublicKey_ga_big_endian, SIGMA_SESSION_PUBKEY_LENGTH);
@@ -342,7 +344,7 @@ ae_error_t TEpidSigma11Verifier::GenM7
         //   SMK := HMAC-SHA256(0x00, g^(ab) || 0x00) with the HMAC key being
         //            32 bytes of 0x00 and the data element being g^(ab) little endian
         // Derive SK and MK
-        //   a) Compute HMAC-SHA256(0x00, g^(ab) || 0x01) 
+        //   a) Compute HMAC-SHA256(0x00, g^(ab) || 0x01)
         //        with the HMAC key being 32 bytes of 0x00, g^(ab) in little endian
         //   b) SK is taken as the first 128 bits of the HMAC result
         //   c) MK is taken as the second 128 bits of the HMAC result
@@ -381,7 +383,7 @@ ae_error_t TEpidSigma11Verifier::GenM7
         //*********************************************************************
         memset(pS2, 0, nMax_S2);
 
-        // Copy Gb in big endian to S2 
+        // Copy Gb in big endian to S2
         memcpy(pS2->Gb, m_sigmaAlg.get_pub_key_gb_be(), SIGMA_SESSION_PUBKEY_LENGTH);
 
         // Copy OCSP request sent in S1
@@ -390,7 +392,7 @@ ae_error_t TEpidSigma11Verifier::GenM7
         // Basename is always set to 0
         memset(pS2->Basename, 0, SIGMA_BASENAME_LENGTH);
 
-        // Location within pS2->Data where data gets added 
+        // Location within pS2->Data where data gets added
         size_t index = 0;
 
         //*********************************************************************
@@ -453,15 +455,15 @@ ae_error_t TEpidSigma11Verifier::GenM7
         //   Sig_pse(g^a || g^b)
         //*********************************************************************
         uint8_t combined_pubkeys[SIGMA_SESSION_PUBKEY_LENGTH * 2];
-        uint8_t ecc_sig[ECDSA_SIG_LENGTH] = {0};        
+        uint8_t ecc_sig[ECDSA_SIG_LENGTH] = {0};
         /* GaGb in big endian format */
         memcpy(combined_pubkeys, m_sigmaAlg.get_remote_pub_key_ga_be(), SIGMA_SESSION_PUBKEY_LENGTH);
         memcpy(combined_pubkeys + SIGMA_SESSION_PUBKEY_LENGTH, m_sigmaAlg.get_pub_key_gb_be(), SIGMA_SESSION_PUBKEY_LENGTH);
 
-        if (SGX_SUCCESS == sgx_ecdsa_sign(combined_pubkeys, 
-            sizeof(combined_pubkeys),  
-            (sgx_ec256_private_t *)pairing_data.secret_data.VerifierPrivateKey, 
-            (sgx_ec256_signature_t *)ecc_sig, 
+        if (SGX_SUCCESS == sgx_ecdsa_sign(combined_pubkeys,
+            sizeof(combined_pubkeys),
+            (sgx_ec256_private_t *)pairing_data.secret_data.VerifierPrivateKey,
+            (sgx_ec256_signature_t *)ecc_sig,
             sigma_ecc_handle))
         {
             /* Convert the signature to big endian format for pS2->SigGaGb */
@@ -504,13 +506,13 @@ ae_error_t TEpidSigma11Verifier::GenM7
 }
 
 #define RL_OFFSET	4
-/* 
-This function will check if the S3 ICV is correct. 
-Then it will verify the EPID signature 
+/*
+This function will check if the S3 ICV is correct.
+Then it will verify the EPID signature
 */
 ae_error_t TEpidSigma11Verifier::VerifyM8
     (
-    /*in */ const SIGMA_S3_MESSAGE*      pS3, 
+    /*in */ const SIGMA_S3_MESSAGE*      pS3,
     /*in */ UINT32 nLen_S3,
     /*in */ const EPID11_PRIV_RL*        pPrivRL,
     /*in, out*/ pairing_blob_t* pPairingBlob,
@@ -650,8 +652,8 @@ ae_error_t TEpidSigma11Verifier::VerifyM8
         uint8_t* pEpid11PrivRL = (pPrivRL == NULL)? NULL:(uint8_t*)pPrivRL+RL_OFFSET;
         uint32_t nEpid11PrivRLSize = (pPrivRL == NULL)? 0:privRL_size-RL_OFFSET-ECDSA_SIG_LENGTH;
         uint8_t* pEpid11SigRL = (m_pSigRL == NULL)? NULL:m_pSigRL+RL_OFFSET;
-        uint32_t nEpid11SigRLSize = (m_pSigRL == NULL)? 0:m_nSigRL-RL_OFFSET-ECDSA_SIG_LENGTH;
-        
+        uint32_t nEpid11SigRLSize = (m_pSigRL == NULL)? 0:static_cast<uint32_t>(m_nSigRL-RL_OFFSET-ECDSA_SIG_LENGTH);
+
         tmp_status = m_sigmaAlg.MsgVerifyPch((UINT8 *)&groupPubKey,
             (uint32_t)(sizeof(EpidCert) - ECDSA_SIG_LENGTH),
             NULL,             // not required for EPID SDK 3.0
@@ -660,7 +662,7 @@ ae_error_t TEpidSigma11Verifier::VerifyM8
             NULL,             // Bsn
             0,                // BsnLen
             (UINT8 *)EpidSigVlr->EpidSig,
-            VLR_UNPADDED_PAYLOAD_SIZE(EpidSigVlr->VlrHeader),
+            static_cast<int>(VLR_UNPADDED_PAYLOAD_SIZE(EpidSigVlr->VlrHeader)),
             pEpid11PrivRL, nEpid11PrivRLSize,       // PrivRL
             pEpid11SigRL, nEpid11SigRLSize,    // SigRL
             NULL, 0);       // GroupRL
@@ -710,9 +712,9 @@ ae_error_t TEpidSigma11Verifier::VerifyM8
             memcpy(&m_pairingID, m_sigmaAlg.get_SK(), sizeof(m_pairingID));
             sgx_status_t seStatus = sgx_read_rand((uint8_t*)&m_pairingNonce, sizeof(m_pairingNonce));
             BREAK_IF_TRUE(SGX_SUCCESS != seStatus, status, PSE_PR_READ_RAND_ERROR);
-            // LTPBlob.pairingNonce = 0 is used to indicate invalid pairing Info in the LTP blob. 
-            // Under the rare situation of a random number of 0 is returned for pairingNonce generation, 
-            // PSE-Pr declares pairing or re-pairing attempt failure. The next pairing/re-pairing attempt 
+            // LTPBlob.pairingNonce = 0 is used to indicate invalid pairing Info in the LTP blob.
+            // Under the rare situation of a random number of 0 is returned for pairingNonce generation,
+            // PSE-Pr declares pairing or re-pairing attempt failure. The next pairing/re-pairing attempt
             // most likely will generate a non-zero pairingNonce
             BREAK_IF_TRUE(memcmp(&m_pairingNonce, &zeroNonce, sizeof(Nonce128_t)) == 0, status, PSE_PR_READ_RAND_ERROR);
             //            OutputOctets("VerifyM8 - new pairing", NULL, 0);
@@ -724,7 +726,7 @@ ae_error_t TEpidSigma11Verifier::VerifyM8
 
         //*********************************************************************
         // Update the unsealed pairing data
-        //      [VerifierPrivateKey, id_pse || id_cse || sk || mk ||  
+        //      [VerifierPrivateKey, id_pse || id_cse || sk || mk ||
         //       PairingNonce || SigRLVersion_cse || PrvRLVersion_cse ||
         //       DalAppletVersion]
         //*********************************************************************
@@ -757,8 +759,8 @@ ae_error_t TEpidSigma11Verifier::VerifyM8
         //NRG:
 
         // keep instance id
-        memcpy(pairing_data.plaintext.pse_instance_id, 
-            pPairingBlob->plaintext.pse_instance_id, 
+        memcpy(pairing_data.plaintext.pse_instance_id,
+            pPairingBlob->plaintext.pse_instance_id,
             sizeof(pairing_data.plaintext.pse_instance_id));
 
         //*********************************************************************
@@ -801,7 +803,7 @@ bool TEpidSigma11Verifier::TaskInfoIsValid( const ME_TASK_INFO& taskInfo)
     if (taskInfo.TaskId != JOM_TASK_ID) return false;
 
     /* Check the first 16 bytes of RsvdforApp matches the hardcoded PSDA Applet ID */
-    if (memcmp(taskInfo.RsvdforApp, PSDA_APPLET_ID, DAL_APPLET_ID_LEN)) 
+    if (memcmp(taskInfo.RsvdforApp, PSDA_APPLET_ID, DAL_APPLET_ID_LEN))
     {
         return false;
     }
@@ -809,7 +811,7 @@ bool TEpidSigma11Verifier::TaskInfoIsValid( const ME_TASK_INFO& taskInfo)
     /* retrieve the PSDA SVN */
     memcpy(&m_nDalAppletVersion, (const_cast<uint8_t *>(taskInfo.RsvdforApp) + DAL_APPLET_ID_LEN), DAL_APPLET_SVN_LEN);
 
-    return true;  
+    return true;
 }
 
 
@@ -846,7 +848,7 @@ ae_error_t TEpidSigma11Verifier::ValidateS3DataBlock(const SIGMA_S3_MESSAGE* pS3
 }
 
 
-ae_error_t TEpidSigma11Verifier::AddCertificateChain(SIGMA_S2_MESSAGE* pS2, 
+ae_error_t TEpidSigma11Verifier::AddCertificateChain(SIGMA_S2_MESSAGE* pS2,
                                                      size_t& index, size_t nMaxS2, const UINT8* pCertChain, size_t nCertChain)
 {
     ae_error_t status = PSE_PR_INTERNAL_ERROR;
@@ -868,7 +870,7 @@ ae_error_t TEpidSigma11Verifier::AddCertificateChain(SIGMA_S2_MESSAGE* pS2,
 }
 
 
-ae_error_t TEpidSigma11Verifier::AddRevocationList(SIGMA_S2_MESSAGE* pS2, 
+ae_error_t TEpidSigma11Verifier::AddRevocationList(SIGMA_S2_MESSAGE* pS2,
                                                    size_t& index, size_t nMaxS2, const EPID11_SIG_RL* pRL, uint32_t nSigRL)
 {
     ae_error_t status = PSE_PR_INTERNAL_ERROR;
@@ -885,10 +887,10 @@ ae_error_t TEpidSigma11Verifier::AddRevocationList(SIGMA_S2_MESSAGE* pS2,
 
             m_nSigRL = nSigRL;
             m_pSigRL = new (std::nothrow) UINT8[m_nSigRL];
-            BREAK_IF_TRUE( (NULL == m_pSigRL), status, 
+            BREAK_IF_TRUE( (NULL == m_pSigRL), status,
                 PSE_PR_INSUFFICIENT_MEMORY_ERROR);
 
-            int nPaddedBytes =  REQUIRED_PADDING_DWORD_ALIGNMENT(m_nSigRL);
+            int nPaddedBytes =  static_cast<int>(REQUIRED_PADDING_DWORD_ALIGNMENT(m_nSigRL));
             memcpy(m_pSigRL, pRL , m_nSigRL);
 
             SIGNATURE_REV_LIST_VLR sigRL_VLR;
@@ -905,6 +907,8 @@ ae_error_t TEpidSigma11Verifier::AddRevocationList(SIGMA_S2_MESSAGE* pS2,
             index += sizeof(SIGNATURE_REV_LIST_VLR);
             memcpy((pS2->Data + index), m_pSigRL, m_nSigRL);
             index += m_nSigRL;
+            // must skip nPaddedBytes for alignment
+            index += nPaddedBytes;
         }
 
         status = AE_SUCCESS;
@@ -915,7 +919,7 @@ ae_error_t TEpidSigma11Verifier::AddRevocationList(SIGMA_S2_MESSAGE* pS2,
 }
 
 
-ae_error_t TEpidSigma11Verifier::AddOcspResponses(SIGMA_S2_MESSAGE* pS2, 
+ae_error_t TEpidSigma11Verifier::AddOcspResponses(SIGMA_S2_MESSAGE* pS2,
                                                   size_t& index, size_t nMaxS2, const UINT8* pOcspResp, size_t nOcspResp)
 {
     ae_error_t status = PSE_PR_INTERNAL_ERROR;
@@ -928,7 +932,7 @@ ae_error_t TEpidSigma11Verifier::AddOcspResponses(SIGMA_S2_MESSAGE* pS2,
             break;
         }
 
-        BREAK_IF_TRUE( (0 == nOcspResp), status , 
+        BREAK_IF_TRUE( (0 == nOcspResp), status ,
             PSE_PR_NO_OCSP_RESPONSE_ERROR);
 
         if (nMaxS2 < ((pS2->Data - (uint8_t*)pS2) + index + nOcspResp))
@@ -949,7 +953,7 @@ ae_error_t TEpidSigma11Verifier::AddOcspResponses(SIGMA_S2_MESSAGE* pS2,
 ae_error_t TEpidSigma11Verifier::ValidateSigRL(const EPID11_SIG_RL* pSigRL, uint32_t sigRL_entries, uint32_t sigRL_size, uint32_t* pVersion)
 {
     sgx_ecc_state_handle_t ivk_ecc_handle = NULL;
-    uint8_t result;      
+    uint8_t result;
     ae_error_t status = PSE_PR_MSG_COMPARE_ERROR;
 
     if (NULL == pVersion)

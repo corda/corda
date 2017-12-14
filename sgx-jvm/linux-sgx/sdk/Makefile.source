@@ -40,7 +40,6 @@
 #        - tcrypto:       libsgx_tcrypto.a
 #        - tkey_exchange: libsgx_tkey_exchange.a
 #        - tprotected_fs: libsgx_tprotected_fs.a
-#        - tsetjmp:       libsgx_tsetjmp.a
 #        - tcmalloc:      libsgx_tcmalloc.a
 #  - Untrtusted libraries
 #        - ukey_exchange: libsgx_ukey_exchange.a
@@ -53,7 +52,7 @@
 #        - signtool:      sgx_sign
 #        - edger8r:       sgx_edger8r
 #  - Simulation libraries and tools
-#        - simulation:    libsgx_trts_sim.a, libsgx_tservice_sim.a, libsgx_urts_sim.a, libsgx_uae_service_sim.a, sgx_config_cpusvn
+#        - simulation:    libsgx_trts_sim.a, libsgx_tservice_sim.a, libsgx_urts_sim.so, libsgx_uae_service_sim.so, sgx_config_cpusvn
 #
 include ../buildenv.mk
 
@@ -62,30 +61,35 @@ LIBTLIBCXX := $(BUILD_DIR)/libsgx_tstdcxx.a
 LIBTCXX    := $(BUILD_DIR)/libsgx_tcxx.a
 LIBTSE     := $(BUILD_DIR)/libsgx_tservice.a
 
-.PHONY: all
-all: tstdc tstdcxx tcxx tservice trts tcrypto tkey_exchange ukey_exchange tprotected_fs uprotected_fs ptrace sample_crypto libcapable simulation signtool edger8r tsetjmp tcmalloc
+.PHONY: components
+components: tstdc tstdcxx tcxx tservice trts tcrypto tkey_exchange ukey_exchange tprotected_fs uprotected_fs ptrace sample_crypto libcapable simulation signtool edger8r tcmalloc
 
 # ---------------------------------------------------
 #  tstdc
-#      includes: tlibc, libm, tlibthread, compiler-rt
+#      includes: tlibc, libm, tlibthread, compiler-rt, tsafecrt
 # ---------------------------------------------------
 .PHONY: tstdc
 tstdc: $(LIBTLIBC)
 
-$(LIBTLIBC): tlibthread compiler-rt sgx_libm
+$(LIBTLIBC): tlibthread compiler-rt tsafecrt sgx_libm tsetjmp
 	$(MAKE) -C tlibc/ -j4 2> /dev/null
-	@$(MKDIR) $(BUILD_DIR)/.libm  $(BUILD_DIR)/.tlibc   $(BUILD_DIR)/.tlibthread
-	@$(RM) -f $(BUILD_DIR)/.libm/* $(BUILD_DIR)/.tlibc/* $(BUILD_DIR)/.tlibthread/*
+	@$(MKDIR) $(BUILD_DIR)/.libm  $(BUILD_DIR)/.tlibc   $(BUILD_DIR)/.tlibthread $(BUILD_DIR)/.tsafecrt $(BUILD_DIR)/.tsetjmp
+	@$(RM) -f $(BUILD_DIR)/.libm/* $(BUILD_DIR)/.tlibc/* $(BUILD_DIR)/.tlibthread/* $(BUILD_DIR)/.tsafecrt/* $(BUILD_DIR)/.tsetjmp/*.o
 	@cd $(BUILD_DIR)/.libm     && $(AR) x $(LINUX_EXTERNAL_DIR)/sgx_libm/libm.a
 	@cd $(BUILD_DIR)/.tlibc      && $(AR) x $(LINUX_SDK_DIR)/tlibc/libtlibc.a
 	@cd $(BUILD_DIR)/.tlibthread && $(AR) x $(LINUX_SDK_DIR)/tlibthread/libtlibthread.a
+	@cd $(BUILD_DIR)/.tsafecrt && $(AR) x $(LINUX_SDK_DIR)/tsafecrt/libsgx_tsafecrt.a
+	@cd $(BUILD_DIR)/.tsetjmp && $(AR) x $(LINUX_SDK_DIR)/tsetjmp/libsgx_tsetjmp.a
 	$(CP) compiler-rt/libcompiler-rt.a $@
-	$(AR) rsD $@ $(BUILD_DIR)/.libm/*.o $(BUILD_DIR)/.tlibc/*.o $(BUILD_DIR)/.tlibthread/*.o
-	@$(RM) -rf $(BUILD_DIR)/.libm $(BUILD_DIR)/.tlibc $(BUILD_DIR)/.tlibthread
-
+	$(AR) rsD $@ $(BUILD_DIR)/.libm/*.o $(BUILD_DIR)/.tlibc/*.o $(BUILD_DIR)/.tlibthread/*.o $(BUILD_DIR)/.tsafecrt/*.o $(BUILD_DIR)/.tsetjmp/*.o
+	@$(RM) -rf $(BUILD_DIR)/.libm $(BUILD_DIR)/.tlibc $(BUILD_DIR)/.tlibthread $(BUILD_DIR)/.tsafecrt $(BUILD_DIR)/.tsetjmp
 .PHONY: tlibthread
 tlibthread:
 	$(MAKE) -C tlibthread/
+
+.PHONY: tsafecrt
+tsafecrt:
+	$(MAKE) -C tsafecrt/
 
 .PHONY: compiler-rt
 compiler-rt:
@@ -101,6 +105,10 @@ endif
 .PHONY: sgx_libm
 sgx_libm:
 	$(MAKE) -C $(LIBM_PATH) ARCH=$(M_ARCH) 2> /dev/null
+
+.PHONY: tsetjmp
+tsetjmp:
+	$(MAKE) -C tsetjmp/
 
 # ---------------------------------------------------
 #  tstdcxx
@@ -189,10 +197,6 @@ tcrypto:
 tkey_exchange: edger8r
 	$(MAKE) -C tkey_exchange
 
-.PHONY: tsetjmp
-tsetjmp:
-	$(MAKE) -C tsetjmp/
-
 .PHONY: tcmalloc
 tcmalloc:
 	$(MAKE) -C gperftools/
@@ -223,7 +227,6 @@ sample_crypto:
 # ---------------------------------------------------
 #  standalone, untrusted libraries
 # ---------------------------------------------------
-
 .PHONY: libcapable
 libcapable:
 	$(MAKE) -C libcapable/linux/
@@ -263,6 +266,7 @@ clean:
 	$(MAKE) -C tae_service/                        clean
 	$(MAKE) -C trts/                               clean
 	$(MAKE) -C tsetjmp/                            clean
+	$(MAKE) -C tsafecrt/                           clean
 	$(MAKE) -C gperftools/                         clean
 	$(MAKE) -C tlibcrypto/                         clean
 	$(MAKE) -C tkey_exchange/                      clean

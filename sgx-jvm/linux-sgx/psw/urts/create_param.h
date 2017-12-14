@@ -38,16 +38,22 @@ typedef struct _create_param_t
 {
     uint64_t          enclave_size;
     uint64_t          stack_max_size;
+    uint64_t          stack_min_size;
     uint64_t          stack_limit_addr;
     uint64_t          stack_base_addr;
+    size_t            ssa_base_addr;
     uint64_t          heap_max_size;
+    uint64_t          heap_min_size;
+    uint64_t          heap_init_size;
     uint64_t          heap_offset;
     uint64_t          first_ssa_gpr;
     uint64_t          td_addr;
     uint64_t          tls_addr;
+    uint32_t          tcs_num;
     uint32_t          tcs_max_num;
+    uint32_t          tcs_min_pool;
     uint32_t          tcs_policy;
-    uint32_t          ssa_frame_size;
+    uint32_t          xsave_size;
 } create_param_t;
 
 #endif

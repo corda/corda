@@ -40,6 +40,11 @@
 #include "sgx_spinlock.h"
 #include "global_init.h"
 #include "trts_internal.h"
+#include "trts_inst.h"
+#include "trts_emodpr.h"
+#include "metadata.h"
+#  include "linux/elf_parser.h"
+#  define GET_TLS_INFO  elf_tls_info
 
 // is_ecall_allowed()
 // check the index in the dynamic entry table
@@ -95,12 +100,111 @@ static sgx_status_t get_func_addr(uint32_t ordinal, void **addr)
     return SGX_SUCCESS;
 }
 
+typedef struct _tcs_node_t
+{
+    uintptr_t tcs;
+    struct _tcs_node_t *next;
+} tcs_node_t;
+
+static tcs_node_t *g_tcs_node = NULL;
+static sgx_spinlock_t g_tcs_node_lock = SGX_SPINLOCK_INITIALIZER;
+
+static uintptr_t g_tcs_cookie = 0;
+#define ENC_TCS_POINTER(x)  (uintptr_t)(x) ^ g_tcs_cookie
+#define DEC_TCS_POINTER(x)  (void *)((x) ^ g_tcs_cookie)
+
+// do_save_tcs()
+//      Save tcs while function do_ecall_add_thread invoked.
+// Parameters:
+//      [IN] ptcs - the tcs_t pointer which need to be saved
+// Return Value:
+//     zero - success
+//     non-zero - fail
+//
+static sgx_status_t do_save_tcs(void *ptcs)
+{
+    if(unlikely(g_tcs_cookie == 0))
+    {
+        uintptr_t rand = 0;
+        do
+        {
+            if(SGX_SUCCESS != sgx_read_rand((unsigned char *)&rand, sizeof(rand)))
+            {
+                return SGX_ERROR_UNEXPECTED;
+            }
+        } while(rand == 0);
+
+        sgx_spin_lock(&g_tcs_node_lock);
+        if(g_tcs_cookie == 0)
+        {
+            g_tcs_cookie = rand;
+        }
+        sgx_spin_unlock(&g_tcs_node_lock);
+    }
+
+    tcs_node_t *tcs_node = (tcs_node_t *)malloc(sizeof(tcs_node_t));
+    if(!tcs_node)
+    {
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    tcs_node->tcs = ENC_TCS_POINTER(ptcs);
+
+    sgx_spin_lock(&g_tcs_node_lock);
+    tcs_node->next = g_tcs_node;
+    g_tcs_node = tcs_node;
+    sgx_spin_unlock(&g_tcs_node_lock);
+
+    return SGX_SUCCESS;
+}
+
+// do_del_tcs()
+//      Delete tcs from the global tcs list.
+// Parameters:
+//      [IN] ptcs - the tcs_t pointer which need to be deleted
+// Return Value:
+//     N/A
+//
+static void do_del_tcs(void *ptcs)
+{
+    sgx_spin_lock(&g_tcs_node_lock);
+    if (g_tcs_node != NULL)
+    {
+        if (DEC_TCS_POINTER(g_tcs_node->tcs) == ptcs)
+        {
+            tcs_node_t *tmp = g_tcs_node;
+            g_tcs_node = g_tcs_node->next;
+            free(tmp);
+        }
+        else
+        {
+            tcs_node_t *tcs_node = g_tcs_node->next;
+            tcs_node_t *pre_tcs_node = g_tcs_node;
+            while (tcs_node != NULL)
+            {
+                if (DEC_TCS_POINTER(tcs_node->tcs) == ptcs)
+                {
+                    pre_tcs_node->next = tcs_node->next;
+                    free(tcs_node);
+                    break;
+                }
+
+                pre_tcs_node = tcs_node;
+                tcs_node = tcs_node->next;
+            }
+        }
+    }
+    sgx_spin_unlock(&g_tcs_node_lock);
+}
+
 static volatile bool           g_is_first_ecall = true;
 static volatile sgx_spinlock_t g_ife_lock       = SGX_SPINLOCK_INITIALIZER;
 
 typedef sgx_status_t (*ecall_func_t)(void *ms);
 static sgx_status_t trts_ecall(uint32_t ordinal, void *ms)
 {
+    sgx_status_t status = SGX_ERROR_UNEXPECTED;
+
     if (unlikely(g_is_first_ecall))
     {
         // The thread performing the global initialization cannot do a nested ECall
@@ -113,6 +217,18 @@ static sgx_status_t trts_ecall(uint32_t ordinal, void *ms)
         sgx_spin_lock(&g_ife_lock);
         if (g_is_first_ecall)
         {
+#ifndef SE_SIM
+            if(EDMM_supported)
+            {
+                //change back the page permission
+                size_t enclave_start = (size_t)&__ImageBase;
+                if((status = change_protection((void *)enclave_start)) != SGX_SUCCESS)
+                {
+                    sgx_spin_unlock(&g_ife_lock);
+                    return status;
+                }
+            }
+#endif
             //invoke global object's construction
             init_global_object();
             g_is_first_ecall = false;
@@ -121,19 +237,77 @@ static sgx_status_t trts_ecall(uint32_t ordinal, void *ms)
     }
 
     void *addr = NULL;
-    sgx_status_t status = get_func_addr(ordinal, &addr);
+    status = get_func_addr(ordinal, &addr);
     if(status == SGX_SUCCESS)
     {
         ecall_func_t func = (ecall_func_t)addr;
         status = func(ms);
     }
-
-    // clean extended registers, no need to save
-    CLEAN_XFEATURE_REGS
+    
     return status;
 }
 
-extern "C" sgx_status_t do_init_thread(void *tcs);
+extern "C" uintptr_t __stack_chk_guard;
+static void init_static_stack_canary(void *tcs)
+{
+    size_t *canary = TCS2CANARY(tcs);
+    *canary = (size_t)__stack_chk_guard;
+}
+
+static sgx_status_t do_init_thread(void *tcs)
+{
+    thread_data_t *thread_data = GET_PTR(thread_data_t, tcs, g_global_data.td_template.self_addr);
+#ifndef SE_SIM
+    size_t saved_stack_commit_addr = thread_data->stack_commit_addr; 
+    bool thread_first_init = (saved_stack_commit_addr == 0) ? true : false;
+#endif
+    size_t stack_guard = thread_data->stack_guard;
+    memcpy_s(thread_data, SE_PAGE_SIZE, const_cast<thread_data_t *>(&g_global_data.td_template), sizeof(thread_data_t));
+    thread_data->last_sp += (size_t)tcs;
+    thread_data->self_addr += (size_t)tcs;
+    thread_data->stack_base_addr += (size_t)tcs;
+    thread_data->stack_limit_addr += (size_t)tcs;
+    thread_data->stack_commit_addr = thread_data->stack_limit_addr;
+    thread_data->first_ssa_gpr += (size_t)tcs;
+    thread_data->tls_array += (size_t)tcs;
+    thread_data->tls_addr += (size_t)tcs;
+
+    thread_data->last_sp -= (size_t)STATIC_STACK_SIZE;
+    thread_data->stack_base_addr -= (size_t)STATIC_STACK_SIZE;
+    thread_data->stack_guard = stack_guard;
+    init_static_stack_canary(tcs);
+
+#ifndef SE_SIM
+    if (EDMM_supported && is_dynamic_thread(tcs))
+    {
+        if (thread_first_init)
+        {   
+            uint32_t page_count = get_dynamic_stack_max_page();
+            thread_data->stack_commit_addr += ((sys_word_t)page_count << SE_PAGE_SHIFT);
+        }
+        else
+        {   
+            thread_data->stack_commit_addr = saved_stack_commit_addr;
+        }
+    }
+#endif
+
+    uintptr_t tls_addr = 0;
+    size_t tdata_size = 0;
+
+    if(0 != GET_TLS_INFO(&__ImageBase, &tls_addr, &tdata_size))
+    {
+        return SGX_ERROR_UNEXPECTED;
+    }
+    if(tls_addr)
+    {
+        memset((void *)TRIM_TO_PAGE(thread_data->tls_addr), 0, ROUND_TO_PAGE(thread_data->self_addr - thread_data->tls_addr));
+        memcpy_s((void *)(thread_data->tls_addr), thread_data->self_addr - thread_data->tls_addr, (void *)tls_addr, tdata_size);
+    }
+
+    return SGX_SUCCESS;
+}
+
 sgx_status_t do_ecall(int index, void *ms, void *tcs)
 {
     sgx_status_t status = SGX_ERROR_UNEXPECTED;
@@ -154,3 +328,128 @@ sgx_status_t do_ecall(int index, void *ms, void *tcs)
     return status;
 }
 
+sgx_status_t do_ecall_add_thread(void *ms, void *tcs)
+{
+    sgx_status_t status = SGX_ERROR_UNEXPECTED;
+
+    struct ms_tcs *ms_tcs = (struct ms_tcs*)ms;
+    if (ms_tcs == NULL)
+    {
+        return status;
+    }
+
+    if (!sgx_is_outside_enclave(ms_tcs, sizeof(struct ms_tcs)))
+    {
+        abort();
+    }
+
+    void* ptcs = ms_tcs->ptcs;
+    if (ptcs == NULL)
+    {
+        return status;
+    }
+
+    status = do_init_thread(tcs);
+    if(SGX_SUCCESS != status)
+    {
+        return status;
+    }
+
+    status = do_save_tcs(ptcs);
+    if(SGX_SUCCESS != status)
+    {
+        return status;
+    }
+
+    status = do_add_thread(ptcs);
+    if (SGX_SUCCESS != status)
+    {
+    	do_del_tcs(ptcs);
+        return status;
+    }
+
+    return status;
+}
+
+// do_uninit_enclave()
+//      Run the global uninitialized functions when the enclave is destroyed.
+// Parameters:
+//      [IN] tcs - used for running this task
+// Return Value:
+//     zero - success
+//     non-zero - fail
+//
+sgx_status_t do_uninit_enclave(void *tcs)
+{
+    sgx_spin_lock(&g_tcs_node_lock);
+    tcs_node_t *tcs_node = g_tcs_node;
+    g_tcs_node = NULL;
+    sgx_spin_unlock(&g_tcs_node_lock);
+
+    while (tcs_node != NULL)
+    {
+        if (DEC_TCS_POINTER(tcs_node->tcs) == tcs)
+        {
+            tcs_node_t *tmp = tcs_node;
+            tcs_node = tcs_node->next;
+            free(tmp);
+            continue;
+        }
+
+        size_t start = (size_t)DEC_TCS_POINTER(tcs_node->tcs);
+        size_t end = start + (1 << SE_PAGE_SHIFT);
+        int rc = sgx_accept_forward(SI_FLAG_TRIM | SI_FLAG_MODIFIED, start, end);
+        if(rc != 0)
+        {
+            return SGX_ERROR_UNEXPECTED;
+        }
+
+        tcs_node_t *tmp = tcs_node;
+        tcs_node = tcs_node->next;
+        free(tmp);
+    }
+
+    sgx_spin_lock(&g_ife_lock);
+    if (!g_is_first_ecall)
+    {
+        uninit_global_object();
+    }
+    sgx_spin_unlock(&g_ife_lock);
+
+    set_enclave_state(ENCLAVE_CRASHED);
+
+    return SGX_SUCCESS;
+}
+
+extern "C" sgx_status_t sgx_trts_mprotect(size_t start, size_t size, uint64_t perms)
+{
+    int rc = -1;
+    size_t page;
+    sgx_status_t ret = SGX_SUCCESS;
+    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
+
+    //Error return if start or size is not page-aligned or size is zero.
+    if (!IS_PAGE_ALIGNED(start) || (size == 0) || !IS_PAGE_ALIGNED(size))
+        return SGX_ERROR_INVALID_PARAMETER;
+
+    ret = change_permissions_ocall(start, size, perms);
+    if (ret != SGX_SUCCESS)
+        return ret;
+
+    si.flags = perms|SI_FLAG_REG|SI_FLAG_PR;
+    memset(&si.reserved, 0, sizeof(si.reserved));
+
+    for(page = start; page < start + size; page += SE_PAGE_SIZE)
+    {
+        do_emodpe(&si, page);
+        // If the target permission to set is RWX, no EMODPR, hence no EACCEPT.
+        if ((perms & (SI_FLAG_W|SI_FLAG_X)) != (SI_FLAG_W|SI_FLAG_X))
+        {
+            rc = do_eaccept(&si, page);
+            if(rc != 0)
+                return (sgx_status_t)rc;
+        }
+    }
+
+    return SGX_SUCCESS;
+}

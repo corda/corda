@@ -34,9 +34,6 @@
 
 #include <stdint.h>
 
-
-#define MAX_PCH_TYPE  2
-
 #ifndef UINT64
 #define UINT64   uint64_t
 #endif
@@ -134,18 +131,5 @@ typedef struct _SAFEID_CRYPTO_CONTEXT
 
 
 #pragma pack(pop)
-
-
-extern void swap(void * pBuf, UINT32 buflen);
-extern void InitRSAKey(UINT8 PlatformKeyId);
-extern STATUS ClsProvisionEpid_1_1();
-extern STATUS ClsMeCreatePermitRequest();
-extern STATUS ClsExchangeEpidRequest();
-extern STATUS ClsPsCreatePermitResponse();
-
-extern UINT16 CurrentClassId;
-extern UINT16 CurrentSubClass;
-
-
 
 #endif

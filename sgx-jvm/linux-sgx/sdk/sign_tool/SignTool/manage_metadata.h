@@ -39,7 +39,6 @@
 #include "binparser.h"
 
 #define MAX_BUFFER_SIZE 4096
-#define TCS_TEMPLATE_SIZE 72
 
 #define STRCMP strcmp
 #define STRNCMP strncmp
@@ -58,9 +57,14 @@ typedef enum _para_type_t
     DISABLEDEBUG,
     HW,
     TCSNUM,
+    TCSMAXNUM,
+    TCSMINPOOL,
     TCSPOLICY,
     STACKMAXSIZE,
+    STACKMINSIZE,
     HEAPMAXSIZE,
+    HEAPMINSIZE,
+    HEAPINITSIZE,
     HEAPEXECUTABLE,
     MISCSELECT,
     MISCMASK
@@ -87,11 +91,16 @@ public:
     ~CMetadata();
     bool build_metadata(const xml_parameter_t *parameter);
 private:
+    bool get_time(uint32_t *date);
     bool modify_metadata(const xml_parameter_t *parameter);
+    bool check_xml_parameter(const xml_parameter_t *parameter);
+    bool fill_enclave_css(const xml_parameter_t *parameter);
     void *alloc_buffer_from_metadata(uint32_t size);
+    bool get_xsave_size(uint64_t xfrm, uint32_t *xsave_size);
     bool build_layout_table();
     bool build_patch_table();
-    bool build_layout_entries(vector<layout_t> &layouts);
+    bool update_layout_entries();
+    bool build_layout_entries();
     bool build_patch_entries(vector<patch_entry_t> &patches);
 
     layout_entry_t *get_entry_by_id(uint16_t id);
@@ -105,6 +114,10 @@ private:
     metadata_t *m_metadata;
     BinParser *m_parser;
     create_param_t m_create_param;
+    vector <layout_t> m_layouts;
+    uint64_t m_rva;
+    uint32_t m_gd_size;
+    uint8_t *m_gd_template;
     bool m_heap_executable;
 };
 #endif

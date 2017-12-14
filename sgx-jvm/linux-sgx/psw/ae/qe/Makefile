@@ -33,21 +33,26 @@ TOP_DIR := ../../..
 include ../buildenv.mk
 
 CXXFLAGS  += -Werror
-CFLAGS    += -Werror 
-EXTERNAL_LIB += -L$(LINUX_EXTERNAL_DIR)/epid/ -lepid
+CFLAGS	+= -Werror 
+
+EPID_SDK_DIR = $(LINUX_EXTERNAL_DIR)/epid-sdk-3.0.0
+EXTERNAL_LIB += -L$(EPID_SDK_DIR)/epid/member -lmember \
+				-L$(EPID_SDK_DIR)/epid/common -lcommon \
+				-L$(EPID_SDK_DIR)/ext/ipp/sources/ippcpepid/src -lippcpepid
+
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux \
-           -I$(SGX_IPP_INC)/                          \
-           -I$(LINUX_EXTERNAL_DIR)/epid               \
-           -I$(LINUX_PSW_DIR)/ae/common               \
-           -I$(COMMON_DIR)/inc/tlibc                  \
-           -I$(LINUX_PSW_DIR)/ae/inc/internal
+		   -I$(SGX_IPP_INC)/                          \
+		   -I$(LINUX_EXTERNAL_DIR)/epid-sdk-3.0.0     \
+		   -I$(LINUX_PSW_DIR)/ae/common               \
+		   -I$(COMMON_DIR)/inc/tlibc                  \
+		   -I$(LINUX_PSW_DIR)/ae/inc/internal
 
 SRC := $(wildcard *.cpp)
 SRC += ipp_bn.cpp                     \
-       ipp_rsa_pub_key.cpp            \
-       se_ecdsa_verify_internal.cpp   \
-       se_sig_rl.cpp                  \
-       pve_qe_common.cpp 
+	   ipp_rsa_pub_key.cpp            \
+	   se_ecdsa_verify_internal.cpp   \
+	   se_sig_rl.cpp                  \
+	   pve_qe_common.cpp 
 
 OBJ := $(SRC:.cpp=.o)
 OBJS := $(sort $(OBJ) version.o)
@@ -55,8 +60,10 @@ OBJS := $(sort $(OBJ) version.o)
 .PHONY: all
 all: $(SONAME) 
 
+.PHONY: EPID
 EPID:
-	$(MAKE) -C $(LINUX_EXTERNAL_DIR)/epid/
+	cd $(EPID_SDK_DIR) && ./configure prefix=/usr/local
+	$(MAKE) -C $(EPID_SDK_DIR) 2> /dev/null
 
 $(SONAME): $(OBJS) EPID
 	$(CC) $(CFLAGS) -o $@ $(OBJS) -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS)
@@ -75,6 +82,10 @@ clean:
 	@$(RM) *.so
 	@$(RM) *.map
 	@$(RM) *_t.*
+ifeq ("$(shell test -f $(EPID_SDK_DIR)/Makefile && echo Makefile exists)", "Makefile exists")
+	-$(MAKE) -C $(EPID_SDK_DIR) clean
+endif
+	@$(RM) -r $(EPID_SDK_DIR)/Makefile $(EPID_SDK_DIR)/config.log $(EPID_SDK_DIR)/config.status
 
 .PHONY: rebuild
 rebuild:

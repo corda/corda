@@ -1,45 +1,53 @@
 /*
-* Copyright 2011-2017 Intel Corporation
-* 
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 
-* 1. Redistributions of source code must retain the above copyright notice,
-* this list of conditions and the following disclaimer.
-* 
-* 2. Redistributions in binary form must reproduce the above copyright
-* notice, this list of conditions and the following disclaimer in the
-* documentation and/or other materials provided with the distribution.
-* 
-* 3. Neither the name of the copyright holder nor the names of its
-* contributors may be used to endorse or promote products derived from
-* this software without specific prior written permission.
-* 
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-* A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-* HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
-* TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
 
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <memory.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sgx_uae_service.h>
 #include <sgx_capable.h>
 
+#include "se_cdefs.h"
+SGX_ACCESS_VERSION(capable, 1);
+
 /* __cpuid(unsinged int info[4], unsigned int leaf, unsigned int subleaf); */
 /* Because gcc's __get_cpuid() intrinsic is difficult to work with */
 #define __cpuid(x,y,z) asm volatile("cpuid":"=a"(x[0]),"=b"(x[1]),"=c"(x[2]),"=d"(x[3]):"a"(y),"c"(z))
+
+#define Genu 0x756e6547
+#define ineI 0x49656e69
+#define ntel 0x6c65746e
 
 #define EFIFS_PATH		"/sys/firmware/efi/"
 #define EFIVARS_PATH 	EFIFS_PATH"efivars/"
@@ -52,6 +60,7 @@ static int _is_cpu_supported();
 sgx_status_t sgx_is_capable (int *sgx_capable)
 {
 	struct stat sb;
+	memset(&sb, 0, sizeof(struct stat));
 
 	if ( sgx_capable == NULL ) return SGX_ERROR_INVALID_PARAMETER;
 
@@ -81,6 +90,7 @@ sgx_status_t sgx_cap_get_status (sgx_device_status_t *sgx_device_status)
 {
 	struct stat sb;
 	int has_efifs= 0;
+	memset(&sb, 0, sizeof(struct stat));
 
 	if ( sgx_device_status == NULL ) return SGX_ERROR_INVALID_PARAMETER;
 
@@ -199,7 +209,7 @@ sgx_status_t sgx_cap_get_status (sgx_device_status_t *sgx_device_status)
 
 static int _is_cpu_supported()
 {
-	unsigned int info[4];
+	unsigned int info[4] = {0, 0, 0, 0};
 	unsigned int *ebx, *ecx, *edx;
 
 	ebx= &info[1];
@@ -209,7 +219,7 @@ static int _is_cpu_supported()
 	/* Is this an Intel CPU? */
 
 	__cpuid (info, 0x00, 0);
-	if ( *ebx != 0x756e6547 || *ecx != 0x6c65746e || *edx != 0x49656e69 )
+	if ( *ebx != Genu || *ecx != ntel || *edx != ineI )
 		return 0;
 
 	/* Does the CPU support Intel SGX? */
@@ -223,7 +233,7 @@ static int _is_cpu_supported()
 
 static int _is_sgx_available ()
 {
-	unsigned int info[4];
+	unsigned int info[4] = {0, 0, 0, 0};
 	unsigned int *eax, *ebx, *ecx, *edx;
 	unsigned int subleaf= 2;
 	unsigned int flag;
@@ -329,7 +339,9 @@ sgx_status_t sgx_cap_enable_device (sgx_device_status_t *sgx_device_status)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	fclose(fefivar);
+	if ( fclose(fefivar)) {
+		return SGX_ERROR_UNEXPECTED;
+	}
 
 	/*
 	 * Now create the EPCSW EFI variable. The variable data is a 
@@ -354,7 +366,9 @@ sgx_status_t sgx_cap_enable_device (sgx_device_status_t *sgx_device_status)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	fclose(fefivar);
+	if ( fclose(fefivar)) {
+		return SGX_ERROR_UNEXPECTED;
+	}
 
 	*sgx_device_status= SGX_DISABLED_REBOOT_REQUIRED;
 

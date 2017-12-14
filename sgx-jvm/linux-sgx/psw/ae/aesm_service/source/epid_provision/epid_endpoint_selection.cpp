@@ -51,7 +51,7 @@ static ae_error_t prov_es_gen_header(provision_request_header_t *es_header,
     //initialize ES Msg1 Header
     es_header->protocol = ENDPOINT_SELECTION;
     es_header->type = TYPE_ES_MSG1;
-    es_header->version = TLV_VERSION_1;
+    es_header->version = TLV_VERSION_2;
     if(0!=memcpy_s(es_header->xid, sizeof(es_header->xid), xid, XID_SIZE)){
         AESM_DBG_FATAL("memcpy error");
         return PVE_UNEXPECTED_ERROR;
@@ -112,7 +112,7 @@ uint32_t CPVEClass::proc_es_msg2(
     char server_url[MAX_PATH],
     uint16_t& ttl,
     const uint8_t xid[XID_SIZE],
-    uint8_t rsa_signature[PVE_RSA_KEY_BYTES],
+    uint8_t rsa_signature[RSA_3072_KEY_BYTES],
     signed_pek_t& pek)
 {
     uint32_t ae_ret = PVE_MSG_ERROR;
@@ -127,7 +127,7 @@ uint32_t CPVEClass::proc_es_msg2(
         goto final_point;
     }
     //first checking resp header for protocol, version and type
-    if(resp_header->protocol != ENDPOINT_SELECTION || resp_header->version!=TLV_VERSION_1 || resp_header->type != TYPE_ES_MSG2){
+    if(resp_header->protocol != ENDPOINT_SELECTION || resp_header->version!=TLV_VERSION_2 || resp_header->type != TYPE_ES_MSG2){
         AESM_DBG_ERROR("ES Msg2 header error");
         goto final_point;
     }
@@ -170,24 +170,24 @@ uint32_t CPVEClass::proc_es_msg2(
         goto final_point;
     }
     if(tlvs_msg[1].type != TLV_SIGNATURE || tlvs_msg[1].version != TLV_VERSION_1 ||
-        tlvs_msg[1].header_size!=SMALL_TLV_HEADER_SIZE||tlvs_msg[1].size != PVE_RSA_KEY_BYTES+1 ||
-        tlvs_msg[1].payload[0] != PEK_PRIV){
+        tlvs_msg[1].header_size!=SMALL_TLV_HEADER_SIZE||tlvs_msg[1].size != RSA_3072_KEY_BYTES+1 ||
+        tlvs_msg[1].payload[0] != PEK_3072_PRIV){
         ae_ret = PVE_MSG_ERROR;
-        AESM_DBG_ERROR("Invalid Signature TLV: type (tlv%d), version %d, size %d while expected value is (tlv%d,) %d, %d", 
+        AESM_DBG_ERROR("Invalid Signature TLV: type (tlv%d), version %d, size %d while expected value is (tlv%d,) %d, %d",
             tlvs_msg[1].type, tlvs_msg[1].version, tlvs_msg[1].size,
-            TLV_SIGNATURE, TLV_VERSION_1, PVE_RSA_KEY_BYTES);
+            TLV_SIGNATURE, TLV_VERSION_1, RSA_3072_KEY_BYTES);
         goto final_point;
     }
-    if(tlvs_msg[2].type != TLV_PEK || tlvs_msg[2].version != TLV_VERSION_1 ||
+    if(tlvs_msg[2].type != TLV_PEK || tlvs_msg[2].version != TLV_VERSION_2 ||
         tlvs_msg[2].header_size!=SMALL_TLV_HEADER_SIZE||tlvs_msg[2].size != sizeof(signed_pek_t)){
             ae_ret = PVE_MSG_ERROR;
-        AESM_DBG_ERROR("Invalid PEK TLV: type (tlv%d), version %d, size %d while expected value is (tlv%d), %d, %d", 
+        AESM_DBG_ERROR("Invalid PEK TLV: type (tlv%d), version %d, size %d while expected value is (tlv%d), %d, %d",
             tlvs_msg[2].type, tlvs_msg[2].version, tlvs_msg[2].size,
-            TLV_PEK, TLV_VERSION_1, sizeof(signed_pek_t));
+            TLV_PEK, TLV_VERSION_2, sizeof(signed_pek_t));
         goto final_point;
     }
     //skip the byte for KEY_ID
-    if(memcpy_s(rsa_signature, PVE_RSA_KEY_BYTES, tlvs_msg[1].payload+1, tlvs_msg[1].size-1)!=0){
+    if(memcpy_s(rsa_signature, RSA_3072_KEY_BYTES, tlvs_msg[1].payload+1, tlvs_msg[1].size-1)!=0){//skip key id
         ae_ret = AE_FAILURE;
         AESM_DBG_ERROR("memcpy failed");
         goto final_point;

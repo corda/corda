@@ -434,7 +434,7 @@ bool validate_segment(const ElfW(Ehdr) *elf_hdr, uint64_t len)
 
             // Verify the overlap of segment. we don't verify here, because a well compiled file has no overlapped segment.
             load_seg[k].first = prg_hdr->p_vaddr;
-            load_seg[k].second = prg_hdr->p_vaddr + ROUND_TO(prg_hdr->p_memsz, prg_hdr->p_align) - 1;
+            load_seg[k].second = ROUND_TO(prg_hdr->p_vaddr + prg_hdr->p_memsz, prg_hdr->p_align) - 1;
 
             for (int j = 0; j < k; j++)
             {
@@ -814,9 +814,15 @@ void ElfParser::get_reloc_entry_offset(const char* sec_name, vector<uint64_t>& o
     }
 }
 
+#include "se_page_attr.h"
 #include "update_global_data.hxx"
 
-bool ElfParser::update_global_data(const create_param_t* const create_param,
+uint32_t ElfParser::get_global_data_size()
+{
+    return (uint32_t)sizeof(global_data_t);
+}
+bool ElfParser::update_global_data(const metadata_t *const metadata,
+                                   const create_param_t* const create_param,
                                    uint8_t *data,
                                    uint32_t *data_size)
 {
@@ -825,9 +831,8 @@ bool ElfParser::update_global_data(const create_param_t* const create_param,
         *data_size = sizeof(global_data_t);
         return false;
     }
-    do_update_global_data(create_param, (global_data_t *)data);
     *data_size = sizeof(global_data_t);
-    return true;
+    return do_update_global_data(metadata, create_param, (global_data_t *)data);
 }
 
 sgx_status_t ElfParser::modify_info(enclave_diff_info_t *enclave_diff_info)

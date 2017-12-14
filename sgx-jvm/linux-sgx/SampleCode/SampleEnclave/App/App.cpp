@@ -146,7 +146,7 @@ void print_error_message(sgx_status_t ret)
     }
     
     if (idx == ttl)
-        printf("Error: Unexpected error occurred.\n");
+    	printf("Error code is 0x%X. Please refer to the \"Intel SGX SDK Developer Reference\" for more details.\n", ret);
 }
 
 /* Initialize the enclave:

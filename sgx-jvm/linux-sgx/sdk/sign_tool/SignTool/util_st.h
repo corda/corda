@@ -62,7 +62,8 @@
     "   -ignore-rel-error   By default, sgx_sign provides an error for enclaves with\n" \
     "                       text relocations. You can ignore the error and continue signing\n" \
     "                       by providing this option. But it is recommended you eliminate the\n" \
-    "                       text relocations instead of bypassing the error with this option.\n"
+    "                       text relocations instead of bypassing the error with this option.\n\n" \
+    "You can run \"sgx_sign -help\" to get this help and exit.\n"
 
 // General error message
 #define OVERALL_ERROR                       "Error happened while signing the enclave.\n"
@@ -115,13 +116,32 @@
 
 // error message for modify_metadata()
 #define SET_STACK_SIZE_ERROR                "Stack size setting is not correct.\n"
-#define SET_HEAP_SIZE_ERROR                 "Heap size setting is not correct.\n"
+#define SET_HEAP_SIZE_ALIGN_ERROR           "Heap size setting is not correct: size is not page aligned.\n"
+#define SET_HEAP_SIZE_INIT_MAX_ERROR        "Heap size setting is not correct: init value should not be larger than max value.\n"
+#define SET_HEAP_SIZE_INIT_MIN_ERROR        "Heap size setting is not correct: min value should not be larger than init value.\n"
+#define SET_HEAP_SIZE_MAX_MIN_ERROR         "Heap size setting is not correct: max value should not be smaller than min value.\n"
 #define SET_HW_LE_ERROR                     "Conflicting setting between the 'HW' and 'LaunchKey'.\n"
+#define SET_TCS_MAX_NUM_ERROR               "Maximum number of TCS is not correct.\n"
+#define SET_TCS_MIN_POOL_ERROR              "Minimum number of TCS Pool is not correct.\n"
 
-// error message for compare_enclave()
-#define PDB_PATH_ERROR                      "The two enclaves' pdb path are not equal. The pdb path of \"%s\" is \"%s\", while the pdb path of \"%s\" is \"%s\".\n"
+
+// error message for parse_key_file()
+#define INVALID_EXPONENT_ERROR              "The exponent of the input key is invalid. Only '3' is accepted as the exponent.\n"
+#define INVALID_KEYSIZE_ERROR               "The required key size must be 3072 bits.\n"
+
+
 #include <stdint.h>
 #include <iostream>
+
+
+typedef enum _command_mode_t
+{
+    SIGN = 0,
+    GENDATA,
+    CATSIG,
+    DUMP
+} command_mode_t;
+
 
 #ifdef __cplusplus
 extern "C" {

@@ -171,6 +171,6 @@ typedef struct _SIGMA_S3_MESSAGE
 #pragma pack()
 
 // This is the constant size portion of the S2 message that is part of the ICV
-#define SIGMA_S2_ICV_CONSTANT_BUFFER_SIZE sizeof(EphemeralPublicKey) + sizeof(SIGMA_BASENAME) + sizeof(OCSP_REQ)
+#define SIGMA_S2_ICV_CONSTANT_BUFFER_SIZE (sizeof(EphemeralPublicKey) + sizeof(SIGMA_BASENAME) + sizeof(OCSP_REQ))
 
 #endif

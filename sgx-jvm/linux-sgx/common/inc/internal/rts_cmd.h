@@ -30,10 +30,12 @@
  */
 
 /* ECALL command */
-#define ECMD_ECALL         0
-#define ECMD_INIT_ENCLAVE -1
-#define ECMD_ORET         -2
-#define ECMD_EXCEPT       -3
+#define ECMD_ECALL           0
+#define ECMD_INIT_ENCLAVE   -1
+#define ECMD_ORET           -2
+#define ECMD_EXCEPT         -3
+#define ECMD_MKTCS          -4
+#define ECMD_UNINIT_ENCLAVE -5
 
 /* OCALL command */
 #define OCMD_ERET         -1

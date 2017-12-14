@@ -33,7 +33,7 @@
 
 #include <string.h>
 #include <stdint.h>
-class AEMessage;
+struct AEMessage;
 class IAEResponse;
 class IAESMLogic;
 

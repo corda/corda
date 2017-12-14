@@ -38,6 +38,7 @@
 #define _EPID_PVE_TYPE_H_
 
 #include "epid/common/types.h"
+#include "epid/member/api.h"
 #include "se_types.h"
 #include "sgx_key.h"
 
@@ -53,21 +54,21 @@
 #define NONCE_SIZE                8                      /*length in bytes of Nonce R in ProvMsg*/
 #define NONCE_2_SIZE              16                     /*length in bytes of Nonce in ProvMsg3*/
 #define CHALLENGE_NONCE_SIZE      32                     /*length in bytes of Challenge nonce in ProvMsg2*/
-#define PPID_SIZE                 sizeof(ppid_t)         /*16*/
 #define PSVN_SIZE                 sizeof(psvn_t)         /*18*/
-#define FMSP_SIZE                 sizeof(fmsp_t)         /*4*/
 #define FLAGS_SIZE                sizeof(flags_t)        /*256*/
 #define MAC_SIZE                  16                     /*length in bytes of the tag in output of AES-GCM*/
-#define PSID_SIZE                 sizeof(psid_t)         /*64*/
-#define JOIN_PROOF_SIZE           sizeof(JoinRequest)    
+#define JOIN_PROOF_SIZE           sizeof(JoinRequest)
 #define BLIND_ESCROW_SIZE         sizeof(blind_escrow_data_t)
 
 #define PEK_PUB                   ((uint8_t)0)
 #define PEK_PRIV                  ((uint8_t)1)
-#define PWK_KEY                   ((uint8_t)2)
+#define PEK_3072_PUB              ((uint8_t)3)
+#define PEK_3072_PRIV             ((uint8_t)4)
 #define ECDSA_SIGN_SIZE           32                     /*This is the size of biginteger for ECDSA signature appended at the end of SIG-RL and the total signature size is size of two such kind of integer*/
-#define PVE_RSA_KEY_BITS          2048
-#define PVE_RSA_KEY_BYTES         (PVE_RSA_KEY_BITS/8)
+#define RSA_3072_KEY_BITS         3072
+#define RSA_3072_KEY_BYTES        (RSA_3072_KEY_BITS/8)
+#define RSA_2048_KEY_BITS         2048
+#define RSA_2048_KEY_BYTES        (RSA_2048_KEY_BITS/8)
 #define PVE_RSA_SEED_SIZE         32
 
 #define XEGB_SIZE                 456                   /*hardcoded size of extended_epid_group_blob_t*/
@@ -125,7 +126,7 @@ typedef struct _signed_epid_group_cert_t{
     uint8_t     ecdsa_signature[2*ECDSA_SIGN_SIZE];
 }signed_epid_group_cert_t;
 
-#define PEK_MOD_SIZE 256
+#define PEK_MOD_SIZE 384
 typedef struct _signed_pek_t{
     uint8_t n[PEK_MOD_SIZE];
     uint8_t e[4];
@@ -185,7 +186,7 @@ typedef struct _se_plaintext_epid_data_sik_t {
     Epid2Params     epid_param_cert;
     GroupPubKey     epid_group_cert;
     uint8_t         qsdk_exp[4];                /*little endian*/
-    uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES];/*little endian*/
+    uint8_t         qsdk_mod[RSA_2048_KEY_BYTES];/*little endian*/
     uint8_t         epid_sk[2*ECDSA_SIGN_SIZE]; /*little endian*/
     uint32_t        xeid;                       /*ExtEPIDGroup ID, little endian*/
 }se_plaintext_epid_data_sik_t;
@@ -197,7 +198,7 @@ typedef struct _se_plaintext_epid_data_sdk_t{
     sgx_isv_svn_t   equiv_pve_isv_svn;
     GroupPubKey     epid_group_cert;
     uint8_t         qsdk_exp[4];                /*little endian*/
-    uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES];/*little endian*/
+    uint8_t         qsdk_mod[RSA_2048_KEY_BYTES];/*little endian*/
     uint8_t         epid_sk[2*ECDSA_SIGN_SIZE]; /*little endian*/
     uint32_t        xeid;                       /*ExtEPIDGroup ID, little endian*/
 }se_plaintext_epid_data_sdk_t;
@@ -209,11 +210,11 @@ typedef struct _extended_epid_group_blob_t{
     uint8_t         epid_sk[2*ECDSA_SIGN_SIZE];  /*ecdsa public key for EPID sign Key in little endian*/
     uint8_t         pek_sk[2*ECDSA_SIGN_SIZE];   /*ecdsa public key for PEKSK in little endian*/
     uint8_t         qsdk_exp[4];                 /*exponient of RSA key for QSDK, little endian*/
-    uint8_t         qsdk_mod[PVE_RSA_KEY_BYTES]; /*Modulus of RSA key for QSDK. current it is 2048 bits, little endian*/
+    uint8_t         qsdk_mod[RSA_2048_KEY_BYTES]; /*Modulus of RSA key for QSDK. current it is 2048 bits, little endian*/
     uint8_t         signature[2*ECDSA_SIGN_SIZE];/*ECDSA signature of the data, big endian*/
 }extended_epid_group_blob_t;
 
-#define EXTENDED_EPID_GROUP_BLOB_DATA_LEN    ((uint32_t)(sizeof(uint32_t)+4*(ECDSA_SIGN_SIZE)+4+(PVE_RSA_KEY_BYTES)))
+#define EXTENDED_EPID_GROUP_BLOB_DATA_LEN    ((uint32_t)(sizeof(uint32_t)+4*(ECDSA_SIGN_SIZE)+4+(RSA_2048_KEY_BYTES)))
 
 #define SGX_TRUSTED_EPID_BLOB_SIZE_SIK  ((uint32_t)(sizeof(sgx_sealed_data_t)+sizeof(se_secret_epid_data_sik_t)+sizeof(se_plaintext_epid_data_sik_t)))
 #define SGX_TRUSTED_EPID_BLOB_SIZE_SDK  ((uint32_t)(sizeof(sgx_sealed_data_t)+sizeof(se_secret_epid_data_sdk_t)+sizeof(se_plaintext_epid_data_sdk_t)))

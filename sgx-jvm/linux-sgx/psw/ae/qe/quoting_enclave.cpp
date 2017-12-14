@@ -690,7 +690,7 @@ static ae_error_t qe_epid_sign(
                 &temp_nr); // The generated non-revoked proof
             if(kEpidNoErr != epid_ret)
             {
-                if(kEpidSigRevokedinSigRl == epid_ret)
+                if(kEpidSigRevokedInSigRl == epid_ret)
                     match = TRUE;
                 else
                 {

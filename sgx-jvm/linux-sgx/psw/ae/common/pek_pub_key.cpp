@@ -113,7 +113,7 @@ sgx_status_t verify_xegb_with_default(const extended_epid_group_blob_t& xegb, ui
         memcpy(out_xegb.epid_sk, &g_sgx_isk_pubkey, 2*ECDSA_SIGN_SIZE);
         memcpy(out_xegb.pek_sk, &g_pek_pub_key_little_endian, 2 * ECDSA_SIGN_SIZE);
         memcpy(out_xegb.qsdk_exp, g_qsdk_pub_key_e, sizeof(g_qsdk_pub_key_e));
-        memcpy(out_xegb.qsdk_mod, g_qsdk_pub_key_n, PVE_RSA_KEY_BYTES);
+        memcpy(out_xegb.qsdk_mod, g_qsdk_pub_key_n, RSA_2048_KEY_BYTES);
         *result = SGX_EC_VALID;
         return SGX_SUCCESS;
     }

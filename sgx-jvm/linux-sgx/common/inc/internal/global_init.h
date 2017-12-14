@@ -40,6 +40,7 @@ extern "C" {
 #endif
 
 void init_global_object(void);
+void uninit_global_object(void);
 
 #ifdef __cplusplus
 }

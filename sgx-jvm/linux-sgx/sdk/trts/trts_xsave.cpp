@@ -34,38 +34,52 @@
 #include "xsave.h"
 #include "trts_inst.h"
 #include "util.h"
+#include "global_data.h"
+#include "stdlib.h"
 
-// 'SYNTHETIC_STATE' buffer size is (512 + 64 + 256) bytes
-//   512 for fxsave buffer,
-//   64 for xsave header,
-//   256 for YMM State (16 * 16 bytes of each YMMH-register)
-// and the buffer should be 64 byte aligned.
-#define SYNTHETIC_STATE_SIZE   (512 + 64 + 256)
-
-se_static_assert(SYNTHETIC_STATE_SIZE <= SE_PAGE_SIZE);
-
-static SE_DECLSPEC_ALIGN(4096) const uint16_t
-SYNTHETIC_STATE[SYNTHETIC_STATE_SIZE/sizeof(uint16_t)] = {
-    0x037F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1F80, 0, 0xFFFF, 0
+#define SYNTHETIC_STATE_SIZE   (512 + 64)  // 512 for legacy regs, 64 for xsave header
+//FXRSTOR only cares about the first 512 bytes, while
+//XRSTOR in compacted mode will ignore the first 512 bytes.
+extern "C" SE_DECLSPEC_ALIGN(XSAVE_ALIGN_SIZE) const uint32_t
+SYNTHETIC_STATE[SYNTHETIC_STATE_SIZE/sizeof(uint32_t)] = {
+    0x037F, 0, 0, 0, 0, 0, 0x1F80, 0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0x80000000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // XCOMP_BV[63] = 1, compaction mode
 };
 
-static int g_xsave_enabled;             // flag to indicate whether xsave is enabled or not
+int g_xsave_enabled;             // flag to indicate whether xsave is enabled or not
 
 // EENTER will set xcr0 with secs.attr.xfrm, 
 // So use the xfeature mask from report instead of calling xgetbv
+#ifdef __clang__
+#define SE_OPTIMIZE_OFF [[clang::optnone]]
+#else
+#define SE_OPTIMIZE_OFF
+#endif
+
+SE_OPTIMIZE_OFF
 uint64_t get_xfeature_state()
 {
+    assert (REPORT_ALIGN_SIZE >= REPORT_DATA_ALIGN_SIZE);
+    assert (REPORT_ALIGN_SIZE >= TARGET_INFO_ALIGN_SIZE);
+
     // target_info and report_data are useless
     // we only need to make sure their alignment and within enclave
-    // so set the pointers to SYNTHETIC_STATE
-    sgx_target_info_t *target_info = (sgx_target_info_t *)SYNTHETIC_STATE;
-    sgx_report_data_t *report_data = (sgx_report_data_t *)SYNTHETIC_STATE;
     uint8_t buffer[sizeof(sgx_report_t) + REPORT_ALIGN_SIZE -1];
     for(size_t i=0; i< sizeof(sgx_report_t) + REPORT_ALIGN_SIZE -1; i++)
     {
         buffer[i] = 0;
     }
     sgx_report_t *report = (sgx_report_t *)ROUND_TO((size_t)buffer, REPORT_ALIGN_SIZE);
+    sgx_target_info_t *target_info = (sgx_target_info_t *)report;
+    sgx_report_data_t *report_data = (sgx_report_data_t *)report;
+
 
     do_ereport(target_info, report_data, report);
 
@@ -78,39 +92,4 @@ uint64_t get_xfeature_state()
     return xfrm;
 }
 
-// save_and_clean_xfeature_regs()
-//      do fwait, fxsave, and then clean the extended feature registers
-// Parameters:
-//      buffer - If the pointer is not NULL, save the CPU state to the memory
-// Return Value:
-//      none
-void save_and_clean_xfeature_regs(uint8_t *buffer)
-{
-    do_fwait();
 
-    if(buffer != 0)
-    {
-        uint8_t *buf = (uint8_t*)ROUND_TO((size_t)buffer, FXSAVE_ALIGN_SIZE);
-        do_fxsave(buf);
-    }
-
-    if(g_xsave_enabled)
-    {
-        do_xrstor(SYNTHETIC_STATE);
-    }
-    else
-    {
-        do_fxrstor(SYNTHETIC_STATE);
-    }
-}
-// restore_xfeature_regs()
-//      restore the extended feature registers
-//
-void restore_xfeature_regs(const uint8_t *buffer)
-{
-    if(buffer != 0)
-    {
-        uint8_t *buf = (uint8_t*)ROUND_TO((size_t)buffer, FXSAVE_ALIGN_SIZE);
-        do_fxrstor(buf);
-    }
-}

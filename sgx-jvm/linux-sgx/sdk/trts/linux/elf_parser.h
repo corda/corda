@@ -52,6 +52,9 @@ int elf_tls_info(const void* enclave_base,
 
 int elf_get_init_array(const void* enclave_base,
         uintptr_t *init_array_addr, size_t *init_array_size);
+
+int elf_get_uninit_array(const void* enclave_base,
+        uintptr_t *uninit_array_addr, size_t *uninit_array_size);
 #ifdef __cplusplus
 }
 #endif

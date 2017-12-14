@@ -52,7 +52,7 @@
     try{ \
         block; \
     } \
-    catch(std::bad_alloc& e) \
+    catch(const std::bad_alloc& e) \
     { \
         *result = AESM_OUT_OF_MEMORY_ERROR; \
         return UAE_OAL_SUCCESS; \

@@ -30,22 +30,63 @@
  */
 
 namespace {
-    void do_update_global_data(const create_param_t* const create_param,
+    layout_entry_t *get_entry_by_id(const metadata_t *const metadata, uint16_t id)
+    {
+        layout_entry_t *layout_start = GET_PTR(layout_entry_t, metadata, metadata->dirs[DIR_LAYOUT].offset);
+        layout_entry_t *layout_end = GET_PTR(layout_entry_t, metadata, metadata->dirs[DIR_LAYOUT].offset + metadata->dirs[DIR_LAYOUT].size);
+        for (layout_entry_t *layout = layout_start; layout < layout_end; layout++)
+        {
+            if(layout->id == id)
+                return layout;
+        }
+        assert(false);
+        return NULL;
+    }
+    bool do_update_global_data(const metadata_t *const metadata,
+                                const create_param_t* const create_param,
                                global_data_t* global_data)
     {
-        global_data->enclave_size = (sys_word_t)create_param->enclave_size;
-        global_data->heap_offset = (sys_word_t)create_param->heap_offset;
-        global_data->heap_size = (sys_word_t)create_param->heap_max_size;
-        global_data->thread_policy = (uint32_t)create_param->tcs_policy;
+        layout_entry_t *layout_heap = get_entry_by_id(metadata, LAYOUT_ID_HEAP_MIN);
+
+        global_data->enclave_size = (sys_word_t)metadata->enclave_size;
+        global_data->heap_offset = (sys_word_t)layout_heap->rva;
+        global_data->heap_size = (sys_word_t)(create_param->heap_init_size);
+        global_data->thread_policy = (sys_word_t)metadata->tcs_policy;
         thread_data_t *thread_data = &global_data->td_template;
-        thread_data->stack_base_addr = (sys_word_t)create_param->stack_base_addr;
+
         thread_data->stack_limit_addr = (sys_word_t)create_param->stack_limit_addr;
+        thread_data->stack_base_addr = (sys_word_t)create_param->stack_base_addr;
         thread_data->last_sp = thread_data->stack_base_addr;
-        thread_data->ssa_frame_size = create_param->ssa_frame_size;
-        thread_data->first_ssa_gpr = (sys_word_t)create_param->first_ssa_gpr;
+        thread_data->xsave_size = create_param->xsave_size;
+        thread_data->first_ssa_gpr = (sys_word_t)create_param->ssa_base_addr + metadata->ssa_frame_size * SE_PAGE_SIZE - (uint32_t)sizeof(ssa_gpr_t);
         // TD address relative to TCS
-        thread_data->self_addr = (sys_word_t)create_param->td_addr;
         thread_data->tls_addr = (sys_word_t)create_param->tls_addr;
+        thread_data->self_addr = (sys_word_t)create_param->td_addr;
         thread_data->tls_array = thread_data->self_addr + (sys_word_t)offsetof(thread_data_t, tls_addr);
+
+        // TCS template
+        if(0 != memcpy_s(&global_data->tcs_template, sizeof(global_data->tcs_template), 
+                          GET_PTR(void, metadata, get_entry_by_id(metadata, LAYOUT_ID_TCS)->content_offset), 
+                          get_entry_by_id(metadata, LAYOUT_ID_TCS)->content_size))
+        {
+            return false;
+        }
+
+        // layout table: dynamic heap + dynamic thread group 
+        layout_entry_t *layout_start = GET_PTR(layout_entry_t, metadata, metadata->dirs[DIR_LAYOUT].offset);
+        layout_entry_t *layout_end = GET_PTR(layout_entry_t, metadata, metadata->dirs[DIR_LAYOUT].offset + metadata->dirs[DIR_LAYOUT].size);
+        global_data->layout_entry_num = 0;
+        for (layout_entry_t *layout = layout_start; layout < layout_end; layout++)
+        {
+            if(0 != memcpy_s(&global_data->layout_table[global_data->layout_entry_num], 
+                     sizeof(global_data->layout_table) - global_data->layout_entry_num * sizeof(layout_t), 
+                     layout, 
+                     sizeof(layout_t)))
+            {
+                return false;
+            }
+            global_data->layout_entry_num++;
+        }
+        return true;
     }
 }

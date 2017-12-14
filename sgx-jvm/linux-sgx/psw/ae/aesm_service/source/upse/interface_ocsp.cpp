@@ -75,8 +75,9 @@ void OpenSSL_init()
 #else
     OPENSSL_malloc_init(); // OpenSSL 1.1 - Initialize malloc, free, etc for OpenSSL's use
 #endif
-    
+
 #if defined(_OPENSSL_FULL_INIT)
+    
     SSL_library_init(); // Initialize OpenSSL's SSL libraries
     SSL_load_error_strings(); // Load SSL error strings
     ERR_load_BIO_strings(); // Load BIO error strings

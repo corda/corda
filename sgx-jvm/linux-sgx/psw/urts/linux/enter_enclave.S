@@ -35,10 +35,27 @@
 
 /* int __morestack(const tcs_t *tcs, const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread); */
 .file "enter_enclave.S"
+.data
+g_xsave_size: .long 0
+g_clean_ymm:  .long 0
 .text
+DECLARE_GLOBAL_FUNC set_xsave_info
+#if defined(LINUX32)
+    mov     SE_WORDSIZE*1(%esp), %ecx
+    mov     SE_WORDSIZE*2(%esp), %edx
+#else
+    mov     %rdi, %rcx
+    mov     %rsi, %rdx
+#endif
+    lea_symbol g_xsave_size, %xax
+    movl    %ecx, (%xax)
+    lea_symbol g_clean_ymm, %xax
+    movl    %edx, (%xax)
+    ret
+
 DECLARE_GLOBAL_FUNC __morestack
 
-__morestack:
+//__morestack:
 EENTER_PROLOG
     movl    frame_arg1, %edi                    /* fn */
 #if defined(__x86_64__)
@@ -48,6 +65,13 @@ EENTER_PROLOG
     mov frame_arg3, %xsi                        /* ms */
 
 .Ldo_eenter:
+    # clean the upper bits of YMM registers
+    lea_symbol  g_clean_ymm, %xbx
+    movl (%xbx), %ecx
+    cmpl $0, %ecx
+    je   1f
+    vzeroupper
+1:
     mov frame_arg0, %xbx                        /* tcs addr */
     lea_pic .Lasync_exit_pointer, %xcx          /* aep addr */
     mov $SE_EENTER, %xax                        /* EENTER leaf */
@@ -95,15 +119,16 @@ EENTER_PROLOG
 #endif
 
     call    stack_sticker
-    cmp     $SE_ERROR_READ_LOCK_FAIL, %eax
+    xor     %xsi, %xsi
+    mov     %eax, %esi
+    cmp     $SE_ERROR_READ_LOCK_FAIL, %esi
     je      .Loret
     mov     $ECMD_ORET, %xdi    /* oret */
-    mov     %xax, %xsi          /* the result of ocall */
     jmp     .Ldo_eenter
     /* never return here */
     ud2
 .Leret:
-    mov     %xsi, %xax
+
 .Loret:
     EENTER_EPILOG
 

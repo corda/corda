@@ -37,7 +37,7 @@
 #include "internal/se_cdefs.h"
 
 //Deallocate storage space of array
-SGX_WEAK void SGXAPI operator delete[] (void* ptr) 
+SGX_WEAK void SGXAPI operator delete[] (void* ptr)
 {
 	operator delete(ptr);
 }

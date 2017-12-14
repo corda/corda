@@ -77,7 +77,6 @@ clean:
 	$(MAKE) -C ./example/util/ clean
 	$(MAKE) -C ./example/ clean
 	$(MAKE) -C ./tools/ clean
-	$(MAKE) -C ./ext/gtest/ clean
 	$(MAKE) -C ./epid/common-testhelper/ clean
 	$(MAKE) -C ./ext/dropt/ clean
 

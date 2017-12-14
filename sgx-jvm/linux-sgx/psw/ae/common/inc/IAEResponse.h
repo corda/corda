@@ -32,7 +32,7 @@
 #define __AE_RESPONSE_H
 
 #include <stdint.h>
-class AEMessage;
+struct AEMessage;
 
 
 class IAEResponse {

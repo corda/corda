@@ -294,3 +294,7 @@ DECLARE_GLOBAL_FUNC set_sgx_tlongjmp_version
     lea_pic sgx_tsetjmp_version, %xax 
     ret
 
+.weak _setjmp
+_setjmp=setjmp
+.weak _longjmp
+_longjmp=longjmp

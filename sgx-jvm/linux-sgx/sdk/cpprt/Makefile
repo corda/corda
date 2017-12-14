@@ -86,8 +86,10 @@ libunwind:
 
 .PHONY: clean
 clean:
-	@-$(MAKE) -C linux/libunwind distclean
 	@$(RM) $(OBJS) $(CPPRT)
+ifeq ("$(shell test -f linux/libunwind/Makefile && echo Makefile exists)", "Makefile exists")	
+	@-$(MAKE) -C linux/libunwind distclean
+endif
 	@$(RM) -r linux/libunwind/INSTALL             \
               linux/libunwind/Makefile.in         \
               linux/libunwind/aclocal.m4          \

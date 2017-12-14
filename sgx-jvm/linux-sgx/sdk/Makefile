@@ -36,6 +36,22 @@ else
 include Makefile.source
 endif
 
+# SDK requires prebuilt IPP libraries.
+CHECK_OPT :=
+ifeq ("$(wildcard $(LINUX_EXTERNAL_DIR)/ippcp_internal/inc)", "")
+CHECK_OPT := opt_check_failed
+endif
+
+.PHONY: opt_check_failed
+opt_check_failed:
+	@echo "ERROR: Please run 'download_prebuilt.sh' to download the prebuilt optimized libraries before compiling."
+	@echo "Exiting......"
+	@exit -2
+
+.PHONY: all
+all: $(CHECK_OPT)
+	$(MAKE) components
+
 .PHONY: rebuild
 rebuild: 
 	$(MAKE) clean 

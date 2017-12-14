@@ -37,7 +37,6 @@ CFLAGS   += -Werror
 
 EPID_SDK_DIR := $(TOP_DIR)/external/epid-sdk-3.0.0/
 
-
 INCLUDE += -I.                                   \
            -I./include                           \
            -I$(TOP_DIR)/sdk/tlibstdcxx/stlport   \
@@ -54,7 +53,6 @@ EXTERNAL_LIB += -lsgx_tstdcxx -lsgx_tcrypto                \
                 -L$(EPID_SDK_DIR)/epid/common -lcommon     \
                 -L$(EPID_SDK_DIR)/ext/ipp/sources/ippcpepid/src -lippcpepid
 
-
 SRC := $(wildcard *.cpp) $(wildcard ./X509_Parser/*.cpp)
 SRC += pse_pr_common.cpp   \
        t_pairing_blob.cpp  \
@@ -66,12 +64,12 @@ OBJS := $(sort $(OBJ) version.o)
 .PHONY: all
 all: $(SONAME) 
 
-.PHONY: EPID_SDK
-EPID_SDK:
+.PHONY: EPID
+EPID:
 	cd $(EPID_SDK_DIR) && ./configure prefix=/usr/local
-	$(MAKE) -C $(EPID_SDK_DIR)
-	
-$(SONAME): $(OBJS) EPID_SDK
+	$(MAKE) -C $(EPID_SDK_DIR) 2> /dev/null
+
+$(SONAME): $(OBJS) EPID
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) -nostdlib -nodefaultlibs -nostartfiles $(LDTFLAGS)
 	$(STRIP)  --strip-unneeded $(SONAME)
 
@@ -88,7 +86,9 @@ clean:
 	@$(RM) *.so
 	@$(RM) *.map
 	@$(RM) *_t.*
+ifeq ("$(shell test -f $(EPID_SDK_DIR)/Makefile && echo Makefile exists)", "Makefile exists")
 	-$(MAKE) -C $(EPID_SDK_DIR) clean
+endif
 	@$(RM) -r $(EPID_SDK_DIR)/Makefile $(EPID_SDK_DIR)/config.log $(EPID_SDK_DIR)/config.status
 
 .PHONY: rebuild

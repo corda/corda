@@ -33,6 +33,7 @@
 #define _PAIRING_BLOB_H_
 
 #include "sgx_tseal.h"
+#include "pse_pr_types.h"
 
 #include "aeerror.h"
 #include <stdint.h>
@@ -40,11 +41,6 @@
 typedef uint8_t     UINT8;
 typedef uint32_t    UINT32;
 
-typedef UINT8 Nonce128_t[16];
-typedef UINT32 SHA256_HASH[8];
-
-typedef UINT8 EcDsaPrivKey[32];
-typedef UINT8 EcDsaPubKey[64];
 typedef UINT8 SIGMA_ID[32];
 typedef UINT8 SIGMA_MAC_KEY[16];
 typedef UINT8 SIGMA_SECRET_KEY[16];

@@ -63,12 +63,29 @@ typedef enum
     SDK_VERSION_2_0
 } sdk_version_t;
 
-typedef struct _cpu_feature_sdk_version
+typedef struct _system_features
 {
     uint64_t cpu_features;
     sdk_version_t version;
-}cpu_sdk_info_t;
+    /* system feature set array. MSb of each element indicates whether this is
+     * the last element. This will help tRTS to know when it can stop walking
+     * through the array searching for certain features.
+    */
+    uint64_t system_feature_set[1];
+}system_features_t;
 
-#define     OCALL_FLAG        0x4F434944
+// current system_feature_set only contains one element of type uint64_t, the highest
+// bit is bit 63
+#define SYS_FEATURE_MSb     63
+
+#define OCALL_FLAG        0x4F434944
+
+typedef enum
+{
+    EDMM_TRIM = -2,
+    EDMM_TRIM_COMMIT = -3,
+    EDMM_MODPR = -4,
+}edmm_ocall_t;
+
 
 #endif

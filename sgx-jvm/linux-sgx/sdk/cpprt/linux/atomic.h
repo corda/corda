@@ -10,7 +10,7 @@
  */
 #if __has_feature(cxx_atomic)
 #define ATOMIC_SWAP(addr, val)\
-	__atomic_exchange(addr, val, __ATOMIC_ACQ_REL)
+	__atomic_exchange_n(addr, val, __ATOMIC_ACQ_REL)
 #elif __has_builtin(__sync_swap)
 #define ATOMIC_SWAP(addr, val)\
 	__sync_swap(addr, val)
@@ -21,7 +21,7 @@
 
 #if __has_feature(cxx_atomic)
 #define ATOMIC_LOAD(addr)\
-	__atomic_load(addr, __ATOMIC_ACQUIRE)
+	__atomic_load_n(addr, __ATOMIC_ACQUIRE)
 #else
 #define ATOMIC_LOAD(addr)\
 	(__sync_synchronize(), *addr)

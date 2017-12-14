@@ -34,6 +34,10 @@ include ../../../buildenv.mk
 CXXFLAGS += -Werror
 CFLAGS   += -Werror
 
+CFLAGS += -fpie
+CXXFLAGS += -fpie
+LDFLAGS := -pie $(COMMON_LDFLAGS)
+
 INC += $(ADDED_INC)
 INC +=  -I$(COMMON_DIR)/inc                         \
         -I$(COMMON_DIR)/inc/internal                \
@@ -41,11 +45,7 @@ INC +=  -I$(COMMON_DIR)/inc                         \
         -I$(LINUX_PSW_DIR)/urts                     \
         -I$(LINUX_PSW_DIR)/urts/linux               \
         -I$(LINUX_EXTERNAL_DIR)/tinyxml2            \
-        -I$(SGX_IPP_INC)                            \
         -I$(LINUX_PSW_DIR)/urts/parser
-
-IPP_LIBS := $(LD_IPP)
-IPP_PATH := $(IPP_LIBS_DIR)
 
 DIR1 := $(LINUX_EXTERNAL_DIR)/tinyxml2/
 DIR2 := $(COMMON_DIR)/src/
@@ -60,7 +60,7 @@ OBJ1 := manage_metadata.o      \
         parse_key_file.o       \
         util_st.o
 
-OBJ2 := ipp_bn.o ipp_rsa_key.o ipp_rsa_pub_key.o sgx_memset_s.o
+OBJ2 := sgx_memset_s.o crypto_evp_digest.o
 
 OBJ3 := tinyxml2.o
 
@@ -80,20 +80,11 @@ all: sgx_sign | $(BUILD_DIR)
 $(BUILD_DIR):
 	@$(MKDIR) $@
 
-sgx_sign: PRIVATE_LDLIBS  := $(IPP_LIBS) -lpthread -lenclaveparser
-sgx_sign: PRIVATE_LDFLAGS := -L$(IPP_PATH) -L$(LINUX_PSW_DIR)/urts/parser
+sgx_sign: PRIVATE_LDLIBS  := -lpthread -lenclaveparser -lcrypto
+sgx_sign: PRIVATE_LDFLAGS := -L$(LINUX_PSW_DIR)/urts/parser $(LDFLAGS)
 
-ifneq ($(USE_OPT_LIBS), 0)
 sgx_sign: $(OBJS) enclaveparser
 	$(CXX) $(CXXFLAGS) $(OBJS) $(PRIVATE_LDFLAGS) $(PRIVATE_LDLIBS) -o $@
-else
-.PHONY: libcrypto_px
-libcrypto_px:
-	$(MAKE) -C $(LINUX_EXTERNAL_DIR)/crypto_px/
-
-sgx_sign: $(OBJS) enclaveparser libcrypto_px
-	$(CXX) $(CXXFLAGS) $(OBJS) $(PRIVATE_LDFLAGS) $(PRIVATE_LDLIBS) -o $@
-endif
 
 $(CPP_OBJS): %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INC) -c $< -o $@
@@ -105,9 +96,6 @@ $(C_OBJS):   %.o: $(DIR2)%.c
 clean:
 	$(RM) *~ *.o sgx_sign $(BUILD_DIR)/sgx_sign
 	$(MAKE) -C $(LINUX_PSW_DIR)/urts/parser/ clean
-ifeq ($(USE_OPT_LIBS), 0)
-	$(MAKE) -C $(LINUX_EXTERNAL_DIR)/crypto_px/ clean
-endif
 
 .PHONY: enclaveparser
 enclaveparser:

@@ -37,16 +37,22 @@
 #pragma pack(1)
 
  /* version of metadata */
-#define MAJOR_VERSION 1         /* MAJOR_VERSION should not larger than 0ffffffff */
-#define MINOR_VERSION 4         /* MINOR_VERSION should not larger than 0ffffffff */
+#define MAJOR_VERSION 2                 //MAJOR_VERSION should not larger than 0ffffffff
+#define MINOR_VERSION 1                 //MINOR_VERSION should not larger than 0ffffffff
+
+#define SGX_1_9_MAJOR_VERSION 1         //MAJOR_VERSION should not larger than 0ffffffff
+#define SGX_1_9_MINOR_VERSION 4         //MINOR_VERSION should not larger than 0ffffffff
 
 #define SGX_1_5_MAJOR_VERSION 1         //MAJOR_VERSION should not larger than 0ffffffff
 #define SGX_1_5_MINOR_VERSION 3         //MINOR_VERSION should not larger than 0ffffffff
 
+
 #define META_DATA_MAKE_VERSION(major, minor) (((uint64_t)major)<<32 | minor)
 
 #define METADATA_MAGIC 0x86A80294635D0E4CULL
-#define METADATA_SIZE 0x1000
+#define METADATA_SIZE 0x3000
+#define TCS_TEMPLATE_SIZE 72
+
 /* TCS Policy bit masks */
 #define TCS_POLICY_BIND     0x00000000  /* If set, the TCS is bound to the application thread */
 #define TCS_POLICY_UNBIND   0x00000001
@@ -58,7 +64,9 @@
 #define SSA_FRAME_SIZE_MIN 1
 #define SSA_FRAME_SIZE_MAX 2
 #define STACK_SIZE_MIN 0x1000
-#define HEAP_SIZE_MIN 0
+#define STACK_SIZE_MAX 0x40000
+#define HEAP_SIZE_MIN 0x1000
+#define HEAP_SIZE_MAX 0x1000000
 #define DEFAULT_MISC_SELECT 0
 #define DEFAULT_MISC_MASK 0xFFFFFFFF
 
@@ -78,13 +86,27 @@ typedef enum
 #define GROUP_FLAG              (1<<12)
 #define GROUP_ID(x)             (GROUP_FLAG | x)
 #define IS_GROUP_ID(x)          !!((x) & GROUP_FLAG)
-#define LAYOUT_ID_HEAP          1
-#define LAYOUT_ID_TCS           2
-#define LAYOUT_ID_TD            3
-#define LAYOUT_ID_SSA           4
-#define LAYOUT_ID_STACK         5
-#define LAYOUT_ID_THREAD_GROUP  GROUP_ID(6)
-#define LAYOUT_ID_GUARD         7
+#define LAYOUT_ID_HEAP_MIN      1
+#define LAYOUT_ID_HEAP_INIT     2
+#define LAYOUT_ID_HEAP_MAX      3
+#define LAYOUT_ID_TCS           4
+#define LAYOUT_ID_TD            5
+#define LAYOUT_ID_SSA           6
+#define LAYOUT_ID_STACK_MAX     7
+#define LAYOUT_ID_STACK_MIN     8
+#define LAYOUT_ID_THREAD_GROUP  GROUP_ID(9)
+#define LAYOUT_ID_GUARD         10
+#define LAYOUT_ID_HEAP_DYN_MIN  11
+#define LAYOUT_ID_HEAP_DYN_INIT 12
+#define LAYOUT_ID_HEAP_DYN_MAX  13
+#define LAYOUT_ID_TCS_DYN       14
+#define LAYOUT_ID_TD_DYN        15
+#define LAYOUT_ID_SSA_DYN       16
+#define LAYOUT_ID_STACK_DYN_MAX 17
+#define LAYOUT_ID_STACK_DYN_MIN 18
+#define LAYOUT_ID_THREAD_GROUP_DYN GROUP_ID(19)
+
+
 
 /* 
 **    layout table example
@@ -138,12 +160,12 @@ typedef struct _metadata_t
     uint32_t            ssa_frame_size;        /* The size of SSA frame in page */
     uint32_t            max_save_buffer_size;  /* Max buffer size is 2632 */
     uint32_t            desired_misc_select;
-    uint32_t            reserved;
+    uint32_t            tcs_min_pool;          /* TCS min pool*/         
     uint64_t            enclave_size;          /* enclave virtual size */
     sgx_attributes_t    attributes;            /* XFeatureMask to be set in SECS. */
     enclave_css_t       enclave_css;           /* The enclave signature */
     data_directory_t    dirs[DIR_NUM];
-    uint8_t             data[2208];
+    uint8_t             data[10400];
 }metadata_t;
 
 se_static_assert(sizeof(metadata_t) == METADATA_SIZE);

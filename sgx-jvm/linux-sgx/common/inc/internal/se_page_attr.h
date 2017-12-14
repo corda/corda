@@ -32,16 +32,29 @@
 #ifndef _SE_PAGE_ATTR_H_
 #define _SE_PAGE_ATTR_H_
 
+// layout.entry.attribute is 16-bit length
 typedef enum
 {
     DoEADD = 0,
     DoEEXTEND,
+    DoEREMOVE,
+    DoPostADD,
+    DoPostREMOVE,
+    DynTHREAD,
+    GrowDOWN,
 } ATTRIBUTE_BITS_t;
 
-typedef enum
-{
-    ADD_PAGE_ONLY = 1<<DoEADD,
-    ADD_EXTEND_PAGE = 1<<DoEADD|1<<DoEEXTEND,
-} EADD_BUFFER_IN_ATTRIBUTE_t;
+#define PAGE_ATTR_EADD         (1<<DoEADD)
+#define PAGE_ATTR_EEXTEND      (1<<DoEEXTEND)
+#define PAGE_ATTR_EREMOVE      (1<<DoEREMOVE)
+#define PAGE_ATTR_POST_ADD     (1<<DoPostADD)
+#define PAGE_ATTR_POST_REMOVE  (1<<DoPostREMOVE)
+#define PAGE_ATTR_DYN_THREAD   (1<<DynTHREAD)
+#define PAGE_DIR_GROW_DOWN     (1<<GrowDOWN)
+#define ADD_PAGE_ONLY           PAGE_ATTR_EADD
+#define ADD_EXTEND_PAGE        (PAGE_ATTR_EADD | PAGE_ATTR_EEXTEND)
+#define PAGE_ATTR_MASK         ~(PAGE_ATTR_EADD | PAGE_ATTR_EEXTEND | PAGE_ATTR_EREMOVE | PAGE_ATTR_POST_ADD | PAGE_ATTR_POST_REMOVE | PAGE_ATTR_DYN_THREAD | PAGE_DIR_GROW_DOWN)
+
+
 
 #endif

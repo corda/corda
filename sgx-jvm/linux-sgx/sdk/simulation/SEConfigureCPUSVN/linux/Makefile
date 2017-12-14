@@ -46,6 +46,8 @@ OBJS := $(sort $(SRCS:.cpp=.o))
 
 WRAPPER_LIB_DIR := $(COMMON_DIR)/se_wrapper
 LDFLAGS := -L$(WRAPPER_LIB_DIR)
+CXXFLAGS += -fpie
+LDFLAGS += -pie $(COMMON_LDFLAGS)
 LDLIBS  := -lwrapper
 
 TARGET := sgx_config_cpusvn

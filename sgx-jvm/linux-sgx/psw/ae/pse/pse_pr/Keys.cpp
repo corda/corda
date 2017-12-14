@@ -37,7 +37,7 @@ const uint8_t** Keys::EpidVerifyKeys()
     return pEpidVerifyKeys;
 }
 
-const uint32_t Keys::EpidVerifyKeyNum()
+uint32_t Keys::EpidVerifyKeyNum()
 {
-    return sizeof(pEpidVerifyKeys) / sizeof(pEpidVerifyKeys[0]);
+    return static_cast<uint32_t>(sizeof(pEpidVerifyKeys) / sizeof(pEpidVerifyKeys[0]));
 }

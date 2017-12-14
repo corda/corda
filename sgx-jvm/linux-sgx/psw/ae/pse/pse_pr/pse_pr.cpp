@@ -51,7 +51,7 @@
 
 static TEpidSigma11Verifier*  s_pVerifier = NULL;
 
-
+//length to copy into enclave
 size_t get_sigRL_size(const EPID11_SIG_RL* pSigRL)
 {
     uint32_t nEntries = 0;
@@ -59,11 +59,12 @@ size_t get_sigRL_size(const EPID11_SIG_RL* pSigRL)
 
     if (TEpidSigma11Verifier::get_sigRL_info(pSigRL, nEntries, nSize))
         return nSize;
-    
-    return 0;
+    else
+        //invalid sigRL
+        return sizeof(EPID11_SIG_RL);
 }
 
-
+//length to copy into enclave
 size_t get_privRL_size(const EPID11_PRIV_RL* pPrivRL)
 {
     uint32_t nEntries = 0;
@@ -71,8 +72,9 @@ size_t get_privRL_size(const EPID11_PRIV_RL* pPrivRL)
 
     if (TEpidSigma11Verifier::get_privRL_info(pPrivRL, nEntries, nSize))
         return nSize;
-    
-    return 0;
+    else
+        //invalid privRL
+        return sizeof(EPID11_PRIV_RL);
 }
 
 

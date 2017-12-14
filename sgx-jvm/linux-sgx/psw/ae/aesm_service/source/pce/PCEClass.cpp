@@ -85,13 +85,13 @@ uint32_t CPCEClass::get_pce_info(const sgx_report_t& report, const signed_pek_t&
         return AE_FAILURE;
     }
 
-    status = ::get_pc_info(m_enclave_id, &ret_val, &report, (uint8_t*)&pek, static_cast<uint32_t>(PEK_MOD_SIZE + sizeof(pek.e)), ALG_RSA_OAEP_2048, encrypted_ppid, PEK_MOD_SIZE, &ret_size, &pce_info, &signature_scheme);
+    status = ::get_pc_info(m_enclave_id, &ret_val, &report, (uint8_t*)&pek, static_cast<uint32_t>(PEK_MOD_SIZE + sizeof(pek.e)), ALG_RSA_OAEP_3072, encrypted_ppid, PEK_MOD_SIZE, &ret_size, &pce_info, &signature_scheme);
     for(; status == SGX_ERROR_ENCLAVE_LOST && retry < AESM_RETRY_COUNT; retry++)
     {
         unload_enclave();
         if(AE_SUCCESS != load_enclave())
             return AE_FAILURE;
-        status = ::get_pc_info(m_enclave_id, &ret_val, &report, (uint8_t*)&pek, static_cast<uint32_t>(PEK_MOD_SIZE + sizeof(pek.e)), ALG_RSA_OAEP_2048, encrypted_ppid, PEK_MOD_SIZE, &ret_size, &pce_info, &signature_scheme);
+        status = ::get_pc_info(m_enclave_id, &ret_val, &report, (uint8_t*)&pek, static_cast<uint32_t>(PEK_MOD_SIZE + sizeof(pek.e)), ALG_RSA_OAEP_3072, encrypted_ppid, PEK_MOD_SIZE, &ret_size, &pce_info, &signature_scheme);
     }
     if(status != SGX_SUCCESS)
         return AE_FAILURE;

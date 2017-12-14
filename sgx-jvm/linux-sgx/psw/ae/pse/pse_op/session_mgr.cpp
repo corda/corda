@@ -528,25 +528,6 @@ pse_op_error_t ephemeral_session_m2m3(
     sgx_isv_svn_t sealed_isv_svn;
     sgx_cpu_svn_t* p_sealed_cpu_svn = NULL;
 
-    // If the pairing blob was sealed by a different ISV SVN, we need to 
-    // tell AESM to redo long term pairing
-    memset_s(&report, sizeof(report), 0, sizeof(report));
-    se_ret = sgx_create_report(NULL, NULL, &report);
-    if(SGX_SUCCESS != se_ret)
-    {
-        return OP_ERROR_INTERNAL;
-    }
-
-    sealed_isv_svn = ((sgx_sealed_data_t*)sealed_blob)->key_request.isv_svn;
-    p_sealed_cpu_svn = &((sgx_sealed_data_t*)sealed_blob)->key_request.cpu_svn;
-    if (sealed_isv_svn != report.body.isv_svn || memcmp(p_sealed_cpu_svn, &report.body.cpu_svn, sizeof(sgx_cpu_svn_t)) != 0)
-    {
-        return OP_ERROR_LTPB_SEALING_OUT_OF_DATE;
-    }
-
-     // Reset ephemeral session
-    memset(&g_eph_session, 0 , sizeof(eph_session_t));
-
     // decrypt sealed blob
     if (UnsealPairingBlob(sealed_blob, &g_pairing_data) != AE_SUCCESS)
     {
@@ -554,6 +535,27 @@ pse_op_error_t ephemeral_session_m2m3(
         op_ret = OP_ERROR_UNSEAL_PAIRING_BLOB;
         goto error;
     }
+
+    // If the pairing blob was sealed by a different ISV SVN, we need to 
+    // tell AESM to redo long term pairing
+    memset_s(&report, sizeof(report), 0, sizeof(report));
+    se_ret = sgx_create_report(NULL, NULL, &report);
+    if(SGX_SUCCESS != se_ret)
+    {
+        op_ret = OP_ERROR_INTERNAL;
+        goto error;
+    }
+
+    sealed_isv_svn = ((sgx_sealed_data_t*)sealed_blob)->key_request.isv_svn;
+    p_sealed_cpu_svn = &((sgx_sealed_data_t*)sealed_blob)->key_request.cpu_svn;
+    if (sealed_isv_svn != report.body.isv_svn || memcmp(p_sealed_cpu_svn, &report.body.cpu_svn, sizeof(sgx_cpu_svn_t)) != 0)
+    {
+        op_ret = OP_ERROR_LTPB_SEALING_OUT_OF_DATE;
+        goto error;
+    }
+
+     // Reset ephemeral session
+    memset(&g_eph_session, 0 , sizeof(eph_session_t));
 
     // verify pairingNonce, must be non-zero.
     memset(&zero_nonce, 0, sizeof(zero_nonce));

@@ -49,6 +49,7 @@ AEGetWhiteListRequest::AEGetWhiteListRequest(uint32_t whiteListSize, uint32_t ti
     :m_request(NULL)
 
 {
+    m_request = new aesm::message::Request::GetWhiteListRequest();
     m_request->set_white_list_size(whiteListSize);
     m_request->set_timeout(timeout);
 }

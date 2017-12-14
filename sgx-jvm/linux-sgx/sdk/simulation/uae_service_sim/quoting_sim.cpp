@@ -35,9 +35,9 @@
 #include "epid/common/types.h"
 #include "se_sig_rl.h"
 #include "se_quote_internal.h"
-#include "ippcp.h"
 #include "deriv.h"
 #include "cpusvn_util.h"
+#include "crypto_wrapper.h"
 
 /* The EPID group certificate */ 
 static const uint8_t EPID_GROUP_CERT[] = {
@@ -153,138 +153,83 @@ static sgx_status_t create_qe_report(const sgx_report_t *p_report,
         return SGX_ERROR_UNEXPECTED;
 
     //QE_REPORT.BODY.REPORTDATA = SHA256(NONCE || QUOTE)
-    int sha256_size = 0;
-    IppsHashState *p_sha_state = NULL;
     sgx_status_t sgx_ret = SGX_ERROR_UNEXPECTED;
-    IppsAES_CMACState* p_cmac_state = NULL;
-    int ippStateSize = 0;
 
     //prepare reprot_data
-    do
+    size_t msg_size = sizeof(sgx_quote_nonce_t) + quote_size;
+    uint8_t * p_msg = (uint8_t *)malloc(msg_size);
+    if(!p_msg)
+        return SGX_ERROR_OUT_OF_MEMORY;
+    if(memcpy_s(p_msg, msg_size, p_quote_nonce, sizeof(sgx_quote_nonce_t)))
     {
-        IppStatus ret;
-        ret = ippsHashGetSize(&sha256_size);
-        if(ret)break;
-        // p_sha_state need to be freed when exit.
-        p_sha_state = (IppsHashState *)malloc(sha256_size);
-        if(!p_sha_state)
-        {
-            sgx_ret = SGX_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-        ret = ippsHashInit(p_sha_state, IPP_ALG_HASH_SHA256);
-        if(ret)break;
-        ret = ippsHashUpdate((uint8_t *)const_cast<sgx_quote_nonce_t*>(p_quote_nonce),
-                                sizeof(sgx_quote_nonce_t),
-                                p_sha_state);
-        if(ret)break;
+        free(p_msg);
+        return sgx_ret;
+    }
+    if(memcpy_s(p_msg + sizeof(sgx_quote_nonce_t), msg_size - sizeof(sgx_quote_nonce_t), p_quote, quote_size))
+    {
+        free(p_msg);
+        return sgx_ret;
+    }
 
-        ret = ippsHashUpdate(p_quote,
-                                quote_size,
-                                p_sha_state);
-        if(ret)break;
+    unsigned int report_data_len = sizeof(temp_qe_report.body.report_data);
 
-        //sha256 final, QE_REPORT.BODY.REPORTDATA = SHA256(NONCE || QUOTE)
-        ret = ippsHashFinal((uint8_t*)&temp_qe_report.body.report_data,
-                              p_sha_state);
-        if(ret)break;
+    if(SGX_SUCCESS != (sgx_ret = sgx_EVP_Digest(EVP_sha256(), p_msg, (unsigned int)msg_size, 
+                    (uint8_t *)&temp_qe_report.body.report_data, &report_data_len)))
+    {
+        if(sgx_ret != SGX_ERROR_OUT_OF_MEMORY)
+            sgx_ret = SGX_ERROR_UNEXPECTED;
+        free(p_msg);
+        return sgx_ret;
+    }
+    
+    free(p_msg);
 
-        /* calculate CMAC using the report key, same as BASE_REPORT_KEY in
-           sdk/simulation/tinst/deriv.cpp */
-        derivation_data_t   dd;
-        memset(&dd, 0, sizeof(dd));
-        dd.size = sizeof(dd_report_key_t);
+    /* calculate CMAC using the report key, same as BASE_REPORT_KEY in
+       sdk/simulation/tinst/deriv.cpp */
+    derivation_data_t   dd;
+    memset(&dd, 0, sizeof(dd));
+    dd.size = sizeof(dd_report_key_t);
 
-        dd.key_name = SGX_KEYSELECT_REPORT;
-        if(memcpy_s(&dd.ddrk.mrenclave,sizeof(dd.ddrk.mrenclave),
-                    &p_report->body.mr_enclave, sizeof(sgx_measurement_t)))
-            break;
-        if(memcpy_s(&dd.ddrk.attributes, sizeof(dd.ddrk.attributes),
-                    &p_report->body.attributes, sizeof(sgx_attributes_t)))
-            break;
-        if(memcpy_s(&dd.ddrk.csr_owner_epoch, sizeof(dd.ddrk.csr_owner_epoch),
-                    SIMU_OWNER_EPOCH_MSR, sizeof(se_owner_epoch_t)))
-            break;
-        if(memcpy_s(&dd.ddrk.cpu_svn, sizeof(dd.ddrk.cpu_svn),
-                    cpusvn, sizeof(sgx_cpu_svn_t)))
-            break;
-        if(memcpy_s(&dd.ddrk.key_id, sizeof(dd.ddrk.key_id),
-                    &temp_qe_report.key_id, sizeof(sgx_key_id_t)))
-            break;
+    dd.key_name = SGX_KEYSELECT_REPORT;
+    if(memcpy_s(&dd.ddrk.mrenclave,sizeof(dd.ddrk.mrenclave),
+                &p_report->body.mr_enclave, sizeof(sgx_measurement_t)))
+        return SGX_ERROR_UNEXPECTED;
+    if(memcpy_s(&dd.ddrk.attributes, sizeof(dd.ddrk.attributes),
+                &p_report->body.attributes, sizeof(sgx_attributes_t)))
+        return SGX_ERROR_UNEXPECTED;
+    if(memcpy_s(&dd.ddrk.csr_owner_epoch, sizeof(dd.ddrk.csr_owner_epoch),
+                SIMU_OWNER_EPOCH_MSR, sizeof(se_owner_epoch_t)))
+        return SGX_ERROR_UNEXPECTED;
+    if(memcpy_s(&dd.ddrk.cpu_svn, sizeof(dd.ddrk.cpu_svn),
+                cpusvn, sizeof(sgx_cpu_svn_t)))
+        return SGX_ERROR_UNEXPECTED;
+    if(memcpy_s(&dd.ddrk.key_id, sizeof(dd.ddrk.key_id),
+                &temp_qe_report.key_id, sizeof(sgx_key_id_t)))
+        return SGX_ERROR_UNEXPECTED;
+    
+    sgx_key_128bit_t tmp_report_key;
+    if(SGX_SUCCESS != (sgx_ret = sgx_cmac128_msg(BASE_REPORT_KEY, dd.ddbuf, dd.size, &tmp_report_key)))
+    {
+        if(sgx_ret != SGX_ERROR_OUT_OF_MEMORY)
+            sgx_ret = SGX_ERROR_UNEXPECTED;
+        return sgx_ret;
+    }
+    
+    // call cryptographic CMAC function
+    // CMAC data are *NOT* including MAC and KEYID
+    if(SGX_SUCCESS != (sgx_ret = sgx_cmac128_msg(tmp_report_key, (const uint8_t *)&temp_qe_report.body, 
+                    sizeof(temp_qe_report.body), &temp_qe_report.mac)))
+    {
+        if(sgx_ret != SGX_ERROR_OUT_OF_MEMORY)
+            sgx_ret = SGX_ERROR_UNEXPECTED;
+        return sgx_ret;
+    }
 
-        ret = ippsAES_CMACGetSize(&ippStateSize);
-        if(ret != ippStsNoErr)break;
-
-        p_cmac_state = (IppsAES_CMACState*)malloc(ippStateSize);
-        if(p_cmac_state == NULL)
-        {
-            sgx_ret = SGX_ERROR_OUT_OF_MEMORY;
-            break;
-        }
-
-        // calculate the derived key
-        ret = ippsAES_CMACInit((const Ipp8u *)BASE_REPORT_KEY, 16,
-                                   p_cmac_state, ippStateSize);
-        if(ret != ippStsNoErr)
-        {
-            if(ret == ippStsMemAllocErr)
-            {
-                sgx_ret = SGX_ERROR_OUT_OF_MEMORY;
-                break;
-            }
-            else
-            {
-                sgx_ret = SGX_ERROR_UNEXPECTED;
-                break;
-            }
-        }
-
-        ret = ippsAES_CMACUpdate((const Ipp8u *)dd.ddbuf,
-                                     dd.size, p_cmac_state);
-        if(ret != ippStsNoErr)break;
-
-        sgx_key_128bit_t tmp_report_key;
-        memset(tmp_report_key, 0, sizeof(tmp_report_key));
-        ret = ippsAES_CMACFinal((Ipp8u *)&tmp_report_key,
-                                    sizeof(tmp_report_key), p_cmac_state);
-        if(ret != ippStsNoErr)break;
-
-        // call cryptographic CMAC function
-        // CMAC data are *NOT* including MAC and KEYID
-        ret = ippsAES_CMACInit((const Ipp8u *)tmp_report_key, 16,
-                                   p_cmac_state, ippStateSize);
-        if(ret != ippStsNoErr)
-        {
-            if(ret == ippStsMemAllocErr)
-            {
-                sgx_ret = SGX_ERROR_OUT_OF_MEMORY;
-                break;
-            }
-            else
-            {
-                sgx_ret = SGX_ERROR_UNEXPECTED;
-                break;
-            }
-        }
-
-        ret = ippsAES_CMACUpdate((const Ipp8u *)&temp_qe_report.body,
-                                     sizeof(temp_qe_report.body),
-                                     p_cmac_state);
-        if(ret != ippStsNoErr)break;
-
-        ret = ippsAES_CMACFinal((Ipp8u *)&temp_qe_report.mac,
-                                    sizeof(temp_qe_report.mac), p_cmac_state);
-        if(ret != ippStsNoErr)break;
-
-        if(memcpy_s(p_qe_report, sizeof(*p_qe_report),
-                    &temp_qe_report, sizeof(temp_qe_report)))
-            break;
-        sgx_ret = SGX_SUCCESS;
-    }while(0);
-    if (p_cmac_state)
-        free(p_cmac_state);
-    if(p_sha_state)
-        free(p_sha_state);
+    if(memcpy_s(p_qe_report, sizeof(*p_qe_report),
+                &temp_qe_report, sizeof(temp_qe_report)))
+    {
+        sgx_ret = SGX_ERROR_UNEXPECTED;
+    }
     return sgx_ret;
 }
 

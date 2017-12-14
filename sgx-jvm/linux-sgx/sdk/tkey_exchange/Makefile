@@ -44,8 +44,7 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/inc    \
            -I$(LINUX_PSW_DIR)/ae/common \
            -I$(LINUX_PSW_DIR)/ae/
 
-INCLUDE += -I$(SGX_IPP_INC)     \
-           -I$(LINUX_EXTERNAL_DIR)/epid
+INCLUDE += -I$(SGX_IPP_INC)
 
 INCLUDE += -I$(LINUX_SDK_DIR)/tlibstdcxx/stlport
 

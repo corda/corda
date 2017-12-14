@@ -75,7 +75,7 @@ static ae_error_t prov_msg1_gen_header(provision_request_header_t *msg1_header,
     uint32_t total_size = 0;
     //platform info tlv size
     uint32_t field1_data_size = PLATFORM_INFO_TLV_SIZE();
-    field1_data_size += CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
+    field1_data_size += CIPHER_TEXT_TLV_SIZE(RSA_3072_KEY_BYTES);
     //add flag tlv if needed
     if(use_flags){
         field1_data_size += FLAGS_TLV_SIZE();
@@ -85,7 +85,7 @@ static ae_error_t prov_msg1_gen_header(provision_request_header_t *msg1_header,
         AESM_DBG_ERROR("Too small ProvMsg1 buffer size");
         return PVE_INSUFFICIENT_MEMORY_ERROR;
     }
-    total_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES) + BLOCK_CIPHER_TEXT_TLV_SIZE(field1_data_size) +MAC_TLV_SIZE(MAC_SIZE);
+    total_size = CIPHER_TEXT_TLV_SIZE(RSA_3072_KEY_BYTES) + BLOCK_CIPHER_TEXT_TLV_SIZE(field1_data_size) +MAC_TLV_SIZE(MAC_SIZE);
     //initialize Msg1 Header
     msg1_header->protocol = SE_EPID_PROVISIONING;
     msg1_header->type = TYPE_PROV_MSG1;
@@ -111,8 +111,8 @@ static ae_error_t prov_msg1_gen_header(provision_request_header_t *msg1_header,
 }
 
 //This function will do the rsa oaep encryption with input src[0:src_len] and put the output to buffer dst
-//The function will assume that buffer src_len is no more than PVE_RSAOAEP_ENCRYPT_MAXLEN and the buffer size of dst is at least PVE_RSA_KEY_BITS
-static ae_error_t aesm_rsa_oaep_encrypt(const uint8_t *src, uint32_t src_len, const IppsRSAPublicKeyState *rsa, uint8_t dst[PVE_RSA_KEY_BYTES])
+//The function will assume that buffer src_len is no more than PVE_RSAOAEP_ENCRYPT_MAXLEN and the buffer size of dst is at least RSA_3072_KEY_BITS
+static ae_error_t aesm_rsa_oaep_encrypt(const uint8_t *src, uint32_t src_len, const IppsRSAPublicKeyState *rsa, uint8_t dst[RSA_3072_KEY_BYTES])
 {
     const int hashsize = SHA_SIZE_BIT;
     Ipp8u seeds[hashsize];
@@ -175,7 +175,7 @@ ret_point:
     uint8_t *field2 = NULL;
     uint8_t field2_iv[IV_SIZE];
     uint8_t field2_mac[MAC_SIZE];
-    uint8_t encrypted_ppid[PVE_RSA_KEY_BYTES];
+    uint8_t encrypted_ppid[RSA_3072_KEY_BYTES];
     //msg1 header will be in the beginning part of the output msg
     provision_request_header_t *msg1_header = reinterpret_cast<provision_request_header_t *>(msg1);
     memset(&pek_report, 0, sizeof(pek_report));
@@ -271,15 +271,15 @@ ret_point:
             AESM_DBG_ERROR("Fail to decode PEK:%d",ippStatus);
             return AE_FAILURE;
         }
-        uint8_t field0[PVE_RSA_KEY_BYTES];
+        uint8_t field0[RSA_3072_KEY_BYTES];
         ret = aesm_rsa_oaep_encrypt(tlvs_msg1_sub.get_tlv_msg(), tlvs_msg1_sub.get_tlv_msg_size(), rsa_pub_key, field0);
-        secure_free_rsa_pub_key(PVE_RSA_KEY_BYTES, sizeof(uint32_t), rsa_pub_key);
+        secure_free_rsa_pub_key(RSA_3072_KEY_BYTES, sizeof(uint32_t), rsa_pub_key);
         if(AE_SUCCESS!=ret){
             AESM_DBG_ERROR("Fail to in RSA_OAEP for ProvMsg1:(ae%d)",ret);
             return ret;
         }
         TLVsMsg tlvs_msg1;
-        tlv_status= tlvs_msg1.add_cipher_text(field0, PVE_RSA_KEY_BYTES, PEK_PUB);
+        tlv_status= tlvs_msg1.add_cipher_text(field0, RSA_3072_KEY_BYTES, PEK_3072_PUB);
         ret = tlv_error_2_pve_error(tlv_status);
         if(AE_SUCCESS!=ret){
             AESM_DBG_ERROR("Fail to generate field0 TLV of ProvMsg1( ae%d)",ret);
@@ -287,7 +287,7 @@ ret_point:
         }
 
         TLVsMsg tlvs_msg2_sub;
-        tlv_status = tlvs_msg2_sub.add_cipher_text(encrypted_ppid, PVE_RSA_KEY_BYTES, PEK_PUB);
+        tlv_status = tlvs_msg2_sub.add_cipher_text(encrypted_ppid, RSA_3072_KEY_BYTES, PEK_3072_PUB);
         ret = tlv_error_2_pve_error(tlv_status);
         if(AE_SUCCESS!=ret){
             return ret;

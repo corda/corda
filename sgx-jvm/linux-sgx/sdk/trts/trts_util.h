@@ -43,10 +43,13 @@ extern "C" {
 
 void * get_heap_base(void);
 size_t get_heap_size(void);
+size_t get_heap_min_size(void);
 int * get_errno_addr(void);
 bool is_stack_addr(void *address, size_t size);
 bool is_valid_sp(uintptr_t sp);
 
+int heap_init(void *_heap_base, size_t _heap_size, size_t _heap_min_size, int _is_edmm_supported);
+int feature_supported(const uint64_t *feature_set, uint32_t feature_shift);
 
 #ifdef __cplusplus
 }

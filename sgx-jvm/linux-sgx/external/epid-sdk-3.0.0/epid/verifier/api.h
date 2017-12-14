@@ -21,6 +21,10 @@
 #include "epid/common/types.h"
 #include "epid/common/errors.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 /*!
  * \file
  * \brief Intel(R) EPID SDK verifier API.
@@ -543,5 +547,9 @@ EpidStatus EpidBlacklistSig(VerifierCtx* ctx, EpidSignature const* sig,
                             size_t sig_len, void const* msg, size_t msg_len);
 
 /*! @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // EPID_VERIFIER_API_H_

@@ -63,9 +63,11 @@ public:
     sgx_enclave_id_t get_enclave_id() const;
     const void* get_start_addr() const;
     const secs_t& get_secs() const;
-    const std::vector<tcs_t *>& get_tcs_list() const;
+    const std::vector<std::pair<tcs_t *, bool>>& get_tcs_list() const;
     void* get_symbol_address(const char* const sym);
     int set_memory_protection();
+    int post_init_action(layout_t *start, layout_t *end, uint64_t delta);
+    int post_init_action_commit(layout_t *start, layout_t *end, uint64_t delta);
 
 private:
     int build_mem_region(const section_info_t &sec_info);
@@ -92,7 +94,7 @@ private:
     void                *m_start_addr;
 
     // the TCS list
-    std::vector<tcs_t *> m_tcs_list;
+    std::vector<std::pair<tcs_t *, bool>> m_tcs_list;
     // the enclave creation parameters
     const metadata_t    *m_metadata;
     secs_t              m_secs;

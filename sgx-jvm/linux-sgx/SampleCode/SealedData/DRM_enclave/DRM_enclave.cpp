@@ -114,11 +114,11 @@ static uint32_t verify_sealed_data(
             break;
         case SGX_ERROR_INVALID_ISVSVN:
             /* Indicates isv_svn field of the sealed data is greater than
-            the enclave’s ISVSVN. This is a downgraded enclave.*/
+            the enclave's ISVSVN. This is a downgraded enclave.*/
             break;
         case SGX_ERROR_INVALID_CPUSVN:
             /* Indicates cpu_svn field of the sealed data is greater than
-            the platform’s cpu_svn. enclave is  on a downgraded platform.*/
+            the platform's cpu_svn. enclave is  on a downgraded platform.*/
             break;
         case SGX_ERROR_INVALID_KEYNAME:
             /*Indicates key_name field of the sealed data is incorrect.*/
@@ -504,11 +504,11 @@ uint32_t perform_time_based_policy(const uint8_t* sealed_log,
             break;
         case SGX_ERROR_INVALID_ISVSVN:
             /* Indicates isv_svn field of the sealed data is greater than the
-            enclave’s ISVSVN. This is a downgraded enclave.*/
+            enclave's ISVSVN. This is a downgraded enclave.*/
             break;
         case SGX_ERROR_INVALID_CPUSVN:
             /* Indicates cpu_svn field of the sealed data is greater than the
-            platform’s cpu_svn. enclave is  on a downgraded platform.*/
+            platform's cpu_svn. enclave is  on a downgraded platform.*/
             break;
         case SGX_ERROR_INVALID_KEYNAME:
             /*Indicates key_name field of the sealed data is incorrect.*/

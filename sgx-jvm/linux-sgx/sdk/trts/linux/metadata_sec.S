@@ -31,7 +31,7 @@
 
     .file "metadata_sec.S"
 
-#define METADATA_SIZE 4096
+#define METADATA_SIZE 0x3000
 .section ".note.sgxmeta", "", @note
     .p2align 2              /* section alignment */
     .long 1f - 0f           /* name size (not including padding) */

@@ -38,12 +38,16 @@
 #include "se_error_internal.h"
 #include "debugger_support.h"
 #include "se_memory.h"
+#include "urts_trim.h"
+#include "urts_emodpr.h"
 #include <assert.h>
+#include "rts.h"
+
 
 using namespace std;
 
 int do_ecall(const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread);
-int do_ocall(const bridge_fn_t bridge, sgx_enclave_id_t enclave_id, void *ms);
+int do_ocall(const bridge_fn_t bridge, void *ms);
 
 CEnclave::CEnclave(CLoader &ldr)
     : m_loader(ldr)
@@ -56,13 +60,18 @@ CEnclave::CEnclave(CLoader &ldr)
     , m_thread_pool(NULL)
     , m_dbg_flag(false)
     , m_destroyed(false)
+    , m_version(0)
+    , m_ocall_table(NULL)
+    , m_pthread_is_valid(false)
+    , m_new_thread_event(NULL)
 {
     memset(&m_enclave_info, 0, sizeof(debug_enclave_info_t));
     se_init_rwlock(&m_rwlock);
 }
 
 
-sgx_status_t CEnclave::initialize(const se_file_t& file, const sgx_enclave_id_t enclave_id, void * const start_addr, const uint64_t enclave_size, const uint32_t tcs_policy)
+sgx_status_t CEnclave::initialize(const se_file_t& file, const sgx_enclave_id_t enclave_id, void * const start_addr, const uint64_t enclave_size, 
+                                        const uint32_t tcs_policy, const uint32_t enclave_version, const uint32_t tcs_min_pool)
 {
     uint32_t name_len = file.name_len;
     if (file.unicode)
@@ -84,15 +93,24 @@ sgx_status_t CEnclave::initialize(const se_file_t& file, const sgx_enclave_id_t 
     m_enclave_id = enclave_id;
     m_start_addr = start_addr;
     m_size = enclave_size;
+    m_version = enclave_version;
+
+    m_new_thread_event = se_event_init();
+    if(m_new_thread_event == NULL)
+    {
+        free(m_enclave_info.lpFileName);
+        m_enclave_info.lpFileName = NULL;
+        return SGX_ERROR_OUT_OF_MEMORY;
+    }
 
     if(TCS_POLICY_BIND == tcs_policy)
     {
-        m_thread_pool = new CThreadPoolBindMode();
+        m_thread_pool = new CThreadPoolBindMode(tcs_min_pool);
     }
     else if(TCS_POLICY_UNBIND == tcs_policy)
     {
         //we also set it as bind mode.
-        m_thread_pool = new CThreadPoolUnBindMode();
+        m_thread_pool = new CThreadPoolUnBindMode(tcs_min_pool);
     }
     else
     {
@@ -102,6 +120,7 @@ sgx_status_t CEnclave::initialize(const se_file_t& file, const sgx_enclave_id_t 
         m_enclave_info.lpFileName = NULL;
         return SGX_ERROR_INVALID_PARAMETER;
     }
+    
     return SGX_SUCCESS;
 }
 
@@ -113,8 +132,13 @@ CEnclave::~CEnclave()
         m_thread_pool = NULL;
     }
 
+    m_ocall_table = NULL;
+
     destory_debug_info(&m_enclave_info);
     se_fini_rwlock(&m_rwlock);
+        
+    se_event_destroy(m_new_thread_event);
+    m_new_thread_event = NULL;
 }
 
 void * CEnclave::get_symbol_address(const char * const symbol)
@@ -127,6 +151,24 @@ sgx_enclave_id_t CEnclave::get_enclave_id()
     return m_enclave_id;
 }
 
+uint32_t CEnclave::get_enclave_version()
+{
+    return m_version;
+}
+
+size_t CEnclave::get_dynamic_tcs_list_size()
+{
+    std::vector<std::pair<tcs_t *, bool>> tcs_list = m_loader.get_tcs_list();
+    size_t count = 0;
+    for (size_t idx = 0; idx < tcs_list.size(); ++idx)
+    {
+        if(tcs_list[idx].second == true)
+        {
+            count++;
+        }
+    }
+    return count;
+}
 
 sgx_status_t CEnclave::error_trts2urts(unsigned int trts_error)
 {
@@ -157,25 +199,61 @@ sgx_status_t CEnclave::ecall(const int proc, const void *ocall_table, void *ms)
         }
 
         //do sgx_ecall
-        CTrustThread *trust_thread = get_tcs();
+        CTrustThread *trust_thread = get_tcs(proc == ECMD_INIT_ENCLAVE);
         unsigned ret = SGX_ERROR_OUT_OF_TCS;
 
+        if(NULL != trust_thread)
         {
-            if(NULL != trust_thread) {
-                ret = do_ecall(proc, ocall_table, ms, trust_thread);
-            }
-        }
-        {
-            put_tcs(trust_thread);
-
-            //release the read/write lock, the only exception is enclave already be removed in ocall
-            if(AbnormalTermination() || ret != SE_ERROR_READ_LOCK_FAIL)
+            if (NULL == m_ocall_table)
             {
-                se_rdunlock(&m_rwlock);
+                m_ocall_table = (sgx_ocall_table_t *)ocall_table;
             }
+
+            if (proc == ECMD_UNINIT_ENCLAVE)
+            {
+                if(m_pthread_is_valid == true)
+                {
+                    m_pthread_is_valid = false;
+                    se_event_wake(m_new_thread_event);
+                    pthread_join(m_pthread_tid, NULL);
+                }
+                ocall_table = m_ocall_table;
+
+                std::vector<CTrustThread *> threads = m_thread_pool->get_thread_list();
+                for (unsigned idx = 0; idx < threads.size(); ++idx)
+                {
+                    if (trust_thread->get_tcs() == threads[idx]->get_tcs())
+                    {
+                        continue;
+                    }
+
+                    uint64_t start = (uint64_t)(threads[idx]->get_tcs());
+                    uint64_t end = start + (1 << SE_PAGE_SHIFT);
+
+                    if (get_enclave_creator()->is_EDMM_supported(CEnclave::get_enclave_id()))
+                    {
+                        if (SGX_SUCCESS != (ret = get_enclave_creator()->trim_range(start, end)))
+                        {
+                            se_rdunlock(&m_rwlock);
+                            return (sgx_status_t)ret;
+                        }
+                    }
+                }
+            }
+
+            ret = do_ecall(proc, ocall_table, ms, trust_thread);
+        }
+        put_tcs(trust_thread);
+
+        //release the read/write lock, the only exception is enclave already be removed in ocall
+        if(AbnormalTermination() || ret != SE_ERROR_READ_LOCK_FAIL)
+        {
+            se_rdunlock(&m_rwlock);
         }
         return error_trts2urts(ret);
-    } else {
+    }
+    else
+    {
         return SGX_ERROR_ENCLAVE_LOST;
     }
 }
@@ -184,16 +262,29 @@ int CEnclave::ocall(const unsigned int proc, const sgx_ocall_table_t *ocall_tabl
 {
     int error = SGX_ERROR_UNEXPECTED;
 
-    //validate the proc is within ocall_table;
-    if(NULL == ocall_table
-            || proc >= ocall_table->count)
+    if ((int)proc == EDMM_TRIM || (int)proc == EDMM_TRIM_COMMIT || (int)proc == EDMM_MODPR)
     {
-        return SGX_ERROR_INVALID_FUNCTION;
+        se_rdunlock(&m_rwlock);
+        if((int)proc == EDMM_TRIM)
+            error = ocall_trim_range(ms);
+        else if ((int)proc == EDMM_TRIM_COMMIT)
+            error = ocall_trim_accept(ms);
+        else if ((int)proc == EDMM_MODPR)
+            error = ocall_emodpr(ms);
     }
+    else 
+    {
+        //validate the proc is within ocall_table;
+        if(NULL == ocall_table ||
+                (proc >= ocall_table->count))
+        {
+            return SGX_ERROR_INVALID_FUNCTION;
+        }
 
-    se_rdunlock(&m_rwlock);
-    bridge_fn_t bridge = reinterpret_cast<bridge_fn_t>(ocall_table->ocall[proc]);
-    error = do_ocall(bridge, m_enclave_id, ms);
+        se_rdunlock(&m_rwlock);
+        bridge_fn_t bridge = reinterpret_cast<bridge_fn_t>(ocall_table->ocall[proc]);
+        error = do_ocall(bridge, ms);
+    }
 
     if (!se_try_rdlock(&m_rwlock))
     {
@@ -216,11 +307,77 @@ const debug_enclave_info_t* CEnclave::get_debug_info()
 }
 
 
-CTrustThread * CEnclave::get_tcs()
+
+CTrustThread * CEnclave::get_tcs(bool is_initialize_ecall)
 {
-    CTrustThread *trust_thread = m_thread_pool->acquire_thread();
+    CTrustThread *trust_thread = m_thread_pool->acquire_thread(is_initialize_ecall);
 
     return trust_thread;
+}
+
+void *fill_tcs_mini_pool_func(void *args)  
+{  
+     CEnclave *it = (CEnclave*)(args);
+     if(it != NULL)
+     {
+        it->fill_tcs_mini_pool(); 
+     }
+     return NULL;
+} 
+
+sgx_status_t CEnclave::fill_tcs_mini_pool_fn()
+{
+    pthread_t tid;
+    if(m_pthread_is_valid == false)
+    {
+       m_pthread_is_valid = true; 
+       int ret = pthread_create(&tid, NULL, fill_tcs_mini_pool_func, (void *)(this));  
+        if(ret != 0)
+        {
+            m_pthread_is_valid = false; 
+            return SGX_ERROR_UNEXPECTED;
+        }
+        m_pthread_tid = tid;
+    }
+    else if(m_pthread_is_valid == true)
+    {
+        if(se_event_wake(m_new_thread_event) != SE_MUTEX_SUCCESS)
+        {
+            return SGX_ERROR_UNEXPECTED;
+        }
+    }
+    
+
+    return SGX_SUCCESS;
+}
+
+sgx_status_t CEnclave::fill_tcs_mini_pool()
+{
+    do
+    {
+        if(se_try_rdlock(&m_rwlock))
+        {
+            //Maybe the enclave has been destroyed after acquire/release m_rwlock. See CEnclave::destroy()
+            if(m_destroyed)
+            {
+                se_rdunlock(&m_rwlock);
+                return SGX_ERROR_ENCLAVE_LOST;
+            }
+            if(m_pthread_is_valid == false)
+            {
+                se_rdunlock(&m_rwlock);
+                return SGX_SUCCESS;
+            }
+            m_thread_pool->fill_tcs_mini_pool();
+            se_rdunlock(&m_rwlock);
+        }
+        else
+        {
+            return SGX_ERROR_ENCLAVE_LOST;
+        } 
+   }while(se_event_wait(m_new_thread_event) == SE_MUTEX_SUCCESS);
+   return SGX_ERROR_UNEXPECTED;
+  
 }
 
 void CEnclave::put_tcs(CTrustThread *trust_thread)
@@ -236,9 +393,6 @@ void CEnclave::put_tcs(CTrustThread *trust_thread)
 void CEnclave::destroy()
 {
     se_wtlock(&m_rwlock);
-    //send debug event to debugger when enclave is debug mode or release mode
-    debug_enclave_info_t *debug_info = const_cast<debug_enclave_info_t *>(get_debug_info());
-    generate_enclave_debug_event(URTS_EXCEPTION_PREREMOVEENCLAVE, debug_info);
 
     get_enclave_creator()->destroy_enclave(ENCLAVE_ID_IOCTL, m_size);
 
@@ -251,11 +405,20 @@ void CEnclave::destroy()
     //m_loader.destroy_enclave();
 }
 
-void CEnclave::add_thread(tcs_t * const tcs)
+void CEnclave::add_thread(tcs_t * const tcs, bool is_unallocated)
 {
-    CTrustThread *trust_thread = m_thread_pool->add_thread(tcs, this);
+    CTrustThread *trust_thread = m_thread_pool->add_thread(tcs, this, is_unallocated);
+    if(!is_unallocated)
+    {
+        insert_debug_tcs_info_head(&m_enclave_info, trust_thread->get_debug_info());
+    }
+}
+
+void CEnclave::add_thread(CTrustThread * const trust_thread)
+{
     insert_debug_tcs_info_head(&m_enclave_info, trust_thread->get_debug_info());
 }
+
 
 int CEnclave::set_extra_debug_info(secs_t& secs)
 {
@@ -478,7 +641,7 @@ bool CEnclave::update_trust_thread_debug_flag(void* tcs_address, uint8_t debug_f
 
     if(debug_info->enclave_type == ET_DEBUG)
     {
-
+       
          if(!se_write_process_mem(pid, reinterpret_cast<unsigned char *>(tcs_address) + sizeof(uint64_t), &debug_flag2, sizeof(uint64_t), NULL))
               return FALSE;
 
@@ -490,13 +653,13 @@ bool CEnclave::update_trust_thread_debug_flag(void* tcs_address, uint8_t debug_f
 bool CEnclave::update_debug_flag(uint8_t debug_flag)
 {
     debug_tcs_info_t* tcs_list_entry = m_enclave_info.tcs_list;
-
+    
     while(tcs_list_entry)
     {
          if(!update_trust_thread_debug_flag(tcs_list_entry->TCS_address, debug_flag))
               return FALSE;
 
-         tcs_list_entry = tcs_list_entry->next_tcs_info;
+         tcs_list_entry = tcs_list_entry->next_tcs_info;     
     }
 
     return TRUE;

@@ -85,7 +85,7 @@ const public_key_t& CertificateProvisioningProtocol::get_intel_pek()
 //The output rsa_pub_key should be released by function free_rsa_key
 static IppStatus get_intel_rsa_pub_key_in_ipp_format(const public_key_t& publicKey, IppsRSAPublicKeyState **rsa_pub_key)
 {
-    if (sizeof(publicKey.n) != PVE_RSA_KEY_BYTES)
+    if (sizeof(publicKey.n) != RSA_3072_KEY_BYTES)
         return ippStsSizeErr;
 
     if (NULL == rsa_pub_key)

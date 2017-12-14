@@ -39,6 +39,8 @@
 #include "util.h"
 #include "elf_util.h"
 #include "global_data.h"
+#include "../trts_emodpr.h"
+#include "trts_inst.h"
 
 static int elf_tls_aligned_virtual_size(const void *enclave_base,
                             size_t *aligned_virtual_size);
@@ -416,4 +418,121 @@ int elf_get_init_array(const void* enclave_base,
 
     return 0;
 }
+
+int elf_get_uninit_array(const void* enclave_base,
+        uintptr_t *uninit_array_addr, size_t *uninit_array_size)
+{
+    ElfW(Half) phnum = 0;
+    const ElfW(Ehdr) *ehdr = (const ElfW(Ehdr)*)enclave_base;
+    ElfW(Phdr) *phdr = get_phdr(ehdr);
+
+    if (!uninit_array_addr || !uninit_array_size)
+        return -1;
+
+    if (phdr == NULL)
+        return -1;  /* Invalid image. */
+
+    *uninit_array_addr = 0;
+    *uninit_array_size = 0;
+
+    /* Search for Dynamic segment */
+    for (; phnum < ehdr->e_phnum; phnum++, phdr++)
+    {
+        if (phdr->p_type == PT_DYNAMIC)
+        {
+            size_t      count;
+            size_t      n_dyn = phdr->p_filesz/sizeof(ElfW(Dyn));
+            ElfW(Dyn)   *dyn = GET_PTR(ElfW(Dyn), ehdr, phdr->p_paddr);
+
+            for (count = 0; count < n_dyn; count++, dyn++)
+            {
+                switch (dyn->d_tag)
+                {
+                    case DT_FINI_ARRAY:
+                        *uninit_array_addr = dyn->d_un.d_ptr;
+                        break;
+                    case DT_FINI_ARRAYSZ:
+                        *uninit_array_size = dyn->d_un.d_val;
+                        break;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+static int has_text_relo(const ElfW(Ehdr) *ehdr, const ElfW(Phdr) *phdr, ElfW(Half) phnum)
+{
+    ElfW(Half) phi = 0;
+    int text_relo = 0;
+
+    for (; phi < phnum; phi++, phdr++)
+    {
+        if (phdr->p_type == PT_DYNAMIC)
+        {
+            size_t count;
+            size_t n_dyn = phdr->p_filesz/sizeof(ElfW(Dyn));
+            ElfW(Dyn) *dyn = GET_PTR(ElfW(Dyn), ehdr, phdr->p_paddr);
+
+            for (count = 0; count < n_dyn; count++, dyn++)
+            {
+                if (dyn->d_tag == DT_NULL)
+                    break;
+
+                if (dyn->d_tag == DT_TEXTREL)
+                {
+                    text_relo = 1;
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    return text_relo;
+}
+
+sgx_status_t change_protection(void *enclave_base)
+{
+    ElfW(Half) phnum = 0;
+    const ElfW(Ehdr) *ehdr = (const ElfW(Ehdr)*)enclave_base;
+    const ElfW(Phdr) *phdr = get_phdr(ehdr);
+    uint64_t perms;
+    sgx_status_t status = SGX_ERROR_UNEXPECTED;
+
+    if (phdr == NULL)
+        return status;
+
+    int text_relocation = has_text_relo(ehdr, phdr, ehdr->e_phnum);
+
+    for (; phnum < ehdr->e_phnum; phnum++, phdr++)
+    {
+        if (text_relocation && (phdr->p_type == PT_LOAD) && ((phdr->p_flags & PF_W) == 0))
+        {
+            perms = 0;
+            size_t start = (size_t)enclave_base + (phdr->p_vaddr & (size_t)(~(SE_PAGE_SIZE-1)));
+            size_t end = (size_t)enclave_base + ((phdr->p_vaddr + phdr->p_memsz + SE_PAGE_SIZE - 1) & (size_t)(~(SE_PAGE_SIZE-1)));
+
+            if (phdr->p_flags & PF_R)
+                perms |= SI_FLAG_R;
+            if (phdr->p_flags & PF_X)
+                perms |= SI_FLAG_X;
+
+            if((status = sgx_trts_mprotect(start, end - start, perms)) != SGX_SUCCESS)
+                return status;
+        }
+
+        if (phdr->p_type == PT_GNU_RELRO)
+        {
+            size_t start = (size_t)enclave_base + (phdr->p_vaddr & (size_t)(~(SE_PAGE_SIZE-1)));
+            size_t end = (size_t)enclave_base + ((phdr->p_vaddr + phdr->p_memsz + SE_PAGE_SIZE - 1) & (size_t)(~(SE_PAGE_SIZE-1)));
+            if ((start != end) &&
+                    (status = sgx_trts_mprotect(start, end - start, SI_FLAG_R)) != SGX_SUCCESS)
+                return status;
+        }
+    }
+
+    return SGX_SUCCESS;
+}
+
 /* vim: set ts=4 sw=4 et cin: */

@@ -14,7 +14,6 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/build/linux/libsgx_tstdc.a	<installdir>/package/lib/libsgx_tstdc.a	0	main	STP
 <deliverydir>/build/linux/libsgx_tstdcxx.a	<installdir>/package/lib/libsgx_tstdcxx.a	0	main	STP
 <deliverydir>/build/linux/libsgx_tcxx.a	<installdir>/package/lib/libsgx_tcxx.a	0	main	STP
-<deliverydir>/build/linux/libsgx_tsetjmp.a	<installdir>/package/lib/libsgx_tsetjmp.a	0	main	STP
 <deliverydir>/build/linux/libsgx_tcmalloc.a	<installdir>/package/lib/libsgx_tcmalloc.a	0	main	STP
 <deliverydir>/build/linux/libsgx_uae_service_deploy.so	<installdir>/package/lib/libsgx_uae_service.so	0	main	STP
 <deliverydir>/build/linux/libsgx_uae_service_sim.so	<installdir>/package/lib/libsgx_uae_service_sim.so	0	main	STP

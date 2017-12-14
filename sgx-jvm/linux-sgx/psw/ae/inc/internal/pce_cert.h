@@ -37,6 +37,7 @@ const uint16_t CUR_PCE_ID = 0;
 
 /*crypto_suite*/
 #define ALG_RSA_OAEP_2048   0
+#define ALG_RSA_OAEP_3072   1
 
 /*signature_scheme*/
 #define NIST_P256_ECDSA_SHA256 0

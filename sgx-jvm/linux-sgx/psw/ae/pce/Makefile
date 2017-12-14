@@ -37,18 +37,17 @@ CFLAGS    += -Werror
 
 AENAME = pce
 
-LINUX_EPID := $(LINUX_EXTERNAL_DIR)/epid/ -lepid
+LINUX_EPID := $(LINUX_EXTERNAL_DIR)/epid-sdk-3.0.0/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux 
 
 INCLUDE += -I$(COMMON_DIR)/inc/tlibc                      \
            -I$(SGX_IPP_INC)/                              \
-           -I$(LINUX_EXTERNAL_DIR)/epid                   \
+           -I$(LINUX_EPID)/                               \
            -I$(LINUX_SDK_DIR)/tseal                       \
            -I$(LINUX_PSW_DIR)/ae/common                   \
            -I$(LINUX_PSW_DIR)/ae/inc/internal
 
 TCRYPTO_LIBDIR := $(LINUX_SDK_DIR)/tlibcrypto
-EPID_LIBDIR    := $(LINUX_EPID)
 
 EXTERNAL_LIB += -L$(TCRYPTO_LIBDIR) -lsgx_tcrypto
 

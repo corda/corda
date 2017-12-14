@@ -71,8 +71,8 @@ extern HANDLE hConsole;
 #ifdef X509_FOR_PSE_PR
 STATUS CreateSha1Hash
     (
-    /*in */  SessMgrDataBuffer            *pSrcBuffer, 
-    /*out*/  SessMgrDataBuffer            *pDigest 
+    /*in */  SessMgrDataBuffer            *pSrcBuffer,
+    /*out*/  SessMgrDataBuffer            *pDigest
     )
 {
     PrepareHashSHA1 hash;
@@ -100,13 +100,13 @@ crypto_status_t EcDsa_VerifySignature
     do
     {
 
-        if (SGX_SUCCESS != sgx_ecc256_open_context(&ecc_handle)) break; 
+        if (SGX_SUCCESS != sgx_ecc256_open_context(&ecc_handle)) break;
 
         uint8_t result;
 
-        if ((SGX_SUCCESS == sgx_ecdsa_verify(pMsg, nMsg,  
-            (sgx_ec256_public_t *)pPublicKey, 
-            (sgx_ec256_signature_t *)pSignature, 
+        if ((SGX_SUCCESS == sgx_ecdsa_verify(pMsg, nMsg,
+            (sgx_ec256_public_t *)pPublicKey,
+            (sgx_ec256_signature_t *)pSignature,
             &result,
             ecc_handle)) && (result == SGX_EC_VALID ))
             *fValid = true;
@@ -274,9 +274,9 @@ const UINT8 OcspResponseTypeOid[][9] =
     {0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01}
 };
 
-const UINT8 ExtendedKeyUsageOcspSignOid[][8] = 
+const UINT8 ExtendedKeyUsageOcspSignOid[][8] =
 {
-    0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x09 
+    0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x09
 };
 #endif
 
@@ -285,7 +285,7 @@ const UINT8 ExtendedKeyUsageOcspSignOid[][8] =
 ParseOcspResponseChain           - Decodes a DER encoded X.509 OCSP response and makes a list of the serial numbers and hashes from the OCSP response.
 
 @param  OcspRespBuffer        - If not NULL, contains the OCSP response. OCSP response contains a list of certificates with their current status (good/revoked)
-@param  OcspRespBufferLength  - Total Length of the OCSP response 
+@param  OcspRespBufferLength  - Total Length of the OCSP response
 @param  OcspCertRootPublicKey -  Public key used to sign the first certificate in the chain. This is the root of trust. If NULL, Intel public key is used.
 @param  OcspCertStatusTable -  Table containing interesting fields in the OCSP response which will be used to compare against the verifier certificate.
 @param  NumberOfSingleResponses -  Number of single responses that the OCSP response has returned to us.
@@ -380,7 +380,7 @@ STATUS ParseOcspResponseChain( UINT8* OcspRespBuffer,
                 DBG_ASSERT(SingleResponse->issuerNameHash.length <= 255);
                 OcspCertStatusTable[TableIndex].issuerNameHashSize = (UINT8)SingleResponse->issuerNameHash.length;
 
-                OcspCertStatusTable[TableIndex].HashAlgo = SingleResponse->issuerIdentifierHashType;     
+                OcspCertStatusTable[TableIndex].HashAlgo = SingleResponse->issuerIdentifierHashType;
                 TableIndex++;
             }
         }
@@ -400,10 +400,10 @@ STATUS ParseOcspResponseChain( UINT8* OcspRespBuffer,
 
 
 /*
-ParseCertificateChain          - This function can 
+ParseCertificateChain          - This function can
 - parse a certificate chain and return the CertificateFields of all the last certificate (usually the certificate of interest)
 - optionally take in root public key that was used to sign first certificate in the chain. If NULL, Intel public Key is used.
-- optionally take in ocspRespBuffer. If ocspRespBuffer is not NULL, this function will parse the ocsp response cert, make a list of 
+- optionally take in ocspRespBuffer. If ocspRespBuffer is not NULL, this function will parse the ocsp response cert, make a list of
 certificates authenticated by OCSP responder, and use this list to verify if each certificate in the chain has been authenticated.
 - optionally takes in the root public key used to sign the first certifcate  in the OCSP responders certificate.
 
@@ -421,13 +421,13 @@ certificates authenticated by OCSP responder, and use this list to verify if eac
 @retval X509_STATUS_SUCCESS        - The operation completed successfully.
 */
 
-/* Input: 
+/* Input:
 pointer to buffer containing a chain of certificates
 Total Length
 
 Assumes the first certificate in the chain is signed by Intel
 */
-STATUS ParseCertificateChain(UINT8 *pCertChain, 
+STATUS ParseCertificateChain(UINT8 *pCertChain,
                              UINT32 CertChainLength,
                              SessMgrCertificateFields *certificateFields,
                              UINT8                    *CertWorkBuffer,
@@ -443,8 +443,8 @@ STATUS ParseCertificateChain(UINT8 *pCertChain,
     UINT8 CertCount = 0;
     SessMgrEcdsaPublicKey ecdsa_pub_key;
 
-    // This is the temp buffer used to store the issuer signing key to verify the next certificate in the chain. 
-    // This size of this buffer should be equal to the Max possible key size 
+    // This is the temp buffer used to store the issuer signing key to verify the next certificate in the chain.
+    // This size of this buffer should be equal to the Max possible key size
     UINT8 TempSignKeyBuffer[200];
     SessMgrDataBuffer TempDataBuffer;
     UINT8 *pCert;
@@ -577,14 +577,14 @@ STATUS ParseCertificateChain(UINT8 *pCertChain,
             return Status;
         }
 
-        // First Certificate is always intel signed 
+        // First Certificate is always intel signed
         Status = VerifyBasicCertificateAttributes(pCert, CertWorkBuffer, certificateFields, &IssuerInfo, CertType, CertLevel, UseFacsimileEpid);
         if(Status != X509_STATUS_SUCCESS){
             DBG_ASSERT(0);
             return Status;
         }
 
-        // Verifiation is required if OCSP table exists (even if empty), make sure the certificate has not been revoked 
+        // Verifiation is required if OCSP table exists (even if empty), make sure the certificate has not been revoked
         if(OcspCertStatusTable){
             BOOL IntelSelfSignedRoot = false;
 #ifdef X509_FOR_PSE_PR
@@ -592,9 +592,9 @@ STATUS ParseCertificateChain(UINT8 *pCertChain,
                 IntelSelfSignedRoot = true;
 #else
             if(CertLevel == root && memcmp(certificateFields->EncodedSubjectPublicKey.buffer+1, INTEL_ECDSA_PUBKEY_PROD_BE, sizeof(INTEL_ECDSA_PUBKEY_PROD_BE)) == 0)
-                IntelSelfSignedRoot = true; 
+                IntelSelfSignedRoot = true;
             else if(gSessmgrCtx.FuseGidZero && CertLevel == root && memcmp(certificateFields->EncodedSubjectPublicKey.buffer+1, INTEL_ECDSA_PUBKEY_DBG_BE, sizeof(INTEL_ECDSA_PUBKEY_DBG_BE)) == 0)
-                IntelSelfSignedRoot = true; 
+                IntelSelfSignedRoot = true;
 #endif
 
             // Skip revocation status check for Intel self-signed root certificate
@@ -609,7 +609,7 @@ STATUS ParseCertificateChain(UINT8 *pCertChain,
             }
         }
 
-        // Certificate has been verified. Everything is good. 
+        // Certificate has been verified. Everything is good.
         // if this is not the leaf, store the public key and algorithm type to use in next certificate signature verification
 
         if(CertLevel != leaf){
@@ -647,7 +647,7 @@ STATUS ParseCertificateChain(UINT8 *pCertChain,
             // If PathLen constraint set by this CA is more constrained than the one enforced by the previous CA, update MaxChainLength
             if(certificateFields->basicConstraint.isBasicConstraintPresent && certificateFields->basicConstraint.pathLenConstraint < (UINT32)MaxChainLengthAllowed)
                 MaxChainLengthAllowed = certificateFields->basicConstraint.pathLenConstraint;
-            else    
+            else
                 MaxChainLengthAllowed--;
             IssuerInfo.CommonNameBuf.buffer = (UINT8 *)certificateFields->subject.commonName;
             IssuerInfo.CommonNameBuf.length = certificateFields->subject.commonNameSize;
@@ -669,9 +669,9 @@ STATUS ParseCertificateChain(UINT8 *pCertChain,
 }
 
 #ifndef X509_FOR_PSE_PR
-/* 
-This function compares the serial number of the certificate with the list of certificates that the OCSP responder sent  us. 
-If found, Make sure the status of the certificate is not revoked. 
+/*
+This function compares the serial number of the certificate with the list of certificates that the OCSP responder sent  us.
+If found, Make sure the status of the certificate is not revoked.
 */
 STATUS VerifyOcspRevocationStatus(SessMgrCertificateFields* certificateFields,
                                   UINT8 NumberofSingleResponses,
@@ -856,12 +856,12 @@ STATUS VerifySignature(const ISSUER_INFO *IssuerInfo, const SessMgrDataBuffer *M
                 }
                 if(VerifRes == FALSE) {
                     DBG_ASSERT(0);
-                    return X509_INVALID_SIGNATURE;             
+                    return X509_INVALID_SIGNATURE;
                 }
             }
 #else
             if(VerifRes == FALSE) {
-                return X509_INVALID_SIGNATURE;             
+                return X509_INVALID_SIGNATURE;
             }
 #endif
 
@@ -872,12 +872,12 @@ STATUS VerifySignature(const ISSUER_INFO *IssuerInfo, const SessMgrDataBuffer *M
             SwapEndian_32B((reinterpret_cast<G3Point*>(SignBuffer->buffer))->x);
             SwapEndian_32B((reinterpret_cast<G3Point*>(SignBuffer->buffer))->y);
 #else
-            Cstatus =  MessageVerify( (unsigned char *)&EcdsaKey, 
-                sizeof(EcdsaKey), 
+            Cstatus =  MessageVerify( (unsigned char *)&EcdsaKey,
+                sizeof(EcdsaKey),
                 MsgBuffer->buffer,
-                MsgBuffer->length, 
-                SignBuffer->buffer, 
-                SignBuffer->length, 
+                MsgBuffer->length,
+                SignBuffer->buffer,
+                SignBuffer->length,
                 &CResult);
 #ifdef TEMP_DISABLE_ECDSA_CHECK
             Status = X509_STATUS_SUCCESS;
@@ -885,14 +885,14 @@ STATUS VerifySignature(const ISSUER_INFO *IssuerInfo, const SessMgrDataBuffer *M
 
             if(CResult != CdgValid) {
                 DBG_ASSERT(0);
-                return X509_INVALID_SIGNATURE;             
+                return X509_INVALID_SIGNATURE;
             }
             Status = X509_STATUS_SUCCESS;
 #endif
 
-            SetConsoleTextAttribute(hConsole, 11); 
+            SetConsoleTextAttribute(hConsole, 11);
             printf("\n Signature Verified ");
-            SetConsoleTextAttribute(hConsole, 8); 
+            SetConsoleTextAttribute(hConsole, 8);
 #endif
             break;
 
@@ -954,7 +954,7 @@ STATUS VerifySignature(const ISSUER_INFO *IssuerInfo, const SessMgrDataBuffer *M
 
             if ((Status != STATUS_SUCCESS) || (IsSignatureValid != TRUE)){
                 DBG_ASSERT(0);
-                return X509_INVALID_SIGNATURE;       
+                return X509_INVALID_SIGNATURE;
             }
 
 #else
@@ -996,9 +996,9 @@ STATUS VerifySignature(const ISSUER_INFO *IssuerInfo, const SessMgrDataBuffer *M
             RsaKey->e= BN_bin2bn((UINT8*)RsaKeyFromCert->e.buffer,RsaKeyFromCert->e.length,RsaKey->e);
             RsaKey->n= BN_bin2bn((UINT8*)RsaKeyFromCert->n.buffer,RsaKeyFromCert->n.length, RsaKey->n);
 
-            Status = RSA_verify(HashType, 
-                Hash, hashSize, 
-                SignBuffer->buffer, SignBuffer->length, 
+            Status = RSA_verify(HashType,
+                Hash, hashSize,
+                SignBuffer->buffer, SignBuffer->length,
                 RsaKey);
             if(Status != 1){
                 DBG_ASSERT(0);
@@ -1046,17 +1046,17 @@ STATUS VerifyOcspResponseAttributes(Uint8* OcspRespBuffer, SessMgrOcspResponseFi
         return X509_STATUS_OCSP_FAILURE;
     }
 
-    // parse the ocsp certificate 
+    // parse the ocsp certificate
     SESSMGR_MEM_ALLOC_BUFFER(workBuffer, MM_DATA_HEAP_SHARED_RW, sizeof(UINT32), workBufferSize, TX_WAIT_FOREVER);
 
     do {
         Status = ParseCertificateChain(ocspResponseFields->responderCertificate.buffer,
-            ocspResponseFields->responderCertificate.length, 
+            ocspResponseFields->responderCertificate.length,
             &certificateFields,
             workBuffer,
             workBufferSize,
             NULL,
-            0, 
+            0,
             NULL,
             OcspResponderCertificate,
             UseFacsimileEpid);
@@ -1079,7 +1079,7 @@ STATUS VerifyOcspResponseAttributes(Uint8* OcspRespBuffer, SessMgrOcspResponseFi
         }
 
         // Verify Nonce only on Signed FW.
-#ifndef _WIN32_DEVPLATFORM 
+#ifndef _WIN32_DEVPLATFORM
 #ifndef WIN_TEST
 #ifndef X509_FOR_PSE_PR
         if(!(gManifestDataPtr->ManifestHeader.manifestFlags.r.debugManifest)){
@@ -1166,9 +1166,9 @@ STATUS VerifyOcspResponseAttributes(Uint8* OcspRespBuffer, SessMgrOcspResponseFi
 
 #ifdef PRINT
         printf("\nOcsp response signature verified ");
-        SetConsoleTextAttribute(hConsole, 2); 
+        SetConsoleTextAttribute(hConsole, 2);
         printf("\n \n *************** VerifyOcspResponseAttributes complete ***************** \n \n");
-        SetConsoleTextAttribute(hConsole, 8); 
+        SetConsoleTextAttribute(hConsole, 8);
 #endif
 
         Status = X509_STATUS_SUCCESS;
@@ -1180,7 +1180,7 @@ STATUS VerifyOcspResponseAttributes(Uint8* OcspRespBuffer, SessMgrOcspResponseFi
 }
 #endif // #ifndef X509_FOR_PSE_PR
 
-STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, const Uint8* workBuffer, const SessMgrCertificateFields* certificateFields, 
+STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, const Uint8* workBuffer, const SessMgrCertificateFields* certificateFields,
                                         const ISSUER_INFO *IssuerInfo, const CertificateType CertType, CertificateLevel CertLevel, BOOL UseFacsimileEpid)
 {
 
@@ -1272,7 +1272,7 @@ STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, cons
             return X509_STATUS_ENCODING_ERROR;
         }
 
-        // Basic constraints extension should be present. 
+        // Basic constraints extension should be present.
         if(!certificateFields->basicConstraint.isBasicConstraintPresent){
             DBG_ASSERT(0);
             return X509_STATUS_ENCODING_ERROR;
@@ -1293,7 +1293,7 @@ STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, cons
         }
 
         // Make sure leaf certs dont have isCA set and intermediate Certs have isCa deasserted.
-        if( (CertLevel == leaf && certificateFields->basicConstraint.isCa == DER_ENCODING_TRUE) || 
+        if( (CertLevel == leaf && certificateFields->basicConstraint.isCa == DER_ENCODING_TRUE) ||
             (CertLevel != leaf && certificateFields->basicConstraint.isCa == DER_ENCODING_FALSE)){
                 DBG_ASSERT(0);
                 return X509_STATUS_ENCODING_ERROR;
@@ -1334,13 +1334,13 @@ STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, cons
             }
         }
 
-        // Every verifier cert should have an authority key id 
+        // Every verifier cert should have an authority key id
         if(!certificateFields->AuthorityKeyId.buffer || (certificateFields->AuthorityKeyId.length != IssuerInfo->EncodedPublicKeyHashBuffer.length) ){
             DBG_ASSERT(0);
             return X509_STATUS_ENCODING_ERROR;
         }
 
-        // Verify Authority Key Id. Spec says Authority Key ID of current cert should be equal to the SubjectKeyId of the upper cert. SubjectKeyId is nothing but the hash of the upper certs public key. 
+        // Verify Authority Key Id. Spec says Authority Key ID of current cert should be equal to the SubjectKeyId of the upper cert. SubjectKeyId is nothing but the hash of the upper certs public key.
         // we have that available in this function. So compare Authority Key with that.
         if(certificateFields->AuthorityKeyId.length != IssuerInfo->EncodedPublicKeyHashBuffer.length ||
             memcmp(certificateFields->AuthorityKeyId.buffer, IssuerInfo->EncodedPublicKeyHashBuffer.buffer, IssuerInfo->EncodedPublicKeyHashBuffer.length) != 0){
@@ -1365,7 +1365,7 @@ STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, cons
                         return X509_STATUS_INTERNAL_ERROR;
                     }
                     if (certificateFields->AuthorityKeyId.length != IssuerInfo->EncodedPublicKeyHashBuffer.length ||
-                        memcmp(certificateFields->AuthorityKeyId.buffer, IssuerInfo->EncodedPublicKeyHashBuffer.buffer, IssuerInfo->EncodedPublicKeyHashBuffer.length) != 0){             
+                        memcmp(certificateFields->AuthorityKeyId.buffer, IssuerInfo->EncodedPublicKeyHashBuffer.buffer, IssuerInfo->EncodedPublicKeyHashBuffer.length) != 0){
                             DBG_ASSERT(0);
                             return X509_STATUS_ENCODING_ERROR;
                     }
@@ -1384,7 +1384,7 @@ STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, cons
             return X509_STATUS_ENCODING_ERROR;
         }
 
-        // If issuer certificate product type exists, ensure it matches current cert 
+        // If issuer certificate product type exists, ensure it matches current cert
         if ((IssuerInfo->productType != invalidProductType) && (IssuerInfo->productType != certificateFields->productType)) {
             DBG_ASSERT(0);
             return X509_STATUS_ENCODING_ERROR;
@@ -1395,9 +1395,9 @@ STATUS VerifyBasicCertificateAttributes(const Uint8* certificateDerEncoded, cons
 #endif
 
 #ifdef PRINT
-    SetConsoleTextAttribute(hConsole, 4); 
+    SetConsoleTextAttribute(hConsole, 4);
     printf("\n \n *************** VerifyBasicCertificateAttributes complete ***************** \n \n");
-    SetConsoleTextAttribute(hConsole, 8); 
+    SetConsoleTextAttribute(hConsole, 8);
 #endif
 
     return X509_STATUS_SUCCESS;
@@ -1622,14 +1622,14 @@ static STATUS sessMgrParseDerCert
 
         /**** End Early Signature Verification *****/
 
-        //  Next Field : Version (Optional field with explicit tagging)  
+        //  Next Field : Version (Optional field with explicit tagging)
 
         Status = ParseIdAndLength(&current_ptr, pCertEnd, EXPLICIT_TAG_0_ID_VALUE, &length, &EncodingBytes, TRUE);
         if( (Status != X509_STATUS_SUCCESS) && Status != X509_STATUS_NOT_FOUND)
             break;
 
         if(Status != X509_STATUS_NOT_FOUND){
-            // We have a version number. Note: Not using ParseInteger function because certificateVersion is defined as a UINT32 and not a DataBuffer 
+            // We have a version number. Note: Not using ParseInteger function because certificateVersion is defined as a UINT32 and not a DataBuffer
             Status = ParseIdAndLength(&current_ptr, pCertEnd, DER_ENCODING_INTEGER_ID, &length, &EncodingBytes, FALSE);
             if(Status != X509_STATUS_SUCCESS || length > MAX_VERSION_LENGTH_SIZE_BYTES){
                 Status = X509_STATUS_ENCODING_ERROR;
@@ -1651,7 +1651,7 @@ static STATUS sessMgrParseDerCert
             break;
         }
 
-        //  Next Field : Certificate Serial Number   Format : Integer Identifier + Length + Value (Max 20 bytes) 
+        //  Next Field : Certificate Serial Number   Format : Integer Identifier + Length + Value (Max 20 bytes)
         Status = ParseInteger(&current_ptr, pCertEnd, &certificateFields->serialNumber, FALSE, TRUE, &padding);
         if ((Status != X509_STATUS_SUCCESS) || (certificateFields->serialNumber.length + padding > MAX_HASH_LEN)) {
             DBG_ASSERT(0);
@@ -1673,7 +1673,7 @@ static STATUS sessMgrParseDerCert
             break;
         }
 
-        // Next Field : issuer 
+        // Next Field : issuer
         Status = ParseName(&current_ptr, pCertEnd, &certificateFields->issuer);
         if(Status != X509_STATUS_SUCCESS){
             DBG_ASSERT(0);
@@ -1686,7 +1686,7 @@ static STATUS sessMgrParseDerCert
         if(Status != X509_STATUS_SUCCESS)
             break;
 
-        // Parse notBefore, notAfter, Subject, SubjectPublic key info  
+        // Parse notBefore, notAfter, Subject, SubjectPublic key info
 
         Status = ParseTime(&current_ptr, pCertEnd, &certificateFields->notValidBeforeTime);
         if(Status != X509_STATUS_SUCCESS)
@@ -1706,7 +1706,7 @@ static STATUS sessMgrParseDerCert
 
         // Next Field: IssuerUniqueId [optional] Implicit TAG Number is 1        Type : UniqueIdentifier (BIT STRING)
         Status = ParseIdAndLength(&current_ptr, pCertEnd, IMPLICIT_TAG_ID + TAG_NUMBER_ISSUER_UNIQUE_ID, &length, &EncodingBytes, TRUE);
-        if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)              
+        if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
             break;
 
         if(Status != X509_STATUS_NOT_FOUND){
@@ -1717,7 +1717,7 @@ static STATUS sessMgrParseDerCert
 
         // Next Field: SubjectUniqueId [optional] Implicit TAG Number is 2  Type : UniqueIdentifier (BIT STRING)
         Status = ParseIdAndLength(&current_ptr, pCertEnd, IMPLICIT_TAG_ID + TAG_NUMBER_SUBJECT_UNIQUE_ID, &length, &EncodingBytes, TRUE);
-        if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)              
+        if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
             break;
 
         if(Status != X509_STATUS_NOT_FOUND){
@@ -1726,9 +1726,9 @@ static STATUS sessMgrParseDerCert
             current_ptr += length;
         }
 
-        // Next Field: Extensions [optional]  
+        // Next Field: Extensions [optional]
         Status = ParseIdAndLength(&current_ptr, pCertEnd, EXPLICIT_TAG_ID + TAG_NUMBER_EXTENSIONS, &length, &EncodingBytes, TRUE);
-        if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)              
+        if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
             break;
 
 
@@ -1753,7 +1753,7 @@ static STATUS sessMgrParseDerCert
             break;
         }
 
-        // Next field : SignatureValue 
+        // Next field : SignatureValue
         Status = ParseSignatureValue(&current_ptr, pCertEnd, &workBuffer, workBufferSize - (int)(workBuffer - workBufferStart), &certificateFields->signatureBuffer, certificateFields->algorithmIdentifierForSignature);
         if(Status != X509_STATUS_SUCCESS){
             DBG_ASSERT(0);
@@ -1795,9 +1795,9 @@ STATUS sessMgrParseOcspResponse
     UINT32 padding;
 
 #ifdef WIN_TEST
-    SetConsoleTextAttribute(hConsole, 4); 
+    SetConsoleTextAttribute(hConsole, 4);
     printf("\n \n *************** Parsing OCSP response ***************** \n \n");
-    SetConsoleTextAttribute(hConsole, 8); 
+    SetConsoleTextAttribute(hConsole, 8);
 #endif
 
     /* Ocsp response is a SEQ { responseStatus, response bytes }*/
@@ -1807,10 +1807,10 @@ STATUS sessMgrParseOcspResponse
         if(Status != X509_STATUS_SUCCESS)
             break;
 
-        // Next Field: response status  response status is a enumerated type 
+        // Next Field: response status  response status is a enumerated type
         Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, DER_ENCODING_ENUMERATED_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS || length != 1){
-            // Note: currently we support only 7 bits. So error out if length is more than 1 byte 
+            // Note: currently we support only 7 bits. So error out if length is more than 1 byte
             Status = X509_STATUS_ENCODING_ERROR;
             break;
         }
@@ -1835,7 +1835,7 @@ STATUS sessMgrParseOcspResponse
         if(Status != X509_STATUS_SUCCESS)
             break;
 
-        //  Next Field: responseType   Type : Object ID 
+        //  Next Field: responseType   Type : Object ID
         Status = ParseOID(&current_ptr, OcspResponseEnd, &temp, &OcspResponseTypeOid[0][0],
             sizeof(OcspResponseTypeOid)/sizeof(OcspResponseTypeOid[0]),
             sizeof(OcspResponseTypeOid[0]));
@@ -1845,7 +1845,7 @@ STATUS sessMgrParseOcspResponse
             break;
         }
 
-        //  Next Field: response      Type : OCTET STRING 
+        //  Next Field: response      Type : OCTET STRING
         Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
             break;
@@ -1870,11 +1870,11 @@ STATUS sessMgrParseOcspResponse
             break;
 
         if(Status != X509_STATUS_NOT_FOUND){
-            // we have version. Just parse over it 
+            // we have version. Just parse over it
             current_ptr += length;
         }
 
-        // Next Field : ResponderId    ResponderId can be a choice of either Name or KeyHash. We distinguish them using the tags 
+        // Next Field : ResponderId    ResponderId can be a choice of either Name or KeyHash. We distinguish them using the tags
         Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, EXPLICIT_TAG_ID + TAG_NUMBER_RESPONDER_NAME, &length, &EncodingBytes, TRUE);
         if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
             break;
@@ -1891,7 +1891,7 @@ STATUS sessMgrParseOcspResponse
                 break;
             }
 
-            // KeyHash is a octet String 
+            // KeyHash is a octet String
             Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
             if(Status != X509_STATUS_SUCCESS)
                 break;
@@ -1910,7 +1910,7 @@ STATUS sessMgrParseOcspResponse
         PrintValidity(&OcspResponseFields->producedAt);
 #endif
 
-        // Next Field : response   Format : responses is a SEQ { single Responses } 
+        // Next Field : response   Format : responses is a SEQ { single Responses }
         Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, DER_ENCODING_SEQUENCE_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
             break;
@@ -2004,7 +2004,7 @@ STATUS sessMgrParseOcspResponse
                 SingleResponse->ocspCertificateStatus = revoked;
 
                 /* This will be followed by a revoked time and reason.
-                We parse but ignore those fields 
+                We parse but ignore those fields
                 */
 
                 current_ptr++;
@@ -2031,7 +2031,7 @@ STATUS sessMgrParseOcspResponse
             if(Status != X509_STATUS_SUCCESS)
                 break;
 
-            // Next Field : ThisUpdate        type: GeneralizedTime        
+            // Next Field : ThisUpdate        type: GeneralizedTime
             Status = ParseTime(&current_ptr, end_of_single_responses, &SingleResponse->thisUpdate);
             if(Status != X509_STATUS_SUCCESS)
                 break;
@@ -2066,7 +2066,7 @@ STATUS sessMgrParseOcspResponse
             }
 
             SingleResponse = (SessMgrOcspSingleResponse *)((UINT8 *)SingleResponse + sizeof(SessMgrOcspSingleResponse));
-            OcspResponseFields->numberOfSingleReponses++;      
+            OcspResponseFields->numberOfSingleReponses++;
             Status = X509_STATUS_SUCCESS;
         }
 
@@ -2092,7 +2092,7 @@ STATUS sessMgrParseOcspResponse
 #endif
 
 
-        // Next Field : Response Extensions [optional] 
+        // Next Field : Response Extensions [optional]
         Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, EXPLICIT_TAG_ID + TAG_NUMBER_RESPONSE_EXTENSIONS, &length, &EncodingBytes, TRUE);
         if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
             break;
@@ -2115,7 +2115,7 @@ STATUS sessMgrParseOcspResponse
             break;
 
         // Next field : Certificate of the OCSP responder. This can be a chain */
-        // ??? why is this optional 
+        // ??? why is this optional
 
         Status = ParseIdAndLength(&current_ptr, OcspResponseEnd, EXPLICIT_TAG_ID + TAG_NUMBER_CERTS, &length, &EncodingBytes, TRUE);
         if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
@@ -2178,7 +2178,7 @@ static STATUS ParseBoolean(UINT8 **ppCurrent, UINT8 *pEnd, BOOL* Value, BOOL opt
 }
 #endif
 
-/* ParseInteger will strip out the integer encoding part. If parsing is successful, ParseInteger 
+/* ParseInteger will strip out the integer encoding part. If parsing is successful, ParseInteger
 will update the current pointer and length
 
 Returns X509_ENCODING_ERROR on failure
@@ -2231,7 +2231,7 @@ STATUS ParseOcspExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrOcspResponseFi
     UINT8 EncodingBytes;
 
     do{
-        //  Extensions = SEQ { extension }      Each extension is associated with a Object ID. We support the extensions listed in ExtensionOID array. 
+        //  Extensions = SEQ { extension }      Each extension is associated with a Object ID. We support the extensions listed in ExtensionOID array.
 
         Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_SEQUENCE_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
@@ -2239,7 +2239,7 @@ STATUS ParseOcspExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrOcspResponseFi
 
         while(current_ptr < pEnd){
 
-            // Each extension is a SEQ { extid (OID) , critical (BOOLEAN), extnValue (OCTET STRING) } 
+            // Each extension is a SEQ { extid (OID) , critical (BOOLEAN), extnValue (OCTET STRING) }
             Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_SEQUENCE_ID, &length, &EncodingBytes, FALSE);
             if(Status != X509_STATUS_SUCCESS)
                 break;
@@ -2255,13 +2255,13 @@ STATUS ParseOcspExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrOcspResponseFi
                 break;
             }
 
-            // Next field is "Critical". This indicates whether it is mandatory for the parser to understand the extension. This  is an optinal field. default is false 
+            // Next field is "Critical". This indicates whether it is mandatory for the parser to understand the extension. This  is an optinal field. default is false
             Status = ParseBoolean(&current_ptr, pEnd, &critical, TRUE);
             if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
                 break;
 
             if(Status == X509_STATUS_NOT_FOUND)
-                critical = DER_ENCODING_FALSE; 
+                critical = DER_ENCODING_FALSE;
 
             // Next Field: Extn Value      This is a OCTET STRING
             Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
@@ -2287,8 +2287,8 @@ STATUS ParseOcspExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrOcspResponseFi
                 break;
 
             default:
-                /* unsupported extension. 
-                Check if it marked as critical. If so, return error else ignore this extension 
+                /* unsupported extension.
+                Check if it marked as critical. If so, return error else ignore this extension
                 */
 
                 if(critical == DER_ENCODING_TRUE){
@@ -2311,7 +2311,7 @@ STATUS ParseOcspExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrOcspResponseFi
 
             Status = X509_STATUS_SUCCESS;
 
-        }  // WHILE end of extensions 
+        }  // WHILE end of extensions
     }while(0); // do_while
 
     *ppCurrent = current_ptr;
@@ -2336,7 +2336,7 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
 
     do{
 
-        //  Extensions = SEQ { extension }      Each extension is associated with a Object ID. We support the extensions listed in ExtensionOID array. 
+        //  Extensions = SEQ { extension }      Each extension is associated with a Object ID. We support the extensions listed in ExtensionOID array.
 
         Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_SEQUENCE_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
@@ -2344,7 +2344,7 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
 
         while(current_ptr < pEnd){
 
-            // Each extension is a SEQ { extid (OID) , critical (BOOLEAN), extnValue (OCTET STRING) } 
+            // Each extension is a SEQ { extid (OID) , critical (BOOLEAN), extnValue (OCTET STRING) }
             Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_SEQUENCE_ID, &length, &EncodingBytes, FALSE);
             if(Status != X509_STATUS_SUCCESS)
                 break;
@@ -2360,13 +2360,13 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
                 break;
             }
 
-            // Next field is "Critical". This indicates whether it is mandatory for the parser to understand the extension. This  is an optinal field. default is false 
+            // Next field is "Critical". This indicates whether it is mandatory for the parser to understand the extension. This  is an optinal field. default is false
             Status = ParseBoolean(&current_ptr, pEnd, &critical, TRUE);
             if(Status != X509_STATUS_SUCCESS && Status != X509_STATUS_NOT_FOUND)
                 break;
 
             if(Status == X509_STATUS_NOT_FOUND)
-                critical = DER_ENCODING_FALSE; 
+                critical = DER_ENCODING_FALSE;
 
             // Next Field: Extn Value      This is a OCTET STRING
             Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
@@ -2497,7 +2497,7 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
                 if(Status != X509_STATUS_SUCCESS)
                     break;
 
-                // KeyPurposeId is a object identifier 
+                // KeyPurposeId is a object identifier
                 Status = ParseOID(&current_ptr, pEnd, &ExtendedKeyUsageOcspType, &ExtendedKeyUsageOcspSignOid[0][0],
                     sizeof(ExtendedKeyUsageOcspSignOid)/sizeof(ExtendedKeyUsageOcspSignOid[0]),
                     sizeof(ExtendedKeyUsageOcspSignOid[0]));
@@ -2530,7 +2530,7 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
                     break;
 
                 if(Status == X509_STATUS_NOT_FOUND)
-                    certificateFields->basicConstraint.isCa = DER_ENCODING_FALSE; 
+                    certificateFields->basicConstraint.isCa = DER_ENCODING_FALSE;
 
                 // Next field is PathLenConstraint [Integer optional]
                 Status = ParseInteger(&current_ptr, pEnd, &DataBuf, TRUE, FALSE, NULL);
@@ -2569,8 +2569,8 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
                 current_ptr++;
                 break;
             default:
-                /* unsupported extension. 
-                Check if it marked as critical. If so, return error else ignore this extension 
+                /* unsupported extension.
+                Check if it marked as critical. If so, return error else ignore this extension
                 */
 
                 if(critical == DER_ENCODING_TRUE){
@@ -2593,7 +2593,7 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
 
             Status = X509_STATUS_SUCCESS;
 
-        }  // WHILE end of extensions 
+        }  // WHILE end of extensions
     }while(0);
 
     DBG_ASSERT(Status == X509_STATUS_SUCCESS);
@@ -2606,10 +2606,10 @@ STATUS ParseCertExtensions(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrCertificateFie
 /* Certificate Policy is a SEQ of Policy Information.
 Policy information is Seq of {Policy Identifier, Policy Qualifier [optional] }
 
-Policy Identifier is a Object ID 
+Policy Identifier is a Object ID
 Policy Qualifier Info is Seq {PolicyqualifierId, qualifier }
 
-PolicyqualifierId is a known Object id 
+PolicyqualifierId is a known Object id
 Qualifier is a CHOICE{cPSuri, UserNotice}
 
 we only support cpSuri which is a IA5string
@@ -2639,7 +2639,7 @@ static STATUS ParseCertificatePolicy(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrData
             if(Status != X509_STATUS_SUCCESS)
                 break;
 
-            // Policy Identifier is a Object ID 
+            // Policy Identifier is a Object ID
             Status = ParseOID(&current_ptr, end_of_PolicyInformation, &temp, &CertificatePolicyOid[0][0],
                 sizeof(CertificatePolicyOid)/sizeof(CertificatePolicyOid[0]),
                 sizeof(CertificatePolicyOid[0]));
@@ -2674,7 +2674,7 @@ static STATUS ParseCertificatePolicy(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrData
                 break;
             }
 
-            // we have a supported policy qualifier id. Qualifier can be a CHOICE{cPSuri, UserNotice}.   Note : Parser only supports  cPSuri 
+            // we have a supported policy qualifier id. Qualifier can be a CHOICE{cPSuri, UserNotice}.   Note : Parser only supports  cPSuri
             Status = ParseIdAndLength(&current_ptr, end_of_PolicyInformation, DER_ENCODING_IA5_STRING_ID, &length, &EncodingBytes, FALSE);
             if(Status != X509_STATUS_SUCCESS)
                 break;
@@ -2727,8 +2727,8 @@ static STATUS ParseSubjectPublicKeyInfo(UINT8 **ppCurrent, UINT8 *pEnd, UINT8 **
 
         /* current_ptr is over the number of padding bits for the BIT string . We expect this to always be zero since we are not dealing with bit level data */
         if(*current_ptr != 0x00){
-            DBG_ASSERT(0);  
-            return X509_STATUS_ENCODING_ERROR; 
+            DBG_ASSERT(0);
+            return X509_STATUS_ENCODING_ERROR;
         }
 
         current_ptr++;
@@ -2742,19 +2742,19 @@ static STATUS ParseSubjectPublicKeyInfo(UINT8 **ppCurrent, UINT8 *pEnd, UINT8 **
         case X509_ecdsaPublicKey:
 
             // for ecdsa we know the length should be 66 bytes.
-            if(length != 66){ 
-                Status = X509_STATUS_ENCODING_ERROR; 
+            if(length != 66){
+                Status = X509_STATUS_ENCODING_ERROR;
                 break;
             }
 
-            Key->buffer = workbuffer_ptr;  
+            Key->buffer = workbuffer_ptr;
             Key->length = sizeof(SessMgrEcdsaPublicKey);
             workbuffer_ptr += sizeof(SessMgrEcdsaPublicKey);
             Status = ParseEcdsaPublicKey(&current_ptr, pEnd, (SessMgrEcdsaPublicKey * )(Key->buffer), (SessMgrEllipticCurveParameter)params);
             break;
 
         case X509_intel_sigma_epidGroupPublicKey_epid11:
-            Key->buffer = workbuffer_ptr;  
+            Key->buffer = workbuffer_ptr;
             Key->length = sizeof(SessMgrEpidGroupPublicKey);
             workbuffer_ptr += sizeof(SessMgrEpidGroupPublicKey);
             Status = ParseEpidPublicKey(&current_ptr, pEnd, (SessMgrEpidGroupPublicKey * )(Key->buffer));
@@ -2764,7 +2764,7 @@ static STATUS ParseSubjectPublicKeyInfo(UINT8 **ppCurrent, UINT8 *pEnd, UINT8 **
             break;
 
         case X509_rsaPublicKey:
-            Key->buffer = workbuffer_ptr;  
+            Key->buffer = workbuffer_ptr;
             Key->length = sizeof(SessMgrRsaKey);
             workbuffer_ptr += sizeof(SessMgrRsaKey);
             Status = ParseRsaPublicKey(&current_ptr, pEnd, (SessMgrRsaKey * )(Key->buffer));
@@ -2797,8 +2797,8 @@ static STATUS ParseRsaPublicKey(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrRsaKey * 
     /* The data portion of the BIT string contains a sequence of Seq { n , e} where n and e are integers */
     Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_SEQUENCE_ID, &length, &EncodingBytes, FALSE);
     if(Status != X509_STATUS_SUCCESS){
-        DBG_ASSERT(0);  
-        return X509_STATUS_ENCODING_ERROR; 
+        DBG_ASSERT(0);
+        return X509_STATUS_ENCODING_ERROR;
     }
 
     Status = ParseInteger(&current_ptr, pEnd, &RsaKey->n, FALSE, FALSE, NULL);
@@ -2838,48 +2838,48 @@ static STATUS ParseEpidPublicKey(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrEpidGrou
         if(Status != X509_STATUS_SUCCESS)
             break;
 
-        // Next Field : h1 [octet string]    This is a ECPoint which is a octet string 
+        // Next Field : h1 [octet string]    This is a ECPoint which is a octet string
         Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
             break;
 
         /* Make sure it has the first bype as 0x04 indicating key is uncompressed  */
-        if(*current_ptr != 0x04){ 
-            Status = X509_STATUS_ENCODING_ERROR; 
+        if(*current_ptr != 0x04){
+            Status = X509_STATUS_ENCODING_ERROR;
             break;
-        } 
+        }
         current_ptr++;
 
         EpidKey->h1x = current_ptr;
         EpidKey->h1y = current_ptr + 32;
         current_ptr += 64;
 
-        // Next Field : h2 [octet string]  This is a ECPoint which is a octet string 
+        // Next Field : h2 [octet string]  This is a ECPoint which is a octet string
         Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
             break;
 
         /* Make sure it has the first bype as 0x04 indicating key is uncompressed  */
-        if(*current_ptr != 0x04){ 
-            Status = X509_STATUS_ENCODING_ERROR; 
+        if(*current_ptr != 0x04){
+            Status = X509_STATUS_ENCODING_ERROR;
             break;
-        } 
+        }
         current_ptr++;
 
         EpidKey->h2x = current_ptr;
         EpidKey->h2y = current_ptr + 32;
         current_ptr += 64;
 
-        // Next Field : w [octet string]  This is a ECPoint which is a octet string 
+        // Next Field : w [octet string]  This is a ECPoint which is a octet string
         Status = ParseIdAndLength(&current_ptr, pEnd, DER_ENCODING_OCTET_STRING_ID, &length, &EncodingBytes, FALSE);
         if(Status != X509_STATUS_SUCCESS)
             break;
 
         /* Make sure it has the first bype as 0x04 indicating key is uncompressed  */
-        if(*current_ptr != 0x04){ 
-            Status = X509_STATUS_ENCODING_ERROR; 
+        if(*current_ptr != 0x04){
+            Status = X509_STATUS_ENCODING_ERROR;
             break;
-        } 
+        }
         current_ptr++;
 
         EpidKey->wx0 = current_ptr;
@@ -2914,10 +2914,10 @@ static STATUS ParseEcdsaPublicKey(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrEcdsaPu
         /* First octet of bit string is 0x04 indicating key is uncompressed.
         Note: The Key is in OCTET String form and we convert it to BIT STRING.        Format : 0x04 | 64-bytes of keys    */
 
-        if(*current_ptr != 0x04){ 
-            Status = X509_STATUS_ENCODING_ERROR; 
+        if(*current_ptr != 0x04){
+            Status = X509_STATUS_ENCODING_ERROR;
             break;
-        } 
+        }
         current_ptr++;
 
         EcDsaKey->px = current_ptr;
@@ -3088,7 +3088,7 @@ static STATUS ParseSignatureValue(UINT8 **ppCurrent, UINT8 *pEnd, UINT8 **pworkb
 
 static STATUS ParseAlgoIdentifier(UINT8 **ppCurrent, UINT8 *pEnd, UINT32* algoId, AlgorithmTypes Type, SessMgrEllipticCurveParameter *params)
 {
-    /***** 
+    /*****
     Format : Sequence Id + length + Object Id + length + OID value + parameters (optional)
     *****/
 
@@ -3109,19 +3109,19 @@ static STATUS ParseAlgoIdentifier(UINT8 **ppCurrent, UINT8 *pEnd, UINT32* algoId
     switch(Type){
     case signature_algo:
         Status = ParseOID(&current_ptr, pEnd, algoId, &HardCodedSignatureAlgorithmOid[0][0],
-            sizeof(HardCodedSignatureAlgorithmOid)/sizeof(HardCodedSignatureAlgorithmOid[0]),
+            static_cast<uint32_t>(sizeof(HardCodedSignatureAlgorithmOid)/sizeof(HardCodedSignatureAlgorithmOid[0])),
             sizeof(HardCodedSignatureAlgorithmOid[0]));
         break;
 
     case PublicKey_algo:
         Status = ParseOID(&current_ptr, pEnd, algoId, &HardCodedPublicKeyAlgorithmOid[0][0],
-            sizeof(HardCodedPublicKeyAlgorithmOid)/sizeof(HardCodedPublicKeyAlgorithmOid[0]),
+            static_cast<uint32_t>(sizeof(HardCodedPublicKeyAlgorithmOid)/sizeof(HardCodedPublicKeyAlgorithmOid[0])),
             sizeof(HardCodedPublicKeyAlgorithmOid[0]));
         break;
 
     case Hash_algo:
         Status = ParseOID(&current_ptr, pEnd, algoId, &HashAlgorithmOid[0][0],
-            sizeof(HashAlgorithmOid)/sizeof(HashAlgorithmOid[0]),
+            static_cast<uint32_t>(sizeof(HashAlgorithmOid)/sizeof(HashAlgorithmOid[0])),
             sizeof(HashAlgorithmOid[0]));
         break;
 
@@ -3228,7 +3228,7 @@ static STATUS ParseAlgoParameters(UINT8 **ppCurrent, UINT8 *pEnd, UINT32* param)
 
 static STATUS ParseName(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrX509Name* Name)
 {
-    UINT8* end_of_sequence = NULL; 
+    UINT8* end_of_sequence = NULL;
     UINT8 *current_ptr = *ppCurrent;
     UINT32 length;
     STATUS Status;
@@ -3265,7 +3265,7 @@ static STATUS ParseName(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrX509Name* Name)
 
             /* Expected value : Attribute type (OID) and value (Can be anything) */
             Status = ParseOID(&current_ptr, end_of_sequence, &NameType, &HardCodedNameOid[0][0],
-                sizeof(HardCodedNameOid)/sizeof(HardCodedNameOid[0]),
+                static_cast<uint32_t>(sizeof(HardCodedNameOid)/sizeof(HardCodedNameOid[0])),
                 sizeof(HardCodedNameOid[0]));
 
             // We might have some cases where we are getting an Unknown OID which we just ignore.
@@ -3320,7 +3320,7 @@ static STATUS ParseName(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrX509Name* Name)
             case organizationUnit:
                 Name->organizationUnit = (char *)current_ptr;
                 Name->organizationUnitSize = length;
-                break;           
+                break;
             case UserId:
                 Name->UserId = (char *)current_ptr;
                 Name->UserIdSize = length;
@@ -3329,7 +3329,7 @@ static STATUS ParseName(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrX509Name* Name)
             default:
                 // Dont support this NameType. Just continue.
                 break;
-            } 
+            }
             current_ptr += length;
         }
     }while(0);
@@ -3338,18 +3338,16 @@ static STATUS ParseName(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrX509Name* Name)
     return Status;
 }
 
-#define DecodeTime_FourBytes(current_ptr)  (1000*( (*current_ptr) - 0x30)) +    \
+#define DecodeTime_FourBytes(current_ptr)  ((1000*( (*current_ptr) - 0x30)) +    \
     (100*( *(current_ptr+1) - 0x30)) +    \
     (10*( *(current_ptr+2) - 0x30)) +    \
-    (*(current_ptr + 3) - 0x30); \
-    current_ptr+=4;
+    (*(current_ptr + 3) - 0x30)) \
 
-#define DecodeTime_TwoBytes(current_ptr)  (10*( (*current_ptr) - 0x30)) +    \
-    (*(current_ptr + 1) - 0x30); \
-    current_ptr+=2;
+#define DecodeTime_TwoBytes(current_ptr)  ((10*( (*current_ptr) - 0x30)) +    \
+    (*(current_ptr + 1) - 0x30)) \
 
 
-#if 0 
+#if 0
 UINT32 DecodeTime(UINT8 *current_ptr, UINT8 length)
 {
     UINT32 value = 0;
@@ -3370,7 +3368,7 @@ UINT32 DecodeTime(UINT8 *current_ptr, UINT8 length)
 
 
 static STATUS ParseTime(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrDateTime* DateTime)
-{  
+{
     /* Id : Either UTC Time or Generalized Time  */
     /*****
     Supported UTC formats : YYMMDDhhmmZ
@@ -3417,27 +3415,34 @@ static STATUS ParseTime(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrDateTime* DateTim
     current_ptr += EncodingBytes;
     date_start_ptr = current_ptr;
 
-    /* Only difference between generalized and UTC is number of digits for the years. 
+    /* Only difference between generalized and UTC is number of digits for the years.
     UTC has 2 digits and Generalized has 4 digits    */
     if(!isUTC){
-        DateTime->date.yearMonthDay.year = DecodeTime_FourBytes(current_ptr);
+        DateTime->date.yearMonthDay.year = static_cast<short unsigned int>(DecodeTime_FourBytes(current_ptr));
+        current_ptr += 4;
     }else{
         // per rfc3280, if XX >= 50 then 19XX, otherwise 20XX. However, here we always use 20XX.
-        DateTime->date.yearMonthDay.year = DecodeTime_TwoBytes(current_ptr);
-        DateTime->date.yearMonthDay.year += 2000;
+        DateTime->date.yearMonthDay.year = static_cast<short unsigned int>(DecodeTime_TwoBytes(current_ptr));
+        current_ptr += 2;
+        DateTime->date.yearMonthDay.year = static_cast<short unsigned int>(DateTime->date.yearMonthDay.year + 2000);
     }
 
     /* The next 8 bytes are common for both UTC and Generalized time */
-    DateTime->date.yearMonthDay.month = DecodeTime_TwoBytes(current_ptr);
-    DateTime->date.yearMonthDay.day = DecodeTime_TwoBytes(current_ptr);
-    DateTime->time.hourMinuteSecond.hour = DecodeTime_TwoBytes(current_ptr);
-    DateTime->time.hourMinuteSecond.minute = DecodeTime_TwoBytes(current_ptr);
+    DateTime->date.yearMonthDay.month = DecodeTime_TwoBytes(current_ptr) & 0xF;
+    current_ptr += 2;
+    DateTime->date.yearMonthDay.day = DecodeTime_TwoBytes(current_ptr) & 0x3F;
+    current_ptr += 2;
+    DateTime->time.hourMinuteSecond.hour = DecodeTime_TwoBytes(current_ptr) & 0x3F;
+    current_ptr += 2;
+    DateTime->time.hourMinuteSecond.minute = DecodeTime_TwoBytes(current_ptr) & 0x3F;
+    current_ptr += 2;
 
     /* Next character can be a numeral(incase we have seconds),  +, - or Z */
 
     if(isdigit(*current_ptr)){
         /* we have second. Get the next two bytes as seconds. */
-        DateTime->time.hourMinuteSecond.second = DecodeTime_TwoBytes(current_ptr);
+        DateTime->time.hourMinuteSecond.second = DecodeTime_TwoBytes(current_ptr) & 0x3F;
+        current_ptr += 2;
     }
 
     /* Next character has to be +, - or Z */
@@ -3445,10 +3450,13 @@ static STATUS ParseTime(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrDateTime* DateTim
     {
     case '-':
         DateTime->time.hourMinuteSecond.timezone_is_neg = true;
+        /* fallthrough */
     case '+':
         current_ptr++;
-        DateTime->time.hourMinuteSecond.timezone_hour = DecodeTime_TwoBytes(current_ptr);
-        DateTime->time.hourMinuteSecond.timezone_minute = DecodeTime_TwoBytes(current_ptr);
+        DateTime->time.hourMinuteSecond.timezone_hour = DecodeTime_TwoBytes(current_ptr) & 0x3F;
+        current_ptr += 2;
+        DateTime->time.hourMinuteSecond.timezone_minute = DecodeTime_TwoBytes(current_ptr) & 0x3F;
+        current_ptr += 2;
         break;
 
     case 'Z':
@@ -3492,7 +3500,7 @@ static STATUS ParseTime(UINT8 **ppCurrent, UINT8 *pEnd, SessMgrDateTime* DateTim
 \param[out]     Length              Length of the Asn DER encoded type in bytes
 \param[out]     EncodingBytes       Number of bytes used for the encoding of the length
 
-\retval  X509_STATUS_SUCCESS        
+\retval  X509_STATUS_SUCCESS
 \retval STATUS_INVALID_PARAMS     THere was some error in parsing the ASN Der encoded buffer.
 
 @brief Return length of the ASN DER encoded type
@@ -3530,7 +3538,7 @@ static STATUS DecodeLength(UINT8* Buffer, UINT8* BufferEnd, UINT32* Length, UINT
         return X509_STATUS_ENCODING_ERROR;
     }
 
-    return X509_STATUS_SUCCESS;   
+    return X509_STATUS_SUCCESS;
 }
 
 static void SwapEndian(UINT8* ptr, int length)
@@ -3580,17 +3588,17 @@ static STATUS swapendian_memcpy(UINT8 *DestPtr, UINT32 DestLen, UINT8 *SrcPtr, U
 /**
 
 @brief ASN DER encoding follows the TLV format : Type Identifier || Length || Value
-1. This function will parse the Type ID and Length, validate it with Expected Id and some encoding rules. 
+1. This function will parse the Type ID and Length, validate it with Expected Id and some encoding rules.
 2. If no errors, function will move the current ptr to the value.
 
 \param[in]      pCurrentPtr     This is a pointer to the current pointer. The function will move the current pointer after parsing the ID and length
-\param[in]      ExpectedId      Expected Type identifier 
-\param[out]     Length          Length in Bytes of the "Value" 
+\param[in]      ExpectedId      Expected Type identifier
+\param[out]     Length          Length in Bytes of the "Value"
 \param[out]     EncodingBytes   Number of Bytes used to encode the length field.
 \param[in]      Optional        Is the ExpectedIdOptional
 
 @retval  X509_STATUS_SUCCESS         ID and length were parsed and verified successfully.
-@retval  X509_STATUS_NOT_FOUND       This value is only returned 
+@retval  X509_STATUS_NOT_FOUND       This value is only returned
 @retval  STATUS_ENCODING_ERROR  Some error in the encoding of the certificate.
 */
 

@@ -40,7 +40,8 @@ CPPFLAGS += -I$(COMMON_DIR)/inc/               \
             -I$(SIM_DIR)/uinst                 \
             -I$(SIM_DIR)/urtssim               \
             -I$(SIM_DIR)/tinst                 \
-            -I$(LINUX_PSW_DIR)/urts
+            -I$(LINUX_PSW_DIR)/urts            \
+            -I$(LINUX_PSW_DIR)/urts/linux
 
 CXXFLAGS += -fPIC -Werror
 

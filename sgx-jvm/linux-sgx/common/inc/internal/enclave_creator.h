@@ -49,6 +49,8 @@
 #include "uncopyable.h"
 #include <string.h>
 #include "file.h"
+#include "isgx_user.h"
+
 
 // this is the interface to both hardware, simulation and signing mode
 class EnclaveCreator : private Uncopyable
@@ -68,12 +70,19 @@ public:
     virtual int destroy_enclave(sgx_enclave_id_t enclave_id, uint64_t enclave_size = 0) = 0;
     virtual int initialize(sgx_enclave_id_t enclave_id) = 0;
     virtual bool use_se_hw() const = 0;
+    virtual bool is_EDMM_supported(sgx_enclave_id_t enclave_id) = 0;
+    virtual bool is_driver_compatible() = 0;
 
     virtual int get_misc_attr(sgx_misc_attribute_t *sgx_misc_attr, metadata_t *metadata, SGXLaunchToken * const lc, uint32_t flag) = 0;
     virtual bool get_plat_cap(sgx_misc_attribute_t *se_attr) = 0;
 #ifdef SE_1P5_VERTICAL
     virtual uint32_t handle_page_fault(uint64_t pf_address) { UNUSED(pf_address); return (uint32_t)SGX_ERROR_UNEXPECTED; }
 #endif
+    virtual int emodpr(uint64_t addr, uint64_t size, uint64_t flag) = 0;
+    virtual int mktcs(uint64_t tcs_addr) = 0;
+    virtual int trim_range(uint64_t fromaddr, uint64_t toaddr) = 0;
+    virtual int trim_accept(uint64_t addr) = 0;
+    virtual int remove_range(uint64_t fromaddr, uint64_t numpages) = 0;
     // destructor
     virtual ~EnclaveCreator() {};
 };

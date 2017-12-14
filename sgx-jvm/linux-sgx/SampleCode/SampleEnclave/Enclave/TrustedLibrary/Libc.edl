@@ -50,6 +50,6 @@ enclave {
         /*
          * Utilize SGX version __cpuid() in enclave.
          */
-        public void ecall_sgx_cpuid([in, out] int cpuinfo[4], int leaf);
+        public void ecall_sgx_cpuid([out] int cpuinfo[4], int leaf);
     };
 };
