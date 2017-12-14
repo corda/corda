@@ -52,7 +52,7 @@ import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     private companion object {
-        val ALICE_KEY = TestIdentity(ALICE_NAME, 70).key
+        val ALICE_KEY = TestIdentity(ALICE_NAME, 70).keyPair
         val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val myInfo = NodeInfo(listOf(NetworkHostAndPort("mockHost", 30000)), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)

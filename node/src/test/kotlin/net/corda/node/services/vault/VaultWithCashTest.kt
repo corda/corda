@@ -49,7 +49,7 @@ class VaultWithCashTest {
         val DUMMY_NOTARY get() = dummyNotary.party
         val MEGA_CORP get() = megaCorp.party
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
         val MINI_CORP_IDENTITY get() = miniCorp.identity
     }
 
@@ -72,7 +72,7 @@ class VaultWithCashTest {
                 cordappPackages,
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
                 TestIdentity(MEGA_CORP.name, servicesKey),
-                dummyNotary.key)
+                dummyNotary.keyPair)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)

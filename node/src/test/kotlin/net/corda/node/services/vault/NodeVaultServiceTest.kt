@@ -64,8 +64,8 @@ class NodeVaultServiceTest {
         val DUMMY_NOTARY get() = dummyNotary.party
         val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_KEY get() = megaCorp.key
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
         val MINI_CORP get() = miniCorp.party
         val MINI_CORP_IDENTITY get() = miniCorp.identity

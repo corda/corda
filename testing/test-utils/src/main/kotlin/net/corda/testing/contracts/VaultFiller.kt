@@ -80,7 +80,7 @@ class VaultFiller @JvmOverloads constructor(
                 addCommand(dummyCommand())
             }
             val stx = issuerServices.signInitialTransaction(dummyIssue)
-            return@map services.addSignature(stx, defaultNotary.pubkey)
+            return@map services.addSignature(stx, defaultNotary.publicKey)
         }
         services.recordTransactions(transactions)
         // Get all the StateAndRefs of all the generated transactions.
@@ -101,7 +101,7 @@ class VaultFiller @JvmOverloads constructor(
                                      linearTimestamp: Instant = now()): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
-        val issuerKey = defaultNotary.key
+        val issuerKey = defaultNotary.keyPair
         val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
         val transactions: List<SignedTransaction> = (1..numberToCreate).map {
             // Issue a Linear state

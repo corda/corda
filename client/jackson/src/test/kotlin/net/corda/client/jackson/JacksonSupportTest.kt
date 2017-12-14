@@ -24,7 +24,7 @@ class JacksonSupportTest {
     private companion object {
         val SEED = BigInteger.valueOf(20170922L)!!
         val mapper = JacksonSupport.createNonRpcMapper()
-        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).pubkey
+        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
     }

@@ -15,7 +15,6 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
@@ -91,13 +90,12 @@ class NetworkParametersGenerator {
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     // KryoServerSerializationScheme is not accessible from nodeapi.
     private fun initialiseSerialization() {
-        val context = if (java.lang.Boolean.getBoolean("net.corda.testing.amqp.enable")) AMQP_P2P_CONTEXT else KRYO_P2P_CONTEXT
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoParametersSerializationScheme)
                     registerScheme(AMQPServerSerializationScheme())
                 },
-                context)
+                AMQP_P2P_CONTEXT)
         )
     }
 

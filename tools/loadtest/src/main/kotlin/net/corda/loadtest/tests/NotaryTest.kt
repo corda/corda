@@ -27,7 +27,7 @@ data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTra
 val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
-            val issuerServices = MockServices(makeTestIdentityService(listOf(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity)), megaCorp.name, dummyCashIssuer.key)
+            val issuerServices = MockServices(makeTestIdentityService(listOf(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity)), megaCorp.name, dummyCashIssuer.keyPair)
             val generateTx = Generator.pickOne(simpleNodes).flatMap { node ->
                 Generator.int().map {
                     val issueBuilder = DummyContract.generateInitial(it, notary.info.legalIdentities[0], DUMMY_CASH_ISSUER) // TODO notary choice

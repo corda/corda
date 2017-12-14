@@ -38,7 +38,7 @@ class NodeInterestRatesTest {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val MEGA_CORP_KEY = generateKeyPair()
         val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
     }
 
     @Rule

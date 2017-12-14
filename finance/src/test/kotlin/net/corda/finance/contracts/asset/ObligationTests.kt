@@ -45,14 +45,14 @@ class ObligationTests {
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
         val BOB get() = bob.party
-        val BOB_PUBKEY get() = bob.pubkey
+        val BOB_PUBKEY get() = bob.publicKey
         val DUMMY_NOTARY get() = dummyNotary.party
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
-        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Rule
@@ -77,7 +77,7 @@ class ObligationTests {
     )
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
     private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), miniCorp)
-    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.key)
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
     private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)

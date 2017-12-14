@@ -27,7 +27,7 @@ class TransactionEncumbranceTests {
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
     }
 
     @Rule

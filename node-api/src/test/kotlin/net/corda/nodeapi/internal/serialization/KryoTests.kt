@@ -33,7 +33,7 @@ import kotlin.test.assertTrue
 
 class KryoTests {
     companion object {
-        private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).pubkey
+        private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
     }
 
     @Rule

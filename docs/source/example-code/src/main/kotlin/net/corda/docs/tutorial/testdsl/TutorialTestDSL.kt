@@ -28,9 +28,9 @@ class CommercialPaperTest {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
     }
 
     @Rule

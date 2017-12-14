@@ -107,9 +107,15 @@ commands.
 
 We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
 
-.. code:: bash
+.. container:: codeset
 
-    start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
+    .. code-block:: java
+
+        start IOUFlow arg0: 99, arg1: "O=PartyB,L=New York,C=US"
+
+    .. code-block:: kotlin
+
+        start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
 This single command will cause PartyA and PartyB to automatically agree an IOU. This is one of the great advantages of
 the flow framework - it allows you to reduce complex negotiation and update processes into a single function call.
@@ -118,13 +124,7 @@ If the flow worked, it should have recorded a new IOU in the vaults of both Part
 
 We can check the contents of each node's vault by running:
 
-.. container:: codeset
-
-    .. code-block:: java
-
-        run vaultQuery contractStateType: com.template.state.IOUState
-
-    .. code-block:: kotlin
+.. code-block:: base
 
         run vaultQuery contractStateType: com.template.IOUState
 
@@ -173,6 +173,11 @@ parts:
 
 * The ``IOUState``, representing IOUs on the ledger
 * The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
+
+After completing this tutorial, your CorDapp should look like this:
+
+* Java: https://github.com/corda/corda-tut1-solution-java
+* Kotlin: https://github.com/corda/corda-tut1-solution-kotlin
 
 Next steps
 ----------

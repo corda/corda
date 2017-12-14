@@ -61,7 +61,7 @@ class HibernateConfigurationTest {
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val BOC get() = bankOfCorda.party
-        val BOC_KEY get() = bankOfCorda.key
+        val BOC_KEY get() = bankOfCorda.keyPair
     }
 
     @Rule
@@ -112,7 +112,7 @@ class HibernateConfigurationTest {
             // `consumeCash` expects we can self-notarise transactions
             services = object : MockServices(cordappPackages, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
-            }, BOB_NAME, generateKeyPair(), dummyNotary.key) {
+            }, BOB_NAME, generateKeyPair(), dummyNotary.keyPair) {
                 override val vaultService = makeVaultService(database.hibernateConfig, schemaService)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

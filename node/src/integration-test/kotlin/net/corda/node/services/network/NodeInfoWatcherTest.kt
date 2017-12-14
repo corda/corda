@@ -49,7 +49,7 @@ class NodeInfoWatcherTest {
     @Before
     fun start() {
         val identityService = makeTestIdentityService()
-        keyManagementService = MockKeyManagementService(identityService, alice.key)
+        keyManagementService = MockKeyManagementService(identityService, alice.keyPair)
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
         nodeInfoPath = tempFolder.root.toPath() / CordformNode.NODE_INFO_DIRECTORY
     }
