@@ -46,7 +46,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
-import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
+import org.apache.activemq.artemis.spi.core.remoting.Connection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
 import java.nio.file.Path
@@ -131,13 +131,14 @@ fun <A> rpcDriver(
 }
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
+
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
-    override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
+    override fun validateUser(user: String?, password: String?, remotingConnection: Connection?): String? {
         return validate(user, password)
     }
 
-    override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
+    override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: Connection?): String? {
         return validate(user, password)
     }
 
