@@ -23,7 +23,7 @@ class TransactionTests {
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
     }
 
     @Rule

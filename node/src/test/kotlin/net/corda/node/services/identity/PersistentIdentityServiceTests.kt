@@ -35,10 +35,10 @@ class PersistentIdentityServiceTests {
         val bob = TestIdentity(BOB_NAME, 80)
         val ALICE get() = alice.party
         val ALICE_IDENTITY get() = alice.identity
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
         val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
-        val BOB_PUBKEY get() = bob.pubkey
+        val BOB_PUBKEY get() = bob.publicKey
     }
 
     private lateinit var database: CordaPersistence

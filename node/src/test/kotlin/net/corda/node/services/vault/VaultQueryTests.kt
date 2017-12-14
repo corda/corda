@@ -64,17 +64,17 @@ class VaultQueryTests {
         val BOB_IDENTITY get() = bob.identity
         val BOC get() = bankOfCorda.party
         val BOC_IDENTITY get() = bankOfCorda.identity
-        val BOC_KEY get() = bankOfCorda.key
-        val BOC_PUBKEY get() = bankOfCorda.pubkey
+        val BOC_KEY get() = bankOfCorda.keyPair
+        val BOC_PUBKEY get() = bankOfCorda.publicKey
         val CASH_NOTARY get() = cashNotary.party
         val CASH_NOTARY_IDENTITY get() = cashNotary.identity
         val CHARLIE get() = charlie.party
         val CHARLIE_IDENTITY get() = charlie.identity
         val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
-        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
         val MEGA_CORP get() = megaCorp.party
         val MINI_CORP_IDENTITY get() = miniCorp.identity
         val MINI_CORP get() = miniCorp.party
@@ -112,7 +112,7 @@ class VaultQueryTests {
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary, dummyCashIssuer.key, BOC_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary, dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
         identitySvc = services.identityService
         // Register all of the identities we're going to use
         (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->

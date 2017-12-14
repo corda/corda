@@ -40,9 +40,9 @@ public class CommercialPaperTest {
 
     {
         IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
-        doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPubkey());
+        doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPublicKey());
         doReturn(null).when(identityService).partyFromKey(BIG_CORP_PUBKEY);
-        doReturn(null).when(identityService).partyFromKey(ALICE.getPubkey());
+        doReturn(null).when(identityService).partyFromKey(ALICE.getPublicKey());
         ledgerServices = new MockServices(identityService, MEGA_CORP.getName());
     }
 
@@ -79,7 +79,7 @@ public class CommercialPaperTest {
         ledger(ledgerServices, DUMMY_NOTARY, l -> {
             l.transaction(tx -> {
                 tx.input(JCP_PROGRAM_ID, inState);
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 tx.attachments(JCP_PROGRAM_ID);
                 return tx.verifies();
             });
@@ -95,7 +95,7 @@ public class CommercialPaperTest {
         ledger(ledgerServices, DUMMY_NOTARY, l -> {
             l.transaction(tx -> {
                 tx.input(JCP_PROGRAM_ID, inState);
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 tx.attachments(JCP_PROGRAM_ID);
                 return tx.failsWith("the state is propagated");
             });
@@ -111,7 +111,7 @@ public class CommercialPaperTest {
         ledger(ledgerServices, DUMMY_NOTARY, l -> {
             l.transaction(tx -> {
                 tx.input(JCP_PROGRAM_ID, inState);
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.failsWith("the state is propagated");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inState.withOwner(ALICE.getParty()));
@@ -134,7 +134,7 @@ public class CommercialPaperTest {
                     tw.timeWindow(getTEST_TX_TIME());
                     return tw.failsWith("output states are issued by a command signer");
                 });
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Issue());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.timeWindow(getTEST_TX_TIME());
                 return tx.verifies();
             });
@@ -154,7 +154,7 @@ public class CommercialPaperTest {
                 tw.timeWindow(getTEST_TX_TIME());
                 return tw.failsWith("output states are issued by a command signer");
             });
-            tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Issue());
+            tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
             tx.timeWindow(getTEST_TX_TIME());
             return tx.verifies();
         });
@@ -176,7 +176,7 @@ public class CommercialPaperTest {
             // Some CP is issued onto the ledger by MegaCorp.
             l.transaction("Issuance", tx -> {
                 tx.output(JCP_PROGRAM_ID, "paper", getPaper());
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Issue());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.timeWindow(getTEST_TX_TIME());
                 return tx.verifies();
@@ -188,8 +188,8 @@ public class CommercialPaperTest {
                 tx.output(Cash.PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), MEGA_CORP.getParty()));
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(ALICE.getParty()));
-                tx.command(ALICE.getPubkey(), new Cash.Commands.Move());
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(ALICE.getPublicKey(), new Cash.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 return tx.verifies();
             });
             return Unit.INSTANCE;
@@ -212,7 +212,7 @@ public class CommercialPaperTest {
             // Some CP is issued onto the ledger by MegaCorp.
             l.transaction("Issuance", tx -> {
                 tx.output(Cash.PROGRAM_ID, "paper", getPaper());
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Issue());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.timeWindow(getTEST_TX_TIME());
                 return tx.verifies();
@@ -224,8 +224,8 @@ public class CommercialPaperTest {
                 tx.output(Cash.PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), MEGA_CORP.getParty()));
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(ALICE.getParty()));
-                tx.command(ALICE.getPubkey(), new Cash.Commands.Move());
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(ALICE.getPublicKey(), new Cash.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 return tx.verifies();
             });
 
@@ -234,7 +234,7 @@ public class CommercialPaperTest {
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 // We moved a paper to other pubkey.
                 tx.output(JCP_PROGRAM_ID, "bob's paper", inputPaper.withOwner(BOB.getParty()));
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 return tx.verifies();
             });
             l.fails();
@@ -258,7 +258,7 @@ public class CommercialPaperTest {
             // Some CP is issued onto the ledger by MegaCorp.
             l.transaction("Issuance", tx -> {
                 tx.output(Cash.PROGRAM_ID, "paper", getPaper());
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Issue());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.timeWindow(getTEST_TX_TIME());
                 return tx.verifies();
@@ -270,8 +270,8 @@ public class CommercialPaperTest {
                 tx.output(Cash.PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), MEGA_CORP.getParty()));
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(ALICE.getParty()));
-                tx.command(ALICE.getPubkey(), new Cash.Commands.Move());
-                tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                tx.command(ALICE.getPublicKey(), new Cash.Commands.Move());
+                tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 return tx.verifies();
             });
 
@@ -281,7 +281,7 @@ public class CommercialPaperTest {
                     JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                     // We moved a paper to another pubkey.
                     tx.output(JCP_PROGRAM_ID, "bob's paper", inputPaper.withOwner(BOB.getParty()));
-                    tx.command(MEGA_CORP.getPubkey(), new JavaCommercialPaper.Commands.Move());
+                    tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                     return tx.verifies();
                 });
                 lw.fails();

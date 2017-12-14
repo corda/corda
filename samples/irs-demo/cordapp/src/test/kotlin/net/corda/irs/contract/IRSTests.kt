@@ -39,14 +39,14 @@ private val DUMMY_PARTY = Party(CordaX500Name("Dummy", "Madrid", "ES"), generate
 private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
 private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
 private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
-private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).pubkey
+private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).publicKey
 private val DUMMY_NOTARY get() = dummyNotary.party
-private val DUMMY_NOTARY_KEY get() = dummyNotary.key
+private val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
 private val MEGA_CORP get() = megaCorp.party
-private val MEGA_CORP_KEY get() = megaCorp.key
-private val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+private val MEGA_CORP_KEY get() = megaCorp.keyPair
+private val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
 private val MINI_CORP get() = miniCorp.party
-private val MINI_CORP_KEY get() = miniCorp.key
+private val MINI_CORP_KEY get() = miniCorp.keyPair
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {

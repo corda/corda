@@ -3,6 +3,7 @@
 
 package net.corda.testing
 
+import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -32,6 +33,7 @@ import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.nio.file.Files
+import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -81,7 +83,7 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort..freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
+    return (freePort until freePort + numberToAlloc).map { NetworkHostAndPort(hostName, it) }
 }
 
 fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration = object : SSLConfiguration {
@@ -117,11 +119,11 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
 }
 
 class TestIdentity @JvmOverloads constructor(val name: CordaX500Name, entropy: Long? = null) {
-    val key = if (entropy != null) entropyToKeyPair(BigInteger.valueOf(entropy)) else generateKeyPair()
-    val pubkey get() = key.public!!
-    val party = Party(name, pubkey)
-    val identity by lazy { getTestPartyAndCertificate(party) } // Often not needed.
-    fun ref(vararg bytes: Byte) = party.ref(*bytes)
+    val keyPair: KeyPair = if (entropy != null) entropyToKeyPair(BigInteger.valueOf(entropy)) else generateKeyPair()
+    val publicKey: PublicKey get() = keyPair.public
+    val party: Party = Party(name, publicKey)
+    val identity: PartyAndCertificate by lazy { getTestPartyAndCertificate(party) } // Often not needed.
+    fun ref(vararg bytes: Byte): PartyAndReference = party.ref(*bytes)
 }
 
 @Suppress("unused")
