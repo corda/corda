@@ -16,28 +16,29 @@ import java.security.cert.X509Certificate
  * in Corda. Null indicates the parent certificate must have no role (the extension must be absent).
  * @property isIdentity true if the role is valid for use as a [net.corda.core.identity.Party] identity, false otherwise (the role is Corda
  * infrastructure of some kind).
+ * @property isWellKnown true if the role is a well known identity type (legal entity or service).
  */
 // NOTE: The order of the entries in the enum MUST NOT be changed, as their ordinality is used as an identifier. Please
 //       also note that IDs are numbered from 1 upwards, matching numbering of other enum types in ASN.1 specifications.
 // TODO: Link to the specification once it has a permanent URL
-enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean) : ASN1Encodable {
+enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, val isWellKnown: Boolean) : ASN1Encodable {
     /**
      * A Doorman (intermediate CA of some kind).
      */
-    INTERMEDIATE_CA(setOf(null), false),
+    INTERMEDIATE_CA(setOf(null), false, false),
     /** Signing key for the network map */
-    NETWORK_MAP(setOf(null), false),
+    NETWORK_MAP(setOf(null), false, false),
     /** The node level CA from which the TLS and well known identity certificates are issued. */
-    NODE_CA(setOf(INTERMEDIATE_CA), false),
+    NODE_CA(setOf(INTERMEDIATE_CA), false, false),
     /** The transport layer security certificate */
-    TLS(setOf(NODE_CA), false),
+    TLS(setOf(NODE_CA), false, false),
     /** A well known (publicly visible) identity of a service */
     // TODO: Lock this down to INTERMEDIATE_CA only
-    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true),
+    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
     /** A well known (publicly visible) identity of a legal entity */
-    WELL_KNOWN_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true),
+    WELL_KNOWN_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
     /** A confidential (limited visibility) identity */
-    CONFIDENTIAL_IDENTITY(setOf(WELL_KNOWN_IDENTITY), true);
+    CONFIDENTIAL_IDENTITY(setOf(WELL_KNOWN_IDENTITY), true, false);
 
     companion object {
         fun getInstance(id: ASN1Integer): CertRole {

@@ -126,7 +126,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         }
 
         // Ensure we record the first identity of the same name, first
-        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it) == CertRole.WELL_KNOWN_IDENTITY }
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
         if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
             val idx = certificates.lastIndexOf(wellKnownCert)
