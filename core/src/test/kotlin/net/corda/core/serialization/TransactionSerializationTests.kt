@@ -1,7 +1,9 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
@@ -9,6 +11,7 @@ import net.corda.finance.POUNDS
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.security.SignatureException
 import java.util.*
@@ -16,7 +19,20 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class TransactionSerializationTests : TestDependencyInjectionBase() {
+class TransactionSerializationTests {
+    private companion object {
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
+    }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
 
     class TestCash : Contract {
@@ -45,9 +61,8 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
     val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY), fakeStateRef)
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
-
-    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP_KEY)
-    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY_KEY)
+    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+    val notaryServices = MockServices(listOf("net.corda.core.serialization"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before
@@ -84,14 +99,14 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
         assertFailsWith(IllegalArgumentException::class) {
             stx.copy(sigs = emptyList())
         }
-
+        val DUMMY_KEY_2 = generateKeyPair()
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)
-            val dummyServices = MockServices(DUMMY_KEY_2)
+            val dummyServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
             stx.copy(sigs = stx2.sigs).verifyRequiredSignatures()

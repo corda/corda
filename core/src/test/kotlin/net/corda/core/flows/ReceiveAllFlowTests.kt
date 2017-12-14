@@ -5,45 +5,81 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.testing.chooseIdentity
-import net.corda.testing.node.network
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
+import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Test
 
 class ReceiveMultipleFlowTests {
+    private val mockNet = MockNetwork()
+    private val nodes = (0..2).map { mockNet.createPartyNode() }
+    @After
+    fun stopNodes() {
+        mockNet.stopNodes()
+    }
+
+    @Test
+    fun showcase_flows_as_closures() {
+
+        val answer = 10.0
+        val message = "Hello Ivan"
+
+        val counterParty = nodes[1].info.singleIdentity()
+
+        val initiatingFlow = @InitiatingFlow object : FlowLogic<Any>() {
+
+            @Suspendable
+            override fun call(): Any {
+                val session = initiateFlow(counterParty)
+                return session.sendAndReceive<Any>(message).unwrap { it }
+            }
+        }
+
+        nodes[1].registerInitiatedFlow(initiatingFlow::class) { session ->
+            object : FlowLogic<Unit>() {
+                @Suspendable
+                override fun call() {
+                    // this is a closure, meaning you can access variables outside its scope e.g., `answer`.
+                    val receivedMessage = session.receive<String>().unwrap { it }
+                    logger.info("Got message from counterParty: $receivedMessage.")
+                    assertThat(receivedMessage).isEqualTo(message)
+                    session.send(answer)
+                }
+            } as FlowLogic<Unit>
+        }
+
+        val flow = nodes[0].services.startFlow(initiatingFlow)
+        mockNet.runNetwork()
+        val receivedAnswer = flow.resultFuture.getOrThrow()
+        assertThat(receivedAnswer).isEqualTo(answer)
+    }
+
     @Test
     fun `receive all messages in parallel using map style`() {
-        network(3) { nodes, _ ->
-            val doubleValue = 5.0
-            nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
-            val stringValue = "Thriller"
-            nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
-
-            val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
-            runNetwork()
-
-            val result = flow.resultFuture.getOrThrow()
-
-            assertThat(result).isEqualTo(doubleValue * stringValue.length)
-        }
+        val doubleValue = 5.0
+        nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
+        val stringValue = "Thriller"
+        nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
+        val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
+        mockNet.runNetwork()
+        val result = flow.resultFuture.getOrThrow()
+        assertThat(result).isEqualTo(doubleValue * stringValue.length)
     }
 
     @Test
     fun `receive all messages in parallel using list style`() {
-        network(3) { nodes, _ ->
-            val value1 = 5.0
-            nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
-            val value2 = 6.0
-            nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
-
-            val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
-            runNetwork()
-            val data = flow.resultFuture.getOrThrow()
-
-            assertThat(data[0]).isEqualTo(value1)
-            assertThat(data[1]).isEqualTo(value2)
-            assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)
-        }
+        val value1 = 5.0
+        nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
+        val value2 = 6.0
+        nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
+        val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
+        mockNet.runNetwork()
+        val data = flow.resultFuture.getOrThrow()
+        assertThat(data[0]).isEqualTo(value1)
+        assertThat(data[1]).isEqualTo(value2)
+        assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)
     }
 
     class ParallelAlgorithmMap(doubleMember: Party, stringMember: Party) : AlgorithmDefinition(doubleMember, stringMember) {

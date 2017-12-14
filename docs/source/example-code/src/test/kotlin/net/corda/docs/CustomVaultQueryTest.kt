@@ -2,16 +2,15 @@ package net.corda.docs
 
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.StartedNode
-import net.corda.testing.*
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -19,21 +18,18 @@ import org.junit.Test
 import java.util.*
 
 class CustomVaultQueryTest {
-
-    lateinit var mockNet: MockNetwork
-    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
-    lateinit var notary: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var notary: Party
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName))
-        mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.docs"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
-        nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
-        nodeA.installCordaService(CustomVaultQuery.Service::class.java)
-        notary = nodeA.services.getDefaultNotary()
+        nodeA.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

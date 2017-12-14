@@ -1,6 +1,5 @@
 package net.corda.client.rpc;
 
-import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
@@ -11,9 +10,9 @@ import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
-import net.corda.nodeapi.User;
+import net.corda.nodeapi.internal.config.User;
 import net.corda.testing.CoreTestUtils;
-import net.corda.testing.node.NodeBasedTest;
+import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,15 +26,21 @@ import static java.util.Objects.requireNonNull;
 import static kotlin.test.AssertionsKt.assertEquals;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
-import static net.corda.node.services.FlowPermissions.startFlowPermission;
-import static net.corda.testing.TestConstants.getALICE;
+import static net.corda.node.services.Permissions.invokeRpc;
+import static net.corda.node.services.Permissions.startFlow;
+import static net.corda.testing.TestConstants.getALICE_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
         super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
     }
 
-    private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.class), startFlowPermission(CashIssueFlow.class));
+    private List<String> perms = Arrays.asList(
+            startFlow(CashPaymentFlow.class),
+            startFlow(CashIssueFlow.class),
+            invokeRpc("nodeInfo"),
+            invokeRpc("vaultQueryBy"),
+            invokeRpc("vaultQueryByCriteria"));
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
@@ -51,8 +56,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
-        CordaFuture<StartedNode<Node>> nodeFuture = startNotaryNode(getALICE().getName(), singletonList(rpcUser), true);
-        node = nodeFuture.get();
+        node = startNode(getALICE_NAME(), 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

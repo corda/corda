@@ -3,31 +3,37 @@ package net.corda.loadtest.tests
 import net.corda.client.mock.Generator
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("NotaryTest")
+private val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+private val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
+private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
 
 data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTransaction, val node: NodeConnection)
 
 val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
-            val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
+            val issuerServices = MockServices(makeTestIdentityService(listOf(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity)), megaCorp.name, dummyCashIssuer.keyPair)
             val generateTx = Generator.pickOne(simpleNodes).flatMap { node ->
                 Generator.int().map {
-                    val issueBuilder = DummyContract.generateInitial(it, notary.info.legalIdentities[1], DUMMY_CASH_ISSUER) // TODO notary choice
+                    val issueBuilder = DummyContract.generateInitial(it, notary.info.legalIdentities[0], DUMMY_CASH_ISSUER) // TODO notary choice
                     val issueTx = issuerServices.signInitialTransaction(issueBuilder)
                     val asset = issueTx.tx.outRef<DummyContract.SingleOwnerState>(0)
-                    val moveBuilder = DummyContract.move(asset, DUMMY_CASH_ISSUER.party)
+                    val moveBuilder = DummyContract.move(asset, dummyCashIssuer.party)
                     val moveTx = issuerServices.signInitialTransaction(moveBuilder)
                     NotariseCommand(issueTx, moveTx, node)
                 }

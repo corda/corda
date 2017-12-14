@@ -6,45 +6,47 @@ import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
+import net.corda.core.internal.concurrent.asCordaFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransaction
-import net.corda.node.utilities.configureDatabase
-import net.corda.testing.*
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.LogHelper
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class DistributedImmutableMapTests : TestDependencyInjectionBase() {
+class DistributedImmutableMapTests {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
-    lateinit var cluster: List<Member>
-    lateinit var transaction: DatabaseTransaction
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
+    private lateinit var cluster: List<Member>
     private val databases: MutableList<CordaPersistence> = mutableListOf()
 
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
-        LogHelper.setLevel(NetworkMapService::class)
         cluster = setUpCluster()
     }
 
     @After
     fun tearDown() {
         LogHelper.reset("org.apache.activemq")
-        LogHelper.reset(NetworkMapService::class)
-        cluster.forEach {
-            it.client.close()
-            it.server.shutdown()
-        }
+        cluster.map { it.client.close().asCordaFuture() }.transpose().getOrThrow()
+        cluster.map { it.server.shutdown().asCordaFuture() }.transpose().getOrThrow()
         databases.forEach { it.close() }
     }
 
@@ -86,7 +88,7 @@ class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), ::makeTestIdentityService)
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(serverNameTablePrefix = "PORT_${myAddress.port}_"), rigorousMock())
         databases.add(database)
         val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
 

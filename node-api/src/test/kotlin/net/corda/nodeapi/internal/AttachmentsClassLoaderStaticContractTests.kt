@@ -1,19 +1,33 @@
 package net.corda.nodeapi.internal
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.*
-import net.corda.testing.node.MockServices
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.*
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
-class AttachmentsClassLoaderStaticContractTests : TestDependencyInjectionBase() {
+class AttachmentsClassLoaderStaticContractTests {
+    private companion object {
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
+    }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     class AttachmentDummyContract : Contract {
         companion object {
@@ -40,11 +54,8 @@ class AttachmentsClassLoaderStaticContractTests : TestDependencyInjectionBase() 
         }
     }
 
-    private lateinit var serviceHub: MockServices
-
-    @Before
-    fun `create service hub`() {
-        serviceHub = MockServices(cordappPackages = listOf("net.corda.nodeapi.internal"))
+    private val serviceHub = rigorousMock<ServicesForResolution>().also {
+        doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.nodeapi.internal")), MockAttachmentStorage())).whenever(it).cordappProvider
     }
 
     @Test

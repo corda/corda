@@ -1,29 +1,33 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.UniquenessException
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
-    val identity = MEGA_CORP
-    val txID = SecureHash.randomSHA256()
+class PersistentUniquenessProviderTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+    private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
+    private val txID = SecureHash.randomSHA256()
 
-    lateinit var database: CordaPersistence
+    private lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
     }
 
     @After

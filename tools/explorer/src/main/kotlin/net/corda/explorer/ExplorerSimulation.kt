@@ -20,27 +20,27 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.User
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.nodeapi.internal.config.User
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import java.time.Instant
 import java.util.*
 
-class ExplorerSimulation(val options: OptionSet) {
+class ExplorerSimulation(private val options: OptionSet) {
     private val user = User("user1", "test", permissions = setOf(
-            startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashConfigDataFlow>()
+            startFlow<CashPaymentFlow>(),
+            startFlow<CashConfigDataFlow>()
     ))
     private val manager = User("manager", "test", permissions = setOf(
-            startFlowPermission<CashIssueAndPaymentFlow>(),
-            startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashExitFlow>(),
-            startFlowPermission<CashConfigDataFlow>())
+            startFlow<CashIssueAndPaymentFlow>(),
+            startFlow<CashPaymentFlow>(),
+            startFlow<CashExitFlow>(),
+            startFlow<CashConfigDataFlow>())
     )
 
     private lateinit var notaryNode: NodeHandle
@@ -65,25 +65,18 @@ class ExplorerSimulation(val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true)) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
-            val notary = startNotaryNode(DUMMY_NOTARY.name, customOverrides = mapOf("nearestCity" to "Zurich"), validating = false)
-            val alice = startNode(providedName = ALICE.name, rpcUsers = arrayListOf(user),
-                    customOverrides = mapOf("nearestCity" to "Milan"))
-            val bob = startNode(providedName = BOB.name, rpcUsers = arrayListOf(user),
-                    customOverrides = mapOf("nearestCity" to "Madrid"))
+            val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
+            val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
-            val issuerGBP = startNode(providedName = ukBankName, rpcUsers = arrayListOf(manager),
-                    customOverrides = mapOf(
-                            "issuableCurrencies" to listOf("GBP"),
-                            "nearestCity" to "London"))
-            val issuerUSD = startNode(providedName = usaBankName, rpcUsers = arrayListOf(manager),
-                    customOverrides = mapOf(
-                            "issuableCurrencies" to listOf("USD"),
-                            "nearestCity" to "New York"))
+            val issuerGBP = startNode(providedName = ukBankName, rpcUsers = listOf(manager),
+                    customOverrides = mapOf("issuableCurrencies" to listOf("GBP")))
+            val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
+                    customOverrides = mapOf("issuableCurrencies" to listOf("USD")))
 
-            notaryNode = notary.get()
+            notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()
             bobNode = bob.get()
             issuerNodeGBP = issuerGBP.get()
@@ -97,8 +90,6 @@ class ExplorerSimulation(val options: OptionSet) {
                 options.has("S") -> startNormalSimulation()
                 options.has("F") -> startErrorFlowsSimulation()
             }
-
-            waitForAllNodesToFinish()
         }
     }
 
@@ -127,10 +118,6 @@ class ExplorerSimulation(val options: OptionSet) {
                 bobNode.nodeInfo.legalIdentities.first() to bobRPC,
                 issuerNodeGBP.nodeInfo.legalIdentities.first() to issuerRPCGBP,
                 issuerNodeUSD.nodeInfo.legalIdentities.first() to issuerRPCUSD))
-
-        listOf(aliceRPC, bobRPC, issuerRPCGBP, issuerRPCUSD).map {
-            it.waitUntilNetworkReady().getOrThrow()
-        }
     }
 
     private fun startSimulation(eventGenerator: EventGenerator, maxIterations: Int) {
@@ -138,7 +125,7 @@ class ExplorerSimulation(val options: OptionSet) {
         fun FlowHandle<AbstractCashFlow.Result>.log(seq: Int, name: String) {
             val out = "[$seq] $name $id :"
             returnValue.thenMatch({ (stx) ->
-                Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}")
+                Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}") // XXX: Why Main's log?
             }, {
                 Main.log.info("$out ${it.message}")
             })

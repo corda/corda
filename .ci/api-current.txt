@@ -53,6 +53,154 @@ public interface net.corda.core.concurrent.CordaFuture extends java.util.concurr
   public abstract void then(kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public abstract concurrent.CompletableFuture toCompletableFuture()
 ##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.context.Actor extends java.lang.Object
+  public <init>(net.corda.core.context.Actor$Id, net.corda.core.context.AuthServiceId, net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor$Id component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.AuthServiceId component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name component3()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor copy(net.corda.core.context.Actor$Id, net.corda.core.context.AuthServiceId, net.corda.core.identity.CordaX500Name)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor$Id getId()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getOwningLegalIdentity()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.AuthServiceId getServiceId()
+  public int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Actor service(String, net.corda.core.identity.CordaX500Name)
+  public String toString()
+  public static final net.corda.core.context.Actor$Companion Companion
+##
+public static final class net.corda.core.context.Actor$Companion extends java.lang.Object
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor service(String, net.corda.core.identity.CordaX500Name)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Actor$Id extends java.lang.Object
+  public <init>(String)
+  @org.jetbrains.annotations.NotNull public final String component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor$Id copy(String)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final String getValue()
+  public int hashCode()
+  public String toString()
+##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.context.AuthServiceId extends java.lang.Object
+  public <init>(String)
+  @org.jetbrains.annotations.NotNull public final String component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.AuthServiceId copy(String)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final String getValue()
+  public int hashCode()
+  public String toString()
+##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.context.InvocationContext extends java.lang.Object
+  public <init>(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace component2()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor component3()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Trace component4()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor component5()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext copy(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor getActor()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Trace getExternalTrace()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor getImpersonatedActor()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin getOrigin()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace getTrace()
+  public int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext peer(net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final java.security.Principal principal()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext rpc(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext scheduled(net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
+  public String toString()
+  public static final net.corda.core.context.InvocationContext$Companion Companion
+##
+public static final class net.corda.core.context.InvocationContext$Companion extends java.lang.Object
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext peer(net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext rpc(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext scheduled(net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
+##
+@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.context.Origin extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public abstract java.security.Principal principal()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Peer extends net.corda.core.context.Origin
+  public <init>(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Peer copy(net.corda.core.identity.CordaX500Name)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getParty()
+  public int hashCode()
+  @org.jetbrains.annotations.NotNull public java.security.Principal principal()
+  public String toString()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$RPC extends net.corda.core.context.Origin
+  public <init>(net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$RPC copy(net.corda.core.context.Actor)
+  public boolean equals(Object)
+  public int hashCode()
+  @org.jetbrains.annotations.NotNull public java.security.Principal principal()
+  public String toString()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Scheduled extends net.corda.core.context.Origin
+  public <init>(net.corda.core.contracts.ScheduledStateRef)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ScheduledStateRef component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Scheduled copy(net.corda.core.contracts.ScheduledStateRef)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ScheduledStateRef getScheduledState()
+  public int hashCode()
+  @org.jetbrains.annotations.NotNull public java.security.Principal principal()
+  public String toString()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Service extends net.corda.core.context.Origin
+  public <init>(String, net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public final String component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Service copy(String, net.corda.core.identity.CordaX500Name)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getOwningLegalIdentity()
+  @org.jetbrains.annotations.NotNull public final String getServiceClassName()
+  public int hashCode()
+  @org.jetbrains.annotations.NotNull public java.security.Principal principal()
+  public String toString()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Shell extends net.corda.core.context.Origin
+  @org.jetbrains.annotations.NotNull public java.security.Principal principal()
+  public static final net.corda.core.context.Origin$Shell INSTANCE
+##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.context.Trace extends java.lang.Object
+  public <init>(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$InvocationId component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace copy(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$InvocationId getInvocationId()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId getSessionId()
+  public int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Trace newInstance(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
+  public String toString()
+  public static final net.corda.core.context.Trace$Companion Companion
+##
+public static final class net.corda.core.context.Trace$Companion extends java.lang.Object
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace newInstance(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Trace$InvocationId extends net.corda.core.utilities.Id
+  public <init>(String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Trace$InvocationId newInstance(String, java.time.Instant)
+  public static final net.corda.core.context.Trace$InvocationId$Companion Companion
+##
+public static final class net.corda.core.context.Trace$InvocationId$Companion extends java.lang.Object
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$InvocationId newInstance(String, java.time.Instant)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Trace$SessionId extends net.corda.core.utilities.Id
+  public <init>(String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
+  public static final net.corda.core.context.Trace$SessionId$Companion Companion
+##
+public static final class net.corda.core.context.Trace$SessionId$Companion extends java.lang.Object
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
+##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AlwaysAcceptAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AlwaysAcceptAttachmentConstraint INSTANCE
@@ -283,7 +431,7 @@ public final class net.corda.core.contracts.ScheduledActivity extends java.lang.
   public int hashCode()
   public String toString()
 ##
-public final class net.corda.core.contracts.ScheduledStateRef extends java.lang.Object implements net.corda.core.contracts.Scheduled
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.ScheduledStateRef extends java.lang.Object implements net.corda.core.contracts.Scheduled
   public <init>(net.corda.core.contracts.StateRef, java.time.Instant)
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.StateRef component1()
   @org.jetbrains.annotations.NotNull public final java.time.Instant component2()
@@ -351,6 +499,7 @@ public final class net.corda.core.contracts.Structures extends java.lang.Object
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.contracts.TimeWindow fromOnly(java.time.Instant)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.contracts.TimeWindow fromStartAndDuration(java.time.Instant, java.time.Duration)
   @org.jetbrains.annotations.Nullable public abstract java.time.Instant getFromTime()
+  @org.jetbrains.annotations.Nullable public final java.time.Duration getLength()
   @org.jetbrains.annotations.Nullable public abstract java.time.Instant getMidpoint()
   @org.jetbrains.annotations.Nullable public abstract java.time.Instant getUntilTime()
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.contracts.TimeWindow untilOnly(java.time.Instant)
@@ -418,6 +567,7 @@ public final class net.corda.core.contracts.TransactionStateKt extends java.lang
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$MissingAttachmentRejection extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String)
+  @org.jetbrains.annotations.NotNull public final String getContractClass()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$MoreThanOneNotary extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash)
@@ -675,6 +825,7 @@ public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
   public final boolean isValid(byte[])
   public final boolean verify(net.corda.core.utilities.OpaqueBytes)
   public final boolean verify(byte[])
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.DigitalSignature withoutKey()
 ##
 public abstract class net.corda.core.crypto.MerkleTree extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash getHash()
@@ -1038,6 +1189,16 @@ public static final class net.corda.core.flows.FinalityFlow$Companion extends ja
   public int hashCode()
   public String toString()
 ##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.FlowInitiator$Service extends net.corda.core.flows.FlowInitiator
+  public <init>(String)
+  @org.jetbrains.annotations.NotNull public final String component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowInitiator$Service copy(String)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public String getName()
+  @org.jetbrains.annotations.NotNull public final String getServiceClassName()
+  public int hashCode()
+  public String toString()
+##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.FlowInitiator$Shell extends net.corda.core.flows.FlowInitiator
   @org.jetbrains.annotations.NotNull public String getName()
   public static final net.corda.core.flows.FlowInitiator$Shell INSTANCE
@@ -1047,6 +1208,7 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   @co.paralleluniverse.fibers.Suspendable public abstract Object call()
   public final void checkFlowPermission(String, Map)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.Nullable public final net.corda.core.flows.FlowStackSnapshot flowStackSnapshot()
+  @org.jetbrains.annotations.Nullable public static final net.corda.core.flows.FlowLogic getCurrentTopLevel()
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowInfo getFlowInfo(net.corda.core.identity.Party)
   @org.jetbrains.annotations.NotNull public final org.slf4j.Logger getLogger()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party getOurIdentity()
@@ -1058,13 +1220,22 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowSession initiateFlow(net.corda.core.identity.Party)
   @co.paralleluniverse.fibers.Suspendable public final void persistFlowStackSnapshot()
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.utilities.UntrustworthyData receive(Class, net.corda.core.identity.Party)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public List receiveAll(Class, List)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public Map receiveAll(Map)
   public final void recordAuditEvent(String, String, Map)
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable public void send(net.corda.core.identity.Party, Object)
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, net.corda.core.identity.Party, Object)
   public final void setStateMachine(net.corda.core.internal.FlowStateMachine)
+  @co.paralleluniverse.fibers.Suspendable @kotlin.jvm.JvmStatic public static final void sleep(java.time.Duration)
   @co.paralleluniverse.fibers.Suspendable public Object subFlow(net.corda.core.flows.FlowLogic)
   @org.jetbrains.annotations.Nullable public final net.corda.core.messaging.DataFeed track()
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction waitForLedgerCommit(net.corda.core.crypto.SecureHash)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction waitForLedgerCommit(net.corda.core.crypto.SecureHash, boolean)
+  public static final net.corda.core.flows.FlowLogic$Companion Companion
+##
+public static final class net.corda.core.flows.FlowLogic$Companion extends java.lang.Object
+  @org.jetbrains.annotations.Nullable public final net.corda.core.flows.FlowLogic getCurrentTopLevel()
+  @co.paralleluniverse.fibers.Suspendable @kotlin.jvm.JvmStatic public final void sleep(java.time.Duration)
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public interface net.corda.core.flows.FlowLogicRef
 ##
@@ -1074,9 +1245,13 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   public <init>()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.identity.Party getCounterparty()
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.flows.FlowInfo getCounterpartyFlowInfo()
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.flows.FlowInfo getCounterpartyFlowInfo(boolean)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData receive(Class)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData receive(Class, boolean)
   @co.paralleluniverse.fibers.Suspendable public abstract void send(Object)
+  @co.paralleluniverse.fibers.Suspendable public abstract void send(Object, boolean)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, Object)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, Object, boolean)
 ##
 public final class net.corda.core.flows.FlowStackSnapshot extends java.lang.Object
   public <init>(java.time.Instant, String, List)
@@ -1181,6 +1356,7 @@ public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda
 public final class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, boolean)
+  public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction call()
 ##
 public @interface net.corda.core.flows.SchedulableFlow
@@ -1222,6 +1398,8 @@ public final class net.corda.core.flows.StackFrameDataToken extends java.lang.Ob
   public String toString()
 ##
 public @interface net.corda.core.flows.StartableByRPC
+##
+public @interface net.corda.core.flows.StartableByService
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.flows.StateMachineRunId extends java.lang.Object
   public <init>(UUID)
@@ -1360,12 +1538,14 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream openAttachment(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract Set partiesFromName(String, boolean)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
+  @org.jetbrains.annotations.NotNull public abstract List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)
   @org.jetbrains.annotations.NotNull public abstract List registeredFlows()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed stateMachineRecordedTransactionMappingFeed()
   @org.jetbrains.annotations.NotNull public abstract List stateMachineRecordedTransactionMappingSnapshot()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed stateMachinesFeed()
   @org.jetbrains.annotations.NotNull public abstract List stateMachinesSnapshot()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash uploadAttachment(java.io.InputStream)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash uploadAttachmentWithMetadata(java.io.InputStream, String, String)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.Vault$Page vaultQuery(Class)
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.Vault$Page vaultQueryBy(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.PageSpecification, net.corda.core.node.services.vault.Sort, Class)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.Vault$Page vaultQueryByCriteria(net.corda.core.node.services.vault.QueryCriteria, Class)
@@ -1441,12 +1621,17 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.messaging.StateMachineInfo extends java.lang.Object
   public <init>(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.FlowInitiator, net.corda.core.messaging.DataFeed)
+  public <init>(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.FlowInitiator, net.corda.core.messaging.DataFeed, net.corda.core.context.InvocationContext)
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.StateMachineRunId component1()
   @org.jetbrains.annotations.NotNull public final String component2()
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowInitiator component3()
   @org.jetbrains.annotations.Nullable public final net.corda.core.messaging.DataFeed component4()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.InvocationContext component5()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext context()
   @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.StateMachineInfo copy(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.FlowInitiator, net.corda.core.messaging.DataFeed)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.StateMachineInfo copy(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.FlowInitiator, net.corda.core.messaging.DataFeed, net.corda.core.context.InvocationContext)
   public boolean equals(Object)
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.InvocationContext getContext()
   @org.jetbrains.annotations.NotNull public final String getFlowLogicClassName()
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.StateMachineRunId getId()
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowInitiator getInitiator()
@@ -1507,6 +1692,7 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   public final int getPlatformVersion()
   public final long getSerial()
   public int hashCode()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party identityFromX500Name(net.corda.core.identity.CordaX500Name)
   public final boolean isLegalIdentity(net.corda.core.identity.Party)
   public String toString()
 ##
@@ -1528,6 +1714,7 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.VaultService getVaultService()
   @org.jetbrains.annotations.NotNull public abstract java.sql.Connection jdbcSession()
   public abstract void recordTransactions(Iterable)
+  public abstract void recordTransactions(net.corda.core.node.StatesToRecord, Iterable)
   public abstract void recordTransactions(boolean, Iterable)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder, Iterable)
@@ -1542,9 +1729,16 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
 @net.corda.core.DoNotImplement public interface net.corda.core.node.StateLoader
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
 ##
+public final class net.corda.core.node.StatesToRecord extends java.lang.Enum
+  protected <init>(String, int)
+  public static net.corda.core.node.StatesToRecord valueOf(String)
+  public static net.corda.core.node.StatesToRecord[] values()
+##
 @net.corda.core.DoNotImplement public interface net.corda.core.node.services.AttachmentStorage
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream, String, String)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.contracts.Attachment openAttachment(net.corda.core.crypto.SecureHash)
+  @org.jetbrains.annotations.NotNull public abstract List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)
 ##
 public final class net.corda.core.node.services.AttachmentStorageKt extends java.lang.Object
 ##
@@ -1638,6 +1832,11 @@ public @interface net.corda.core.node.services.CordaService
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.ServiceHub getServices()
   public abstract void start()
   public abstract void stop()
+  public static final net.corda.core.node.services.NotaryService$Companion Companion
+  @org.jetbrains.annotations.NotNull public static final String ID_PREFIX = "corda.notary."
+##
+public static final class net.corda.core.node.services.NotaryService$Companion extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public final String constructId(boolean, boolean, boolean, boolean)
 ##
 public abstract class net.corda.core.node.services.PartyInfo extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.identity.Party getParty()
@@ -1674,7 +1873,7 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
   @org.jetbrains.annotations.NotNull public final java.time.Clock getClock()
   public final boolean isValid(net.corda.core.contracts.TimeWindow)
 ##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage
+@net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage extends net.corda.core.node.StateLoader
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.transactions.SignedTransaction getTransaction(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract rx.Observable getUpdates()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()
@@ -1833,6 +2032,76 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   public static net.corda.core.node.services.vault.AggregateFunctionType valueOf(String)
   public static net.corda.core.node.services.vault.AggregateFunctionType[] values()
 ##
+@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.vault.AttachmentQueryCriteria extends java.lang.Object implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria and(net.corda.core.node.services.vault.AttachmentQueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria or(net.corda.core.node.services.vault.AttachmentQueryCriteria)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentQueryCriteria$AndComposition extends net.corda.core.node.services.vault.AttachmentQueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$AndVisitor
+  public <init>(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentQueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria extends net.corda.core.node.services.vault.AttachmentQueryCriteria
+  public <init>()
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate)
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate component1()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate component2()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate component3()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria copy(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate getFilenameCondition()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate getUploadDateCondition()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate getUploaderCondition()
+  public int hashCode()
+  public String toString()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentQueryCriteria$OrComposition extends net.corda.core.node.services.vault.AttachmentQueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$OrVisitor
+  public <init>(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentQueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.services.vault.AttachmentSort extends net.corda.core.node.services.vault.BaseSort
+  public <init>(Collection)
+  @org.jetbrains.annotations.NotNull public final Collection component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort copy(Collection)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final Collection getColumns()
+  public int hashCode()
+  public String toString()
+##
+public static final class net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute extends java.lang.Enum
+  protected <init>(String, int, String)
+  @org.jetbrains.annotations.NotNull public final String getColumnName()
+  public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute valueOf(String)
+  public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute[] values()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentSort$AttachmentSortColumn extends java.lang.Object
+  public <init>(net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute, net.corda.core.node.services.vault.Sort$Direction)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.Sort$Direction component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort$AttachmentSortColumn copy(net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute, net.corda.core.node.services.vault.Sort$Direction)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.Sort$Direction getDirection()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute getSortAttribute()
+  public int hashCode()
+  public String toString()
+##
+public interface net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser extends net.corda.core.node.services.vault.BaseQueryCriteriaParser
+  @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria)
+##
+public interface net.corda.core.node.services.vault.BaseQueryCriteriaParser
+  @org.jetbrains.annotations.NotNull public abstract Collection parse(net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.BaseSort)
+  @org.jetbrains.annotations.NotNull public abstract Collection parseAnd(net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria)
+  @org.jetbrains.annotations.NotNull public abstract Collection parseOr(net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria)
+##
+public abstract class net.corda.core.node.services.vault.BaseSort extends java.lang.Object
+  public <init>()
+##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.node.services.vault.BinaryComparisonOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
   protected <init>(String, int)
   public static net.corda.core.node.services.vault.BinaryComparisonOperator valueOf(String)
@@ -1870,6 +2139,8 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression in(reflect.Field, Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$CollectionExpression in(Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression in(kotlin.reflect.KProperty1, Collection)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$NullExpression isNotNull()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$NullExpression isNull()
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression isNull(reflect.Field)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression isNull(kotlin.reflect.KProperty1)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$BinaryComparison lessThan(Comparable)
@@ -1878,6 +2149,7 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$BinaryComparison lessThanOrEqual(Comparable)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression lessThanOrEqual(reflect.Field, Comparable)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression lessThanOrEqual(kotlin.reflect.KProperty1, Comparable)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$Likeness like(String)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression like(reflect.Field, String)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression like(kotlin.reflect.KProperty1, String)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$AggregateFunctionExpression max(reflect.Field)
@@ -1894,6 +2166,7 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression notIn(reflect.Field, Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$CollectionExpression notIn(Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression notIn(kotlin.reflect.KProperty1, Collection)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.ColumnPredicate$Likeness notLike(String)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression notLike(reflect.Field, String)
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression notLike(kotlin.reflect.KProperty1, String)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.node.services.vault.CriteriaExpression$ColumnPredicateExpression notNull(reflect.Field)
@@ -2048,15 +2321,29 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   public static net.corda.core.node.services.vault.EqualityComparisonOperator valueOf(String)
   public static net.corda.core.node.services.vault.EqualityComparisonOperator[] values()
 ##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.services.vault.IQueryCriteriaParser
-  @org.jetbrains.annotations.NotNull public abstract Collection parse(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.Sort)
-  @org.jetbrains.annotations.NotNull public abstract Collection parseAnd(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
+public interface net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.BaseQueryCriteriaParser)
+##
+public static interface net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria and(net.corda.core.node.services.vault.GenericQueryCriteria)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria or(net.corda.core.node.services.vault.GenericQueryCriteria)
+##
+public static interface net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$AndVisitor extends net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.BaseQueryCriteriaParser)
+##
+public static interface net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$OrVisitor extends net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.BaseQueryCriteriaParser)
+##
+@net.corda.core.DoNotImplement public interface net.corda.core.node.services.vault.IQueryCriteriaParser extends net.corda.core.node.services.vault.BaseQueryCriteriaParser
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$CommonQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$FungibleAssetQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$LinearStateQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$VaultCustomQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$VaultQueryCriteria)
-  @org.jetbrains.annotations.NotNull public abstract Collection parseOr(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.node.services.vault.LikenessOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
   protected <init>(String, int)
@@ -2083,10 +2370,15 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   public final boolean isDefault()
   public String toString()
 ##
-@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.vault.QueryCriteria extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.QueryCriteria and(net.corda.core.node.services.vault.QueryCriteria)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.QueryCriteria or(net.corda.core.node.services.vault.QueryCriteria)
-  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
+@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.vault.QueryCriteria extends java.lang.Object implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria and(net.corda.core.node.services.vault.QueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria or(net.corda.core.node.services.vault.QueryCriteria)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.QueryCriteria$AndComposition extends net.corda.core.node.services.vault.QueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$AndVisitor
+  public <init>(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
 ##
 @net.corda.core.serialization.CordaSerializable public abstract static class net.corda.core.node.services.vault.QueryCriteria$CommonQueryCriteria extends net.corda.core.node.services.vault.QueryCriteria
   public <init>()
@@ -2145,6 +2437,12 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   @org.jetbrains.annotations.Nullable public final List getUuid()
   public int hashCode()
   public String toString()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.QueryCriteria$OrComposition extends net.corda.core.node.services.vault.QueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$OrVisitor
+  public <init>(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getB()
   @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.QueryCriteria$SoftLockingCondition extends java.lang.Object
@@ -2230,7 +2528,7 @@ public final class net.corda.core.node.services.vault.QueryCriteriaUtils extends
   public static final int DEFAULT_PAGE_SIZE = 200
   public static final int MAX_PAGE_SIZE = 2147483647
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.services.vault.Sort extends java.lang.Object
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.services.vault.Sort extends net.corda.core.node.services.vault.BaseSort
   public <init>(Collection)
   @org.jetbrains.annotations.NotNull public final Collection component1()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.Sort copy(Collection)
@@ -2340,66 +2638,6 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public final int getVersion()
   @org.jetbrains.annotations.NotNull public String toString()
 ##
-public final class net.corda.core.schemas.NodeInfoSchema extends java.lang.Object
-  public static final net.corda.core.schemas.NodeInfoSchema INSTANCE
-##
-public final class net.corda.core.schemas.NodeInfoSchemaV1 extends net.corda.core.schemas.MappedSchema
-  public static final net.corda.core.schemas.NodeInfoSchemaV1 INSTANCE
-##
-@javax.persistence.Entity public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort extends java.lang.Object
-  public <init>()
-  public <init>(net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort copy(net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort)
-  public boolean equals(Object)
-  public int hashCode()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort toHostAndPort()
-  public String toString()
-  public static final net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort$Companion Companion
-##
-public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort fromHostAndPort(net.corda.core.utilities.NetworkHostAndPort)
-##
-@javax.persistence.Entity @javax.persistence.Table public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBPartyAndCertificate extends java.lang.Object
-  public <init>()
-  public <init>(String, String, byte[], boolean, Set)
-  public <init>(net.corda.core.identity.PartyAndCertificate, boolean)
-  @org.jetbrains.annotations.NotNull public final String component1()
-  @org.jetbrains.annotations.NotNull public final String component2()
-  @org.jetbrains.annotations.NotNull public final byte[] component3()
-  public final boolean component4()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBPartyAndCertificate copy(String, String, byte[], boolean, Set)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final String getName()
-  @org.jetbrains.annotations.NotNull public final String getOwningKey()
-  @org.jetbrains.annotations.NotNull public final byte[] getPartyCertBinary()
-  public int hashCode()
-  public final boolean isMain()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.PartyAndCertificate toLegalIdentityAndCert()
-  public String toString()
-##
-@javax.persistence.Embeddable public static final class net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort extends java.lang.Object implements java.io.Serializable
-  public <init>()
-  public <init>(String, Integer)
-  @org.jetbrains.annotations.Nullable public final String component1()
-  @org.jetbrains.annotations.Nullable public final Integer component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort copy(String, Integer)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.Nullable public final String getHost()
-  @org.jetbrains.annotations.Nullable public final Integer getPort()
-  public int hashCode()
-  public String toString()
-##
-@javax.persistence.Entity @javax.persistence.Table public static final class net.corda.core.schemas.NodeInfoSchemaV1$PersistentNodeInfo extends java.lang.Object
-  public <init>()
-  public <init>(int, List, List, int, long)
-  @org.jetbrains.annotations.NotNull public final List getAddresses()
-  public final int getId()
-  @org.jetbrains.annotations.NotNull public final List getLegalIdentitiesAndCerts()
-  public final int getPlatformVersion()
-  public final long getSerial()
-  public final void setId(int)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NodeInfo toNodeInfo()
-##
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public class net.corda.core.schemas.PersistentState extends java.lang.Object implements net.corda.core.schemas.StatePersistable
   public <init>()
   public <init>(net.corda.core.schemas.PersistentStateRef)
@@ -2431,6 +2669,20 @@ public interface net.corda.core.serialization.ClassWhitelist
   public abstract boolean hasListed(Class)
 ##
 public @interface net.corda.core.serialization.CordaSerializable
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformEnumDefault
+  public abstract String new()
+  public abstract String old()
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformEnumDefaults
+  public abstract net.corda.core.serialization.CordaSerializationTransformEnumDefault[] value()
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformRename
+  public abstract String from()
+  public abstract String to()
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformRenames
+  public abstract net.corda.core.serialization.CordaSerializationTransformRename[] value()
 ##
 public @interface net.corda.core.serialization.DeprecatedConstructorForDeserialization
   public abstract int version()
@@ -2472,6 +2724,10 @@ public static final class net.corda.core.serialization.SerializationContext$UseC
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
   public static net.corda.core.serialization.SerializationContext$UseCase[] values()
 ##
+public interface net.corda.core.serialization.SerializationCustomSerializer
+  public abstract Object fromProxy(Object)
+  public abstract Object toProxy(Object)
+##
 public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
@@ -2479,12 +2735,6 @@ public final class net.corda.core.serialization.SerializationDefaults extends ja
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getRPC_SERVER_CONTEXT()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationFactory getSERIALIZATION_FACTORY()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getSTORAGE_CONTEXT()
-  public final void setCHECKPOINT_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public final void setP2P_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public final void setRPC_CLIENT_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public final void setRPC_SERVER_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public final void setSERIALIZATION_FACTORY(net.corda.core.serialization.SerializationFactory)
-  public final void setSTORAGE_CONTEXT(net.corda.core.serialization.SerializationContext)
   public static final net.corda.core.serialization.SerializationDefaults INSTANCE
 ##
 public abstract class net.corda.core.serialization.SerializationFactory extends java.lang.Object
@@ -2580,8 +2830,10 @@ public static final class net.corda.core.serialization.SingletonSerializationTok
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.FilteredTransaction extends net.corda.core.transactions.TraversableTransaction
+  public <init>(net.corda.core.crypto.SecureHash, List, List)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.transactions.FilteredTransaction buildFilteredTransaction(net.corda.core.transactions.WireTransaction, function.Predicate)
   public final void checkAllComponentsVisible(net.corda.core.contracts.ComponentGroupEnum)
+  public final void checkCommandVisibility(java.security.PublicKey)
   public final boolean checkWithFun(kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public final List getFilteredComponentGroups()
   @org.jetbrains.annotations.NotNull public final List getGroupHashes()
@@ -2641,6 +2893,7 @@ public static final class net.corda.core.transactions.FilteredTransaction$Compan
   @org.jetbrains.annotations.NotNull public final List inputsOfType(Class)
   public String toString()
   public final void verify()
+  public static final net.corda.core.transactions.LedgerTransaction$Companion Companion
 ##
 public static final class net.corda.core.transactions.LedgerTransaction$InOutGroup extends java.lang.Object
   public <init>(List, List, Object)
@@ -2681,6 +2934,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   public int hashCode()
   public String toString()
   public void verifyRequiredSignatures()
+  public void verifySignaturesExcept(Collection)
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.NotaryChangeWireTransaction extends net.corda.core.transactions.CoreTransaction
   public <init>(List, net.corda.core.identity.Party, net.corda.core.identity.Party)
@@ -2696,6 +2950,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @org.jetbrains.annotations.NotNull public List getOutputs()
   public int hashCode()
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolve(net.corda.core.node.ServiceHub, List)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolve(net.corda.core.node.StateLoader, List)
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.SignedTransaction extends java.lang.Object implements net.corda.core.transactions.TransactionWithSignatures
@@ -2721,13 +2976,17 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   public final boolean isNotaryChangeTransaction()
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction plus(Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction plus(net.corda.core.crypto.TransactionSignature)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.BaseTransaction resolveBaseTransaction(net.corda.core.node.StateLoader)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolveNotaryChangeTransaction(net.corda.core.node.ServiceHub)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolveNotaryChangeTransaction(net.corda.core.node.StateLoader)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionWithSignatures resolveTransactionWithSignatures(net.corda.core.node.ServiceHub)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub, boolean)
   @org.jetbrains.annotations.NotNull public String toString()
   public final void verify(net.corda.core.node.ServiceHub)
   public final void verify(net.corda.core.node.ServiceHub, boolean)
   public void verifyRequiredSignatures()
+  public void verifySignaturesExcept(Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction withAdditionalSignature(java.security.KeyPair, net.corda.core.crypto.SignatureMetadata)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction withAdditionalSignature(net.corda.core.crypto.TransactionSignature)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction withAdditionalSignatures(Iterable)
@@ -2791,6 +3050,7 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @org.jetbrains.annotations.NotNull public abstract Set getRequiredSigningKeys()
   @org.jetbrains.annotations.NotNull public abstract List getSigs()
   public abstract void verifyRequiredSignatures()
+  public abstract void verifySignaturesExcept(Collection)
 ##
 @net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.TraversableTransaction extends net.corda.core.transactions.CoreTransaction
   public <init>(List)
@@ -2868,6 +3128,21 @@ public final class net.corda.core.utilities.EncodingUtils extends java.lang.Obje
   @org.jetbrains.annotations.NotNull public static final String toBase64(byte[])
   @org.jetbrains.annotations.NotNull public static final String toHex(byte[])
   @org.jetbrains.annotations.NotNull public static final byte[] toSHA256Bytes(java.security.PublicKey)
+  public static final int MAX_HASH_HEX_SIZE = 130
+##
+public class net.corda.core.utilities.Id extends java.lang.Object
+  public <init>(Object, String, java.time.Instant)
+  public final boolean equals(Object)
+  @org.jetbrains.annotations.Nullable public final String getEntityType()
+  @org.jetbrains.annotations.NotNull public final java.time.Instant getTimestamp()
+  @org.jetbrains.annotations.NotNull public final Object getValue()
+  public final int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.utilities.Id newInstance(Object, String, java.time.Instant)
+  @org.jetbrains.annotations.NotNull public final String toString()
+  public static final net.corda.core.utilities.Id$Companion Companion
+##
+public static final class net.corda.core.utilities.Id$Companion extends java.lang.Object
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.Id newInstance(Object, String, java.time.Instant)
 ##
 public final class net.corda.core.utilities.KotlinUtilsKt extends java.lang.Object
   public static final void debug(org.slf4j.Logger, kotlin.jvm.functions.Function0)
@@ -3069,6 +3344,13 @@ public static interface net.corda.core.utilities.UntrustworthyData$Validator ext
 public final class net.corda.core.utilities.UntrustworthyDataKt extends java.lang.Object
   public static final Object unwrap(net.corda.core.utilities.UntrustworthyData, kotlin.jvm.functions.Function1)
 ##
+public final class net.corda.core.utilities.UuidGenerator extends java.lang.Object
+  public <init>()
+  public static final net.corda.core.utilities.UuidGenerator$Companion Companion
+##
+public static final class net.corda.core.utilities.UuidGenerator$Companion extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public final UUID next()
+##
 public interface net.corda.core.utilities.VariablePropertyDelegate extends net.corda.core.utilities.PropertyDelegate
   public abstract void setValue(Object, kotlin.reflect.KProperty, Object)
 ##
@@ -3244,6 +3526,7 @@ public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public <init>(net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration)
   @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCConnection start(String, String)
+  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCConnection start(String, String, net.corda.core.context.Trace, net.corda.core.context.Actor)
   public final Object use(String, String, kotlin.jvm.functions.Function1)
 ##
 public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.Object

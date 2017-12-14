@@ -4,17 +4,18 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
+import net.corda.core.node.services.NotaryService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.internal.demorun.*
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.testing.node.internal.demorun.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import java.nio.file.Paths
 
-fun main(args: Array<String>) = RaftNotaryCordform().runNodes()
+fun main(args: Array<String>) = RaftNotaryCordform().deployNodes()
 
 internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
 
@@ -22,18 +23,19 @@ private val notaryNames = createNotaryNames(3)
 
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
-class RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
+class RaftNotaryCordform : CordformDefinition() {
     private val clusterName = CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")
 
     init {
+        nodesDirectory = Paths.get("build", "nodes", "nodesRaft")
         node {
-            name(ALICE.name)
+            name(ALICE_NAME)
             p2pPort(10002)
             rpcPort(10003)
             rpcUsers(notaryDemoUser)
         }
         node {
-            name(BOB.name)
+            name(BOB_NAME)
             p2pPort(10005)
             rpcPort(10006)
         }
@@ -58,6 +60,9 @@ class RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.toString()) }, clusterName)
+        ServiceIdentityGenerator.generateToDisk(
+                notaryNames.map { context.baseDirectory(it.toString()) },
+                clusterName,
+                NotaryService.constructId(validating = true, raft = true))
     }
 }

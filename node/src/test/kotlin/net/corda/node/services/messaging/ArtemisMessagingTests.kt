@@ -1,30 +1,25 @@
 package net.corda.node.services.messaging
 
-import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.mock
-import net.corda.core.concurrent.CordaFuture
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
-import net.corda.node.services.RPCUserServiceImpl
-import net.corda.node.services.api.MonitoringService
+import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.node.services.config.CertChainPolicyConfig
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -33,56 +28,60 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.net.ServerSocket
+import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-//TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
-class ArtemisMessagingTests : TestDependencyInjectionBase() {
+class ArtemisMessagingTests {
+    companion object {
+        const val TOPIC = "platform.self"
+    }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    val serverPort = freePort()
-    val rpcPort = freePort()
-    val topic = "platform.self"
-    val identity = generateKeyPair()
+    private val serverPort = freePort()
+    private val rpcPort = freePort()
+    private val identity = generateKeyPair()
 
-    lateinit var config: NodeConfiguration
-    lateinit var database: CordaPersistence
-    lateinit var userService: RPCUserService
-    lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
+    private lateinit var config: NodeConfiguration
+    private lateinit var database: CordaPersistence
+    private lateinit var securityManager: RPCSecurityManager
+    private var messagingClient: P2PMessagingClient? = null
+    private var messagingServer: ArtemisMessagingServer? = null
 
-    var messagingClient: NodeMessagingClient? = null
-    var messagingServer: ArtemisMessagingServer? = null
-
-    lateinit var networkMapCache: NetworkMapCacheImpl
-
-    val rpcOps = object : RPCOps {
-        override val protocolVersion: Int get() = throw UnsupportedOperationException()
-    }
+    private lateinit var networkMapCache: NetworkMapCacheImpl
 
     @Before
     fun setUp() {
-        val baseDirectory = temporaryFolder.root.toPath()
-        userService = RPCUserServiceImpl(emptyList())
-        config = testNodeConfiguration(
-                baseDirectory = baseDirectory,
-                myLegalName = ALICE.name)
+        securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
+        abstract class AbstractNodeConfiguration : NodeConfiguration
+        config = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
+            doReturn(ALICE_NAME).whenever(it).myLegalName
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn("").whenever(it).exportJMXto
+            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+        }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
-        networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config), mock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())
     }
 
     @After
     fun cleanUp() {
         messagingClient?.stop()
         messagingServer?.stop()
-        messagingClient = null
-        messagingServer = null
         database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
@@ -125,10 +124,8 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
 
     @Test
     fun `client should be able to send message to itself`() {
-        val receivedMessages = LinkedBlockingQueue<Message>()
-
-        val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(topic, data = "first msg".toByteArray())
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -137,94 +134,45 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `client should be able to send message to itself before network map is available, and receive after`() {
-        val settableFuture = openFuture<Unit>()
-        networkMapRegistrationFuture = settableFuture
-
-        val receivedMessages = LinkedBlockingQueue<Message>()
-
-        val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(topic, data = "first msg".toByteArray())
+    fun `platform version is included in the message`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, data = "second msg".toByteArray())
-        messagingClient.send(networkMapMessage, messagingClient.myAddress)
-
-        val actual: Message = receivedMessages.take()
-        assertEquals("second msg", String(actual.data))
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
-        settableFuture.set(Unit)
-        val firstActual: Message = receivedMessages.take()
-        assertEquals("first msg", String(firstActual.data))
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
-    }
-
-    @Test
-    fun `client should be able to send large numbers of messages to itself before network map is available and survive restart, then receive messages`() {
-        // Crank the iteration up as high as you want... just takes longer to run.
-        val iterations = 100
-        networkMapRegistrationFuture = openFuture()
-
-        val receivedMessages = LinkedBlockingQueue<Message>()
-
-        val messagingClient = createAndStartClientAndServer(receivedMessages)
-        for (iter in 1..iterations) {
-            val message = messagingClient.createMessage(topic, data = "first msg $iter".toByteArray())
-            messagingClient.send(message, messagingClient.myAddress)
-        }
-
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, data = "second msg".toByteArray())
-        messagingClient.send(networkMapMessage, messagingClient.myAddress)
-
-        val actual: Message = receivedMessages.take()
-        assertEquals("second msg", String(actual.data))
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
-
-        // Stop client and server and create afresh.
-        messagingClient.stop()
-        messagingServer?.stop()
-
-        networkMapRegistrationFuture = doneFuture(Unit)
-
-        createAndStartClientAndServer(receivedMessages)
-        for (iter in 1..iterations) {
-            val firstActual: Message = receivedMessages.take()
-            assertThat(String(firstActual.data)).isEqualTo("first msg $iter")
-        }
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
+        val received = receivedMessages.take()
+        assertThat(received.platformVersion).isEqualTo(3)
     }
 
     private fun startNodeMessagingClient() {
-        messagingClient!!.start(rpcOps, userService)
+        messagingClient!!.start()
     }
 
-    private fun createAndStartClientAndServer(receivedMessages: LinkedBlockingQueue<Message>): NodeMessagingClient {
+    private fun createAndStartClientAndServer(platformVersion: Int = 1): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
+        val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
+
         createMessagingServer().start()
 
-        val messagingClient = createMessagingClient()
+        val messagingClient = createMessagingClient(platformVersion = platformVersion)
         startNodeMessagingClient()
-        messagingClient.addMessageHandler(topic) { message, _ ->
-            receivedMessages.add(message)
-        }
-        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, _ ->
+        messagingClient.addMessageHandler(TOPIC) { message, _ ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread { messagingClient.run(messagingServer!!.serverControl) }
-        return messagingClient
+        thread(isDaemon = true) { messagingClient.run() }
+
+        return Pair(messagingClient, receivedMessages)
     }
 
-    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort)): NodeMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1): P2PMessagingClient {
         return database.transaction {
-            NodeMessagingClient(
+            P2PMessagingClient(
                     config,
-                    MOCK_VERSION_INFO,
+                    MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                     server,
                     identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
-                    database,
-                    networkMapRegistrationFuture,
-                    MonitoringService(MetricRegistry())).apply {
+                    database
+            ).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }
@@ -232,7 +180,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
     }
 
     private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

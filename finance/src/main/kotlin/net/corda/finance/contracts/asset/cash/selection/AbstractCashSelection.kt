@@ -4,15 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.Cash
 import java.sql.*
@@ -44,7 +41,7 @@ abstract class AbstractCashSelection {
             }.invoke()
         }
 
-        val log = loggerFor<AbstractCashSelection>()
+        private val log = contextLogger()
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states
@@ -72,13 +69,14 @@ abstract class AbstractCashSelection {
      * with this notary are included.
      * @param onlyFromIssuerParties Optional issuer parties to match against.
      * @param withIssuerRefs Optional issuer references to match against.
-     * @return JDBC ResultSet with the matching states that were found. If sufficient funds were found these will be locked,
+     * @param withResultSet Function that contains the business logic. The JDBC ResultSet with the matching states that were found. If sufficient funds were found these will be locked,
      * otherwise what is available is returned unlocked for informational purposes.
+     * @return The result of the withResultSet function
      */
     abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
-                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>) : ResultSet
+                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
 
-    override abstract fun toString() : String
+    override abstract fun toString(): String
 
     /**
      * Query to gather Cash states that are available and retry if they are temporarily unavailable.
@@ -127,32 +125,40 @@ abstract class AbstractCashSelection {
             try {
                 // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
                 // the softLockReserve update will detect whether we try to lock states locked by others
-                val rs = executeQuery(connection, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs)
-                stateAndRefs.clear()
+                return executeQuery(connection, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs) { rs ->
+                    stateAndRefs.clear()
 
-                var totalPennies = 0L
-                while (rs.next()) {
-                    val txHash = SecureHash.parse(rs.getString(1))
-                    val index = rs.getInt(2)
-                    val stateRef = StateRef(txHash, index)
-                    val state = rs.getBlob(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
-                    val pennies = rs.getLong(4)
-                    totalPennies = rs.getLong(5)
-                    val rowLockId = rs.getString(6)
-                    stateAndRefs.add(StateAndRef(state, stateRef))
-                    log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
+                    var totalPennies = 0L
+                    val stateRefs = mutableSetOf<StateRef>()
+                    while (rs.next()) {
+                        val txHash = SecureHash.parse(rs.getString(1))
+                        val index = rs.getInt(2)
+                        val pennies = rs.getLong(3)
+                        totalPennies = rs.getLong(4)
+                        val rowLockId = rs.getString(5)
+                        stateRefs.add(StateRef(txHash, index))
+                        log.trace { "ROW: $rowLockId ($lockId): ${StateRef(txHash, index)} : $pennies ($totalPennies)" }
+                    }
+
+                    if (stateRefs.isNotEmpty()) {
+                        // TODO: future implementation to retrieve contract states from a Vault BLOB store
+                        stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
+                    }
+
+                    val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity
+                    if (success) {
+                        // we should have a minimum number of states to satisfy our selection `amount` criteria
+                        log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
+
+                        // With the current single threaded state machine available states are guaranteed to lock.
+                        // TODO However, we will have to revisit these methods in the future multi-threaded.
+                        services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
+                    } else {
+                        log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
+                    }
+                    success
                 }
 
-                if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
-                    // we should have a minimum number of states to satisfy our selection `amount` criteria
-                    log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
-
-                    // With the current single threaded state machine available states are guaranteed to lock.
-                    // TODO However, we will have to revisit these methods in the future multi-threaded.
-                    services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
-                    return true
-                }
-                log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
                 // retry as more states may become available
             } catch (e: SQLException) {
                 log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]

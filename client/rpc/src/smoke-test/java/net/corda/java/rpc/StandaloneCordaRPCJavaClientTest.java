@@ -9,7 +9,7 @@ import net.corda.core.messaging.FlowHandle;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
-import net.corda.nodeapi.User;
+import net.corda.nodeapi.internal.config.User;
 import net.corda.smoketesting.NodeConfig;
 import net.corda.smoketesting.NodeProcess;
 import org.junit.After;
@@ -48,8 +48,7 @@ public class StandaloneCordaRPCJavaClientTest {
             port.getAndIncrement(),
             port.getAndIncrement(),
             true,
-            Collections.singletonList(rpcUser),
-            null
+            Collections.singletonList(rpcUser)
     );
 
     @Before
@@ -74,7 +73,7 @@ public class StandaloneCordaRPCJavaClientTest {
     }
 
     private void copyFinanceCordapp() {
-        Path cordappsDir = (factory.baseDirectory(notaryConfig).resolve("cordapps"));
+        Path cordappsDir = (factory.baseDirectory(notaryConfig).resolve(NodeProcess.CORDAPPS_DIR_NAME));
         try {
             Files.createDirectories(cordappsDir);
         } catch (IOException ex) {

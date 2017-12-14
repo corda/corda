@@ -1,8 +1,7 @@
 package net.corda.docs
 
 import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.nodeapi.config.parseAs
+import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.verifier.Verifier
 import org.junit.Test
 import java.nio.file.Path
@@ -34,7 +33,7 @@ class ExampleConfigTest {
             ConfigHelper.loadConfig(
                     baseDirectory = baseDirectory,
                     configFile = it
-            ).parseAs<FullNodeConfiguration>()
+            ).parseAsNodeConfiguration()
         }
     }
 

@@ -1,24 +1,28 @@
 package net.corda.confidential
 
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
+import net.corda.core.identity.*
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
+import org.junit.Before
+import net.corda.testing.node.startFlow
 import org.junit.Test
 import kotlin.test.*
 
 class SwapIdentitiesFlowTests {
+    private lateinit var mockNet: MockNetwork
+
+    @Before
+    fun setup() {
+        // We run this in parallel threads to help catch any race conditions that may exist.
+        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
+    }
+
     @Test
     fun `issue key`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(threadPerNode = true)
-
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.services.myInfo.singleIdentity()
 
@@ -52,19 +56,16 @@ class SwapIdentitiesFlowTests {
      */
     @Test
     fun `verifies identity name`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(threadPerNode = true)
-
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
         val bob: Party = bobNode.services.myInfo.singleIdentity()
-        val notBob = notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
+        val notBob = charlieNode.database.transaction {
+            charlieNode.services.keyManagementService.freshKeyAndCert(charlieNode.services.myInfo.chooseIdentityAndCert(), false)
         }
         val sigData = SwapIdentitiesFlow.buildDataToSign(notBob)
-        val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
+        val signature = charlieNode.services.keyManagementService.sign(sigData, notBob.owningKey)
         assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
             SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBob, signature.withoutKey())
         }
@@ -77,35 +78,34 @@ class SwapIdentitiesFlowTests {
      */
     @Test
     fun `verifies signature`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(threadPerNode = true)
-
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
-        val bob: Party = bobNode.services.myInfo.singleIdentity()
+        val notaryNode = mockNet.defaultNotaryNode
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val alice: PartyAndCertificate = aliceNode.info.singleIdentityAndCert()
+        val bob: PartyAndCertificate = bobNode.info.singleIdentityAndCert()
+        val notary: PartyAndCertificate = mockNet.defaultNotaryIdentityAndCert
         // Check that the wrong signature is rejected
         notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
+            notaryNode.services.keyManagementService.freshKeyAndCert(notary, false)
         }.let { anonymousNotary ->
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotary)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotary, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousNotary, signature.withoutKey())
             }
         }
         // Check that the right signing key, but wrong identity is rejected
-        val anonymousAlice = aliceNode.database.transaction {
-            aliceNode.services.keyManagementService.freshKeyAndCert(aliceNode.services.myInfo.chooseIdentityAndCert(), false)
+        val anonymousAlice: PartyAndCertificate = aliceNode.database.transaction {
+            aliceNode.services.keyManagementService.freshKeyAndCert(alice, false)
         }
         bobNode.database.transaction {
-            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.chooseIdentityAndCert(), false)
+            bobNode.services.keyManagementService.freshKeyAndCert(bob, false)
         }.let { anonymousBob ->
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAlice)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBob, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousBob, signature.withoutKey())
             }
         }
 

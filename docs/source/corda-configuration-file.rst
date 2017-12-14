@@ -45,8 +45,7 @@ Simple Notary configuration file.
     }
     useHTTPS : false
     devMode : true
-    // Certificate signing service will be hosted by R3 in the near future.
-    //certificateSigningService : "https://testnet.certificate.corda.net"
+    compatibilityZoneURL : "https://cz.corda.net"
 
 Fields
 ------
@@ -69,6 +68,13 @@ path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
+:database: Database configuration:
+
+        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
+        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
@@ -84,6 +90,9 @@ path to the node's base directory.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
+:security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
+    :doc:`clientrpc` for details.
+
 :webAddress: The host and port on which the webserver will listen if it is started. This is not used by the node itself.
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
@@ -97,37 +106,28 @@ path to the node's base directory.
 :notary: Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT SMaRt
     cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
 
-        :validating: Boolean to determine whether the notary is a validating or non-validating one.
+    :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
-        :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
+    :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
 
-                :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
-                    separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
+        :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
+            separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
 
-                :clusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified
-                    members must be active and be able to communicate with the cluster leader for joining. If empty, a new
-                    cluster will be bootstrapped.
+        :clusterAddresses: Must list the addresses of all the members in the cluster. At least one of the members must
+            be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
+            new cluster will be bootstrapped.
 
-        :bftSMaRt: If part of a distributed BFT-SMaRt cluster specify this config object, with the following settings:
+    :bftSMaRt: If part of a distributed BFT-SMaRt cluster specify this config object, with the following settings:
 
-                :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
+        :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
 
-                :clusterAddresses: List of all BFT-SMaRt cluster member addresses.
+        :clusterAddresses: Must list the addresses of all the members in the cluster. At least one of the members must
+            be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
+            new cluster will be bootstrapped.
 
-        :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
+    :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
 
     Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
-
-:networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
-    a config object with the details of the network map service:
-
-        :address: Host and port string of the ArtemisMQ broker hosting the network map node
-        :legalName: Legal name of the node. This is required as part of the TLS host verification process. The node will
-            reject the connection to the network map service if it provides a TLS common name which doesn't match with this value.
-
-:minimumPlatformVersion: Used by the node if it's running the network map service to enforce a minimum version requirement
-    on registrations - any node on a Platform Version lower than this value will have their registration rejected.
-    Defaults to 1 if absent.
 
 :useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private
     key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled
@@ -136,21 +136,40 @@ path to the node's base directory.
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
 
-        :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
-        :password: The password
-        :permissions: A list of permission strings which RPC methods can use to control access
-
-    If this field is absent or an empty list then RPC is effectively locked down. Alternatively, if it contains the string
-    ``ALL`` then the user is permitted to use *any* RPC method. This value is intended for administrator users and for developers.
+    :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
+    :password: The password
+    :permissions: A list of permissions for starting flows via RPC. To give the user the permission to start the flow
+        ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
+        contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
+        users and for development.
 
 :devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
-    bugs in the checkpointing process.
+    bugs in the checkpointing process. Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
+    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
+    failing on node start if this schema is either not present or not compatible.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
     interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
 
-:certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
-    obtain SSL certificate. (See :doc:`permissioning` for more information.)
+:compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
+    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
+
+:jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
+    only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
+
+:systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
+    of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
+
+:jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
+    Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
+    for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``
+
+:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
+
+    :port: The port to start SSH server on
+
+:exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
+    Default Jolokia access url is http://127.0.0.1:7005/jolokia/

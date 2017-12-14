@@ -1,9 +1,7 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -13,7 +11,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.packageName
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.queryBy
@@ -28,20 +25,20 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.rigorousMock
+import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Test
-import java.math.BigInteger
-import java.security.KeyPair
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
-private class NodePair(private val mockNet: MockNetwork) {
+class NodePair(private val mockNet: MockNetwork) {
     private class ServerLogic(private val session: FlowSession, private val running: AtomicBoolean) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -69,28 +66,28 @@ private class NodePair(private val mockNet: MockNetwork) {
         private set
 
     fun <T> communicate(clientLogic: AbstractClientLogic<T>, rebootClient: Boolean): FlowStateMachine<T> {
-        server.internals.internalRegisterFlowFactory(AbstractClientLogic::class.java, InitiatedFlowFactory.Core { ServerLogic(it, serverRunning) }, ServerLogic::class.java, false)
+        server.internalRegisterFlowFactory(AbstractClientLogic::class.java, InitiatedFlowFactory.Core { ServerLogic(it, serverRunning) }, ServerLogic::class.java, false)
         client.services.startFlow(clientLogic)
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
             client.dispose()
-            client = mockNet.createNode(client.internals.id)
+            client = mockNet.createNode(MockNodeParameters(client.internals.id))
         }
         return uncheckedCast(client.smm.allStateMachines.single().stateMachine)
     }
 }
 
 class VaultSoftLockManagerTest {
-    private val mockVault: VaultServiceInternal = mock()
-    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-            return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
-                override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
-                    val realVault = super.makeVaultService(keyManagementService, stateLoader)
-                    return object : VaultServiceInternal by realVault {
-                        override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
-                            mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
-                        }
+    private val mockVault = rigorousMock<VaultServiceInternal>().also {
+        doNothing().whenever(it).softLockRelease(any(), anyOrNull())
+    }
+    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
+        object : MockNetwork.MockNode(args) {
+            override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
+                val realVault = super.makeVaultService(keyManagementService, stateLoader, hibernateConfig)
+                return object : VaultServiceInternal by realVault {
+                    override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
+                        mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
                     }
                 }
             }
@@ -102,8 +99,8 @@ class VaultSoftLockManagerTest {
         mockNet.stopNodes()
     }
 
-    private object CommandDataImpl : CommandData
-    private class ClientLogic(nodePair: NodePair, private val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
+    object CommandDataImpl : CommandData
+    class ClientLogic(nodePair: NodePair, val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
         override fun callImpl() = run {
             subFlow(FinalityFlow(serviceHub.signInitialTransaction(TransactionBuilder(notary = ourIdentity).apply {
                 addOutputState(state, ContractImpl::class.jvmName)
@@ -115,12 +112,15 @@ class VaultSoftLockManagerTest {
         }
     }
 
-    private abstract class SingleParticipantState(nodePair: NodePair) : ContractState {
-        override val participants = listOf(nodePair.client.info.chooseIdentity())
+    private abstract class ParticipantState(override val participants: List<AbstractParty>) : ContractState
+
+    private class PlainOldState(participants: List<AbstractParty>) : ParticipantState(participants) {
+        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.chooseIdentity()))
     }
 
-    private class PlainOldState(nodePair: NodePair) : SingleParticipantState(nodePair)
-    private class FungibleAssetImpl(nodePair: NodePair) : SingleParticipantState(nodePair), FungibleAsset<Unit> {
+    private class FungibleAssetImpl(participants: List<AbstractParty>) : ParticipantState(participants), FungibleAsset<Unit> {
+        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.chooseIdentity()))
+
         override val owner get() = participants[0]
         override fun withNewOwner(newOwner: AbstractParty) = throw UnsupportedOperationException()
         override val amount get() = Amount(1, Issued(PartyAndReference(owner, OpaqueBytes.of(1)), Unit))

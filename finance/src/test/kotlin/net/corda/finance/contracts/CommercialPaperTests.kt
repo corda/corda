@@ -1,7 +1,11 @@
 package net.corda.finance.contracts
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
@@ -12,11 +16,15 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.*
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
-import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
-import org.junit.Ignore
+import net.corda.testing.node.ledger
+import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.transaction
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -34,6 +42,11 @@ interface ICommercialPaperTestTemplate {
     fun getMoveCommand(): CommandData
     fun getContract(): ContractClassName
 }
+
+private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+private val MEGA_CORP get() = megaCorp.party
+private val MEGA_CORP_IDENTITY get() = megaCorp.identity
+private val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
 
 class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = JavaCommercialPaper.State(
@@ -83,17 +96,40 @@ class CommercialPaperTestsGeneric {
         @Parameterized.Parameters
         @JvmStatic
         fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
+
+        private val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        private val DUMMY_CASH_ISSUER_IDENTITY get() = dummyCashIssuer.identity
+        private val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
+        private val alice = TestIdentity(ALICE_NAME, 70)
+        private val BIG_CORP_KEY = generateKeyPair()
+        private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        private val ALICE get() = alice.party
+        private val ALICE_KEY get() = alice.keyPair
+        private val ALICE_PUBKEY get() = alice.publicKey
+        private val DUMMY_NOTARY get() = dummyNotary.party
+        private val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
+        private val MINI_CORP get() = miniCorp.party
+        private val MINI_CORP_IDENTITY get() = miniCorp.identity
+        private val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Parameterized.Parameter
     lateinit var thisTest: ICommercialPaperTestTemplate
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
+    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+        doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
+        doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
+    }, MEGA_CORP.name)
 
     @Test
     fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` issuer
-        ledger {
+        ledgerServices.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)
@@ -103,8 +139,8 @@ class CommercialPaperTestsGeneric {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
                 attachments(CP_PROGRAM_ID, JavaCommercialPaper.JCP_PROGRAM_ID)
-                output(thisTest.getContract(), "paper") { thisTest.getPaper() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+                output(thisTest.getContract(), "paper", thisTest.getPaper())
+                command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -115,10 +151,10 @@ class CommercialPaperTestsGeneric {
                 attachments(Cash.PROGRAM_ID, JavaCommercialPaper.JCP_PROGRAM_ID)
                 input("paper")
                 input("alice's $900")
-                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP }
-                output(thisTest.getContract(), "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
+                output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP)
+                output(thisTest.getContract(), "alice's paper", "paper".output<ICommercialPaperState>().withOwner(ALICE))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(MEGA_CORP_PUBKEY, thisTest.getMoveCommand())
                 this.verifies()
             }
 
@@ -130,13 +166,11 @@ class CommercialPaperTestsGeneric {
                 input("some profits")
 
                 fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output(Cash.PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE ownedBy ALICE }
-                    output(Cash.PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE ownedBy MEGA_CORP }
+                    output(Cash.PROGRAM_ID, "Alice's profit", aliceGetsBack.STATE ownedBy ALICE)
+                    output(Cash.PROGRAM_ID, "Change", (someProfits - aliceGetsBack).STATE ownedBy MEGA_CORP)
                 }
-
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                command(ALICE_PUBKEY) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
-
+                command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, thisTest.getRedeemCommand(DUMMY_NOTARY))
                 tweak {
                     outputs(700.DOLLARS `issued by` issuer)
                     timeWindow(TEST_TX_TIME + 8.days)
@@ -152,7 +186,7 @@ class CommercialPaperTestsGeneric {
                 timeWindow(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output(thisTest.getContract()) { "paper".output<ICommercialPaperState>() }
+                    output(thisTest.getContract(), "paper".output<ICommercialPaperState>())
                     this `fails with` "must be destroyed"
                 }
 
@@ -161,13 +195,17 @@ class CommercialPaperTestsGeneric {
         }
     }
 
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+        ledgerServices.transaction(DUMMY_NOTARY, script)
+    }
+
     @Test
     fun `key mismatch at issue`() {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
-            output(thisTest.getContract()) { thisTest.getPaper() }
-            command(MINI_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper())
+            command(MINI_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
         }
@@ -178,8 +216,8 @@ class CommercialPaperTestsGeneric {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
-            output(thisTest.getContract()) { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer))
+            command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
@@ -190,8 +228,8 @@ class CommercialPaperTestsGeneric {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
-            output(thisTest.getContract()) { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days))
+            command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
         }
@@ -203,8 +241,8 @@ class CommercialPaperTestsGeneric {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
             input(thisTest.getContract(), thisTest.getPaper())
-            output(thisTest.getContract()) { thisTest.getPaper() }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper())
+            command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
@@ -222,33 +260,35 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceServices: MockServices
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
-
-    private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
-    private val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
-
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
+    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, dummyCashIssuer.keyPair)
     private lateinit var moveTX: SignedTransaction
-
-    //    @Test
-    @Ignore
+    @Test
     fun `issue move and then redeem`() {
-        initialiseTestSerialization()
-        val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(ALICE_KEY))
+        val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(
+                listOf(ALICE_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                listOf("net.corda.finance.contracts"),
+                MEGA_CORP.name)
         val databaseAlice = aliceDatabaseAndServices.first
         aliceServices = aliceDatabaseAndServices.second
         aliceVaultService = aliceServices.vaultService
 
         databaseAlice.transaction {
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            alicesVault = VaultFiller(aliceServices, dummyNotary, rngFactory = ::Random).fillWithSomeTestCash(9000.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
-
-        val bigCorpDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BIG_CORP_KEY))
+        val bigCorpDatabaseAndServices = makeTestDatabaseAndMockServices(
+                listOf(BIG_CORP_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                listOf("net.corda.finance.contracts"),
+                MEGA_CORP.name)
         val databaseBigCorp = bigCorpDatabaseAndServices.first
         bigCorpServices = bigCorpDatabaseAndServices.second
         bigCorpVaultService = bigCorpServices.vaultService
 
         databaseBigCorp.transaction {
-            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            bigCorpVault = VaultFiller(bigCorpServices, dummyNotary, rngFactory = ::Random).fillWithSomeTestCash(13000.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 
@@ -311,6 +351,5 @@ class CommercialPaperTestsGeneric {
             validRedemption.toLedgerTransaction(aliceServices).verify()
             // soft lock not released after success either!!! (as transaction not recorded)
         }
-        resetTestSerialization()
     }
 }

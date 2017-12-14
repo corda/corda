@@ -2,6 +2,7 @@ package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -82,16 +83,16 @@ open class TransactionBuilder(
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services.cordappProvider)
 
-    internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+    internal fun toWireTransactionWithContext(cordappProvider: CordappProvider, serializationContext: SerializationContext? = null): WireTransaction {
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
         // allows for less boiler plate when constructing transactions since for the typical case the named contract
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
         // with an explicit [AttachmentConstraint]
         val resolvedOutputs = outputs.map { state ->
             if (state.constraint is AutomaticHashConstraint) {
-                services.cordappProvider.getContractAttachmentID(state.contract)?.let {
+                cordappProvider.getContractAttachmentID(state.contract)?.let {
                     state.copy(constraint = HashAttachmentConstraint(it))
                 } ?: throw MissingContractAttachments(listOf(state))
             } else {
@@ -106,8 +107,7 @@ open class TransactionBuilder(
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
-    internal fun toLedgerTransactionWithContext(services: ServiceHub, serializationContext: SerializationContext) = toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
-
+    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext) = toWireTransactionWithContext(services.cordappProvider, serializationContext).toLedgerTransaction(services)
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
         toLedgerTransaction(services).verify()

@@ -2,11 +2,13 @@ package net.corda.nodeapi.internal.serialization;
 
 import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
-import net.corda.core.serialization.SerializationDefaults;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.testing.TestDependencyInjectionBase;
+import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.nodeapi.internal.serialization.kryo.CordaClosureSerializer;
+import net.corda.nodeapi.internal.serialization.kryo.KryoSerializationSchemeKt;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.Serializable;
@@ -15,15 +17,16 @@ import java.util.concurrent.Callable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
-public final class LambdaCheckpointSerializationTest extends TestDependencyInjectionBase {
-
+public final class LambdaCheckpointSerializationTest {
+    @Rule
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private SerializationFactory factory;
     private SerializationContext context;
 
     @Before
     public void setup() {
-        factory = SerializationDefaults.INSTANCE.getSERIALIZATION_FACTORY();
-        context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
+        factory = testSerialization.getEnv().getSerializationFactory();
+        context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
     }
 
     @Test

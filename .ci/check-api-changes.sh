@@ -1,4 +1,5 @@
 #!/bin/bash
+set +o posix
 
 echo "Starting API Diff"
 
@@ -11,7 +12,7 @@ if [ ! -f $apiCurrent ]; then
 fi
 
 # Remove the two header lines from the diff output.
-diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt | tail --lines=+3`
+diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt | tail -n +3`
 echo "Diff contents:"
 echo "$diffContents"
 echo
@@ -36,7 +37,7 @@ function forUserImpl() {
     awk '/DoNotImplement/,/^##/{ next }{ print }' $1
 }
 
-userDiffContents=`diff -u <(forUserImpl $apiCurrent) <(forUserImpl $APIHOME/../build/api/api-corda-*.txt) | tail --lines=+3`
+userDiffContents=`diff -u <(forUserImpl $apiCurrent) <(forUserImpl $APIHOME/../build/api/api-corda-*.txt) | tail -n +3`
 
 newAbstracts=$(echo "$userDiffContents" | grep "^+" | grep "\(public\|protected\) abstract")
 abstractCount=`grep -v "^$" <<EOF | wc -l
@@ -51,6 +52,10 @@ if [ $abstractCount -gt 0 ]; then
 fi
 
 badChanges=$(($removalCount + $abstractCount))
+if [ $badChanges -gt 255 ]; then
+    echo "OVERFLOW! Number of bad API changes: $badChanges"
+    badChanges=255
+fi
 
 echo "Exiting with exit code" $badChanges
 exit $badChanges

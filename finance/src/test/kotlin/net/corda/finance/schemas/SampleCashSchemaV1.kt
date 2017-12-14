@@ -1,7 +1,10 @@
 package net.corda.finance.schemas
 
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import org.hibernate.annotations.Type
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Index
@@ -22,8 +25,8 @@ object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),
                     Index(name = "pennies_idx", columnList = "pennies")))
     class PersistentCashState(
-            @Column(name = "owner_key")
-            var owner: String,
+            @Column(name = "owner_key_hash", length = MAX_HASH_HEX_SIZE)
+            var ownerHash: String,
 
             @Column(name = "pennies")
             var pennies: Long,
@@ -31,10 +34,11 @@ object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             @Column(name = "ccy_code", length = 3)
             var currency: String,
 
-            @Column(name = "issuer_key")
-            var issuerParty: String,
+            @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE)
+            var issuerPartyHash: String,
 
-            @Column(name = "issuer_ref")
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState()
 }

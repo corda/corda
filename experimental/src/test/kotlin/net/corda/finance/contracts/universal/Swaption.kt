@@ -2,14 +2,17 @@ package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 
 class Swaption {
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val notional = 50.M
@@ -57,16 +60,14 @@ class Swaption {
     @Test
     fun issue() {
         transaction {
-            output(UNIVERSAL_PROGRAM_ID) { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID, stateInitial)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Issue())
             this.verifies()
         }
     }

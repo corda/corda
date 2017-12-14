@@ -8,6 +8,9 @@ import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 import javax.persistence.*
@@ -22,7 +25,7 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
             var txId: String = "",
 
             @Lob
-            @Column
+            @Column(name = "transaction_value")
             var transaction: ByteArray = ByteArray(0)
     )
 

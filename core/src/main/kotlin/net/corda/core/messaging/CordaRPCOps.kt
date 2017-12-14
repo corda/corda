@@ -1,6 +1,10 @@
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -10,13 +14,11 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
@@ -25,13 +27,41 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
+private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
+
 @CordaSerializable
-data class StateMachineInfo(
+data class StateMachineInfo @JvmOverloads constructor(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val initiator: FlowInitiator,
-        val progressTrackerStepAndUpdates: DataFeed<String, String>?
+        val progressTrackerStepAndUpdates: DataFeed<String, String>?,
+        val context: InvocationContext? = null
 ) {
+    fun context(): InvocationContext = context ?: contextFrom(initiator)
+
+    private fun contextFrom(initiator: FlowInitiator): InvocationContext {
+        var actor: Actor? = null
+        val origin: Origin
+        when (initiator) {
+            is FlowInitiator.RPC -> {
+                actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
+                origin = Origin.RPC(actor)
+            }
+            is FlowInitiator.Peer -> origin = Origin.Peer(initiator.party.name)
+            is FlowInitiator.Service -> origin = Origin.Service(initiator.serviceClassName, unknownName)
+            is FlowInitiator.Shell -> origin = Origin.Shell
+            is FlowInitiator.Scheduled -> origin = Origin.Scheduled(initiator.scheduledState)
+        }
+        return InvocationContext.newInstance(origin = origin, actor = actor)
+    }
+
+    fun copy(id: StateMachineRunId = this.id,
+             flowLogicClassName: String = this.flowLogicClassName,
+             initiator: FlowInitiator = this.initiator,
+             progressTrackerStepAndUpdates: DataFeed<String, String>? = this.progressTrackerStepAndUpdates): StateMachineInfo {
+        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, context = context)
+    }
+
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
 
@@ -100,21 +130,13 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultQueryAPIHelpers
-    fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
-        return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
-        return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-        return vaultQueryBy(criteria, paging, Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-        return vaultQueryBy(criteria, PageSpecification(), sorting, contractStateType)
-    }
+    fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T>
     // DOCEND VaultQueryAPIHelpers
 
     /**
@@ -141,21 +163,13 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultTrackAPIHelpers
-    fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
-    fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
-    fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, paging, Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
-    fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
-    }
+    fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>>
     // DOCEND VaultTrackAPIHelpers
 
     /**
@@ -233,6 +247,12 @@ interface CordaRPCOps : RPCOps {
 
     /** Uploads a jar to the node, returns it's hash. */
     fun uploadAttachment(jar: InputStream): SecureHash
+
+    /** Uploads a jar including metadata to the node, returns it's hash. */
+    fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash
+
+    /** Queries attachments metadata */
+    fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>
 
     /** Returns the node's current time. */
     fun currentNodeTime(): Instant

@@ -1,9 +1,10 @@
 package net.corda.nodeapi.internal
 
-import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.ServiceHub
@@ -17,15 +18,11 @@ import net.corda.nodeapi.DummyContractBackdoor
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.attachmentsClassLoaderEnabledPropertyName
 import net.corda.nodeapi.internal.serialization.withTokenContext
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.kryoSpecific
-import net.corda.testing.node.MockAttachmentStorage
-import net.corda.testing.node.MockServices
+import net.corda.testing.*
+import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.*
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -35,14 +32,15 @@ import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertFailsWith
 
-class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
+class AttachmentsClassLoaderTests {
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated.jar")
         private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
-
+        private val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        private val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
         private fun SerializationContext.withAttachmentStorage(attachmentStorage: AttachmentStorage): SerializationContext {
-            val serviceHub = mock<ServiceHub>()
-            whenever(serviceHub.attachments).thenReturn(attachmentStorage)
+            val serviceHub = rigorousMock<ServiceHub>()
+            doReturn(attachmentStorage).whenever(serviceHub).attachments
             return this.withServiceHub(serviceHub)
         }
 
@@ -51,14 +49,16 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
         }
     }
 
-    private lateinit var serviceHub: DummyServiceHub
-
-    class DummyServiceHub : MockServices() {
-        override val cordappProvider: CordappProviderImpl
-                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
-        private val cordapp get() = cordappProvider.cordapps.first()
-        val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
-        val appContext get() = cordappProvider.getAppContext(cordapp)
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+    private val attachments = MockAttachmentStorage()
+    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
+    private val cordapp get() = cordappProvider.cordapps.first()
+    private val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
+    private val appContext get() = cordappProvider.getAppContext(cordapp)
+    private val serviceHub = rigorousMock<ServiceHub>().also {
+        doReturn(attachments).whenever(it).attachments
     }
 
     // These ClassLoaders work together to load 'AnotherDummyContract' in a disposable way, such that even though
@@ -76,12 +76,6 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
     }
 
     class ClassLoaderForTests : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
-
-    @Before
-    fun `create service hub`() {
-        serviceHub = DummyServiceHub()
-    }
-
     @Test
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {
         ClassLoaderForTests().use { child ->
@@ -111,8 +105,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test MockAttachmentStorage open as jar`() {
-        val storage = serviceHub.attachments
-        val key = serviceHub.attachmentId
+        val storage = attachments
+        val key = attachmentId
         val attachment = storage.openAttachment(key)!!
 
         val jar = attachment.openAsJAR()
@@ -122,9 +116,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test overlapping file exception`() {
-        val storage = serviceHub.attachments
-
-        val att0 = serviceHub.attachmentId
+        val storage = attachments
+        val att0 = attachmentId
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some other data")))
 
@@ -135,9 +128,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `basic`() {
-        val storage = serviceHub.attachments
-
-        val att0 = serviceHub.attachmentId
+        val storage = attachments
+        val att0 = attachmentId
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
@@ -168,9 +160,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `loading class AnotherDummyContract`() {
-        val storage = serviceHub.attachments
-
-        val att0 = serviceHub.attachmentId
+        val storage = attachments
+        val att0 = attachmentId
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
@@ -193,10 +184,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
         val contract = createContract2Cash()
 
         val bytes = contract.serialize()
-
-        val storage = serviceHub.attachments
-
-        val att0 = serviceHub.attachmentId
+        val storage = attachments
+        val att0 = attachmentId
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
@@ -221,10 +210,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
         val context2 = SerializationFactory.defaultFactory.defaultContext.withWhitelisted(data.contract.javaClass)
 
         val bytes = data.serialize(context = context2)
-
-        val storage = serviceHub.attachments
-
-        val att0 = serviceHub.attachmentId
+        val storage = attachments
+        val att0 = attachmentId
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
@@ -275,7 +262,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test serialization of WireTransaction with dynamically loaded contract`() {
-        val child = serviceHub.appContext.classLoader
+        val child = appContext.classLoader
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
@@ -287,7 +274,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
                 .withClassLoader(child)
 
         val bytes = run {
-            val wireTransaction = tx.toWireTransaction(serviceHub, context)
+            val wireTransaction = tx.toWireTransaction(cordappProvider, context)
             wireTransaction.serialize(context = context)
         }
         val copiedWireTransaction = bytes.deserialize(context = context)
@@ -306,13 +293,12 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
                 val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
                 val contract = contractClass.newInstance() as DummyContractBackdoor
                 val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
-
-                val attachmentRef = serviceHub.attachmentId
+                val attachmentRef = attachmentId
                 val bytes = run {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
                             .withServiceHub(serviceHub)
                             .withClassLoader(child)
-                    val wireTransaction = tx.toWireTransaction(serviceHub, outboundContext)
+                    val wireTransaction = tx.toWireTransaction(cordappProvider, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
                 }
                 // use empty attachmentStorage
@@ -339,7 +325,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
             val contract = contractClass.newInstance() as DummyContractBackdoor
             val outboundContext = SerializationFactory.defaultFactory.defaultContext.withClassLoader(child)
-            val attachmentRef = serviceHub.attachmentId
+            val attachmentRef = attachmentId
             // We currently ignore annotations in attachments, so manually whitelist.
             val inboundContext = SerializationFactory
                     .defaultFactory

@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.context.InvocationContext
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
@@ -15,7 +16,7 @@ import java.time.Instant
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 interface FlowStateMachine<R> {
     @Suspendable
-    fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>): FlowInfo
+    fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): FlowInfo
 
     @Suspendable
     fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession
@@ -25,16 +26,17 @@ interface FlowStateMachine<R> {
                                  otherParty: Party,
                                  payload: Any,
                                  sessionFlow: FlowLogic<*>,
-                                 retrySend: Boolean = false): UntrustworthyData<T>
+                                 retrySend: Boolean,
+                                 maySkipCheckpoint: Boolean): UntrustworthyData<T>
 
     @Suspendable
-    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): UntrustworthyData<T>
 
     @Suspendable
-    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
+    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean)
 
     @Suspendable
-    fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
+    fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): SignedTransaction
 
     @Suspendable
     fun sleepUntil(until: Instant)
@@ -54,7 +56,7 @@ interface FlowStateMachine<R> {
     val logger: Logger
     val id: StateMachineRunId
     val resultFuture: CordaFuture<R>
-    val flowInitiator: FlowInitiator
+    val context: InvocationContext
     val ourIdentityAndCert: PartyAndCertificate
 
     @Suspendable

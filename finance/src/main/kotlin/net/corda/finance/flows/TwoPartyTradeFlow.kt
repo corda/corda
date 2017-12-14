@@ -87,9 +87,11 @@ object TwoPartyTradeFlow {
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
 
+            // DOCSTART 07
             // Sync identities to ensure we know all of the identities involved in the transaction we're about to
             // be asked to sign
             subFlow(IdentitySyncFlow.Receive(otherSideSession))
+            // DOCEND 07
 
             // DOCSTART 5
             val signTransactionFlow = object : SignTransactionFlow(otherSideSession, VERIFYING_AND_SIGNING.childProgressTracker()) {

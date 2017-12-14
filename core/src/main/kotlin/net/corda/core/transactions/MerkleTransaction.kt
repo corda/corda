@@ -108,7 +108,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
  * @param groupHashes the roots of the transaction component groups.
  */
 @CordaSerializable
-class FilteredTransaction private constructor(
+class FilteredTransaction internal constructor(
         override val id: SecureHash,
         val filteredComponentGroups: List<FilteredComponentGroup>,
         val groupHashes: List<SecureHash>

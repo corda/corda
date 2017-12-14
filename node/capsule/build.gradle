@@ -10,6 +10,12 @@ description 'Corda standalone node'
 
 configurations {
     runtimeArtifacts.extendsFrom runtime
+    capsuleRuntime
+}
+
+dependencies {
+    // TypeSafe Config: for simple and human friendly config files.
+    capsuleRuntime "com.typesafe:config:$typesafe_config_version"
 }
 
 // Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
@@ -28,14 +34,15 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
             project(':node').jar,
             project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
             project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
-            "$rootDir/config/dev/log4j2.xml"
+            "$rootDir/config/dev/log4j2.xml",
+            "$rootDir/node/build/resources/main/reference.conf"
     )
     from 'NOTICE' // Copy CDDL notice
-
+    from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
     capsuleManifest {
         applicationVersion = corda_release_version
-        appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
+        appClassPath = ["jolokia-war-${project.rootProject.ext.jolokia_version}.war"]
         // See experimental/quasar-hook/README.md for how to generate.
         def quasarExcludeExpression = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
@@ -47,6 +54,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // JVM configuration:
         // - Constrain to small heap sizes to ease development on low end devices.
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        // NOTE: these can be overridden in node.conf.
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']

@@ -9,10 +9,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.unwrap
+import net.corda.core.utilities.*
 import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
@@ -25,8 +22,9 @@ object CustomVaultQuery {
     @CordaService
     class Service(val services: AppServiceHub) : SingletonSerializeAsToken() {
         private companion object {
-            val log = loggerFor<Service>()
+            private val log = contextLogger()
         }
+
         fun rebalanceCurrencyReserves(): List<Amount<Currency>> {
             val nativeQuery = """
                 select
@@ -47,16 +45,18 @@ object CustomVaultQuery {
             """
             log.info("SQL to execute: $nativeQuery")
             val session = services.jdbcSession()
-            val prepStatement = session.prepareStatement(nativeQuery)
-            val rs = prepStatement.executeQuery()
-            val topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
-            while (rs.next()) {
-                val currencyStr = rs.getString(1)
-                val amount = rs.getLong(2)
-                log.info("$currencyStr : $amount")
-                topUpLimits.add(Amount(amount, Currency.getInstance(currencyStr)))
+            return session.prepareStatement(nativeQuery).use { prepStatement ->
+                prepStatement.executeQuery().use { rs ->
+                    val topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
+                    while (rs.next()) {
+                        val currencyStr = rs.getString(1)
+                        val amount = rs.getLong(2)
+                        log.info("$currencyStr : $amount")
+                        topUpLimits.add(Amount(amount, Currency.getInstance(currencyStr)))
+                    }
+                    topUpLimits
+                }
             }
-            return topUpLimits
         }
     }
 }
@@ -72,6 +72,7 @@ object TopupIssuerFlow {
     data class TopupRequest(val issueToParty: Party,
                             val issuerPartyRef: OpaqueBytes,
                             val notaryParty: Party)
+
     @InitiatingFlow
     @StartableByRPC
     class TopupIssuanceRequester(val issueToParty: Party,

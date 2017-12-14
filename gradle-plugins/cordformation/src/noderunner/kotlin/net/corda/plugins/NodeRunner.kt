@@ -22,6 +22,11 @@ private object debugPortAlloc {
     internal fun next() = basePort++
 }
 
+private object monitoringPortAlloc {
+    private var basePort = 7005
+    internal fun next() = basePort++
+}
+
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
     val headless = GraphicsEnvironment.isHeadless() || args.contains(HEADLESS_FLAG)
@@ -49,8 +54,9 @@ private abstract class JarType(private val jarName: String) {
             return null
         }
         val debugPort = debugPortAlloc.next()
+        val monitoringPort = monitoringPortAlloc.next()
         println("Starting $jarName in $dir on debug port $debugPort")
-        val process = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, javaArgs, jvmArgs).start()
+        val process = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, monitoringPort, javaArgs, jvmArgs).start()
         if (os == OS.MACOS) Thread.sleep(1000)
         return process
     }
@@ -69,15 +75,23 @@ private abstract class JavaCommand(
         jarName: String,
         internal val dir: File,
         debugPort: Int?,
+        monitoringPort: Int?,
         internal val nodeName: String,
         init: MutableList<String>.() -> Unit, args: List<String>,
         jvmArgs: List<String>
 ) {
+    private val jolokiaJar by lazy {
+        File("$dir/drivers").listFiles { _, filename ->
+            filename.matches("jolokia-jvm-.*-agent\\.jar$".toRegex())
+        }.first().name
+    }
+
     internal val command: List<String> = mutableListOf<String>().apply {
         add(getJavaPath())
         addAll(jvmArgs)
         add("-Dname=$nodeName")
         null != debugPort && add("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
+        null != monitoringPort && add("-Dcapsule.jvm.args=-javaagent:drivers/$jolokiaJar=port=$monitoringPort")
         add("-jar")
         add(jarName)
         init()
@@ -89,14 +103,14 @@ private abstract class JavaCommand(
     internal abstract fun getJavaPath(): String
 }
 
-private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>, jvmArgs: List<String>)
-    : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args, jvmArgs) {
+private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
+    : JavaCommand(jarName, dir, debugPort, monitoringPort, dir.name, { add("--no-local-shell") }, args, jvmArgs) {
     override fun processBuilder() = ProcessBuilder(command).redirectError(File("error.$nodeName.log")).inheritIO()
     override fun getJavaPath() = File(File(System.getProperty("java.home"), "bin"), "java").path
 }
 
-private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>, jvmArgs: List<String>)
-    : JavaCommand(jarName, dir, debugPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
+private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
+    : JavaCommand(jarName, dir, debugPort, monitoringPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
     override fun processBuilder() = ProcessBuilder(when (os) {
         OS.MACOS -> {
             listOf("osascript", "-e", """tell app "Terminal"
@@ -104,11 +118,11 @@ private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: I
     delay 0.5
     tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
     delay 0.5
-    do script "bash -c 'cd $dir; ${command.joinToString(" ")} && exit'" in selected tab of the front window
+    do script "bash -c 'cd \"$dir\" ; \"${command.joinToString("""\" \"""")}\" && exit'" in selected tab of the front window
 end tell""")
         }
         OS.WINDOWS -> {
-            listOf("cmd", "/C", "start ${command.joinToString(" ")}")
+            listOf("cmd", "/C", "start ${command.joinToString(" ") { windowsSpaceEscape(it) }}")
         }
         OS.LINUX -> {
             // Start shell to keep window open unless java terminated normally or due to SIGTERM:
@@ -122,12 +136,11 @@ end tell""")
     })
 
     private fun unixCommand() = command.map(::quotedFormOf).joinToString(" ")
-    override fun getJavaPath(): String {
-        val path = File(File(System.getProperty("java.home"), "bin"), "java").path
-        // Replace below is to fix an issue with spaces in paths on Windows.
-        // Quoting the entire path does not work, only the space or directory within the path.
-        return if (os == OS.WINDOWS) path.replace(" ", "\" \"") else path
-    }
+    override fun getJavaPath(): String = File(File(System.getProperty("java.home"), "bin"), "java").path
+
+    // Replace below is to fix an issue with spaces in paths on Windows.
+    // Quoting the entire path does not work, only the space or directory within the path.
+    private fun windowsSpaceEscape(s:String) = s.replace(" ", "\" \"")
 }
 
 private fun quotedFormOf(text: String) = "'${text.replace("'", "'\\''")}'" // Suitable for UNIX shells.

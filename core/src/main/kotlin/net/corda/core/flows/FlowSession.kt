@@ -54,8 +54,20 @@ abstract class FlowSession {
      * Returns a [FlowInfo] object describing the flow [counterparty] is using. With [FlowInfo.flowVersion] it
      * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
      *
-     * This method can be called before any send or receive has been done with [counterparty]. In such a case this will force
-     * them to start their flow.
+     * This method can be called before any send or receive has been done with [counterparty]. In such a case this will
+     * force them to start their flow.
+     *
+     * @param maySkipCheckpoint setting it to true indicates to the platform that it may optimise away the checkpoint.
+     */
+    @Suspendable
+    abstract fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo
+
+    /**
+     * Returns a [FlowInfo] object describing the flow [counterparty] is using. With [FlowInfo.flowVersion] it
+     * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
+     *
+     * This method can be called before any send or receive has been done with [counterparty]. In such a case this will
+     * force them to start their flow.
      */
     @Suspendable
     abstract fun getCounterpartyFlowInfo(): FlowInfo
@@ -80,8 +92,26 @@ abstract class FlowSession {
 
     /**
      * Serializes and queues the given [payload] object for sending to the [counterparty]. Suspends until a response
-     * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the data
-     * should not be trusted until it's been thoroughly verified for consistency and that all expectations are
+     * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the
+     * data should not be trusted until it's been thoroughly verified for consistency and that all expectations are
+     * satisfied, as a malicious peer may send you subtly corrupted data in order to exploit your code.
+     *
+     * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
+     * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
+     *
+     * @param maySkipCheckpoint setting it to true indicates to the platform that it may optimise away the checkpoint.
+     * @return an [UntrustworthyData] wrapper around the received object.
+     */
+    @Suspendable
+    abstract fun <R : Any> sendAndReceive(
+            receiveType: Class<R>,
+            payload: Any, maySkipCheckpoint: Boolean
+    ): UntrustworthyData<R>
+
+    /**
+     * Serializes and queues the given [payload] object for sending to the [counterparty]. Suspends until a response
+     * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the
+     * data should not be trusted until it's been thoroughly verified for consistency and that all expectations are
      * satisfied, as a malicious peer may send you subtly corrupted data in order to exploit your code.
      *
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
@@ -111,10 +141,35 @@ abstract class FlowSession {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      *
+     * @param maySkipCheckpoint setting it to true indicates to the platform that it may optimise away the checkpoint.
+     * @return an [UntrustworthyData] wrapper around the received object.
+     */
+    @Suspendable
+    abstract fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R>
+
+    /**
+     * Suspends until [counterparty] sends us a message of type [receiveType].
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
      * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
     abstract fun <R : Any> receive(receiveType: Class<R>): UntrustworthyData<R>
+
+    /**
+     * Queues the given [payload] for sending to the [counterparty] and continues without suspending.
+     *
+     * Note that the other party may receive the message at some arbitrary later point or not at all: if [counterparty]
+     * is offline then message delivery will be retried until it comes back or until the message is older than the
+     * network's event horizon time.
+     *
+     * @param maySkipCheckpoint setting it to true indicates to the platform that it may optimise away the checkpoint.
+     */
+    @Suspendable
+    abstract fun send(payload: Any, maySkipCheckpoint: Boolean)
 
     /**
      * Queues the given [payload] for sending to the [counterparty] and continues without suspending.

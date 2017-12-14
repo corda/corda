@@ -2,12 +2,14 @@ package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
@@ -16,20 +18,17 @@ import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.chooseIdentity
-import net.corda.testing.configureTestSSL
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.testing.*
+import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.messaging.SimpleMQClient
-import net.corda.testing.node.NodeBasedTest
+import net.corda.testing.node.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -52,7 +51,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Before
     fun start() {
-        alice = startNode(ALICE.name, rpcUsers = extraRPCUsers + rpcUser).getOrThrow()
+        alice = startNode(ALICE_NAME, rpcUsers = extraRPCUsers + rpcUser)
         attacker = createAttacker()
         startAttacker(attacker)
     }
@@ -87,7 +86,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `create queue for peer which has not been communicated with`() {
-        val bob = startNode(BOB.name).getOrThrow()
+        val bob = startNode(BOB_NAME)
         assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
     }
 
@@ -95,16 +94,6 @@ abstract class MQSecurityTest : NodeBasedTest() {
     fun `create queue for unknown peer`() {
         val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toBase58String()}"
         assertAllQueueCreationAttacksFail(invalidPeerQueue)
-    }
-
-    @Test
-    fun `consume message from network map queue`() {
-        assertConsumeAttackFails(NETWORK_MAP_QUEUE)
-    }
-
-    @Test
-    fun `send message to network map address`() {
-        assertSendAttackFails(NETWORK_MAP_QUEUE)
     }
 
     @Test
@@ -147,14 +136,20 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: NetworkHostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
+    fun clientTo(target: NetworkHostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))): SimpleMQClient {
         val client = SimpleMQClient(target, sslConfiguration)
         clients += client
         return client
     }
 
-    fun loginToRPC(target: NetworkHostAndPort, rpcUser: User): CordaRPCOps {
-        return CordaRPCClient(target).start(rpcUser.username, rpcUser.password).proxy
+    private val rpcConnections = mutableListOf<CordaRPCConnection>()
+    private fun loginToRPC(target: NetworkHostAndPort, rpcUser: User): CordaRPCOps {
+        return CordaRPCClient(target).start(rpcUser.username, rpcUser.password).also { rpcConnections.add(it) }.proxy
+    }
+
+    @After
+    fun closeRPCConnections() {
+        rpcConnections.forEach { it.forceClose() }
     }
 
     fun loginToRPCAndGetClientQueue(): String {
@@ -219,8 +214,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     private fun startBobAndCommunicateWithAlice(): Party {
-        val bob = startNode(BOB.name).getOrThrow()
-        bob.internals.registerInitiatedFlow(ReceiveFlow::class.java)
+        val bob = startNode(BOB_NAME)
+        bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()

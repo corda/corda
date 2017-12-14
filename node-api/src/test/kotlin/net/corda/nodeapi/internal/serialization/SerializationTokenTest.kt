@@ -3,24 +3,30 @@ package net.corda.nodeapi.internal.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
+import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.testing.rigorousMock
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 
-class SerializationTokenTest : TestDependencyInjectionBase() {
-
+class SerializationTokenTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
-        factory = SerializationDefaults.SERIALIZATION_FACTORY
-        context = SerializationDefaults.CHECKPOINT_CONTEXT.withWhitelisted(SingletonSerializationToken::class.java)
+        factory = testSerialization.env.serializationFactory
+        context = testSerialization.env.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
@@ -35,8 +41,7 @@ class SerializationTokenTest : TestDependencyInjectionBase() {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
-    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, mock())
-
+    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()

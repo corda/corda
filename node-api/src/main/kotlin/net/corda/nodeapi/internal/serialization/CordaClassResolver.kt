@@ -10,8 +10,9 @@ import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.serialization.amqp.hasAnnotationInHierarchy
+import net.corda.nodeapi.internal.serialization.kryo.ThrowableSerializer
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
@@ -26,10 +27,8 @@ import java.util.*
 class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
-    /*
-     * These classes are assignment-compatible Java equivalents of Kotlin classes.
-     * The point is that we do not want to send Kotlin types "over the wire" via RPC.
-     */
+    // These classes are assignment-compatible Java equivalents of Kotlin classes.
+    // The point is that we do not want to send Kotlin types "over the wire" via RPC.
     private val javaAliases: Map<Class<*>, Class<*>> = mapOf(
             listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
             setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
@@ -175,7 +174,8 @@ class GlobalTransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableC
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since it implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.serialization.SerializationWhitelist],
+ * since it implements [MutableClassWhitelist].
  */
 class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 
@@ -186,7 +186,7 @@ class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWh
 @Suppress("unused")
 class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {
     companion object {
-        val log = loggerFor<LoggingWhitelist>()
+        private val log = contextLogger()
         val globallySeen: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
         val journalWriter: PrintWriter? = openOptionalDynamicWhitelistJournal()
 

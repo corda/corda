@@ -1,9 +1,10 @@
 package net.corda.node.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -13,7 +14,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.cordapp.DummyRPCFlow
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -25,18 +25,18 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 @StartableByService
-class DummyServiceFlow : FlowLogic<FlowInitiator>() {
+class DummyServiceFlow : FlowLogic<InvocationContext>() {
     companion object {
         object TEST_STEP : ProgressTracker.Step("Custom progress step")
     }
     override val progressTracker: ProgressTracker = ProgressTracker(TEST_STEP)
 
     @Suspendable
-    override fun call(): FlowInitiator {
+    override fun call(): InvocationContext {
         // We call a subFlow, otehrwise there is no chance to subscribe to the ProgressTracker
         subFlow(CashIssueFlow(100.DOLLARS, OpaqueBytes.of(1), serviceHub.networkMapCache.notaryIdentities.first()))
         progressTracker.currentStep = TEST_STEP
-        return stateMachine.flowInitiator
+        return stateMachine.context
     }
 }
 
@@ -44,9 +44,8 @@ class DummyServiceFlow : FlowLogic<FlowInitiator>() {
 class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsToken() {
     fun startServiceFlow() {
         val handle = appServiceHub.startFlow(DummyServiceFlow())
-        val initiator = handle.returnValue.get()
-        initiator as FlowInitiator.Service
-        assertEquals(this.javaClass.name, initiator.serviceClassName)
+        val context = handle.returnValue.get()
+        assertEquals(this.javaClass.name, (context.origin as Origin.Service).serviceClassName)
     }
 
     fun startServiceFlowAndTrack() {
@@ -75,14 +74,12 @@ class TestCordaService2(val appServiceHub: AppServiceHub): SingletonSerializeAsT
 class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: ServiceHub) : SingletonSerializeAsToken()
 
 class CordaServiceTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
-    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: MockNetwork
+    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
 
     @Before
     fun start() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.node.internal","net.corda.finance"))
-        notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name, validating = true)
         nodeA = mockNet.createNode()
         mockNet.startNodes()
     }

@@ -1,0 +1,119 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'maven-publish'
+apply plugin: 'application'
+
+mainClassName = 'net.corda.irs.IRSDemo'
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+    demoArtifacts.extendsFrom integrationTestRuntime
+}
+
+dependencies {
+    // The irs demo CorDapp depends upon Cash CorDapp features
+    cordapp project(':finance')
+
+    // Corda integration dependencies
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+
+    // Cordapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
+    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+
+    cordaCompile project(':node-driver')
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+
+    ext.rpcUsers = [
+            ['username' : "user",
+             'password' : "password",
+             'permissions' : [
+                     "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
+                     "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
+                     "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
+                     "InvokeRpc.vaultQueryBy",
+                     "InvokeRpc.networkMapSnapshot",
+                     "InvokeRpc.currentNodeTime",
+                     "InvokeRpc.wellKnownPartyFromX500Name"
+             ]]
+    ]
+
+    directory "./build/nodes"
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating : true]
+        p2pPort 10002
+        rpcPort 10003
+        cordapps = ["${project.group}:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+        useTestClock true
+    }
+    node {
+        name "O=Bank A,L=London,C=GB"
+        p2pPort 10005
+        rpcPort 10006
+        cordapps = ["${project.group}:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+        useTestClock true
+    }
+    node {
+        name "O=Bank B,L=New York,C=US"
+        p2pPort 10008
+        rpcPort 10009
+        cordapps = ["${project.group}:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+        useTestClock true
+    }
+}
+
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+// This fixes the "line too long" error when running this demo with windows CLI
+// TODO: Automatically apply to all projects via a plugin
+tasks.withType(CreateStartScripts).each { task ->
+    task.doLast {
+        String text = task.windowsScript.text
+        // Replaces the per file classpath (which are all jars in "lib") with a wildcard on lib
+        text = text.replaceFirst(/(set CLASSPATH=%APP_HOME%\\lib\\).*/, { "${it[1]}*" })
+        task.windowsScript.write text
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true // defaults to false
+        downloadSources = true
+    }
+}
+
+jar {
+    from sourceSets.test.output
+}
+
+artifacts {
+    demoArtifacts jar
+}

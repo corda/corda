@@ -8,6 +8,7 @@ import net.corda.core.crypto.TransactionSignature;
 import net.corda.core.flows.*;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
+import net.corda.core.identity.PartyAndCertificate;
 import net.corda.core.internal.FetchDataFlow;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
@@ -32,7 +33,7 @@ import java.util.List;
 import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.testing.TestConstants.getALICE_KEY;
+import static net.corda.core.crypto.Crypto.generateKeyPair;
 
 @SuppressWarnings("unused")
 public class FlowCookbookJava {
@@ -106,9 +107,7 @@ public class FlowCookbookJava {
         @Override
         public Void call() throws FlowException {
             // We'll be using a dummy public key for demonstration purposes.
-            // These are built in to Corda, and are generally used for writing
-            // tests.
-            PublicKey dummyPubKey = getALICE_KEY().getPublic();
+            PublicKey dummyPubKey = generateKeyPair().getPublic();
 
             /*---------------------------
              * IDENTIFYING OTHER NODES *
@@ -401,8 +400,8 @@ public class FlowCookbookJava {
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
-            PublicKey otherKey = getServiceHub().getKeyManagementService().freshKey();
-            SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(txBuilder, otherKey);
+            PartyAndCertificate otherIdentity = getServiceHub().getKeyManagementService().freshKeyAndCert(getOurIdentityAndCert(), false);
+            SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(txBuilder, otherIdentity.getOwningKey());
             // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
@@ -412,9 +411,9 @@ public class FlowCookbookJava {
             SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx);
             // DOCEND 38
             // Or, if we wanted to use a different public key:
-            PublicKey otherKey2 = getServiceHub().getKeyManagementService().freshKey();
+            PartyAndCertificate otherIdentity2 = getServiceHub().getKeyManagementService().freshKeyAndCert(getOurIdentityAndCert(), false);
             // DOCSTART 39
-            SignedTransaction twiceSignedTx2 = getServiceHub().addSignature(onceSignedTx, otherKey2);
+            SignedTransaction twiceSignedTx2 = getServiceHub().addSignature(onceSignedTx, otherIdentity2.getOwningKey());
             // DOCEND 39
 
             // We can also generate a signature over the transaction without
@@ -428,7 +427,7 @@ public class FlowCookbookJava {
             // DOCEND 40
             // And again, if we wanted to use a different public key:
             // DOCSTART 41
-            TransactionSignature sig2 = getServiceHub().createSignature(onceSignedTx, otherKey2);
+            TransactionSignature sig2 = getServiceHub().createSignature(onceSignedTx, otherIdentity2.getOwningKey());
             // DOCEND 41
 
             /*----------------------------

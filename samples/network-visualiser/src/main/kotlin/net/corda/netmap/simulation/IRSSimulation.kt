@@ -21,16 +21,15 @@ import net.corda.finance.flows.TwoPartyDealFlow.Instigator
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.node.startFlow
 import rx.Observable
 import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.allOf
-
 
 /**
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
@@ -45,7 +44,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.internals + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }, trustRoot = DEV_TRUST_ROOT))
+        om = JacksonSupport.createInMemoryMapper(makeTestIdentityService((banks + regulators + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }))
         registerFinanceJSONMappers(om)
 
         return startIRSDealBetween(0, 1).thenCompose {
@@ -130,18 +129,14 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
 
-        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/trade.json")
+        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResourceAsStream("net/corda/irs/web/simulation/trade.json")
                 .reader()
                 .readText()
-                .replace("oracleXXX", RatesOracleFactory.RATES_SERVICE_NAME.toString()))
+                .replace("oracleXXX", RatesOracleNode.RATES_SERVICE_NAME.toString()))
         irs.fixedLeg.fixedRatePayer = node1.info.chooseIdentity()
         irs.floatingLeg.floatingRatePayer = node2.info.chooseIdentity()
-
-        node1.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
-        node2.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
-
-        val notaryId = node1.rpcOps.notaryIdentities().first()
-
+        node1.registerInitiatedFlow(FixingFlow.Fixer::class.java)
+        node2.registerInitiatedFlow(FixingFlow.Fixer::class.java)
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
@@ -154,9 +149,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         @InitiatedBy(StartDealFlow::class)
         class AcceptDealFlow(otherSession: FlowSession) : Acceptor(otherSession)
-
-        val acceptDealFlows: Observable<AcceptDealFlow> = node2.internals.registerInitiatedFlow(AcceptDealFlow::class.java)
-
+        val acceptDealFlows: Observable<AcceptDealFlow> = node2.registerInitiatedFlow(AcceptDealFlow::class.java)
         val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose {
             uncheckedCast<FlowStateMachine<*>, FlowStateMachine<SignedTransaction>>(it.stateMachine).resultFuture.toCompletableFuture()
         }
@@ -166,7 +159,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.chooseIdentity(),
-                AutoOffer(notaryId, irs)) // TODO Pass notary as parameter to Simulation.
+                AutoOffer(mockNet.defaultNotaryIdentity, irs)) // TODO Pass notary as parameter to Simulation.
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }

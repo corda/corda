@@ -3,8 +3,8 @@ package net.corda.node.services.persistence
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import net.corda.node.utilities.currentDBSession
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -23,7 +23,7 @@ class DBCheckpointStorage : CheckpointStorage {
             var checkpointId: String = "",
 
             @Lob
-            @Column(name = "checkpoint")
+            @Column(name = "checkpoint_value")
             var checkpoint: ByteArray = ByteArray(0)
     )
 

@@ -8,9 +8,9 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
-import net.corda.node.utilities.*
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.kryoSpecific
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -20,7 +20,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CompositeKeyTests : TestDependencyInjectionBase() {
+class CompositeKeyTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
@@ -334,7 +337,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
         val ca = X509Utilities.createSelfSignedCACertificate(caName, caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca, caKeyPair, caName.copy(commonName = "CompositeKey"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, ca, caKeyPair, caName.copy(commonName = "CompositeKey"), compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"

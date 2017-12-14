@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -22,7 +23,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
 import javax.persistence.Entity
 import javax.persistence.Table
@@ -39,7 +40,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                                     cluster: BFTSMaRt.Cluster) : NotaryService() {
     companion object {
         val id = constructId(validating = false, bft = true)
-        private val log = loggerFor<BFTNonValidatingNotaryService>()
+        private val log = contextLogger()
     }
 
     private val client: BFTSMaRt.Client
@@ -58,7 +59,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-            BFTSMaRt.Client(it, replicaId, cluster)
+            BFTSMaRt.Client(it, replicaId, cluster, this)
         }
     }
 
@@ -93,7 +94,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
     class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
         : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
 
@@ -110,7 +111,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                                     inputIndex = it.consumingIndex,
                                     requestingParty = Party(
                                             name = CordaX500Name.parse(it.party.name),
-                                            owningKey = parsePublicKeyBase58(it.party.owningKey))))
+                                            owningKey = Crypto.decodePublicKey(it.party.owningKey))))
                 },
                 toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
                     PersistedCommittedState(
@@ -118,7 +119,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                             consumingTxHash = id.toString(),
                             consumingIndex = inputIndex,
                             party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
-                                    requestingParty.owningKey.toBase58String())
+                                    requestingParty.owningKey.encoded)
                     )
                 },
                 persistentEntityClass = PersistedCommittedState::class.java

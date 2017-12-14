@@ -7,6 +7,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.primitives.Primitives
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
@@ -22,10 +23,11 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransaction
-import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
@@ -40,9 +42,8 @@ class FlowPermissionException(message: String) : FlowException(message)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
-                              override val flowInitiator: FlowInitiator,
-        // Store the Party rather than the full cert path with PartyAndCertificate
-                              val ourIdentity: Party) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              val ourIdentity: Party,
+                              override val context: InvocationContext) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
 
     companion object {
         // Used to work around a small limitation in Quasar.
@@ -163,7 +164,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>): FlowInfo {
+    override fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): FlowInfo {
         val state = getConfirmedSession(otherParty, sessionFlow).state as FlowSessionState.Initiated
         return state.context
     }
@@ -173,7 +174,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                                           otherParty: Party,
                                           payload: Any,
                                           sessionFlow: FlowLogic<*>,
-                                          retrySend: Boolean): UntrustworthyData<T> {
+                                          retrySend: Boolean,
+                                          maySkipCheckpoint: Boolean): UntrustworthyData<T> {
         requireNonPrimitive(receiveType)
         logger.debug { "sendAndReceive(${receiveType.name}, $otherParty, ${payload.toString().abbreviate(300)}) ..." }
         val session = getConfirmedSessionIfPresent(otherParty, sessionFlow)
@@ -192,7 +194,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <T : Any> receive(receiveType: Class<T>,
                                    otherParty: Party,
-                                   sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
+                                   sessionFlow: FlowLogic<*>,
+                                   maySkipCheckpoint: Boolean): UntrustworthyData<T> {
         requireNonPrimitive(receiveType)
         logger.debug { "receive(${receiveType.name}, $otherParty) ..." }
         val session = getConfirmedSession(otherParty, sessionFlow)
@@ -208,7 +211,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>) {
+    override fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean) {
         logger.debug { "send($otherParty, ${payload.toString().abbreviate(300)})" }
         val session = getConfirmedSessionIfPresent(otherParty, sessionFlow)
         if (session == null) {
@@ -220,7 +223,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
+    override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): SignedTransaction {
         logger.debug { "waitForLedgerCommit($hash) ..." }
         suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>))
         val stx = serviceHub.validatedTransactions.getTransaction(hash)
@@ -252,7 +255,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
-                flowInitiator,
+                context,
                 "Flow Permission Required: $permissionName",
                 extraAuditData,
                 logic.javaClass,
@@ -262,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
         @Suppress("ConstantConditionIf")
         if (!permissionGranted) {
-            throw FlowPermissionException("User $flowInitiator not permissioned for $permissionName on flow $id")
+            throw FlowPermissionException("User ${context.principal()} not permissioned for $permissionName on flow $id")
         }
     }
 
@@ -270,7 +273,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
                 serviceHub.clock.instant(),
-                flowInitiator,
+                context,
                 comment,
                 extraAuditData,
                 logic.javaClass,
@@ -303,6 +306,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
         return result
     }
+
+    internal fun pushToLoggingContext() = context.pushToLoggingContext()
 
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
@@ -390,6 +395,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
         val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
+        logger.info("Initiating flow session with party ${otherParty.name}. Session id for tracing purposes is ${session.ourSessionId}.")
         val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {

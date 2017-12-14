@@ -6,6 +6,45 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
+* **Enum Class Evolution**
+  With the addition of AMQP serialization Corda now supports enum constant evolution.
+
+  That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
+  annotations applied, have older and newer instances of that enumeration be understood.
+
+* **AMQP Enabled**
+
+AMQP Serialization is now enabled for both peer to peer communication and writing states to the vault. This change
+brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
+users.
+
+* **Custom Serializers**
+
+To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
+to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
+serializers to operate on those types.
+
+A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
+
+Release 2.0
+----------
+Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
+a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
+This was absent from version 1 but based on user feedback its re-introduction removes the need for complicated "isRelevant()" checks.
+
+In addition the fix for a small bug present in the coin selection code of V1.0 is integrated from master.
+
+* **Version Bump**
+
+Due to the introduction of new APIs, Corda 2.0 has a platform version of 2. This will be advertised in the network map structures
+and via the versioning APIs.
+
+* **Observer Nodes**
+
+Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
+that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
+can be used for reporting.
+
 Release 1.0
 -----------
 Corda 1.0 is finally here!
@@ -29,8 +68,8 @@ unless an incompatible change is required for security reasons:
    Utilities and serialisers for working with JSON representations of basic types.
 
 Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity
-we have introduced a new test node driver module to encapsulate all test functionality in support of building standalone node integration 
-tests using our DSL driver. 
+we have introduced a new test node driver module to encapsulate all test functionality in support of building standalone node integration
+tests using our DSL driver.
 
 Please read :doc:`corda-api` for complete details.
 

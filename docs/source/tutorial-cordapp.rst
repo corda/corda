@@ -176,7 +176,7 @@ There are two ways to run the example CorDapp:
 * Via IntelliJ
 
 In both cases, we will deploy a set of test nodes with our CorDapp installed, then run the nodes. You can read more
-about how we define the nodes to be deployed :doc:`here <deploying-a-node>`.
+about how we define the nodes to be deployed :doc:`here <generating-a-node>`.
 
 Terminal
 ~~~~~~~~
@@ -283,7 +283,7 @@ IntelliJ
       fun main(args: Array<String>) {
           // No permissions required as we are not invoking flows.
           val user = User("user1", "test", permissions = setOf())
-          driver(isDebug = true) {
+          driver(isDebug = true, waitForNodesToFinish = true) {
               startNode(getX500Name(O="Controller",L="London",C='GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
               val (nodeA, nodeB, nodeC) = Futures.allAsList(
                       startNode(getX500Name(O="PartyA",L="London",C="GB"), rpcUsers = listOf(user)),
@@ -293,8 +293,6 @@ IntelliJ
               startWebserver(nodeA)
               startWebserver(nodeB)
               startWebserver(nodeC)
-
-              waitForAllNodesToFinish()
           }
       }
 
@@ -505,7 +503,7 @@ Debugging is done via IntelliJ as follows:
     fun main(args: Array<String>) {
         // No permissions required as we are not invoking flows.
         val user = User("user1", "test", permissions = setOf())
-        driver(isDebug = true) {
+        driver(isDebug = true, waitForNodesToFinish = true) {
             startNode(getX500Name(O="Controller",L="London",C="GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
             val (nodeA, nodeB, nodeC) = Futures.allAsList(
                     startNode(getX500Name(O="PartyA",L=London,C=GB"), rpcUsers = listOf(user)),
@@ -515,8 +513,6 @@ Debugging is done via IntelliJ as follows:
             startWebserver(nodeA)
             startWebserver(nodeB)
             startWebserver(nodeC)
-
-            waitForAllNodesToFinish()
         }
     }
 

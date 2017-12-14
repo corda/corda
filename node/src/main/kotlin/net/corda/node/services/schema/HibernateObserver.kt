@@ -7,10 +7,11 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
-import net.corda.node.services.persistence.HibernateConfiguration
-import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.node.services.api.SchemaService
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import org.hibernate.FlushMode
 import rx.Observable
 
@@ -18,12 +19,11 @@ import rx.Observable
  * A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.
  */
 // TODO: Manage version evolution of the schemas via additional tooling.
-class HibernateObserver private constructor(private val config: HibernateConfiguration) {
+class HibernateObserver private constructor(private val config: HibernateConfiguration, private val schemaService: SchemaService) {
     companion object {
-        private val log = loggerFor<HibernateObserver>()
-        @JvmStatic
-        fun install(vaultUpdates: Observable<Vault.Update<ContractState>>, config: HibernateConfiguration): HibernateObserver {
-            val observer = HibernateObserver(config)
+        private val log = contextLogger()
+        fun install(vaultUpdates: Observable<Vault.Update<ContractState>>, config: HibernateConfiguration, schemaService: SchemaService): HibernateObserver {
+            val observer = HibernateObserver(config, schemaService)
             vaultUpdates.subscribe { observer.persist(it.produced) }
             return observer
         }
@@ -36,7 +36,7 @@ class HibernateObserver private constructor(private val config: HibernateConfigu
     private fun persistState(stateAndRef: StateAndRef<ContractState>) {
         val state = stateAndRef.state.data
         log.debug { "Asked to persist state ${stateAndRef.ref}" }
-        config.schemaService.selectSchemas(state).forEach { persistStateWithSchema(state, stateAndRef.ref, it) }
+        schemaService.selectSchemas(state).forEach { persistStateWithSchema(state, stateAndRef.ref, it) }
     }
 
     @VisibleForTesting
@@ -47,7 +47,7 @@ class HibernateObserver private constructor(private val config: HibernateConfigu
                 flushMode(FlushMode.MANUAL).
                 openSession()
         session.use {
-            val mappedObject = config.schemaService.generateMappedObject(state, schema)
+            val mappedObject = schemaService.generateMappedObject(state, schema)
             mappedObject.stateRef = PersistentStateRef(stateRef)
             it.persist(mappedObject)
             it.flush()

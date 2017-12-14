@@ -20,8 +20,8 @@ object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey
         output.writeObject(obj.encoded, data, clazz)
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): PrivateKey {
-        val bits = input.readObject(obj, schema, ByteArray::class.java) as ByteArray
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): PrivateKey {
+        val bits = input.readObject(obj, schemas, ByteArray::class.java) as ByteArray
         return Crypto.decodePrivateKey(bits)
     }
 }

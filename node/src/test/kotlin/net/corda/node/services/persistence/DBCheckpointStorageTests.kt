@@ -5,16 +5,17 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.LogHelper
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
@@ -26,14 +27,18 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
     return checkpoints
 }
 
-class DBCheckpointStorageTests : TestDependencyInjectionBase() {
-    lateinit var checkpointStorage: DBCheckpointStorage
-    lateinit var database: CordaPersistence
+class DBCheckpointStorageTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
+    private lateinit var checkpointStorage: DBCheckpointStorage
+    private lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         newCheckpointStorage()
     }
 

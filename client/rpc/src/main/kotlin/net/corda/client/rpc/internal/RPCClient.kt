@@ -2,20 +2,20 @@ package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
+import net.corda.core.context.Actor
+import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
+import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.*
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -93,13 +93,15 @@ class RPCClient<I : RPCOps>(
     ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
 
     companion object {
-        private val log = loggerFor<RPCClient<*>>()
+        private val log = contextLogger()
     }
 
     fun start(
             rpcOpsClass: Class<I>,
             username: String,
-            password: String
+            password: String,
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null
     ): RPCConnection<I> {
         return log.logElapsedTime("Startup") {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
@@ -110,9 +112,10 @@ class RPCClient<I : RPCOps>(
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
                 reconnectAttempts = rpcConfiguration.maxReconnectAttempts
                 minLargeMessageSize = rpcConfiguration.maxFileSize
+                isUseGlobalPools = nodeSerializationEnv != null
             }
-
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext)
+            val sessionId = Trace.SessionId.newInstance()
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor)
             try {
                 proxyHandler.start()
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))

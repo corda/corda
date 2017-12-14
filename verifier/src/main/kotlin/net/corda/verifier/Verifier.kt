@@ -5,21 +5,22 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.*
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
-import net.corda.nodeapi.config.NodeSSLConfiguration
-import net.corda.nodeapi.config.getValue
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -35,8 +36,7 @@ data class VerifierConfiguration(
 
 class Verifier {
     companion object {
-        private val log = loggerFor<Verifier>()
-
+        private val log = contextLogger()
         fun loadConfiguration(baseDirectory: Path, configPath: Path): VerifierConfiguration {
             val defaultConfig = ConfigFactory.parseResources("verifier-reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
             val customConfig = ConfigFactory.parseFile(configPath.toFile(), ConfigParseOptions.defaults().setAllowMissing(false))
@@ -49,6 +49,7 @@ class Verifier {
             require(args.isNotEmpty()) { "Usage: <binary> BASE_DIR_CONTAINING_VERIFIER_CONF" }
             val baseDirectory = Paths.get(args[0])
             val verifierConfig = loadConfiguration(baseDirectory, baseDirectory / "verifier.conf")
+            initialiseSerialization()
             val locator = ActiveMQClient.createServerLocatorWithHA(
                     tcpTransport(ConnectionDirection.Outbound(), verifierConfig.nodeHostAndPort, verifierConfig)
             )
@@ -61,7 +62,6 @@ class Verifier {
                 session.close()
                 sessionFactory.close()
             }
-            initialiseSerialization()
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {
@@ -86,15 +86,12 @@ class Verifier {
         }
 
         private fun initialiseSerialization() {
-            SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme)
-                registerScheme(AMQPVerifierSerializationScheme)
-            }
-            /**
-             * Even though default context is set to Kryo P2P, the encoding will be adjusted depending on the incoming
-             * request received, see use of [context] in [main] method.
-             */
-            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+            nodeSerializationEnv = SerializationEnvironmentImpl(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(KryoVerifierSerializationScheme)
+                        registerScheme(AMQPVerifierSerializationScheme)
+                    },
+                    AMQP_P2P_CONTEXT)
         }
     }
 
@@ -107,7 +104,7 @@ class Verifier {
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }
 
-    private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme() {
+    private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return (byteSequence == AmqpHeaderV1_0 && (target == SerializationContext.UseCase.P2P))
         }

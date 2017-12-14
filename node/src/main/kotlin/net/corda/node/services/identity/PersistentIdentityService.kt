@@ -6,15 +6,16 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.bouncycastle.cert.X509CertificateHolder
-import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -25,26 +26,21 @@ import javax.persistence.Id
 import javax.persistence.Lob
 
 @ThreadSafe
-class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = emptySet(),
-                                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                                override val trustRoot: X509Certificate,
-                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
-    constructor(wellKnownIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
+class PersistentIdentityService(override val trustRoot: X509Certificate,
+                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+    constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {
-        private val log = loggerFor<PersistentIdentityService>()
-        private val certFactory: CertificateFactory = CertificateFactory.getInstance("X.509")
+        private val log = contextLogger()
 
         fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
-                        Pair(SecureHash.parse(it.publicKeyHash),
-                                PartyAndCertificate(ByteArrayInputStream(it.identity).use {
-                                    certFactory.generateCertPath(it)
-                                }))
+                        Pair(
+                                SecureHash.parse(it.publicKeyHash),
+                                PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(it.identity.inputStream()))
+                        )
                     },
                     toPersistentEntity = { key: SecureHash, value: PartyAndCertificate ->
                         PersistentIdentity(key.toString(), value.certPath.encoded)
@@ -72,11 +68,11 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
     class PersistentIdentity(
             @Id
-            @Column(name = "pk_hash", length = 64)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String = "",
 
             @Lob
-            @Column
+            @Column(name = "identity_value")
             var identity: ByteArray = ByteArray(0)
     )
 
@@ -87,7 +83,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             @Column(name = "name", length = 128)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = 64)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String = ""
     )
 
@@ -100,6 +96,10 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
+    }
+
+    /** Requires a database transaction. */
+    fun loadIdentities(identities: Iterable<PartyAndCertificate> = emptySet(), confidentialIdentities: Iterable<PartyAndCertificate> = emptySet()) {
         identities.forEach {
             val key = mapToKey(it)
             keyToParties.addWithDuplicatesAllowed(key, it, false)
@@ -110,19 +110,31 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         }
     }
 
-    // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-            log.error(e.localizedMessage)
-            log.error("Path = ")
+            log.warn(e.localizedMessage)
+            log.warn("Path = ")
             identity.certPath.certificates.reversed().forEach {
-                log.error(it.toX509CertHolder().subject.toString())
+                log.warn(it.toX509CertHolder().subject.toString())
             }
             throw e
+        }
+
+        // Ensure we record the first identity of the same name, first
+        val identityPrincipal = identity.name.x500Principal
+        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
+            val principal = (it as? X509Certificate)?.subjectX500Principal
+            principal == identityPrincipal
+        }
+        if (firstCertWithThisName != identity.certificate) {
+            val certificates = identity.certPath.certificates
+            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
+            verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 
         log.debug { "Registering identity $identity" }
@@ -148,15 +160,13 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // Expand the anonymous party to a full party (i.e. has a name) if possible
-        val candidate = party as? Party ?: partyFromKey(party.owningKey)
+        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
+        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
+        // into a party, and from there figure out the well known party.
+        val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        // Look up the well known identity for that name
         return if (candidate != null) {
-            // If we have a well known identity by that name, use it in preference to the candidate. Otherwise default
-            // back to the candidate.
-            val res = wellKnownPartyFromX500Name(candidate.name) ?: candidate
-            res
+            wellKnownPartyFromX500Name(candidate.name)
         } else {
             null
         }

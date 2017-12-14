@@ -13,7 +13,7 @@ interface CordaFuture<V> : Future<V> {
      * If the completion thread is problematic for you e.g. deadlock, you can submit to an executor manually.
      * If callback fails, its throwable is logged.
      */
-    fun <W> then(callback: (CordaFuture<V>) -> W): Unit
+    fun <W> then(callback: (CordaFuture<V>) -> W)
 
     /**
      * @return a new [CompletableFuture] with the same outcome as this Future.

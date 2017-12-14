@@ -8,13 +8,17 @@ import rx.Observable
 
 /**
  * [FlowHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
- *
- * @property id The started state machine's ID.
- * @property returnValue A [CordaFuture] of the flow's return value.
  */
 @DoNotImplement
 interface FlowHandle<A> : AutoCloseable {
+    /**
+     * The started state machine's ID.
+     */
     val id: StateMachineRunId
+
+    /**
+     * A [CordaFuture] of the flow's return value.
+     */
     val returnValue: CordaFuture<A>
 
     /**
@@ -25,11 +29,22 @@ interface FlowHandle<A> : AutoCloseable {
 
 /**
  * [FlowProgressHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
- *
- * @property progress The stream of progress tracker events.
  */
 interface FlowProgressHandle<A> : FlowHandle<A> {
+    /**
+     * The stream of progress tracker events.
+     */
     val progress: Observable<String>
+
+    /**
+     * [DataFeed] of current step in the steps tree, see [ProgressTracker]
+     */
+    val stepsTreeIndexFeed: DataFeed<Int, Int>?
+
+    /**
+     * [DataFeed] of current steps tree, see [ProgressTracker]
+     */
+    val stepsTreeFeed: DataFeed<List<Pair<Int, String>>, List<Pair<Int, String>>>?
 
     /**
      * Use this function for flows whose returnValue and progress are not going to be used or tracked, so as to free up
@@ -52,10 +67,17 @@ data class FlowHandleImpl<A>(
 }
 
 @CordaSerializable
-data class FlowProgressHandleImpl<A>(
+data class FlowProgressHandleImpl<A> @JvmOverloads constructor(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>,
-        override val progress: Observable<String>) : FlowProgressHandle<A> {
+        override val progress: Observable<String>,
+        override val stepsTreeIndexFeed: DataFeed<Int, Int>? = null,
+        override val stepsTreeFeed: DataFeed<List<Pair<Int, String>>, List<Pair<Int, String>>>? = null) : FlowProgressHandle<A> {
+
+    // For API compatibility
+    fun copy(id: StateMachineRunId, returnValue: CordaFuture<A>, progress: Observable<String>): FlowProgressHandleImpl<A> {
+        return copy(id = id, returnValue = returnValue, progress = progress, stepsTreeFeed = null, stepsTreeIndexFeed = null)
+    }
 
     // Remember to add @Throws to FlowProgressHandle.close() if this throws an exception.
     override fun close() {

@@ -10,12 +10,14 @@ import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
+import org.apache.commons.collections4.map.LRUMap
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Modifier
@@ -51,13 +53,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         }
     }
 
-    companion object {
-        private val logger = loggerFor<CordappLoader>()
+    val cordappSchemas: Set<MappedSchema> get() = cordapps.flatMap { it.customSchemas }.toSet()
 
+    companion object {
+        private val logger = contextLogger()
         /**
          * Default cordapp dir name
          */
-        val CORDAPPS_DIR_NAME = "cordapps"
+        private const val CORDAPPS_DIR_NAME = "cordapps"
 
         /**
          * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
@@ -66,6 +69,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          *                  for classpath scanning.
          */
         fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getCordappsPath(baseDir)))
+
+        // Cache for CordappLoaders to avoid costly classpath scanning
+        private val cordappLoadersCache = LRUMap<List<*>, CordappLoader>(1000)
 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
@@ -76,8 +82,11 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            return CordappLoader(getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
+            if (!configuration.devMode) {
+                logger.warn("Package scanning should only occur in dev mode!")
+            }
+            val paths = getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage)
+            return cordappLoadersCache.computeIfAbsent(paths, { CordappLoader(paths) })
         }
 
         /**
@@ -88,8 +97,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * CorDapps.
          */
         @VisibleForTesting
-        fun createWithTestPackages(testPackages: List<String>)
-                = CordappLoader(testPackages.flatMap(this::createScanPackage))
+        fun createWithTestPackages(testPackages: List<String>): CordappLoader {
+            return cordappLoadersCache.computeIfAbsent(testPackages, { CordappLoader(testPackages.flatMap(this::createScanPackage)) })
+        }
 
         /**
          * Creates a dev mode CordappLoader intended only to be used in test environments
@@ -166,15 +176,16 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         /** A Cordapp representing the core package which is not scanned automatically. */
         @VisibleForTesting
         internal val coreCordapp = CordappImpl(
-                listOf(),
-                listOf(),
-                coreRPCFlows,
-                listOf(),
-                listOf(),
-                listOf(),
-                listOf(),
-                setOf(),
-                ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
+                contractClassNames = listOf(),
+                initiatedFlows = listOf(),
+                rpcFlows = coreRPCFlows,
+                serviceFlows = listOf(),
+                schedulableFlows = listOf(),
+                services = listOf(),
+                serializationWhitelists = listOf(),
+                serializationCustomSerializers = listOf(),
+                customSchemas = setOf(),
+                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
         )
     }
 
@@ -188,6 +199,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
+                    findSerializers(scanResult),
                     findCustomSchemas(scanResult),
                     it.url)
         }
@@ -238,13 +250,20 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
+    private fun findSerializers(scanResult: RestrictedScanResult): List<SerializationCustomSerializer<*, *>> {
+        return scanResult.getClassesImplementing(SerializationCustomSerializer::class)
+    }
+
     private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {
         return scanResult.getClassesWithSuperclass(MappedSchema::class).toSet()
     }
 
+    private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in $cordappJarPath")
-        return RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
+        return cachedScanResult.computeIfAbsent(cordappJarPath, {
+            RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
+        })
     }
 
     private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
@@ -274,6 +293,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     /** @param rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
     private class RestrictedURL(val url: URL, rootPackageName: String?) {
         val qualifiedNamePrefix = rootPackageName?.let { it + '.' } ?: ""
+        override fun toString() = url.toString()
     }
 
     private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {
@@ -284,6 +304,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
         fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<T> {
             return scanResult.getNamesOfSubclassesOf(type.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .map { it.kotlin.objectOrNewInstance() }
+        }
+
+        fun <T : Any> getClassesImplementing(type: KClass<T>): List<T> {
+            return scanResult.getNamesOfClassesImplementing(type.java)
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }

@@ -3,6 +3,7 @@ package net.corda.core.concurrent
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
+import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger
@@ -16,7 +17,10 @@ class ConcurrencyUtilsTest {
     private val f1 = openFuture<Int>()
     private val f2 = openFuture<Double>()
     private var invocations = 0
-    private val log = mock<Logger>()
+    private val log = rigorousMock<Logger>().also {
+        doNothing().whenever(it).error(any(), any<Throwable>())
+    }
+
     @Test
     fun `firstOf short circuit`() {
         // Order not significant in this case:

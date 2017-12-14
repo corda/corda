@@ -3,7 +3,10 @@ package net.corda.client.rpc
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.context.Actor
+import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
@@ -70,8 +73,15 @@ class CordaRPCClient @JvmOverloads constructor(
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
     init {
-        // TODO: allow clients to have serialization factory etc injected and align with RPC protocol version?
-        KryoClientSerializationScheme.initialiseSerialization()
+        try {
+            effectiveSerializationEnv
+        } catch (e: IllegalStateException) {
+            try {
+                KryoClientSerializationScheme.initialiseSerialization()
+            } catch (e: IllegalStateException) {
+                // Race e.g. two of these constructed in parallel, ignore.
+            }
+        }
     }
 
     private val rpcClient = RPCClient<CordaRPCOps>(
@@ -91,7 +101,22 @@ class CordaRPCClient @JvmOverloads constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     fun start(username: String, password: String): CordaRPCConnection {
-        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password))
+        return start(username, password, null, null)
+    }
+
+    /**
+     * Logs in to the target server and returns an active connection. The returned connection is a [java.io.Closeable]
+     * and can be used with a try-with-resources statement. If you don't use that, you should use the
+     * [RPCConnection.notifyServerAndClose] or [RPCConnection.forceClose] methods to dispose of the connection object
+     * when done.
+     *
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @param externalTrace external [Trace] for correlation.
+     * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
+     */
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?): CordaRPCConnection {
+        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
     }
 
     /**

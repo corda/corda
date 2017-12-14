@@ -1,15 +1,21 @@
 package net.corda.docs.java.tutorial.helloworld;
 
-// DOCSTART 01
 import co.paralleluniverse.fibers.Suspendable;
-import net.corda.core.contracts.Command;
-import net.corda.core.contracts.StateAndContract;
+import com.template.TemplateContract;
 import net.corda.core.flows.*;
+
+// DOCSTART 01
+// Add these imports:
+import net.corda.core.contracts.Command;
+import net.corda.core.contracts.CommandData;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import net.corda.core.utilities.ProgressTracker;
 
+import static com.template.TemplateContract.TEMPLATE_CONTRACT_ID;
+
+// Replace TemplateFlow's definition with:
 @InitiatingFlow
 @StartableByRPC
 public class IOUFlow extends FlowLogic<Void> {
@@ -40,21 +46,15 @@ public class IOUFlow extends FlowLogic<Void> {
         // We retrieve the notary identity from the network map.
         final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
-        // We create a transaction builder.
-        final TransactionBuilder txBuilder = new TransactionBuilder();
-        txBuilder.setNotary(notary);
-
         // We create the transaction components.
         IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
-        String outputContract = IOUContract.class.getName();
-        StateAndContract outputContractAndState = new StateAndContract(outputState, outputContract);
-        Command cmd = new Command<>(new IOUContract.Create(), getOurIdentity().getOwningKey());
+        CommandData cmdType = new TemplateContract.Commands.Action();
+        Command cmd = new Command<>(cmdType, getOurIdentity().getOwningKey());
 
-        // We add the items to the builder.
-        txBuilder.withItems(outputContractAndState, cmd);
-
-        // Verifying the transaction.
-        txBuilder.verify(getServiceHub());
+        // We create a transaction builder and add the components.
+        final TransactionBuilder txBuilder = new TransactionBuilder(notary)
+                .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
+                .addCommand(cmd);
 
         // Signing the transaction.
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);

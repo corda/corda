@@ -1,40 +1,45 @@
 package net.corda.client.jackson
 
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.USD
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.MINI_CORP
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 
-class JacksonSupportTest : TestDependencyInjectionBase() {
-    companion object {
-        private val SEED = BigInteger.valueOf(20170922L)
+class JacksonSupportTest {
+    private companion object {
+        val SEED = BigInteger.valueOf(20170922L)!!
         val mapper = JacksonSupport.createNonRpcMapper()
+        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var services: ServiceHub
     private lateinit var cordappProvider: CordappProvider
 
     @Before
     fun setup() {
-        services = mock()
-        cordappProvider = mock()
-        whenever(services.cordappProvider).thenReturn(cordappProvider)
+        services = rigorousMock()
+        cordappProvider = rigorousMock()
+        doReturn(cordappProvider).whenever(services).cordappProvider
     }
 
     @Test
@@ -91,8 +96,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
     @Test
     fun writeTransaction() {
         val attachmentRef = SecureHash.randomSHA256()
-        whenever(cordappProvider.getContractAttachmentID(DummyContract.PROGRAM_ID))
-                .thenReturn(attachmentRef)
+        doReturn(attachmentRef).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         fun makeDummyTx(): SignedTransaction {
             val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
                     .toWireTransaction(services)

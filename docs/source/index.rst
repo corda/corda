@@ -10,11 +10,15 @@ quick introduction to distributed ledgers and how Corda is different, then watch
       <iframe src="https://player.vimeo.com/video/205410473" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
     </embed>
 
-Want to see Corda running? Download our demonstration application `DemoBench <https://www.corda.net/downloads/>`_ or follow our :doc:`quickstart guide </quickstart-index>`.
+Want to see Corda running? Download our demonstration application `DemoBench <https://www.corda.net/downloads/>`_ or
+follow our :doc:`quickstart guide </quickstart-index>`.
 
-If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read our :doc:`Hello, World! tutorial </hello-world-index>`. For the background behind Corda, read the non-technical `introductory white paper`_ or for more detail, the `technical white paper`_.
+If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
+our :doc:`Hello, World! tutorial </hello-world-introduction>`. For the background behind Corda, read the non-technical
+`introductory white paper`_ or for more detail, the `technical white paper`_.
 
-If you have questions or comments, then get in touch with us either on `Slack <https://slack.corda.net/>`_, `Discourse <https://discourse.corda.net/>`_, or write a question on `stackoverflow <https://stackoverflow.com/questions/tagged/corda>`_ .
+If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or write a question on
+`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ .
 
 We look forward to seeing what you can do with Corda!
 

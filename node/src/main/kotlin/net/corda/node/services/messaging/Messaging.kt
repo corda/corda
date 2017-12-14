@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
@@ -83,9 +82,40 @@ interface MessagingService {
      * to send an ACK message back.
      *
      * @param retryId if provided the message will be scheduled for redelivery until [cancelRedelivery] is called for this id.
-     * Note that this feature should only be used when the target is an idempotent distributed service, e.g. a notary.
+     *     Note that this feature should only be used when the target is an idempotent distributed service, e.g. a notary.
+     * @param sequenceKey an object that may be used to enable a parallel [MessagingService] implementation. Two
+     *     subsequent send()s with the same [sequenceKey] (up to equality) are guaranteed to be delivered in the same
+     *     sequence the send()s were called. By default this is chosen conservatively to be [target].
+     * @param acknowledgementHandler if non-null this handler will be called once the sent message has been committed by
+     *     the broker. Note that if specified [send] itself may return earlier than the commit.
      */
-    fun send(message: Message, target: MessageRecipients, retryId: Long? = null)
+    fun send(
+            message: Message,
+            target: MessageRecipients,
+            retryId: Long? = null,
+            sequenceKey: Any = target,
+            acknowledgementHandler: (() -> Unit)? = null
+    )
+
+    /** A message with a target and sequenceKey specified. */
+    data class AddressedMessage(
+            val message: Message,
+            val target: MessageRecipients,
+            val retryId: Long? = null,
+            val sequenceKey: Any = target
+    )
+
+    /**
+     * Sends a list of messages to the specified recipients. This function allows for an efficient batching
+     * implementation.
+     *
+     * @param addressedMessages The list of messages together with the recipients, retry ids and sequence keys.
+     * @param retryId if provided the message will be scheduled for redelivery until [cancelRedelivery] is called for this id.
+     *     Note that this feature should only be used when the target is an idempotent distributed service, e.g. a notary.
+     * @param acknowledgementHandler if non-null this handler will be called once all sent messages have been committed
+     *     by the broker. Note that if specified [send] itself may return earlier than the commit.
+     */
+    fun send(addressedMessages: List<AddressedMessage>, acknowledgementHandler: (() -> Unit)? = null)
 
     /** Cancels the scheduled message redelivery for the specified [retryId] */
     fun cancelRedelivery(retryId: Long)
@@ -102,14 +132,6 @@ interface MessagingService {
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
-
-    /**
-     * Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
-     * then this will block until all in-flight messages have finished being handled and acknowledged. If called
-     * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
-     * it returns immediately and shutdown is asynchronous.
-     */
-    fun stop()
 }
 
 /**
@@ -168,23 +190,12 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): CordaFutu
     return messageFuture
 }
 
-fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
-        = send(TopicSession(topic, sessionID), payload, to, uuid)
+fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID()) {
+    send(TopicSession(topic, sessionID), payload, to, uuid)
+}
 
-fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID(), retryId: Long? = null)
-        = send(createMessage(topicSession, payload.serialize().bytes, uuid), to, retryId)
-
-/**
- * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
- * on the messaging service interface until you have successfully started up the system. One of these objects should
- * be the only way to obtain a reference to a [MessagingService]. Startup may be a slow process: some implementations
- * may let you cast the returned future to an object that lets you get status info.
- *
- * A specific implementation of the controller class will have extra features that let you customise it before starting
- * it up.
- */
-interface MessagingServiceBuilder<out T : MessagingService> {
-    fun start(): ListenableFuture<out T>
+fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID(), retryId: Long? = null) {
+    send(createMessage(topicSession, payload.serialize().bytes, uuid), to, retryId)
 }
 
 interface MessageHandlerRegistration

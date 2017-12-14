@@ -1,28 +1,32 @@
 package net.corda.docs.java.tutorial.twoparty;
 
-// DOCSTART 01
-import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.CommandData;
-import net.corda.core.contracts.CommandWithParties;
 import net.corda.core.contracts.Contract;
-import net.corda.core.identity.Party;
 import net.corda.core.transactions.LedgerTransaction;
+
+// DOCSTART 01
+// Add these imports:
+import com.google.common.collect.ImmutableList;
+import net.corda.core.contracts.CommandWithParties;
+import net.corda.core.identity.Party;
 
 import java.security.PublicKey;
 import java.util.List;
 
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-// DOCEND 01
 
+// Replace TemplateContract's definition with:
 public class IOUContract implements Contract {
+    public static final String IOU_CONTRACT_ID = "com.template.IOUContract";
+
     // Our Create command.
     public static class Create implements CommandData {
     }
 
     @Override
     public void verify(LedgerTransaction tx) {
-        final CommandWithParties<net.corda.docs.java.tutorial.helloworld.IOUContract.Create> command = requireSingleCommand(tx.getCommands(), net.corda.docs.java.tutorial.helloworld.IOUContract.Create.class);
+        final CommandWithParties<IOUContract.Create> command = requireSingleCommand(tx.getCommands(), IOUContract.Create.class);
 
         requireThat(check -> {
             // Constraints on the shape of the transaction.
@@ -36,15 +40,14 @@ public class IOUContract implements Contract {
             check.using("The IOU's value must be non-negative.", out.getValue() > 0);
             check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
 
-            // DOCSTART 02
             // Constraints on the signers.
             final List<PublicKey> signers = command.getSigners();
             check.using("There must be two signers.", signers.size() == 2);
             check.using("The borrower and lender must be signers.", signers.containsAll(
                     ImmutableList.of(borrower.getOwningKey(), lender.getOwningKey())));
-            // DOCEND 02
 
             return null;
         });
     }
 }
+// DOCEND 01

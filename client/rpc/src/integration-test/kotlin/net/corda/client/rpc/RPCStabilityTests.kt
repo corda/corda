@@ -2,6 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -11,20 +12,34 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.*
-import net.corda.testing.driver.poll
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.internal.*
+import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RPCStabilityTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+    private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
+    @After
+    fun shutdown() {
+        pool.shutdown()
+    }
 
     object DummyOps : RPCOps {
         override val protocolVersion = 0
@@ -51,8 +66,8 @@ class RPCStabilityTests {
         val executor = Executors.newScheduledThreadPool(1)
         fun startAndStop() {
             rpcDriver {
-                val server = startRpcServer<RPCOps>(ops = DummyOps)
-                startRpcClient<RPCOps>(server.get().broker.hostAndPort!!).get()
+                val server = startRpcServer<RPCOps>(ops = DummyOps).get()
+                startRpcClient<RPCOps>(server.broker.hostAndPort!!).get()
             }
         }
         repeat(5) {
@@ -196,9 +211,9 @@ class RPCStabilityTests {
             val proxy = startRpcClient<LeakObservableOps>(server.get().broker.hostAndPort!!).get()
             // Leak many observables
             val N = 200
-            (1..N).toList().parallelStream().forEach {
-                proxy.leakObservable()
-            }
+            (1..N).map {
+                pool.fork { proxy.leakObservable(); Unit }
+            }.transpose().getOrThrow()
             // In a loop force GC and check whether the server is notified
             while (true) {
                 System.gc()
@@ -219,6 +234,7 @@ class RPCStabilityTests {
                 override val protocolVersion = 0
                 override fun ping() = "pong"
             }
+
             val serverFollower = shutdownManager.follower()
             val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
@@ -230,7 +246,7 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            val pingFuture = ForkJoinPool.commonPool().fork(client::ping)
+            val pingFuture = pool.fork(client::ping)
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
@@ -320,9 +336,10 @@ class RPCStabilityTests {
             val message = session.createMessage(false)
             val request = RPCApi.ClientToServer.RpcRequest(
                     clientAddress = SimpleString(myQueue),
-                    id = RPCApi.RpcRequestId(random63BitValue()),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
-                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes
+                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes,
+                    replyId = Trace.InvocationId.newInstance(),
+                    sessionId = Trace.SessionId.newInstance()
             )
             request.writeToClientMessage(message)
             producer.send(message)
@@ -335,7 +352,7 @@ class RPCStabilityTests {
 
 }
 
-fun RPCDriverExposedDSLInterface.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
+fun RPCDriverDSL.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
     pollUntilTrue("number of RPC clients to become $expected") {
         val clientAddresses = server.broker.serverControl.addressNames.filter { it.startsWith(RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX) }
         clientAddresses.size == expected

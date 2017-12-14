@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -17,7 +17,9 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     open val kotlinConstructor = constructorForDeserialization(clazz)
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
-    private val logger = loggerFor<ObjectSerializer>()
+    companion object {
+        private val logger = contextLogger()
+    }
 
     open internal val propertySerializers: Collection<PropertySerializer> by lazy {
         propertiesForSerialization(kotlinConstructor, clazz, factory)
@@ -53,10 +55,15 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({ clazz.typeName }) {
+    override fun readObject(
+            obj: Any,
+            schemas: SerializationSchemas,
+            input: DeserializationInput): Any = ifThrowsAppend({ clazz.typeName }) {
         if (obj is List<*>) {
-            if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
-            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, schema, input) }
+            if (obj.size > propertySerializers.size) {
+                throw NotSerializableException("Too many properties in described type $typeName")
+            }
+            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, schemas, input) }
             construct(params)
         } else throw NotSerializableException("Body of described type is unexpected $obj")
     }

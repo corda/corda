@@ -6,22 +6,23 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.core.internal.cert
-import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.X509Utilities
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
-import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.security.cert.CertificateFactory
-import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -30,17 +31,27 @@ import kotlin.test.assertNull
  * Tests for the in memory identity service.
  */
 class PersistentIdentityServiceTests {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val bob = TestIdentity(BOB_NAME, 80)
+        val ALICE get() = alice.party
+        val ALICE_IDENTITY get() = alice.identity
+        val ALICE_PUBKEY get() = alice.publicKey
+        val BOB get() = bob.party
+        val BOB_IDENTITY get() = bob.identity
+        val BOB_PUBKEY get() = bob.publicKey
+    }
 
-    lateinit var database: CordaPersistence
-    lateinit var services: MockServices
-    lateinit var identityService: IdentityService
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+    private lateinit var database: CordaPersistence
+    private lateinit var identityService: IdentityService
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), createIdentityService = { PersistentIdentityService(trustRoot = DEV_TRUST_ROOT) })
-        database = databaseAndServices.first
-        services = databaseAndServices.second
-        identityService = services.identityService
+        identityService = PersistentIdentityService(DEV_TRUST_ROOT)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), identityService)
     }
 
     @After
@@ -131,17 +142,15 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `assert unknown anonymous key is unrecognised`() {
-        withTestSerialization {
-            val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
-            val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)
-            val identity = Party(rootCert.cert)
-            val txIdentity = AnonymousParty(txKey.public)
+        val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
+        val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)
+        val identity = Party(rootCert.cert)
+        val txIdentity = AnonymousParty(txKey.public)
 
-            assertFailsWith<UnknownAnonymousPartyException> {
-                database.transaction {
-                    identityService.assertOwnership(identity, txIdentity)
-                }
+        assertFailsWith<UnknownAnonymousPartyException> {
+            database.transaction {
+                identityService.assertOwnership(identity, txIdentity)
             }
         }
     }
@@ -152,8 +161,8 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `get anonymous identity by key`() {
-        val (alice, aliceTxIdentity) = createParty(ALICE.name, DEV_CA)
-        val (_, bobTxIdentity) = createParty(ALICE.name, DEV_CA)
+        val (alice, aliceTxIdentity) = createConfidentialIdentity(ALICE.name)
+        val (_, bobTxIdentity) = createConfidentialIdentity(ALICE.name)
 
         // Now we have identities, construct the service and let it know about both
         database.transaction {
@@ -184,46 +193,44 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `assert ownership`() {
-        withTestSerialization {
-            val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
-            val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
+        val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
+        val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
+        database.transaction {
+            // Now we have identities, construct the service and let it know about both
+            identityService.verifyAndRegisterIdentity(anonymousAlice)
+            identityService.verifyAndRegisterIdentity(anonymousBob)
+        }
+
+        // Verify that paths are verified
+        database.transaction {
+            identityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
+            identityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
+        }
+        assertFailsWith<IllegalArgumentException> {
             database.transaction {
-                // Now we have identities, construct the service and let it know about both
-                identityService.verifyAndRegisterIdentity(anonymousAlice)
-                identityService.verifyAndRegisterIdentity(anonymousBob)
+                identityService.assertOwnership(alice.party, anonymousBob.party.anonymise())
             }
-
-            // Verify that paths are verified
+        }
+        assertFailsWith<IllegalArgumentException> {
             database.transaction {
-                identityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
-                identityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
+                identityService.assertOwnership(bob.party, anonymousAlice.party.anonymise())
             }
-            assertFailsWith<IllegalArgumentException> {
-                database.transaction {
-                    identityService.assertOwnership(alice.party, anonymousBob.party.anonymise())
-                }
-            }
-            assertFailsWith<IllegalArgumentException> {
-                database.transaction {
-                    identityService.assertOwnership(bob.party, anonymousAlice.party.anonymise())
-                }
-            }
+        }
 
-            assertFailsWith<IllegalArgumentException> {
-                val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
-                database.transaction {
-                    val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
-                    identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
-                }
+        assertFailsWith<IllegalArgumentException> {
+            val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
+            database.transaction {
+                val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
+                identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
             }
         }
     }
 
     @Test
     fun `Test Persistence`() {
-        val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
-        val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
+        val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
+        val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
         database.transaction {
             // Register well known identities
@@ -236,7 +243,7 @@ class PersistentIdentityServiceTests {
 
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = database.transaction {
-            PersistentIdentityService(trustRoot = DEV_TRUST_ROOT)
+            PersistentIdentityService(DEV_TRUST_ROOT)
         }
 
         database.transaction {
@@ -255,13 +262,12 @@ class PersistentIdentityServiceTests {
         assertEquals(anonymousBob, bobReload!!)
     }
 
-    private fun createParty(x500Name: CordaX500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, PartyAndCertificate> {
-        val certFactory = CertificateFactory.getInstance("X509")
+    private fun createConfidentialIdentity(x500Name: CordaX500Name): Pair<PartyAndCertificate, PartyAndCertificate> {
         val issuerKeyPair = generateKeyPair()
-        val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
+        val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public)
         val txKey = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
-        val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
+        val txCert = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
+        val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 
@@ -269,11 +275,23 @@ class PersistentIdentityServiceTests {
      * Ensure if we feed in a full identity, we get the same identity back.
      */
     @Test
-    fun `deanonymising a well known identity`() {
+    fun `deanonymising a well known identity should return the identity`() {
+        val service = makeTestIdentityService()
         val expected = ALICE
-        val actual = database.transaction {
-            identityService.wellKnownPartyFromAnonymous(expected)
-        }
+        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        val actual = service.wellKnownPartyFromAnonymous(expected)
         assertEquals(expected, actual)
+    }
+
+    /**
+     * Ensure we don't blindly trust what an anonymous identity claims to be.
+     */
+    @Test
+    fun `deanonymising a false well known identity should return null`() {
+        val service = makeTestIdentityService()
+        val notAlice = Party(ALICE.name, generateKeyPair().public)
+        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        val actual = service.wellKnownPartyFromAnonymous(notAlice)
+        assertNull(actual)
     }
 }

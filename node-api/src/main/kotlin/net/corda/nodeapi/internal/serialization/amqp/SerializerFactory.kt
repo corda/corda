@@ -4,7 +4,9 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.nodeapi.internal.serialization.carpenter.*
+import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
+import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
+import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -13,7 +15,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
-data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
+data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
+data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -33,16 +36,21 @@ data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: An
 open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
-    private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
+    private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
+    val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
+
     open val classCarpenter = ClassCarpenter(cl, whitelist)
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
-    private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>): AMQPSerializer<Any> {
+    private fun getEvolutionSerializer(
+            typeNotation: TypeNotation,
+            newSerializer: AMQPSerializer<Any>,
+            schemas: SerializationSchemas): AMQPSerializer<Any> {
         return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, this)
-                is RestrictedType -> throw NotSerializableException("Enum evolution is not currently supported")
+                is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, this, schemas)
             }
         }
     }
@@ -166,7 +174,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
      * contained in the [Schema].
      */
     @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
+    fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
             processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException(
@@ -188,13 +196,20 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         }
     }
 
+    fun registerExternal(customSerializer: CorDappCustomSerializer) {
+        if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
+            customSerializers += customSerializer
+            serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
+        }
+    }
+
     /**
-     * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
-     * if not use the [ClassCarpenter] to generate a class to use in it's place
+     * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
+     * if not, use the [ClassCarpenter] to generate a class to use in it's place.
      */
-    private fun processSchema(schema: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
+    private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
-        for (typeNotation in schema.schema.types) {
+        for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
             try {
                 val serialiser = processSchemaEntry(typeNotation)
 
@@ -202,7 +217,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerialiser
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
-                    getEvolutionSerializer(typeNotation, serialiser)
+                    getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas)
                 }
             } catch (e: ClassNotFoundException) {
                 if (sentinel) throw e
@@ -213,7 +228,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         if (metaSchema.isNotEmpty()) {
             val mc = MetaCarpenter(metaSchema, classCarpenter)
             mc.build()
-            processSchema(schema, true)
+            processSchema(schemaAndDescriptor, true)
         }
     }
 
@@ -259,11 +274,13 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 val declaredSuperClass = declaredType.asClass()?.superclass
-                if (declaredSuperClass == null || !customSerializer.isSerializerFor(declaredSuperClass) || !customSerializer.revealSubclassesInSchema) {
-                    return customSerializer
+                return if (declaredSuperClass == null
+                        || !customSerializer.isSerializerFor(declaredSuperClass)
+                        || !customSerializer.revealSubclassesInSchema) {
+                    customSerializer as? AMQPSerializer<Any>
                 } else {
                     // Make a subclass serializer for the subclass and return that...
-                    return CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
+                    CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
                 }
             }
         }

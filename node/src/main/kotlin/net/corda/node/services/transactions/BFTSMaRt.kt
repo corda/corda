@@ -29,8 +29,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
@@ -75,9 +75,9 @@ object BFTSMaRt {
         fun waitUntilAllReplicasHaveInitialized()
     }
 
-    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster) : SingletonSerializeAsToken() {
+    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTNonValidatingNotaryService) : SingletonSerializeAsToken() {
         companion object {
-            private val log = loggerFor<Client>()
+            private val log = contextLogger()
         }
 
         /** A proxy for communicating with the BFT cluster */
@@ -90,6 +90,7 @@ object BFTSMaRt {
 
         private fun awaitClientConnectionToCluster() {
             // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this method can be moved to some startup code.
+            // TODO: Investigate ConcurrentModificationException in this method.
             while (true) {
                 val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
                 if (inactive.isEmpty()) break
@@ -180,7 +181,7 @@ object BFTSMaRt {
                            protected val notaryIdentityKey: PublicKey,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
-            private val log = loggerFor<Replica>()
+            private val log = contextLogger()
         }
 
         private val stateManagerOverride = run {

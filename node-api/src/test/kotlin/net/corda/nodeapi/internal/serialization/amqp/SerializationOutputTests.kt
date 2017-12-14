@@ -1,33 +1,35 @@
+@file:Suppress("unused", "MemberVisibilityCanPrivate")
+
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.client.rpc.RPCException
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
-import net.corda.core.internal.toX509CertHolder
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.client.rpc.RPCException
-import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
+import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.testing.BOB_IDENTITY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_PUBKEY
-import net.corda.testing.withTestSerialization
+import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
-import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertSame
+import org.assertj.core.api.Assertions.*
+import org.junit.Assert.*
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -37,11 +39,26 @@ import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.reflect.full.superclasses
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class SerializationOutputTests {
+    private companion object {
+        val BOB_IDENTITY = TestIdentity(BOB_NAME, 80).identity
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+        val MINI_CORP get() = miniCorp.party
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
+    }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     data class Foo(val bar: String, val pub: Int)
 
     data class testFloat(val f: Float)
@@ -73,7 +90,6 @@ class SerializationOutputTests {
     }
 
     data class Woo(val fred: Int) {
-        @Suppress("unused")
         val bob = "Bob"
     }
 
@@ -83,7 +99,6 @@ class SerializationOutputTests {
 
     @CordaSerializable
     data class AnnotatedWoo(val fred: Int) {
-        @Suppress("unused")
         val bob = "Bob"
     }
 
@@ -145,6 +160,13 @@ class SerializationOutputTests {
 
     data class PolymorphicProperty(val foo: FooInterface?)
 
+    @CordaSerializable
+    class NonZeroByte(val value: Byte) {
+        init {
+            require(value.toInt() != 0) { "Zero not allowed" }
+        }
+    }
+
     private inline fun <reified T : Any> serdes(obj: T,
                                                 factory: SerializerFactory = SerializerFactory(
                                                         AllWhitelist, ClassLoader.getSystemClassLoader()),
@@ -164,6 +186,8 @@ class SerializationOutputTests {
             this.register(Choice.DESCRIPTOR, Choice.Companion)
             this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
             this.register(ReferencedObject.DESCRIPTOR, ReferencedObject.Companion)
+            this.register(TransformsSchema.DESCRIPTOR, TransformsSchema.Companion)
+            this.register(TransformTypes.DESCRIPTOR, TransformTypes.Companion)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
@@ -399,6 +423,32 @@ class SerializationOutputTests {
     }
 
     @Test
+    fun `class constructor is invoked on deserialisation`() {
+        val ser = SerializationOutput(SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader()))
+        val des = DeserializationInput(ser.serializerFactory)
+
+        val serialisedOne = ser.serialize(NonZeroByte(1)).bytes
+        val serialisedTwo = ser.serialize(NonZeroByte(2)).bytes
+
+        // Find the index that holds the value byte
+        val valueIndex = serialisedOne.zip(serialisedTwo).mapIndexedNotNull { index, (oneByte, twoByte) ->
+            if (oneByte.toInt() == 1 && twoByte.toInt() == 2) index else null
+        }.single()
+
+        val copy = serialisedTwo.clone()
+
+        // Double check
+        copy[valueIndex] = 0x03
+        assertThat(des.deserialize(OpaqueBytes(copy), NonZeroByte::class.java).value).isEqualTo(3)
+
+        // Now use the forbidden value
+        copy[valueIndex] = 0x00
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            des.deserialize(OpaqueBytes(copy), NonZeroByte::class.java)
+        }.withMessageContaining("Zero not allowed")
+    }
+
+    @Test
     fun `test custom serializers on public key`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
@@ -428,11 +478,9 @@ class SerializationOutputTests {
         assertSerializedThrowableEquivalent(t, desThrowable)
     }
 
-    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable = withTestSerialization {
+    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable {
         val newContext = SerializationFactory.defaultFactory.defaultContext.withProperty(CommonPropertyNames.IncludeInternalInfo, true)
-
-        val deserializedObj = SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
-        return deserializedObj
+        return SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
     }
 
     @Test
@@ -558,11 +606,16 @@ class SerializationOutputTests {
     fun `test transaction state`() {
         val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
+        val scheme = AMQPServerSerializationScheme(emptyList())
+        val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
+                .java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
+        func.isAccessible = true
+
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        AbstractAMQPSerializationScheme.registerCustomSerializers(factory)
+        func.invoke(scheme, factory)
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
+        func.invoke(scheme, factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertTrue((desState as TransactionState<*>).data is FooState)
@@ -751,26 +804,32 @@ class SerializationOutputTests {
     }
 
     @Test
-    fun `test certificate holder serialize`() {
+    fun `test privacy salt serialize`() {
+        serdes(PrivacySalt())
+        serdes(PrivacySalt(secureRandomBytes(32)))
+    }
+
+    @Test
+    fun `test X509 certificate serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateSerializer)
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateSerializer)
 
-        val obj = BOB_IDENTITY.certificate.toX509CertHolder()
+        val obj = BOB_IDENTITY.certificate
         serdes(obj, factory, factory2)
     }
 
     @Test
-    fun `test party and certificate serialize`() {
+    fun `test cert path serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.CertPathSerializer(factory))
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory2))
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.CertPathSerializer(factory2))
 
-        val obj = BOB_IDENTITY
+        val obj = BOB_IDENTITY.certPath
         serdes(obj, factory, factory2)
     }
 
@@ -984,5 +1043,37 @@ class SerializationOutputTests {
         obj[Month.APRIL] = Month.APRIL.value
         obj[Month.AUGUST] = Month.AUGUST.value
         serdes(obj)
+    }
+
+    @Test
+    fun `test contract attachment serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory2))
+
+        val obj = ContractAttachment(GeneratedAttachment("test".toByteArray()), DummyContract.PROGRAM_ID)
+        val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
+        assertEquals(obj.id, obj2.attachment.id)
+        assertEquals(obj.contract, obj2.contract)
+        assertArrayEquals(obj.open().readBytes(), obj2.open().readBytes())
+    }
+
+    @Test
+    fun `test contract attachment throws if missing attachment`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory2))
+
+        val obj = ContractAttachment(object : AbstractAttachment({ throw Exception() }) {
+            override val id = SecureHash.zeroHash
+        }, DummyContract.PROGRAM_ID)
+
+        assertThatThrownBy {
+            serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
+        }.isInstanceOf(MissingAttachmentsException::class.java)
     }
 }

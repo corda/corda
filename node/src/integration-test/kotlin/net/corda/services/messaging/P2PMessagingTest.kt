@@ -3,10 +3,8 @@ package net.corda.services.messaging
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.elapsedTime
+import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.randomOrNull
-import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
@@ -14,114 +12,120 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.testing.*
-import net.corda.testing.node.NodeBasedTest
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.chooseIdentity
+import net.corda.testing.driver.DriverDSL
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.driver
+import net.corda.testing.node.ClusterSpec
+import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-class P2PMessagingTest : NodeBasedTest() {
+class P2PMessagingTest {
     private companion object {
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }
 
     @Test
-    fun `network map will work after restart`() {
-        val identities = listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
-        fun startNodes() = identities.map { startNode(it.name) }.transpose()
-
-        val startUpDuration = elapsedTime { startNodes().getOrThrow() }
-        // Start the network map a second time - this will restore message queues from the journal.
-        // This will hang and fail prior the fix. https://github.com/corda/corda/issues/37
-        clearAllNodeInfoDb() // Clear network map data from nodes databases.
-        stopAllNodes()
-        startNodes().getOrThrow(timeout = startUpDuration * 3)
-    }
-
-    @Ignore
-    @Test
     fun `communicating with a distributed service which we're part of`() {
-        val distributedService = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
-        assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
+        startDriverWithDistributedService { distributedService ->
+            assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
+        }
     }
 
     @Test
     fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
-        val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
-        val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
-        val serviceAddress = alice.services.networkMapCache.run {
-            val notaryParty = notaryIdentities.randomOrNull()!!
-            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
+        startDriverWithDistributedService { distributedServiceNodes ->
+            val alice = startAlice()
+            val serviceAddress = alice.services.networkMapCache.run {
+                val notaryParty = notaryIdentities.randomOrNull()!!
+                alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
+            }
+
+            val dummyTopic = "dummy.topic"
+            val responseMessage = "response"
+
+            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, dummyTopic, responseMessage)
+
+            // Send a single request with retry
+            val responseFuture = with(alice.network) {
+                val request = TestRequest(replyTo = myAddress)
+                val responseFuture = onNext<Any>(dummyTopic, request.sessionID)
+                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
+                send(msg, serviceAddress, retryId = request.sessionID)
+                responseFuture
+            }
+            crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
+            // The request wasn't successful.
+            assertThat(responseFuture.isDone).isFalse()
+            crashingNodes.ignoreRequests = false
+
+            // The retry should be successful.
+            val response = responseFuture.getOrThrow(10.seconds)
+            assertThat(response).isEqualTo(responseMessage)
         }
-
-        val dummyTopic = "dummy.topic"
-        val responseMessage = "response"
-
-        val crashingNodes = simulateCrashingNodes(distributedServiceNodes, dummyTopic, responseMessage)
-
-        // Send a single request with retry
-        val responseFuture = with(alice.network) {
-            val request = TestRequest(replyTo = myAddress)
-            val responseFuture = onNext<Any>(dummyTopic, request.sessionID)
-            val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
-            send(msg, serviceAddress, retryId = request.sessionID)
-            responseFuture
-        }
-        crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
-        // The request wasn't successful.
-        assertThat(responseFuture.isDone).isFalse()
-        crashingNodes.ignoreRequests = false
-
-        // The retry should be successful.
-        val response = responseFuture.getOrThrow(10.seconds)
-        assertThat(response).isEqualTo(responseMessage)
     }
 
     @Test
     fun `distributed service request retries are persisted across client node restarts`() {
-        val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
-        val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
-        val serviceAddress = alice.services.networkMapCache.run {
-            val notaryParty = notaryIdentities.randomOrNull()!!
-            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
+        startDriverWithDistributedService { distributedServiceNodes ->
+            val alice = startAlice()
+            val serviceAddress = alice.services.networkMapCache.run {
+                val notaryParty = notaryIdentities.randomOrNull()!!
+                alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
+            }
+
+            val dummyTopic = "dummy.topic"
+            val responseMessage = "response"
+
+            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, dummyTopic, responseMessage)
+
+            val sessionId = random63BitValue()
+
+            // Send a single request with retry
+            with(alice.network) {
+                val request = TestRequest(sessionId, myAddress)
+                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
+                send(msg, serviceAddress, retryId = request.sessionID)
+            }
+
+            // Wait until the first request is received
+            crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
+            // Stop alice's node after we ensured that the first request was delivered and ignored.
+            alice.dispose()
+            val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
+            assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
+
+            crashingNodes.ignoreRequests = false
+
+            // Restart the node and expect a response
+            val aliceRestarted = startAlice()
+            val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
+
+            assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
+            assertThat(response).isEqualTo(responseMessage)
         }
+    }
 
-        val dummyTopic = "dummy.topic"
-        val responseMessage = "response"
-
-        val crashingNodes = simulateCrashingNodes(distributedServiceNodes, dummyTopic, responseMessage)
-
-        val sessionId = random63BitValue()
-
-        // Send a single request with retry
-        with(alice.network) {
-            val request = TestRequest(sessionId, myAddress)
-            val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
-            send(msg, serviceAddress, retryId = request.sessionID)
+    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<StartedNode<Node>>) -> Unit) {
+        driver(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))) {
+            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as NodeHandle.InProcess).node })
         }
+    }
 
-        // Wait until the first request is received
-        crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
-        // Stop alice's node after we ensured that the first request was delivered and ignored.
-        alice.dispose()
-        val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
-        assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
-
-        crashingNodes.ignoreRequests = false
-
-        // Restart the node and expect a response
-        val aliceRestarted = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
-        val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
-
-        assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
-        assertThat(response).isEqualTo(responseMessage)
+    private fun DriverDSL.startAlice(): StartedNode<Node> {
+        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
+                .map { (it as NodeHandle.InProcess).node }
+                .getOrThrow()
     }
 
     data class CrashingNodes(

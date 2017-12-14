@@ -11,10 +11,7 @@ import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
@@ -24,7 +21,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
@@ -45,7 +42,7 @@ import kotlin.test.assertTrue
 
 class StandaloneCordaRPClientTest {
     private companion object {
-        val log = loggerFor<StandaloneCordaRPClientTest>()
+        private val log = contextLogger()
         val user = User("user1", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15200)
         const val attachmentSize = 2116
@@ -89,7 +86,7 @@ class StandaloneCordaRPClientTest {
     }
 
     private fun copyFinanceCordapp() {
-        val cordappsDir = (factory.baseDirectory(notaryConfig) / "cordapps").createDirectories()
+        val cordappsDir = (factory.baseDirectory(notaryConfig) / NodeProcess.CORDAPPS_DIR_NAME).createDirectories()
         // Find the finance jar file for the smoke tests of this module
         val financeJar = Paths.get("build", "resources", "smokeTest").list {
             it.filter { "corda-finance" in it.toString() }.toList().single()

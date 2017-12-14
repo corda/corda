@@ -4,14 +4,14 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.demobench.model.NodeConfigWrapper
 import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 
 class NodeRPC(config: NodeConfigWrapper, start: (NodeConfigWrapper, CordaRPCOps) -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
     private companion object {
-        val log = loggerFor<NodeRPC>()
+        private val log = contextLogger()
         val oneSecond = SECONDS.toMillis(1)
     }
 

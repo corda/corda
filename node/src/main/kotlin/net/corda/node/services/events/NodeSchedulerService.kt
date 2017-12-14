@@ -1,32 +1,32 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.internal.MutableClock
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.PersistentMap
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
 import java.time.Clock
 import java.time.Instant
@@ -36,6 +36,8 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
 import javax.persistence.Entity
+import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
+import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
@@ -63,8 +65,7 @@ class NodeSchedulerService(private val clock: Clock,
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
-        private val log = loggerFor<NodeSchedulerService>()
-
+        private val log = contextLogger()
         /**
          * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
          * used in demos or testing.  This will substitute a Fiber compatible Future so the current
@@ -215,7 +216,7 @@ class NodeSchedulerService(private val clock: Clock,
      * cancelled then we run the scheduled action.  Finally we remove that action from the scheduled actions and
      * recompute the next scheduled action.
      */
-    internal fun rescheduleWakeUp() {
+    private fun rescheduleWakeUp() {
         // Note, we already have the mutex but we need the scope again here
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
@@ -245,7 +246,9 @@ class NodeSchedulerService(private val clock: Clock,
                     val scheduledFlow = getScheduledFlow(scheduledState)
                     if (scheduledFlow != null) {
                         flowName = scheduledFlow.javaClass.name
-                        val future = flowStarter.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
+                        // TODO refactor the scheduler to store and propagate the original invocation context
+                        val context = InvocationContext.newInstance(Origin.Scheduled(scheduledState))
+                        val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                         future.then {
                             unfinishedSchedules.countDown()
                         }

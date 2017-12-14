@@ -136,31 +136,7 @@ service. Also, this service allows mapping of friendly names, or
 ``StateMachineManager`` to convert between the ``CompositeKey``, or 
 ``Party`` based addressing used in the flows/contracts and the 
 physical host and port information required for the physical 
-``ArtemisMQ`` messaging layer. 
-
-
-PersistentNetworkMapService and NetworkMapService
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``NetworkMapService`` is a node internal component responsible for 
-managing and communicating the directory of authenticated registered 
-nodes and advertised services in the Corda network. Only a single node 
-in the network (in future this will be a clustered service) should host 
-the NetworkMapService implementation. All other Corda nodes initiate 
-their remote connection to the ``NetworkMapService`` early in the 
-start-up sequence and wait to synchronise their local 
-``NetworkMapCache`` before activating any flows. For the 
-``PersistentNetworkMapService`` registered ``NodeInfo`` data is 
-persisted and will include nodes that are not currently active. The 
-networking layer will persist any messages directed at such inactive 
-nodes with the expectation that they will be delivered eventually, or 
-else that the source flow will be terminated by admin intervention. 
-An ``InMemoryNetworkMapService`` is also available for unit tests 
-without a database. 
-
-The ``NetworkMapService`` should not be used by any flows, or 
-contracts. Instead they should access the NetworkMapCache service to 
-access this data. 
+``ArtemisMQ`` messaging layer.
 
 Storage and persistence related services
 ----------------------------------------

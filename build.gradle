@@ -4,10 +4,9 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "2.0-SNAPSHOT"
+    ext.corda_release_version = "3.0-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
-    // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
-    ext.corda_platform_version = 1
+    ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
@@ -21,20 +20,20 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '0.5.3'
-    ext.artemis_version = '2.1.0'
-    ext.jackson_version = '2.8.5'
-    ext.jetty_version = '9.3.9.v20160517'
+    ext.artemis_version = '2.4.0'
+    ext.jackson_version = '2.9.2'
+    ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.jolokia_version = '2.0.0-M3'
-    ext.assertj_version = '3.6.1'
+    ext.jolokia_version = '1.3.7'
+    ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
-    ext.log4j_version = '2.7'
+    ext.log4j_version = '2.9.1'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.9.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
-    ext.fileupload_version = '1.3.2'
+    ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
     ext.mockito_version = '2.10.0'
     ext.jopt_simple_version = '5.0.2'
@@ -45,6 +44,13 @@ buildscript {
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
+    ext.dependency_checker_version = '3.0.1'
+    ext.commons_collections_version = '4.1'
+    ext.beanutils_version = '1.9.3'
+    ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
+    ext.jsr305_version = constants.getProperty("jsr305Version")
+    ext.shiro_version = '1.4.0'
+    ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -67,6 +73,8 @@ buildscript {
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
         classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
+        classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
     }
 }
 
@@ -75,7 +83,6 @@ plugins {
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     // Version 1.0.2 of this plugin uses capsule:1.0.1
     id "us.kirchmeier.capsule" version "1.0.2"
-    id "com.jfrog.artifactory" version "4.4.18"
 }
 
 ext {
@@ -87,6 +94,7 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -101,7 +109,13 @@ allprojects {
     apply plugin: 'kotlin'
     apply plugin: 'java'
     apply plugin: 'jacoco'
+    apply plugin: 'org.owasp.dependencycheck'
 
+    dependencyCheck {
+        suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
+        cveValidForHours = 1
+        format = 'ALL'
+    }
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
@@ -132,13 +146,6 @@ allprojects {
     tasks.withType(Test) {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperties['java.io.tmpdir'] = buildDir
-
-        // Ensures that "net.corda.testing.amqp.enable" is passed correctly from Gradle command line
-        // down to JVM executing unit test. It looks like we are running unit tests in the forked mode
-        // and all the "-D" parameters passed to Gradle not making it to unit test level
-        // TODO: Remove once we fully switched to AMQP
-        final AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
-        systemProperty(AMQP_ENABLE_PROP_NAME, System.getProperty(AMQP_ENABLE_PROP_NAME))
     }
 
     group 'net.corda'
@@ -175,9 +182,6 @@ if (!JavaVersion.current().java8Compatible)
 repositories {
     mavenCentral()
     jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
 }
 
 // Required for building out the fat JAR.
@@ -247,9 +251,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     }
     node {
         name "O=Bank B,OU=corda,L=London,C=GB"
-        p2pPort 10007
-        rpcPort 10008
-        webPort 10009
+        p2pAddress "localhost:10007"
+        rpcAddress "localhost:10008"
+        webAddress "localhost:10009"
         cordapps = []
     }
 }

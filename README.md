@@ -20,7 +20,7 @@ Corda is a decentralised database system in which nodes trust each other as litt
 1. Read the [Getting Started](https://docs.corda.net/getting-set-up.html) documentation
 2. Run the [Example CorDapp](https://docs.corda.net/tutorial-cordapp.html)
 3. Read about Corda's [Key Concepts](https://docs.corda.net/key-concepts.html)
-3. Follow the [Hello, World! tutorial](https://docs.corda.net/hello-world-index.html)
+3. Follow the [Hello, World! tutorial](https://docs.corda.net/hello-world-introduction.html)
 
 ## Useful links
 

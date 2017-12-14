@@ -6,8 +6,8 @@ import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
@@ -22,7 +22,6 @@ data class NodeConfig(
         /** This is not used by the node but by the webserver which looks at node.conf. */
         val webAddress: NetworkHostAndPort,
         val notary: NotaryService?,
-        val networkMapService: NetworkMapConfig?,
         val h2port: Int,
         val rpcUsers: List<User> = listOf(defaultUser),
         /** This is an extra config used by the Cash app. */
@@ -39,15 +38,8 @@ data class NodeConfig(
     @Suppress("unused")
     private val useTestClock = true
 
-    val isNetworkMap: Boolean get() = networkMapService == null
-
     fun toText(): String = toConfig().root().render(renderOptions)
 }
-
-/**
- * This is a mirror of NetworkMapInfo.
- */
-data class NetworkMapConfig(val legalName: CordaX500Name, val address: NetworkHostAndPort)
 
 /**
  * This is a subset of NotaryConfig. It implements [ExtraService] to avoid unnecessary copying.

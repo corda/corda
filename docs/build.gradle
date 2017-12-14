@@ -5,13 +5,17 @@ dependencies {
     compile rootProject
 }
 
+ext {
+    // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
+    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin',
+                            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+}
+
 dokka {
     moduleName = 'corda'
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
     processConfigurations = ['compile']
-    // TODO: Re-add '../testing/node-driver/src/main/kotlin', '../testing/test-utils/src/main/kotlin' when they're API stable
-    // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
-    sourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
+    sourceDirs = dokkaSourceDirs
     includes = ['packages.md']
     jdkVersion = 8
 
@@ -31,8 +35,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     outputFormat = "javadoc"
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
     processConfigurations = ['compile']
-    // TODO: Make this a copy of the list above programmatically.
-    sourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
+    sourceDirs = dokkaSourceDirs
     includes = ['packages.md']
     jdkVersion = 8
 

@@ -3,15 +3,16 @@ package net.corda.core.internal
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.node.internal.StartedNode
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,26 +27,25 @@ import kotlin.test.assertNull
 
 // DOCSTART 3
 class ResolveTransactionsFlowTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
-    lateinit var megaCorpNode: StartedNode<MockNetwork.MockNode>
-    lateinit var miniCorpNode: StartedNode<MockNetwork.MockNode>
-    lateinit var megaCorp: Party
-    lateinit var miniCorp: Party
-    lateinit var notary: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var megaCorpNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var miniCorpNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var megaCorp: Party
+    private lateinit var miniCorp: Party
+    private lateinit var notary: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        notaryNode = mockNet.createNotaryNode()
-        megaCorpNode = mockNet.createPartyNode(MEGA_CORP.name)
-        miniCorpNode = mockNet.createPartyNode(MINI_CORP.name)
-        megaCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
-        miniCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
-        mockNet.runNetwork()
-        notary = notaryNode.services.getDefaultNotary()
-        megaCorp = megaCorpNode.info.chooseIdentity()
-        miniCorp = miniCorpNode.info.chooseIdentity()
+        notaryNode = mockNet.defaultNotaryNode
+        megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
+        miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))
+        megaCorpNode.registerInitiatedFlow(TestResponseFlow::class.java)
+        miniCorpNode.registerInitiatedFlow(TestResponseFlow::class.java)
+        notary = mockNet.defaultNotaryIdentity
+        megaCorp = megaCorpNode.info.singleIdentity()
+        miniCorp = miniCorpNode.info.singleIdentity()
     }
 
     @After
@@ -53,7 +53,6 @@ class ResolveTransactionsFlowTest {
         mockNet.stopNodes()
     }
 // DOCEND 3
-
 
     // DOCSTART 1
     @Test

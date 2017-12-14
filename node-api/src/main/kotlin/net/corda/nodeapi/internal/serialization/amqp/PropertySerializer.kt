@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
@@ -14,7 +14,7 @@ import kotlin.reflect.jvm.javaGetter
 sealed class PropertySerializer(val name: String, val readMethod: Method?, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
-    abstract fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any?
+    abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any?
 
     val type: String = generateType()
     val requires: List<String> = generateRequires()
@@ -32,17 +32,16 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         return if (isInterface) listOf(SerializerFactory.nameForType(resolvedType)) else emptyList()
     }
 
-    private fun generateDefault(): String? {
-        if (isJVMPrimitive) {
-            return when (resolvedType) {
-                java.lang.Boolean.TYPE -> "false"
-                java.lang.Character.TYPE -> "&#0"
-                else -> "0"
+    private fun generateDefault(): String? =
+            if (isJVMPrimitive) {
+                when (resolvedType) {
+                    java.lang.Boolean.TYPE -> "false"
+                    java.lang.Character.TYPE -> "&#0"
+                    else -> "0"
+                }
+            } else {
+                null
             }
-        } else {
-            return null
-        }
-    }
 
     private fun generateMandatory(): Boolean {
         return isJVMPrimitive || readMethod?.returnsNullable() == false
@@ -61,8 +60,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     }
 
     companion object {
-        private val logger = loggerFor<PropertySerializer>()
-
+        private val logger = contextLogger()
         fun make(name: String, readMethod: Method?, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
             readMethod?.isAccessible = true
             if (SerializerFactory.isPrimitive(resolvedType)) {
@@ -92,8 +90,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             }
         }
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
-            input.readObjectOrNull(obj, schema, resolvedType)
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
+            input.readObjectOrNull(obj, schemas, resolvedType)
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
@@ -109,7 +107,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     class AMQPPrimitivePropertySerializer(name: String, readMethod: Method?, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
             return if (obj is Binary) obj.array else obj
         }
 
@@ -132,7 +130,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             PropertySerializer(name, readMethod, Character::class.java) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
             return if (obj == null) null else (obj as Short).toChar()
         }
 

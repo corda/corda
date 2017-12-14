@@ -77,8 +77,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: Can we verify the entries in the list?
-        concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schema, declaredType.actualTypeArguments[0]) })
+        concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schemas, declaredType.actualTypeArguments[0]) })
     }
 }

@@ -9,6 +9,7 @@ import net.corda.finance.issuedBy
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -16,6 +17,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FinalityFlowTests {
+    companion object {
+        private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
+    }
+
     private lateinit var mockNet: MockNetwork
     private lateinit var aliceServices: StartedNodeServices
     private lateinit var bobServices: StartedNodeServices
@@ -26,16 +31,13 @@ class FinalityFlowTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
-        mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         aliceServices = aliceNode.services
         bobServices = bobNode.services
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notary = notaryNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

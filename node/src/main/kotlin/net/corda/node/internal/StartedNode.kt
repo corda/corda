@@ -1,22 +1,18 @@
 package net.corda.node.internal
 
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.StateLoader
-import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.TransactionStorage
-import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.node.services.NotaryService
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import rx.Observable
 
 interface StartedNode<out N : AbstractNode> {
     val internals: N
@@ -25,23 +21,23 @@ interface StartedNode<out N : AbstractNode> {
     val checkpointStorage: CheckpointStorage
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
-    val inNodeNetworkMapService: NetworkMapService
     val network: MessagingService
     val database: CordaPersistence
     val rpcOps: CordaRPCOps
+    val notaryService: NotaryService?
     fun dispose() = internals.stop()
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
     /**
-     * Use this method to install your Corda services in your tests. This is automatically done by the node when it
-     * starts up for all classes it finds which are annotated with [CordaService].
+     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
+     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
+     * @return An [Observable] of the initiated flows started by counter-parties.
      */
-    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>) = internals.installCordaService(services, serviceClass)
-}
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(smm, initiatedFlowClass)
 
-class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
+    @VisibleForTesting
+    fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                       flowFactory: InitiatedFlowFactory<F>,
+                                                       initiatedFlowClass: Class<F>,
+                                                       track: Boolean): Observable<F> {
+        return internals.internalRegisterFlowFactory(smm, initiatingFlowClass, flowFactory, initiatedFlowClass, track)
     }
 }

@@ -1,57 +1,85 @@
 package net.corda.node.services.vault;
 
-import com.google.common.collect.*;
-import kotlin.*;
+import com.google.common.collect.ImmutableSet;
+import kotlin.Pair;
+import kotlin.Triple;
 import net.corda.core.contracts.*;
-import net.corda.core.identity.*;
-import net.corda.core.messaging.*;
-import net.corda.core.node.services.*;
+import net.corda.core.crypto.CryptoUtils;
+import net.corda.core.identity.AbstractParty;
+import net.corda.core.identity.CordaX500Name;
+import net.corda.core.identity.Party;
+import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.services.Vault;
+import net.corda.core.node.services.VaultQueryException;
+import net.corda.core.node.services.VaultService;
 import net.corda.core.node.services.vault.*;
-import net.corda.core.node.services.vault.QueryCriteria.*;
-import net.corda.core.utilities.*;
-import net.corda.finance.contracts.*;
-import net.corda.finance.contracts.asset.*;
-import net.corda.finance.schemas.*;
-import net.corda.node.utilities.*;
-import net.corda.testing.*;
-import net.corda.testing.contracts.*;
-import net.corda.testing.node.*;
-import org.junit.*;
+import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
+import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
+import net.corda.finance.contracts.DealState;
+import net.corda.finance.contracts.asset.Cash;
+import net.corda.finance.schemas.CashSchemaV1;
+import net.corda.node.services.api.IdentityServiceInternal;
+import net.corda.nodeapi.internal.persistence.CordaPersistence;
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
+import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.TestIdentity;
+import net.corda.testing.contracts.DummyLinearContract;
+import net.corda.testing.contracts.VaultFiller;
+import net.corda.testing.node.MockServices;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import rx.Observable;
 
-import java.io.*;
-import java.lang.reflect.*;
-import java.security.*;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.cert.CertificateException;
 import java.util.*;
-import java.util.stream.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
-import static net.corda.core.utilities.ByteArrays.*;
-import static net.corda.finance.contracts.asset.CashUtilities.*;
-import static net.corda.testing.CoreTestUtils.*;
-import static net.corda.testing.TestConstants.*;
-import static net.corda.testing.node.MockServices.*;
-import static org.assertj.core.api.Assertions.*;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
+import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.testing.CoreTestUtils.rigorousMock;
+import static net.corda.testing.TestConstants.getBOC_NAME;
+import static net.corda.testing.TestConstants.getCHARLIE_NAME;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY_NAME;
+import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
+import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class VaultQueryJavaTests extends TestDependencyInjectionBase {
-
-    private MockServices services;
+public class VaultQueryJavaTests {
+    private static final TestIdentity BOC = new TestIdentity(getBOC_NAME());
+    private static final Party CHARLIE = new TestIdentity(getCHARLIE_NAME(), 90L).getParty();
+    private static final TestIdentity DUMMY_CASH_ISSUER_INFO = new TestIdentity(new CordaX500Name("Snake Oil Issuer", "London", "GB"), 10L);
+    private static final PartyAndReference DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_INFO.ref((byte) 1);
+    private static final TestIdentity DUMMY_NOTARY = new TestIdentity(getDUMMY_NOTARY_NAME(), 20L);
+    private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
+    @Rule
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
+    private VaultFiller vaultFiller;
     private MockServices issuerServices;
     private VaultService vaultService;
     private CordaPersistence database;
 
     @Before
-    public void setUp() {
+    public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        ArrayList<KeyPair> keys = new ArrayList<>();
-        keys.add(getMEGA_CORP_KEY());
-        keys.add(getDUMMY_NOTARY_KEY());
-        IdentityService identitySvc = makeTestIdentityService();
-        @SuppressWarnings("unchecked")
-        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(keys, () -> identitySvc, cordappPackages);
-        issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
+        IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity()));
+        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
+                Arrays.asList(MEGA_CORP.getKeyPair(), DUMMY_NOTARY.getKeyPair()),
+                identitySvc,
+                cordappPackages,
+                MEGA_CORP.getName());
+        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, BOC.getKeyPair());
         database = databaseAndServices.getFirst();
-        services = databaseAndServices.getSecond();
+        MockServices services = databaseAndServices.getSecond();
+        vaultFiller = new VaultFiller(services, DUMMY_NOTARY);
         vaultService = services.getVaultService();
     }
 
@@ -71,7 +99,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @Test
     public void unconsumedLinearStates() throws VaultQueryException {
         database.transaction(tx -> {
-            VaultFiller.fillWithSomeTestLinearStates(services, 3);
+            vaultFiller.fillWithSomeTestLinearStates(3);
             return tx;
         });
         database.transaction(tx -> {
@@ -89,8 +117,8 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     public void unconsumedStatesForStateRefsSortedByTxnId() {
         Vault<LinearState> issuedStates =
                 database.transaction(tx -> {
-                    VaultFiller.fillWithSomeTestLinearStates(services, 8);
-                    return VaultFiller.fillWithSomeTestLinearStates(services, 2);
+                    vaultFiller.fillWithSomeTestLinearStates(8);
+                    return vaultFiller.fillWithSomeTestLinearStates(2);
                 });
         database.transaction(tx -> {
             Stream<StateRef> stateRefsStream = StreamSupport.stream(issuedStates.getStates().spliterator(), false).map(StateAndRef::getRef);
@@ -115,20 +143,17 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     public void consumedCashStates() {
         Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
         database.transaction(tx -> {
-            VaultFiller.fillWithSomeTestCash(services,
-                    new Amount<Currency>(100, Currency.getInstance("USD")),
+            vaultFiller.fillWithSomeTestCash(
+                    new Amount<>(100, Currency.getInstance("USD")),
                     issuerServices,
-                    TestConstants.getDUMMY_NOTARY(),
                     3,
-                    3,
-                    new Random(),
-                    new OpaqueBytes("1".getBytes()),
+                    DUMMY_CASH_ISSUER,
                     null,
-                    CashUtilities.getDUMMY_CASH_ISSUER());
+                    new Random());
             return tx;
         });
         database.transaction(tx -> {
-            VaultFiller.consumeCash(services, amount, getDUMMY_NOTARY());
+            vaultFiller.consumeCash(amount, CHARLIE);
             return tx;
         });
         database.transaction(tx -> {
@@ -149,17 +174,16 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         @SuppressWarnings("unchecked")
         Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
                 database.transaction((DatabaseTransaction tx) -> {
-                    Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
+                    Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
                     StateAndRef<LinearState> linearState = states.getStates().iterator().next();
                     UniqueIdentifier uid = linearState.component1().getData().getLinearId();
-
-                    Vault<DealState> dealStates = VaultFiller.fillWithSomeTestDeals(services, dealIds);
+                    Vault<DealState> dealStates = vaultFiller.fillWithSomeTestDeals(dealIds);
                     return new Triple(linearState, uid, dealStates);
                 });
         database.transaction(tx -> {
             // consume states
-            VaultFiller.consumeDeals(services, (List<? extends StateAndRef<? extends DealState>>) ids.getThird().getStates(), getDUMMY_NOTARY());
-            VaultFiller.consumeLinearStates(services, Collections.singletonList(ids.getFirst()), getDUMMY_NOTARY());
+            vaultFiller.consumeDeals((List<? extends StateAndRef<? extends DealState>>) ids.getThird().getStates());
+            vaultFiller.consumeLinearStates(Collections.singletonList(ids.getFirst()));
             return tx;
         });
         database.transaction(tx -> {
@@ -198,11 +222,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars10 = new Amount<>(10, Currency.getInstance("USD"));
             Amount<Currency> dollars1 = new Amount<>(1, Currency.getInstance("USD"));
-
-            VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars10, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars1, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(pounds, issuerServices, 1, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 1, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars10, issuerServices, 1, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars1, issuerServices, 1, DUMMY_CASH_ISSUER);
             return tx;
         });
         database.transaction(tx -> {
@@ -239,16 +262,13 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @Test
     public void trackCashStates() {
         database.transaction(tx -> {
-            VaultFiller.fillWithSomeTestCash(services,
+            vaultFiller.fillWithSomeTestCash(
                     new Amount<>(100, Currency.getInstance("USD")),
                     issuerServices,
-                    TestConstants.getDUMMY_NOTARY(),
                     3,
-                    3,
-                    new Random(),
-                    new OpaqueBytes("1".getBytes()),
+                    DUMMY_CASH_ISSUER,
                     null,
-                    getDUMMY_CASH_ISSUER());
+                    new Random());
             return tx;
         });
         database.transaction(tx -> {
@@ -274,10 +294,9 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         List<String> dealIds = Arrays.asList("123", "456", "789");
         UniqueIdentifier uid =
                 database.transaction(tx -> {
-                    Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
+                    Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
                     UniqueIdentifier _uid = states.getStates().iterator().next().component1().getData().getLinearId();
-
-                    VaultFiller.fillWithSomeTestDeals(services, dealIds);
+                    vaultFiller.fillWithSomeTestDeals(dealIds);
                     return _uid;
                 });
         database.transaction(tx -> {
@@ -287,7 +306,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Collections.singletonList(uid);
-            List<AbstractParty> dealParty = Collections.singletonList(getMEGA_CORP());
+            List<AbstractParty> dealParty = Collections.singletonList(MEGA_CORP.getParty());
             QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, dealIds);
             QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, Vault.StateStatus.UNCONSUMED, null);
             QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
@@ -321,13 +340,11 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Amount<Currency> dollars300 = new Amount<>(300, Currency.getInstance("USD"));
             Amount<Currency> pounds = new Amount<>(400, Currency.getInstance("GBP"));
             Amount<Currency> swissfrancs = new Amount<>(500, Currency.getInstance("CHF"));
-
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 1, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars200, issuerServices, 2, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars300, issuerServices, 3, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(pounds, issuerServices, 4, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(swissfrancs, issuerServices, 5, DUMMY_CASH_ISSUER);
             return tx;
         });
         database.transaction(tx -> {
@@ -369,13 +386,11 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Amount<Currency> dollars300 = new Amount<>(300, Currency.getInstance("USD"));
             Amount<Currency> pounds = new Amount<>(400, Currency.getInstance("GBP"));
             Amount<Currency> swissfrancs = new Amount<>(500, Currency.getInstance("CHF"));
-
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 1, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars200, issuerServices, 2, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars300, issuerServices, 3, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(pounds, issuerServices, 4, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(swissfrancs, issuerServices, 5, DUMMY_CASH_ISSUER);
             return tx;
         });
         database.transaction(tx -> {
@@ -394,37 +409,28 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                 Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample22
 
-                assertThat(results.getOtherResults()).hasSize(27);
-                /** CHF */
+                assertThat(results.getOtherResults()).hasSize(18);
+                /* CHF */
                 assertThat(results.getOtherResults().get(0)).isEqualTo(500L);
-                assertThat(results.getOtherResults().get(1)).isEqualTo("CHF");
-                assertThat(results.getOtherResults().get(2)).isEqualTo(5L);
-                assertThat(results.getOtherResults().get(3)).isEqualTo(102L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo("CHF");
-                assertThat(results.getOtherResults().get(5)).isEqualTo(94L);
-                assertThat(results.getOtherResults().get(6)).isEqualTo("CHF");
-                assertThat(results.getOtherResults().get(7)).isEqualTo(100.00);
-                assertThat(results.getOtherResults().get(8)).isEqualTo("CHF");
-                /** GBP */
-                assertThat(results.getOtherResults().get(9)).isEqualTo(400L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo("GBP");
-                assertThat(results.getOtherResults().get(11)).isEqualTo(4L);
-                assertThat(results.getOtherResults().get(12)).isEqualTo(103L);
-                assertThat(results.getOtherResults().get(13)).isEqualTo("GBP");
-                assertThat(results.getOtherResults().get(14)).isEqualTo(93L);
-                assertThat(results.getOtherResults().get(15)).isEqualTo("GBP");
+                assertThat(results.getOtherResults().get(1)).isEqualTo(5L);
+                assertThat(results.getOtherResults().get(2)).isEqualTo(102L);
+                assertThat(results.getOtherResults().get(3)).isEqualTo(94L);
+                assertThat(results.getOtherResults().get(4)).isEqualTo(100.00);
+                assertThat(results.getOtherResults().get(5)).isEqualTo("CHF");
+                /* GBP */
+                assertThat(results.getOtherResults().get(6)).isEqualTo(400L);
+                assertThat(results.getOtherResults().get(7)).isEqualTo(4L);
+                assertThat(results.getOtherResults().get(8)).isEqualTo(103L);
+                assertThat(results.getOtherResults().get(9)).isEqualTo(93L);
+                assertThat(results.getOtherResults().get(10)).isEqualTo(100.0);
+                assertThat(results.getOtherResults().get(11)).isEqualTo("GBP");
+                /* USD */
+                assertThat(results.getOtherResults().get(12)).isEqualTo(600L);
+                assertThat(results.getOtherResults().get(13)).isEqualTo(6L);
+                assertThat(results.getOtherResults().get(14)).isEqualTo(113L);
+                assertThat(results.getOtherResults().get(15)).isEqualTo(87L);
                 assertThat(results.getOtherResults().get(16)).isEqualTo(100.0);
-                assertThat(results.getOtherResults().get(17)).isEqualTo("GBP");
-                /** USD */
-                assertThat(results.getOtherResults().get(18)).isEqualTo(600L);
-                assertThat(results.getOtherResults().get(19)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(20)).isEqualTo(6L);
-                assertThat(results.getOtherResults().get(21)).isEqualTo(113L);
-                assertThat(results.getOtherResults().get(22)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(23)).isEqualTo(87L);
-                assertThat(results.getOtherResults().get(24)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(25)).isEqualTo(100.0);
-                assertThat(results.getOtherResults().get(26)).isEqualTo("USD");
+                assertThat(results.getOtherResults().get(17)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {
                 e.printStackTrace();
@@ -441,12 +447,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
             Amount<Currency> pounds300 = new Amount<>(300, Currency.getInstance("GBP"));
             Amount<Currency> pounds400 = new Amount<>(400, Currency.getInstance("GBP"));
-
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), new OpaqueBytes("1".getBytes()), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
-            VaultFiller.fillWithSomeTestCash(services, pounds300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), new OpaqueBytes("1".getBytes()), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, pounds400, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), new OpaqueBytes("1".getBytes()), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
-
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 1, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(dollars200, issuerServices, 2, BOC.ref((byte) '1'));
+            vaultFiller.fillWithSomeTestCash(pounds300, issuerServices, 3, DUMMY_CASH_ISSUER);
+            vaultFiller.fillWithSomeTestCash(pounds400, issuerServices, 4, BOC.ref((byte) '1'));
             return tx;
         });
         database.transaction(tx -> {
@@ -454,30 +458,28 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                 // DOCSTART VaultJavaQueryExample23
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
-                Field issuerParty = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerParty");
-
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(issuerParty, currency), Sort.Direction.DESC));
-
+                Field issuerPartyHash = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerPartyHash");
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(issuerPartyHash, currency), Sort.Direction.DESC));
                 Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, sumCriteria);
                 // DOCEND VaultJavaQueryExample23
 
                 assertThat(results.getOtherResults()).hasSize(12);
 
                 assertThat(results.getOtherResults().get(0)).isEqualTo(400L);
-                assertThat(results.getOtherResults().get(1)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
+                assertThat(results.getOtherResults().get(1)).isEqualTo(CryptoUtils.toStringShort(BOC.getPublicKey()));
                 assertThat(results.getOtherResults().get(2)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(3)).isEqualTo(300L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
+                assertThat(results.getOtherResults().get(4)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPublicKey()));
                 assertThat(results.getOtherResults().get(5)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(6)).isEqualTo(200L);
-                assertThat(results.getOtherResults().get(7)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
+                assertThat(results.getOtherResults().get(7)).isEqualTo(CryptoUtils.toStringShort(BOC.getPublicKey()));
                 assertThat(results.getOtherResults().get(8)).isEqualTo("USD");
                 assertThat(results.getOtherResults().get(9)).isEqualTo(100L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
+                assertThat(results.getOtherResults().get(10)).isEqualTo(CryptoUtils.toStringShort(DUMMY_CASH_ISSUER_INFO.getPublicKey()));
                 assertThat(results.getOtherResults().get(11)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
             return tx;
         });

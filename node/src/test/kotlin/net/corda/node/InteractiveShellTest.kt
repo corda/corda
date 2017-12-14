@@ -1,32 +1,38 @@
 package net.corda.node
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.shell.InteractiveShell
-import net.corda.node.utilities.configureDatabase
-import net.corda.testing.DEV_TRUST_ROOT
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_IDENTITY
+import net.corda.node.internal.configureDatabase
+import net.corda.testing.TestIdentity
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 
 class InteractiveShellTest {
+    companion object {
+        private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+    }
+
     @Before
     fun setup() {
-        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), ::makeTestIdentityService)
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
     }
 
     @After
@@ -36,8 +42,8 @@ class InteractiveShellTest {
 
     @Suppress("UNUSED")
     class FlowA(val a: String) : FlowLogic<String>() {
-        constructor(b: Int) : this(b.toString())
-        constructor(b: Int, c: String) : this(b.toString() + c)
+        constructor(b: Int?) : this(b.toString())
+        constructor(b: Int?, c: String) : this(b.toString() + c)
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
@@ -46,13 +52,20 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = InMemoryIdentityService(listOf(MEGA_CORP_IDENTITY), trustRoot = DEV_TRUST_ROOT)
+    private val ids = makeTestIdentityService(listOf(megaCorp.identity))
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {
-        var output: DummyFSM? = null
-        InteractiveShell.runFlowFromString({ DummyFSM(it as FlowA).apply { output = this } }, input, FlowA::class.java, om)
-        assertEquals(expected, output!!.flowA.a, input)
+        var output: String? = null
+        InteractiveShell.runFlowFromString( { clazz, args ->
+
+            val instance = clazz.getConstructor(*args.map { it!!::class.java }.toTypedArray()).newInstance(*args) as FlowA
+            output = instance.a
+            val future = openFuture<String>()
+            future.set("ABC")
+            FlowProgressHandleImpl(StateMachineRunId.createRandom(), future, Observable.just("Some string"))
+        }, input, FlowA::class.java, om)
+        assertEquals(expected, output!!, input)
     }
 
     @Test
@@ -81,7 +94,5 @@ class InteractiveShellTest {
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test
-    fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
-
-    class DummyFSM(val flowA: FlowA) : FlowStateMachine<Any?> by mock()
+    fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())
 }

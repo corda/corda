@@ -16,7 +16,7 @@ import com.opengamma.strata.market.param.CurrencyParameterSensitivities
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import com.opengamma.strata.product.swap.ResolvedSwapTrade
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.vega.flows.toCordaCompatible
 import java.time.LocalDate
 
@@ -63,7 +63,7 @@ abstract class AnalyticsEngine {
 
 class OGSIMMAnalyticsEngine : AnalyticsEngine() {
     private companion object {
-        val log = loggerFor<OGSIMMAnalyticsEngine>()
+        private val log = contextLogger()
     }
 
     override fun curveGroup(): CurveGroupDefinition {

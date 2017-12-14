@@ -16,14 +16,21 @@ import net.corda.finance.USD
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.User
-import net.corda.testing.*
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.nodeapi.internal.config.User
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
+import net.corda.testing.node.internal.RPCDriverDSL
+import net.corda.testing.node.internal.rpcDriver
+import net.corda.testing.node.internal.rpcTestUser
+import net.corda.testing.node.internal.startRpcClient
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -33,23 +40,24 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ContractUpgradeFlowTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    lateinit var bobNode: StartedNode<MockNetwork.MockNode>
-    lateinit var notary: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var notary: Party
+    private lateinit var alice: Party
+    private lateinit var bob: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
-        val notaryNode = mockNet.createNotaryNode()
-        aliceNode = mockNet.createPartyNode(ALICE.name)
-        bobNode = mockNet.createPartyNode(BOB.name)
+        aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        bobNode = mockNet.createPartyNode(BOB_NAME)
+        notary = mockNet.defaultNotaryIdentity
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
 
         // Process registration
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
-
-        notary = notaryNode.services.getDefaultNotary()
     }
 
     @After
@@ -60,11 +68,11 @@ class ContractUpgradeFlowTest {
     @Test
     fun `2 parties contract upgrade`() {
         // Create dummy contract.
-        val twoPartyDummyContract = DummyContract.generateInitial(0, notary, aliceNode.info.chooseIdentity().ref(1), bobNode.info.chooseIdentity().ref(1))
+        val twoPartyDummyContract = DummyContract.generateInitial(0, notary, alice.ref(1), bob.ref(1))
         val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
         val stx = bobNode.services.addSignature(signedByA)
 
-        aliceNode.services.startFlow(FinalityFlow(stx, setOf(bobNode.info.chooseIdentity())))
+        aliceNode.services.startFlow(FinalityFlow(stx, setOf(bob)))
         mockNet.runNetwork()
 
         val atx = aliceNode.database.transaction { aliceNode.services.validatedTransactions.getTransaction(stx.id) }
@@ -115,11 +123,11 @@ class ContractUpgradeFlowTest {
         check(bobNode)
     }
 
-    private fun RPCDriverExposedDSLInterface.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = CordaRPCOpsImpl(node.services, node.smm, node.database, node.services)
+                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services)
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password
@@ -128,21 +136,21 @@ class ContractUpgradeFlowTest {
 
     @Test
     fun `2 parties contract upgrade using RPC`() {
-        rpcDriver(initialiseSerialization = false) {
+        rpcDriver {
             // Create dummy contract.
-            val twoPartyDummyContract = DummyContract.generateInitial(0, notary, aliceNode.info.chooseIdentity().ref(1), bobNode.info.chooseIdentity().ref(1))
+            val twoPartyDummyContract = DummyContract.generateInitial(0, notary, alice.ref(1), bob.ref(1))
             val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
             val stx = bobNode.services.addSignature(signedByA)
 
             val user = rpcTestUser.copy(permissions = setOf(
-                    startFlowPermission<FinalityInvoker>(),
-                    startFlowPermission<ContractUpgradeFlow.Initiate<*, *>>(),
-                    startFlowPermission<ContractUpgradeFlow.Authorise>(),
-                    startFlowPermission<ContractUpgradeFlow.Deauthorise>()
+                    startFlow<FinalityInvoker>(),
+                    startFlow<ContractUpgradeFlow.Initiate<*, *>>(),
+                    startFlow<ContractUpgradeFlow.Authorise>(),
+                    startFlow<ContractUpgradeFlow.Deauthorise>()
             ))
             val rpcA = startProxy(aliceNode, user)
             val rpcB = startProxy(bobNode, user)
-            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(bobNode.info.chooseIdentity()))
+            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(bob))
             mockNet.runNetwork()
             handle.returnValue.getOrThrow()
 
@@ -204,7 +212,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val chosenIdentity = aliceNode.info.chooseIdentity()
+        val chosenIdentity = alice
         val result = aliceNode.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx

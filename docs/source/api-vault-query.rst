@@ -176,6 +176,17 @@ define a ``PageSpecification`` to correctly process results with efficient memor
 place to alert API users to the need for pagination where a single query returns more than 200 results and no
 ``PageSpecification`` has been supplied.
 
+Here's a query that extracts every unconsumed ``ContractState`` from the vault in pages of size 200, starting from the
+default page number (page one):
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val vaultSnapshot = proxy.vaultQueryBy<ContractState>(
+            QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED),
+            PageSpecification(DEFAULT_PAGE_NUM, 200))
+
 .. note:: A pages maximum size ``MAX_PAGE_SIZE`` is defined as ``Int.MAX_VALUE`` and should be used with extreme
    caution as results returned may exceed your JVM's memory footprint.
 

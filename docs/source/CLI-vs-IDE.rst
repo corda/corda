@@ -9,11 +9,11 @@ a developer environment.
 IDE - IntelliJ
 --------------
 
-IntelliJ (R3's preferred IDE) integrates well with gradle (our chosen build, deployment and CLI tool). IntelliJ understands gradle
-tasks and dependencies, automatically loading them in the background when a project is first opened or the gradle
-project changes. Occasionally, however, you may need to refresh the gradle project manually - but this is hinted to you
-by the IDE. It's a good idea to do this before carrying on with other work (and in fact you may find it is essential to pick
-up new libraries, etc.).
+IntelliJ (the preferred IDE for Corda) integrates well with gradle (Corda's default build, deployment and CLI tool).
+IntelliJ understands gradle tasks and dependencies, automatically loading them in the background when a project is
+first opened or the gradle project changes. Occasionally, however, you may need to refresh the gradle project manually
+- but this is hinted to you by the IDE. It's a good idea to do this before carrying on with other work (and in fact you
+may find it is essential to pick up new libraries, etc.).
 
 There are some great resources about how to get started using IntelliJ. As opposed to trying to repeat them here, we advise
 you to go to the `IntelliJ docs here <https://www.jetbrains.com/idea/documentation/>`_.

@@ -122,7 +122,7 @@ In the instructions above the server node permissions are configured programmati
 .. code-block:: text
 
         driver(driverDirectory = baseDirectory) {
-            val user = User("user", "password", permissions = setOf(startFlowPermission<CashFlow>()))
+            val user = User("user", "password", permissions = setOf(startFlow<CashFlow>()))
             val node = startNode("CN=Alice Corp,O=Alice Corp,L=London,C=GB", rpcUsers = listOf(user)).get()
 
 When starting a standalone node using a configuration file we must supply the RPC credentials as follows:

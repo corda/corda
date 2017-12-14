@@ -1,54 +1,35 @@
 package net.corda.node.services.api
 
-import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
-    /**
-     * Deregister from updates from the given map service.
-     * @param network the network messaging service.
-     * @param mapParty the network map service party to fetch current state from.
-     */
-    fun deregisterForUpdates(network: MessagingService, mapParty: Party): CordaFuture<Unit>
+    val allNodeHashes: List<SecureHash>
 
-    /**
-     * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
-     * updates.
-     * @param network the network messaging service.
-     * @param networkMapAddress the network map service to fetch current state from.
-     * @param subscribe if the cache should subscribe to updates.
-     * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
-     * version is less than or equal to the given version, no update is fetched.
-     */
-    fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient,
-                      subscribe: Boolean, ifChangedSinceVer: Int? = null): CordaFuture<Unit>
+    fun getNodeByHash(nodeHash: SecureHash): NodeInfo?
 
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
@@ -56,23 +37,13 @@ interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
     /** Removes a node from the local cache. */
     fun removeNode(node: NodeInfo)
 
-    /** For testing where the network map cache is manipulated marks the service as immediately ready. */
-    @VisibleForTesting
-    fun runWithoutMapService()
-
     /** Indicates if loading network map data from database was successful. */
     val loadDBSuccess: Boolean
 }
 
-@CordaSerializable
-sealed class NetworkCacheException : CordaException("Network Cache Error") {
-    /** Indicates a failure to deregister, because of a rejected request from the remote node */
-    class DeregistrationFailed : NetworkCacheException()
-}
-
 interface ServiceHubInternal : ServiceHub {
     companion object {
-        private val log = loggerFor<ServiceHubInternal>()
+        private val log = contextLogger()
     }
 
     override val vaultService: VaultServiceInternal
@@ -92,7 +63,7 @@ interface ServiceHubInternal : ServiceHub {
     val database: CordaPersistence
     val configuration: NodeConfiguration
     override val cordappProvider: CordappProviderInternal
-    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
@@ -104,9 +75,43 @@ interface ServiceHubInternal : ServiceHub {
             log.warn("Transactions recorded from outside of a state machine")
         }
 
-        if (notifyVault) {
+        if (statesToRecord != StatesToRecord.NONE) {
             val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-            vaultService.notifyAll(toNotify)
+            // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
+            // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
+            // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
+            //
+            // The reason for this is three-fold:
+            //
+            // 1) We are putting in place the observer mode feature relatively quickly to meet specific customer
+            //    launch target dates.
+            //
+            // 2) The right design for vaults which mix observations and relevant states isn't entirely clear yet.
+            //
+            // 3) If we get the design wrong it could create security problems and business confusions.
+            //
+            // Back in the bitcoinj days I did add support for "watching addresses" to the wallet code, which is the
+            // Bitcoin equivalent of observer nodes:
+            //
+            //   https://bitcoinj.github.io/working-with-the-wallet#watching-wallets
+            //
+            // The ability to have a wallet containing both irrelevant and relevant states complicated everything quite
+            // dramatically, even methods as basic as the getBalance() API which required additional modes to let you
+            // query "balance I can spend" vs "balance I am observing". In the end it might have been better to just
+            // require the user to create an entirely separate wallet for observing with.
+            //
+            // In Corda we don't support a single node having multiple vaults (at the time of writing), and it's not
+            // clear that's the right way to go: perhaps adding an "origin" column to the VAULT_STATES table is a better
+            // solution. Then you could select subsets of states depending on where the report came from.
+            //
+            // The risk of doing this is that apps/developers may use 'canned SQL queries' not written by us that forget
+            // to add a WHERE clause for the origin column. Those queries will seem to work most of the time until
+            // they're run on an observer node and mix in irrelevant data. In the worst case this may result in
+            // erroneous data being reported to the user, which could cause security problems.
+            //
+            // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
+            // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
+            vaultService.notifyAll(statesToRecord, toNotify)
         }
     }
 
@@ -114,34 +119,28 @@ interface ServiceHubInternal : ServiceHub {
 }
 
 interface FlowStarter {
-    /**
-     * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
-     * defaults to [FlowInitiator.RPC] with username "Only For Testing".
-     */
-    @VisibleForTesting
-    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing"))
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
-     * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
+     * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
-     * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
-     * See: [FlowInitiator].
+     * Note that you must be on the server thread to call this method. [context] points how flow was started,
+     * See: [InvocationContext].
      *
      * @throws net.corda.core.flows.IllegalFlowLogicException or IllegalArgumentException if there are problems with the
      * [logicType] or [args].
      */
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
-            flowInitiator: FlowInitiator,
-            vararg args: Any?): FlowStateMachineImpl<T> {
+            context: InvocationContext,
+            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
-        return startFlow(logic, flowInitiator, ourIdentity = null)
+        return startFlow(logic, context)
     }
 }
 

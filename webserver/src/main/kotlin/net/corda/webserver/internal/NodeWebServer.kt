@@ -4,7 +4,7 @@ import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
 import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
@@ -32,7 +32,7 @@ import javax.ws.rs.core.MediaType
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
-        val log = loggerFor<NodeWebServer>()
+        private val log = contextLogger()
         const val retryDelay = 1000L // Milliseconds
     }
 
@@ -58,7 +58,7 @@ class NodeWebServer(val config: WebServerConfig) {
         // Export JMX monitoring statistics and data over REST/JSON.
         if (config.exportJMXto.split(',').contains("http")) {
             val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-            val warpath = classpath.firstOrNull { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
+            val warpath = classpath.firstOrNull { it.contains("jolokia-war") && it.endsWith(".war") }
             if (warpath != null) {
                 handlerCollection.addHandler(WebAppContext().apply {
                     // Find the jolokia WAR file on the classpath.

@@ -3,7 +3,7 @@ package net.corda.demobench.model
 import com.typesafe.config.Config
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.config.parseAs
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
@@ -24,10 +24,6 @@ class InstallFactory : Controller() {
         nodeConfig.webAddress.checkPort()
 
         val tempDir = Files.createTempDirectory(baseDir, ".node")
-
-        if (nodeConfig.isNetworkMap) {
-            log.info("Node '${nodeConfig.myLegalName}' is the network map")
-        }
 
         return InstallConfig(tempDir, NodeConfigWrapper(tempDir, nodeConfig))
     }

@@ -114,7 +114,7 @@ class NodeTabView : Fragment() {
 
                 fieldset("Additional configuration") {
                     styleClass.addAll("services-panel")
-                    val extraServices = if (nodeController.hasNetworkMap()) {
+                    val extraServices = if (nodeController.hasNotary()) {
                         listOf(USD, GBP, CHF, EUR).map { CurrencyIssuer(it) }
                     } else {
                         listOf(NotaryService(true), NotaryService(false))
@@ -123,7 +123,7 @@ class NodeTabView : Fragment() {
                     val servicesList = CheckListView(extraServices.observable()).apply {
                         vboxConstraints { vGrow = Priority.ALWAYS }
                         model.item.extraServices.set(checkModel.checkedItems)
-                        if (!nodeController.hasNetworkMap()) {
+                        if (!nodeController.hasNotary()) {
                             checkModel.check(0)
                             checkModel.checkedItems.addListener(ListChangeListener { change ->
                                 while (change.next()) {
@@ -204,14 +204,15 @@ class NodeTabView : Fragment() {
 
     private fun Pane.nodeNameField() = textfield(model.legalName) {
         minWidth = textWidth
-        validator {
-            if (it == null) {
+        validator { rawName ->
+            val normalizedName: String? = rawName?.let(LegalNameValidator::normalize)
+            if (normalizedName == null) {
                 error("Node name is required")
-            } else if (nodeController.nameExists(LegalNameValidator.normaliseLegalName(it))) {
+            } else if (nodeController.nameExists(normalizedName)) {
                 error("Node with this name already exists")
             } else {
                 try {
-                    LegalNameValidator.validateLegalName(LegalNameValidator.normaliseLegalName(it))
+                    LegalNameValidator.validateOrganization(normalizedName, LegalNameValidator.Validation.MINIMAL)
                     null
                 } catch (e: IllegalArgumentException) {
                     error(e.message)

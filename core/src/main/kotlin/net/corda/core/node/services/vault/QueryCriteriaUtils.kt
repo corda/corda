@@ -127,12 +127,14 @@ data class PageSpecification(val pageNumber: Int = -1, val pageSize: Int = DEFAU
     val isDefault = (pageSize == DEFAULT_PAGE_SIZE && pageNumber == -1)
 }
 
+abstract class BaseSort
+
 /**
  * Sort allows specification of a set of entity attribute names and their associated directionality
  * and null handling, to be applied upon processing a query specification.
  */
 @CordaSerializable
-data class Sort(val columns: Collection<SortColumn>) {
+data class Sort(val columns: Collection<SortColumn>) : BaseSort() {
     @CordaSerializable
     enum class Direction {
         ASC,
@@ -174,6 +176,21 @@ data class Sort(val columns: Collection<SortColumn>) {
     @CordaSerializable
     data class SortColumn(
             val sortAttribute: SortAttribute,
+            val direction: Sort.Direction = Sort.Direction.ASC)
+}
+
+@CordaSerializable
+data class AttachmentSort(val columns: Collection<AttachmentSortColumn>) : BaseSort() {
+
+    enum class AttachmentSortAttribute(val columnName: String) {
+        INSERTION_DATE("insertion_date"),
+        UPLOADER("uploader"),
+        FILENAME("filename")
+    }
+
+    @CordaSerializable
+    data class AttachmentSortColumn(
+            val sortAttribute: AttachmentSortAttribute,
             val direction: Sort.Direction = Sort.Direction.ASC)
 }
 
@@ -257,6 +274,11 @@ object Builder {
     fun <R : Comparable<R>> between(from: R, to: R) = ColumnPredicate.Between(from, to)
     fun <R : Comparable<R>> `in`(collection: Collection<R>) = ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection)
     fun <R : Comparable<R>> notIn(collection: Collection<R>) = ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection)
+    fun like(string: String) = ColumnPredicate.Likeness(LikenessOperator.LIKE, string)
+    fun notLike(string: String) = ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string)
+    fun <R> isNull() = ColumnPredicate.NullExpression<R>(NullOperator.IS_NULL)
+    fun <R> isNotNull() = ColumnPredicate.NullExpression<R>(NullOperator.NOT_NULL)
+
 
     fun <O> KProperty1<O, String?>.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
     @JvmStatic

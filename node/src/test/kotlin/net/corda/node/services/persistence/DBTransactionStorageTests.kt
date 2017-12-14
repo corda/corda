@@ -5,59 +5,40 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.node.services.VaultService
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
-import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
-class DBTransactionStorageTests : TestDependencyInjectionBase() {
-    lateinit var database: CordaPersistence
-    lateinit var transactionStorage: DBTransactionStorage
-    lateinit var services: MockServices
-    val vault: VaultService get() = services.vaultService
+class DBTransactionStorageTests {
+    private companion object {
+        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
+    private lateinit var database: CordaPersistence
+    private lateinit var transactionStorage: DBTransactionStorage
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), ::makeTestIdentityService)
-        database.transaction {
-
-            services = object : MockServices(BOB_KEY) {
-                override val vaultService: VaultServiceInternal
-                    get() {
-                        val vaultService = NodeVaultService(clock, keyManagementService, stateLoader, database.hibernateConfig)
-                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig)
-                        return vaultService
-                    }
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
-                    }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
-                }
-            }
-        }
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
         newTransactionStorage()
     }
 

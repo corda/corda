@@ -2,19 +2,26 @@ package net.corda.demobench.model
 
 import javafx.beans.binding.IntegerExpression
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.days
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
@@ -35,9 +42,9 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     private val command = jvm.commandFor(cordaPath).toTypedArray()
 
     private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
+    private var notaryIdentity: Party? = null
+    private var networkParametersCopier: NetworkParametersCopier? = null
     private val port = AtomicInteger(firstPort)
-
-    private var networkMapConfig: NetworkMapConfig? = null
 
     val activeNodes: List<NodeConfigWrapper>
         get() = nodes.values.filter {
@@ -60,6 +67,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         fun IntegerExpression.toLocalAddress() = NetworkHostAndPort("localhost", value)
 
         val location = nodeData.nearestCity.value
+        val notary = nodeData.extraServices.filterIsInstance<NotaryService>().noneOrSingle()
         val nodeConfig = NodeConfig(
                 myLegalName = CordaX500Name(
                         organisation = nodeData.legalName.value.trim(),
@@ -69,8 +77,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 p2pAddress = nodeData.p2pPort.toLocalAddress(),
                 rpcAddress = nodeData.rpcPort.toLocalAddress(),
                 webAddress = nodeData.webPort.toLocalAddress(),
-                notary = nodeData.extraServices.filterIsInstance<NotaryService>().noneOrSingle(),
-                networkMapService = networkMapConfig,  // The first node becomes the network map
+                notary = notary,
                 h2port = nodeData.h2Port.value,
                 issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() }
         )
@@ -82,11 +89,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             return null
         }
 
-        if (nodeConfig.isNetworkMap) {
-            networkMapConfig = nodeConfig.let { NetworkMapConfig(it.myLegalName, it.p2pAddress) }
-            log.info("Network map provided by: ${nodeConfig.myLegalName}")
-        }
-
         nodeInfoFilesCopier.addConfig(wrapper)
 
         return wrapper
@@ -96,10 +98,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         config.state = NodeState.DEAD
 
         nodeInfoFilesCopier.removeConfig(config)
-
-        if (config.nodeConfig.isNetworkMap) {
-            log.warning("Network map service (Node '${config.nodeConfig.myLegalName}') has exited.")
-        }
     }
 
     val nextPort: Int get() = port.andIncrement
@@ -110,10 +108,12 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     fun nameExists(name: String) = keyExists(name.toKey())
 
-    fun hasNetworkMap(): Boolean = networkMapConfig != null
+    fun hasNotary(): Boolean = activeNodes.any { it.nodeConfig.notary != null }
 
     fun runCorda(pty: R3Pty, config: NodeConfigWrapper): Boolean {
         try {
+            // Notary can be removed and then added again, that's why we need to perform this check.
+            require((config.nodeConfig.notary != null).xor(notaryIdentity != null)) { "There must be exactly one notary in the network" }
             config.nodeDir.createDirectories()
 
             // Install any built-in plugins into the working directory.
@@ -127,6 +127,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             val cordaEnv = System.getenv().toMutableMap().apply {
                 jvm.setCapsuleCacheDir(this)
             }
+            (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
             return true
@@ -136,14 +137,39 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         }
     }
 
+    private fun makeNetworkParametersCopier(config: NodeConfigWrapper): NetworkParametersCopier {
+        val identity = getNotaryIdentity(config)
+        val parametersCopier = NetworkParametersCopier(NetworkParameters(
+                minimumPlatformVersion = 1,
+                notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
+                modifiedTime = Instant.now(),
+                eventHorizon = 10000.days,
+                maxMessageSize = 40000,
+                maxTransactionSize = 40000,
+                epoch = 1
+        ))
+        notaryIdentity = identity
+        networkParametersCopier = parametersCopier
+        return parametersCopier
+    }
+
+    // Generate notary identity and save it into node's directory. This identity will be used in network parameters.
+    private fun getNotaryIdentity(config: NodeConfigWrapper): Party {
+        return ServiceIdentityGenerator.generateToDisk(
+                dirs = listOf(config.nodeDir),
+                serviceName = config.nodeConfig.myLegalName,
+                serviceId = "identity")
+    }
+
     fun reset() {
         baseDir = baseDirFor(System.currentTimeMillis())
         log.info("Changed base directory: $baseDir")
 
         // Wipe out any knowledge of previous nodes.
-        networkMapConfig = null
         nodes.clear()
         nodeInfoFilesCopier.reset()
+        notaryIdentity = null
+        networkParametersCopier = null
     }
 
     /**
@@ -156,10 +182,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         nodeInfoFilesCopier.addConfig(config)
 
         updatePort(config.nodeConfig)
-
-        if (networkMapConfig == null && config.nodeConfig.isNetworkMap) {
-            networkMapConfig = config.nodeConfig.let { NetworkMapConfig(it.myLegalName, it.p2pAddress) }
-        }
 
         return true
     }

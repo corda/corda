@@ -5,15 +5,21 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.User
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcTestUser
-import net.corda.testing.startInVmRpcClient
-import net.corda.testing.startRpcClient
+import net.corda.nodeapi.internal.config.User
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.node.internal.RPCDriverDSL
+import net.corda.testing.node.internal.rpcTestUser
+import net.corda.testing.node.internal.startInVmRpcClient
+import net.corda.testing.node.internal.startRpcClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.junit.Rule
 import org.junit.runners.Parameterized
 
 open class AbstractRPCTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
     enum class RPCTestMode {
         InVm,
         Netty
@@ -35,7 +41,7 @@ open class AbstractRPCTest {
             val createSession: () -> ClientSession
     )
 
-    inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.testProxy(
+    inline fun <reified I : RPCOps> RPCDriverDSL.testProxy(
             ops: I,
             rpcUser: User = rpcTestUser,
             clientConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,
@@ -49,9 +55,9 @@ open class AbstractRPCTest {
                     }
                 }
             RPCTestMode.Netty ->
-                startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap { server ->
-                    startRpcClient<I>(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration).map {
-                        TestProxy(it, { startArtemisSession(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password) })
+                startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap { (broker) ->
+                    startRpcClient<I>(broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration).map {
+                        TestProxy(it, { startArtemisSession(broker.hostAndPort!!, rpcUser.username, rpcUser.password) })
                     }
                 }
         }.get()

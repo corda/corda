@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Jolokia agent and MBean access policy based security -->
+<!-- TODO: review these settings before production deployment -->
+<restrict>
+    <!-- IP based restrictions -->
+    <remote>
+        <!-- IP address, a host name, or a netmask given in CIDR format (e.g. "10.0.0.0/16" for all clients coming from the 10.0 network). -->
+        <host>127.0.0.1</host>
+        <host>localhost</host>
+    </remote>
+    <!-- commands for which access is granted: read, write, exec, list, search, version -->
+    <commands>
+        <command>version</command>
+        <command>read</command>
+    </commands>
+    <!-- MBean access and deny restrictions -->
+    <!-- HTTP method restrictions: get, post -->
+    <http>
+        <method>get</method>
+    </http>
+    <!-- Cross-Origin Resource Sharing (CORS) restrictions
+         (by default, allow cross origin access from any host)
+     -->
+</restrict>

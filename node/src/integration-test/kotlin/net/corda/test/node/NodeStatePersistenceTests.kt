@@ -7,7 +7,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -18,14 +17,12 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.FlowPermissions
-import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.chooseIdentity
-import net.corda.testing.driver.DriverDSLExposedInterface
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import org.junit.Assume
+import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.lang.management.ManagementFactory
 import javax.persistence.Column
@@ -35,42 +32,72 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class NodeStatePersistenceTests {
-
     @Test
     fun `persistent state survives node restart`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
         // More investigation is needed to establish why.
-        Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
+        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
-        val user = User("mark", "dadada", setOf(FlowPermissions.startFlowPermission<SendMessageFlow>()))
+        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
-            val (nodeName, notaryNodeHandle) = {
-                val notaryNodeHandle = startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+            val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                ensureAcquainted(notaryNodeHandle, nodeHandle)
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
+                defaultNotaryNode.getOrThrow()
                 nodeHandle.rpcClientToNode().start(user.username, user.password).use {
-                    it.proxy.startFlow(::SendMessageFlow, message).returnValue.getOrThrow()
+                    it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
-                nodeHandle.stop().getOrThrow()
-                nodeName to notaryNodeHandle
+                nodeHandle.stop()
+                nodeName
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            ensureAcquainted(notaryNodeHandle, nodeHandle)
-            nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
-                val stateAndRef = page.states.singleOrNull()
-                assertNotNull(stateAndRef)
-                val retrievedMessage = stateAndRef!!.state.data.message
-                assertEquals(message, retrievedMessage)
+                page.states.singleOrNull()
             }
+            nodeHandle.stop()
+            result
         }
+        assertNotNull(stateAndRef)
+        val retrievedMessage = stateAndRef!!.state.data.message
+        assertEquals(message, retrievedMessage)
     }
 
-    private fun DriverDSLExposedInterface.ensureAcquainted(one: NodeHandle, another: NodeHandle) {
-        listOf(one.pollUntilKnowsAbout(another), another.pollUntilKnowsAbout(one)).transpose().getOrThrow()
+    @Test
+    fun `persistent state survives node restart without reinitialising database schema`() {
+        // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
+        // More investigation is needed to establish why.
+        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
+
+        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
+        val message = Message("Hello world!")
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+            val nodeName = {
+                val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
+                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
+                defaultNotaryNode.getOrThrow()
+                nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                    it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
+                }
+                nodeHandle.stop()
+                nodeName
+            }()
+
+            val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to "false")).getOrThrow()
+            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                val page = it.proxy.vaultQuery(MessageState::class.java)
+                page.states.singleOrNull()
+            }
+            nodeHandle.stop()
+            result
+        }
+        assertNotNull(stateAndRef)
+        val retrievedMessage = stateAndRef!!.state.data.message
+        assertEquals(message, retrievedMessage)
     }
 }
 
@@ -137,7 +164,7 @@ open class MessageContract : Contract {
 }
 
 @StartableByRPC
-class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransaction>() {
+class SendMessageFlow(private val message: Message, private val notary: Party) : FlowLogic<SignedTransaction>() {
     companion object {
         object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
         object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
@@ -153,8 +180,6 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.notaryIdentities.first()
-
         progressTracker.currentStep = GENERATING_TRANSACTION
 
         val messageState = MessageState(message = message, by = ourIdentity)

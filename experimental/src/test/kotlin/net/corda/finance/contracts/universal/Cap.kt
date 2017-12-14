@@ -1,24 +1,35 @@
 package net.corda.finance.contracts.universal
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.identity.CordaX500Name
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.EnforceVerifyOrFail
-import net.corda.testing.TransactionDSL
-import net.corda.testing.TransactionDSLInterpreter
+import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.*
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.transaction
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 
+internal val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    net.corda.testing.transaction(cordappPackages = listOf("net.corda.finance.contracts.universal"), dsl = script)
+    MockServices(listOf("net.corda.finance.contracts.universal"), rigorousMock<IdentityServiceInternal>().also {
+        listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
+            doReturn(null).whenever(it).partyFromKey(party.owningKey)
+        }
+    }, CordaX500Name("MegaCorp", "London", "GB")).transaction(DUMMY_NOTARY, script)
 }
 
 class Cap {
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val notional = 50.M
@@ -172,16 +183,14 @@ class Cap {
     @Test
     fun issue() {
         transaction {
-            output(UNIVERSAL_PROGRAM_ID) { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID, stateInitial)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Issue())
             this.verifies()
         }
     }
@@ -189,44 +198,38 @@ class Cap {
     @Test
     fun `first fixing`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { stateInitial }
-            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
+            input(UNIVERSAL_PROGRAM_ID, stateInitial)
+            output(UNIVERSAL_PROGRAM_ID, stateAfterFixingFirst)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
 
             tweak {
                 // wrong source
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBORx", tradeDate, Tenor("3M")), 1.0.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBORx", tradeDate, Tenor("3M")), 1.0.bd))))
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate.plusYears(1), Tenor("3M")), 1.0.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate.plusYears(1), Tenor("3M")), 1.0.bd))))
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("9M")), 1.0.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("9M")), 1.0.bd))))
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.5.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.5.bd))))
                 this `fails with` "output state does not reflect fix command"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.0.bd))) }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.0.bd))))
             this.verifies()
         }
     }
@@ -234,19 +237,16 @@ class Cap {
     @Test
     fun `first execute`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
-            output(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
-            output(UNIVERSAL_PROGRAM_ID) { statePaymentFirst }
-
+            input(UNIVERSAL_PROGRAM_ID, stateAfterFixingFirst)
+            output(UNIVERSAL_PROGRAM_ID, stateAfterExecutionFirst)
+            output(UNIVERSAL_PROGRAM_ID, statePaymentFirst)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("exercise"))
             this.verifies()
         }
     }
@@ -254,18 +254,15 @@ class Cap {
     @Test
     fun `final execute`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFinal }
-            output(UNIVERSAL_PROGRAM_ID) { statePaymentFinal }
-
+            input(UNIVERSAL_PROGRAM_ID, stateAfterFixingFinal)
+            output(UNIVERSAL_PROGRAM_ID, statePaymentFinal)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("exercise"))
             this.verifies()
         }
     }
@@ -273,44 +270,38 @@ class Cap {
     @Test
     fun `second fixing`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
-            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFinal }
+            input(UNIVERSAL_PROGRAM_ID, stateAfterExecutionFirst)
+            output(UNIVERSAL_PROGRAM_ID, stateAfterFixingFinal)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
 
             tweak {
                 // wrong source
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBORx", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBORx", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))))
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01").plusYears(1), Tenor("3M")), 1.0.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01").plusYears(1), Tenor("3M")), 1.0.bd))))
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("9M")), 1.0.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("9M")), 1.0.bd))))
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.5.bd))) }
-
+                command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.5.bd))))
                 this `fails with` "output state does not reflect fix command"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))) }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Fix(listOf(net.corda.finance.contracts.Fix(FixOf("LIBOR", BusinessCalendar.parseDateFromString("2017-03-01"), Tenor("3M")), 1.0.bd))))
             this.verifies()
         }
     }

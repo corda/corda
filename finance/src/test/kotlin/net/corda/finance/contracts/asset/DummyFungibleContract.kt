@@ -1,19 +1,19 @@
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.utilities.toBase58String
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.finance.utils.sumCash
-import net.corda.finance.utils.sumCashOrNull
-import net.corda.finance.utils.sumCashOrZero
 import net.corda.finance.schemas.SampleCashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.finance.utils.sumCash
+import net.corda.finance.utils.sumCashOrNull
+import net.corda.finance.utils.sumCashOrZero
 import java.security.PublicKey
 import java.util.*
 
@@ -43,10 +43,10 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is SampleCashSchemaV1 -> SampleCashSchemaV1.PersistentCashState(
-                        owner = this.owner.owningKey.toBase58String(),
+                        ownerHash = this.owner.owningKey.toStringShort(),
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
-                        issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
+                        issuerPartyHash = this.amount.token.issuer.party.owningKey.toStringShort(),
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 is SampleCashSchemaV2 -> SampleCashSchemaV2.PersistentCashState(
@@ -55,7 +55,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         _quantity = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         _issuerParty = this.amount.token.issuer.party,
-                        _issuerRef = this.amount.token.issuer.reference.bytes
+                        _issuerRef = this.amount.token.issuer.reference
                 )
                 is SampleCashSchemaV3 -> SampleCashSchemaV3.PersistentCashState(
                         participants = this.participants.toMutableSet(),

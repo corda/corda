@@ -10,6 +10,8 @@ import java.io.File
  */
 class Cordformation : Plugin<Project> {
     internal companion object {
+        const val CORDFORMATION_TYPE = "cordformationInternal"
+
         /**
          * Gets a resource file from this plugin's JAR file.
          *
@@ -18,10 +20,12 @@ class Cordformation : Plugin<Project> {
          * @return A file handle to the file in the JAR.
          */
         fun getPluginFile(project: Project, filePathInJar: String): File {
-            val archive: File? = project.rootProject.buildscript.configurations.single { it.name == "classpath" }.find {
-                it.name.contains("cordformation")
-            }
-            return project.rootProject.resources.text.fromArchiveEntry(archive, filePathInJar).asFile()
+            val archive: File? = project.rootProject.buildscript.configurations
+                    .single { it.name == "classpath" }
+                    .find { it.name.contains("cordformation") }
+            return project.rootProject.resources.text
+                    .fromArchiveEntry(archive, filePathInJar)
+                    .asFile()
         }
 
         val executableFileMode = "0755".toInt(8)
@@ -29,5 +33,8 @@ class Cordformation : Plugin<Project> {
 
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
+        Utils.createRuntimeConfiguration(CORDFORMATION_TYPE, project)
+        val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
+        project.dependencies.add(CORDFORMATION_TYPE, "org.jolokia:jolokia-jvm:$jolokiaVersion:agent")
     }
 }

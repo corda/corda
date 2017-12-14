@@ -1,58 +1,60 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.schemas.NodeInfoSchemaV1
 import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toBase58String
-import net.corda.node.services.api.NetworkCacheException
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.createMessage
-import net.corda.node.services.messaging.sendRequest
-import net.corda.node.services.network.NetworkMapService.FetchMapResponse
-import net.corda.node.services.network.NetworkMapService.SubscribeResponse
-import net.corda.node.utilities.*
-import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.NotaryInfo
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
-import java.security.SignatureException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 
-class NetworkMapCacheImpl(networkMapCacheBase: NetworkMapCacheBaseInternal, private val identityService: IdentityService) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
+class NetworkMapCacheImpl(
+        networkMapCacheBase: NetworkMapCacheBaseInternal,
+        private val identityService: IdentityService
+) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
+    companion object {
+        private val logger = loggerFor<NetworkMapCacheImpl>()
+    }
+
     init {
         networkMapCacheBase.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
         networkMapCacheBase.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
                 mapChange.node.legalIdentitiesAndCerts.forEach {
-                    identityService.verifyAndRegisterIdentity(it)
+                    try {
+                        identityService.verifyAndRegisterIdentity(it)
+                    } catch (ignore: Exception) {
+                        // Log a warning to indicate node info is not added to the network map cache.
+                        logger.warn("Node info for :'${it.name}' is not added to the network map due to verification error.")
+                    }
                 }
             }
         }
@@ -70,14 +72,15 @@ class NetworkMapCacheImpl(networkMapCacheBase: NetworkMapCacheBaseInternal, priv
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
+open class PersistentNetworkMapCache(
+        private val database: CordaPersistence,
+        notaries: List<NotaryInfo>
+) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
-        val logger = loggerFor<PersistentNetworkMapCache>()
+        private val logger = contextLogger()
     }
 
-    private var registeredForPush = false
-    // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in
-    //  next PR that gets rid of services. These maps are used only for queries by service.
+    // TODO Cleanup registered and party nodes
     protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
     protected val partyNodes: MutableList<NodeInfo> get() = registeredNodes.map { it.value }.toMutableList()
     private val _changed = PublishSubject.create<MapChange>()
@@ -85,39 +88,46 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
+    // TODO revisit the logic under which nodeReady and loadDBSuccess are set.
+    // with the NetworkMapService redesign their meaning is not too well defined.
     private val _registrationFuture = openFuture<Void?>()
     override val nodeReady: CordaFuture<Void?> get() = _registrationFuture
     private var _loadDBSuccess: Boolean = false
     override val loadDBSuccess get() = _loadDBSuccess
-    // TODO From the NetworkMapService redesign doc: Remove the concept of network services.
-    //  As a temporary hack, just assume for now that every network has a notary service named "Notary Service" that can be looked up in the map.
-    //  This should eliminate the only required usage of services.
-    //  It is ensured on node startup when constructing a notary that the name contains "notary".
-    override val notaryIdentities: List<Party>
-        get() {
-            return partyNodes
-                    .flatMap {
-                        // TODO: validate notary identity certificates before loading into network map cache.
-                        //       Notary certificates have to be signed by the doorman directly
-                        it.legalIdentities
-                    }
-                    .filter { it.name.commonName?.startsWith(NotaryService.ID_PREFIX) ?: false }
-                    .toSet() // Distinct, because of distributed service nodes
-                    .sortedBy { it.name.toString() }
-        }
 
-    private val nodeInfoSerializer = NodeInfoWatcher(configuration.baseDirectory,
-            configuration.additionalNodeInfoPollingFrequencyMsec)
+    override val notaryIdentities: List<Party> = notaries.map { it.identity }
+    private val validatingNotaries = notaries.mapNotNullTo(HashSet()) { if (it.validating) it.identity else null }
 
     init {
-        loadFromFiles()
         database.transaction { loadFromDB(session) }
     }
 
-    private fun loadFromFiles() {
-        logger.info("Loading network map from files..")
-        nodeInfoSerializer.nodeInfoUpdates().subscribe { node -> addNode(node) }
+    override val allNodeHashes: List<SecureHash>
+        get() {
+            return database.transaction {
+                val builder = session.criteriaBuilder
+                val query = builder.createQuery(String::class.java).run {
+                    from(NodeInfoSchemaV1.PersistentNodeInfo::class.java).run {
+                        select(get<String>(NodeInfoSchemaV1.PersistentNodeInfo::hash.name))
+                    }
+                }
+                session.createQuery(query).resultList.map { SecureHash.parse(it) }
+            }
+        }
+
+    override fun getNodeByHash(nodeHash: SecureHash): NodeInfo? {
+        return database.transaction {
+            val builder = session.criteriaBuilder
+            val query = builder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java).run {
+                from(NodeInfoSchemaV1.PersistentNodeInfo::class.java).run {
+                    where(builder.equal(get<String>(NodeInfoSchemaV1.PersistentNodeInfo::hash.name), nodeHash.toString()))
+                }
+            }
+            session.createQuery(query).resultList.singleOrNull()?.toNodeInfo()
+        }
     }
+
+    override fun isValidatingNotary(party: Party): Boolean = party in validatingNotaries
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = database.transaction { queryByIdentityKey(session, party.owningKey) }
@@ -149,38 +159,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         }
     }
 
-    override fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
-                               ifChangedSinceVer: Int?): CordaFuture<Unit> {
-        if (subscribe && !registeredForPush) {
-            // Add handler to the network, for updates received from the remote network map service.
-            network.addMessageHandler(NetworkMapService.PUSH_TOPIC) { message, _ ->
-                try {
-                    val req = message.data.deserialize<NetworkMapService.Update>()
-                    val ackMessage = network.createMessage(NetworkMapService.PUSH_ACK_TOPIC,
-                            data = NetworkMapService.UpdateAcknowledge(req.mapVersion, network.myAddress).serialize().bytes)
-                    network.send(ackMessage, req.replyTo)
-                    processUpdatePush(req)
-                } catch (e: NodeMapException) {
-                    logger.warn("Failure during node map update due to bad update: ${e.javaClass.name}")
-                } catch (e: Exception) {
-                    logger.error("Exception processing update from network map service", e)
-                }
-            }
-            registeredForPush = true
-        }
-
-        // Fetch the network map and register for updates at the same time
-        val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, network.myAddress)
-        val future = network.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { (nodes) ->
-            // We may not receive any nodes back, if the map hasn't changed since the version specified
-            nodes?.forEach { processRegistration(it) }
-            Unit
-        }
-        _registrationFuture.captureLater(future.map { null })
-
-        return future
-    }
-
     override fun addNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
         synchronized(_changed) {
@@ -194,19 +172,21 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
             if (previousNode == null) {
                 logger.info("No previous node found")
                 database.transaction {
-                    updateInfoDB(node)
+                    updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Added(node))
                 }
             } else if (previousNode != node) {
                 logger.info("Previous node was found as: $previousNode")
                 database.transaction {
-                    updateInfoDB(node)
+                    updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
                 }
             } else {
                 logger.info("Previous node was identical to incoming one - doing nothing")
             }
         }
+        _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
+        _registrationFuture.set(null)
         logger.info("Done adding node with info: $node")
     }
 
@@ -222,48 +202,10 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         logger.info("Done removing node with info: $node")
     }
 
-    /**
-     * Unsubscribes from updates from the given map service.
-     * @param mapParty the network map service party to listen to updates from.
-     */
-    override fun deregisterForUpdates(network: MessagingService, mapParty: Party): CordaFuture<Unit> {
-        // Fetch the network map and register for updates at the same time
-        val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
-        // `network.getAddressOfParty(partyInfo)` is a work-around for MockNetwork and InMemoryMessaging to get rid of SingleMessageRecipient in NodeInfo.
-        val address = getPartyInfo(mapParty)?.let { network.getAddressOfParty(it) } ?:
-                throw IllegalArgumentException("Can't deregister for updates, don't know the party: $mapParty")
-        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
-            if (it.confirmed) Unit else throw NetworkCacheException.DeregistrationFailed()
-        }
-        _registrationFuture.captureLater(future.map { null })
-        return future
-    }
-
-    fun processUpdatePush(req: NetworkMapService.Update) {
-        try {
-            val reg = req.wireReg.verified()
-            processRegistration(reg)
-        } catch (e: SignatureException) {
-            throw NodeMapException.InvalidSignature()
-        }
-    }
-
     override val allNodes: List<NodeInfo>
         get() = database.transaction {
             getAllInfos(session).map { it.toNodeInfo() }
         }
-
-    private fun processRegistration(reg: NodeRegistration) {
-        when (reg.type) {
-            AddOrRemove.ADD -> addNode(reg.node)
-            AddOrRemove.REMOVE -> removeNode(reg.node)
-        }
-    }
-
-    @VisibleForTesting
-    override fun runWithoutMapService() {
-        _registrationFuture.set(null)
-    }
 
     // Changes related to NetworkMap redesign
     // TODO It will be properly merged into network map cache after services removal.
@@ -285,35 +227,20 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
                 logger.info("Loaded node info: $nodeInfo")
                 val node = nodeInfo.toNodeInfo()
                 addNode(node)
-                _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
             } catch (e: Exception) {
                 logger.warn("Exception parsing network map from the database.", e)
             }
         }
-        if (loadDBSuccess) {
-            _registrationFuture.set(null) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
-        }
     }
 
-    private fun updateInfoDB(nodeInfo: NodeInfo) {
-        // TODO Temporary workaround to force isolated transaction (otherwise it causes race conditions when processing
-        //  network map registration on network map node)
-        database.dataSource.connection.use {
-            val session = database.entityManagerFactory.withOptions().connection(it.apply {
-                transactionIsolation = 1
-            }).openSession()
-            session.use {
-                val tx = session.beginTransaction()
-                // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
-                val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
-                val nodeInfoEntry = generateMappedObject(nodeInfo)
-                if (info.isNotEmpty()) {
-                    nodeInfoEntry.id = info[0].id
-                }
-                session.merge(nodeInfoEntry)
-                tx.commit()
-            }
+    private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
+        // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
+        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
+        val nodeInfoEntry = generateMappedObject(nodeInfo)
+        if (info.isNotEmpty()) {
+            nodeInfoEntry.id = info.first().id
         }
+        session.merge(nodeInfoEntry)
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
@@ -323,9 +250,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
 
     private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKey = :owningKey",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKeyHash = :owningKeyHash",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-        query.setParameter("owningKey", identityKey.toBase58String())
+        query.setParameter("owningKeyHash", identityKey.toStringShort())
         return query.resultList
     }
 
@@ -365,12 +292,13 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
     }
 
+
     /** Object Relational Mapping support. */
     private fun generateMappedObject(nodeInfo: NodeInfo): NodeInfoSchemaV1.PersistentNodeInfo {
         return NodeInfoSchemaV1.PersistentNodeInfo(
                 id = 0,
+                hash = nodeInfo.serialize().hash.toString(),
                 addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
-                // TODO Another ugly hack with special first identity...
                 legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
                     NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
                 },

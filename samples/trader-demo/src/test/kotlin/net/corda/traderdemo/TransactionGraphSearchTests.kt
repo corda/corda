@@ -2,6 +2,7 @@ package net.corda.traderdemo
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -10,10 +11,20 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockTransactionStorage
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class TransactionGraphSearchTests : TestDependencyInjectionBase() {
+class TransactionGraphSearchTests {
+    private companion object {
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+    }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction) : MockTransactionStorage() {
         init {
             addTransaction(originTx)
@@ -31,19 +42,17 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData): GraphTransactionStorage {
-        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), MEGA_CORP_KEY)
-        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), DUMMY_NOTARY_KEY)
-
-        val originBuilder = TransactionBuilder(DUMMY_NOTARY)
+        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), megaCorp)
+        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), dummyNotary)
+        val originBuilder = TransactionBuilder(dummyNotary.party)
                 .addOutputState(DummyState(random31BitValue()), DummyContract.PROGRAM_ID)
-                .addCommand(command, MEGA_CORP_PUBKEY)
+                .addCommand(command, megaCorp.publicKey)
 
         val originPtx = megaCorpServices.signInitialTransaction(originBuilder)
         val originTx = notaryServices.addSignature(originPtx)
-
-        val inputBuilder = TransactionBuilder(DUMMY_NOTARY)
+        val inputBuilder = TransactionBuilder(dummyNotary.party)
                 .addInputState(originTx.tx.outRef<DummyState>(0))
-                .addCommand(dummyCommand(MEGA_CORP_PUBKEY))
+                .addCommand(dummyCommand(megaCorp.publicKey))
 
         val inputPtx = megaCorpServices.signInitialTransaction(inputBuilder)
         val inputTx = megaCorpServices.addSignature(inputPtx)

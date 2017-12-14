@@ -1,15 +1,38 @@
+buildscript {
+    ext {
+        springBootVersion = '1.5.7.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+// Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
+// causing the problems in runtime. Those can be changed by manipulating above properties
+// See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
+// This has to be repeated here as otherwise the order of files does matter
+ext['artemis.version'] = "$artemis_version"
+ext['hibernate.version'] = "$hibernate_version"
+
+
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'application'
+apply plugin: 'org.springframework.boot'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'us.kirchmeier.capsule'
+
+// Spring Boot plugin have to be reimported, however it picks up the settings from irs-demo, so there is no need to
+// reconfigure
 
 // Warning: The network visualiser is not a Cordapp so please do not use it as an example of how
 // to build a cordapp
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies

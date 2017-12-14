@@ -4,7 +4,6 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.resetTestSerialization
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -23,11 +22,7 @@ class InMemoryMessagingTests {
 
     @After
     fun tearDown() {
-        if (mockNet.nodes.isNotEmpty()) {
-            mockNet.stopNodes()
-        } else {
-            resetTestSerialization()
-        }
+        mockNet.stopNodes()
     }
 
     @Test
@@ -47,23 +42,17 @@ class InMemoryMessagingTests {
 
     @Test
     fun basics() {
-        val node1 = mockNet.networkMapNode
+        val node1 = mockNet.createNode()
         val node2 = mockNet.createNode()
         val node3 = mockNet.createNode()
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
-
-        with(node2) {
-            node2.network.addMessageHandler { msg, _ ->
-                node2.network.send(msg, node3.network.myAddress)
-            }
+        node2.network.addMessageHandler { msg, _ ->
+            node2.network.send(msg, node3.network.myAddress)
         }
-
-        with(node3) {
-            node2.network.addMessageHandler { msg, _ ->
-                finalDelivery = msg
-            }
+        node3.network.addMessageHandler { msg, _ ->
+            finalDelivery = msg
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
@@ -76,7 +65,7 @@ class InMemoryMessagingTests {
 
     @Test
     fun broadcast() {
-        val node1 = mockNet.networkMapNode
+        val node1 = mockNet.createNode()
         val node2 = mockNet.createNode()
         val node3 = mockNet.createNode()
 
@@ -95,7 +84,7 @@ class InMemoryMessagingTests {
      */
     @Test
     fun `skip unhandled messages`() {
-        val node1 = mockNet.networkMapNode
+        val node1 = mockNet.createNode()
         val node2 = mockNet.createNode()
         var received = 0
 
