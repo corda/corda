@@ -86,9 +86,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
-    testRuntime "net.corda:corda-rpc:$corda_release_version"
     testCompile "com.spotify:docker-client:8.9.1"
-    integrationTestRuntime "net.corda:corda-rpc:$corda_release_version"
 
     compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {
         // The jira client includes jersey-core 1.5 which breaks everything.
