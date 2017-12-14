@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
@@ -12,7 +13,6 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.contracts.DummyContract
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
 import java.io.InputStream
@@ -50,6 +50,7 @@ import kotlin.collections.set
  * will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
  * the triggered diagnostic.
  */
+@DoNotImplement
 sealed class EnforceVerifyOrFail {
     internal object Token : EnforceVerifyOrFail()
 }

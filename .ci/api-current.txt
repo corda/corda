@@ -3522,6 +3522,9 @@ public static final class net.corda.client.jackson.StringToMethodCallParser$Unpa
   public <init>(String)
   @org.jetbrains.annotations.NotNull public final String getMethodName()
 ##
+public static interface net.corda.testing.node.InMemoryMessagingNetwork$LatencyCalculator
+  @org.jetbrains.annotations.NotNull public abstract java.time.Duration between(net.corda.core.messaging.SingleMessageRecipient, net.corda.core.messaging.SingleMessageRecipient)
+##
 public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public <init>(net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration)
@@ -3568,4 +3571,8 @@ public @interface net.corda.client.rpc.RPCSinceVersion
 ##
 public final class net.corda.client.rpc.UtilsKt extends java.lang.Object
   public static final void notUsed(rx.Observable)
+##
+public abstract class net.corda.testing.TestDependencyInjectionBase extends java.lang.Object
+  public <init>()
+  @org.junit.Rule @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public final net.corda.testing.SerializationEnvironmentRule testSerialization
 ##
