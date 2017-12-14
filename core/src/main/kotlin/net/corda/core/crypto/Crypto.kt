@@ -63,7 +63,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 object Crypto {
     /**
-     * RSA_SHA256 signature scheme using SHA256 as hash algorithm.
+     * RSA signature scheme using SHA256 for message hashing.
      * Note: Recommended key size >= 3072 bits.
      */
     @JvmField
@@ -80,7 +80,7 @@ object Crypto {
             "RSA_SHA256 signature scheme using SHA256 as hash algorithm."
     )
 
-    /** ECDSA signature scheme using the secp256k1 Koblitz curve. */
+    /** ECDSA signature scheme using the secp256k1 Koblitz curve and SHA256 for message hashing. */
     @JvmField
     val ECDSA_SECP256K1_SHA256 = SignatureScheme(
             2,
@@ -95,7 +95,7 @@ object Crypto {
             "ECDSA signature scheme using the secp256k1 Koblitz curve."
     )
 
-    /** ECDSA signature scheme using the secp256r1 (NIST P-256) curve. */
+    /** ECDSA signature scheme using the secp256r1 (NIST P-256) curve and SHA256 for message hashing. */
     @JvmField
     val ECDSA_SECP256R1_SHA256 = SignatureScheme(
             3,
@@ -110,7 +110,7 @@ object Crypto {
             "ECDSA signature scheme using the secp256r1 (NIST P-256) curve."
     )
 
-    /** EdDSA signature scheme using the ed255519 twisted Edwards curve. */
+    /** EdDSA signature scheme using the ed25519 twisted Edwards curve and SHA512 for message hashing. */
     @JvmField
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
@@ -127,13 +127,15 @@ object Crypto {
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
 
-    /**
-     * SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers
-     * at the cost of larger key sizes and loss of compatibility.
-     */
+    /** DLSequence (ASN1Sequence) for SHA512 truncated to 256 bits, used in SPHINCS-256 signature scheme. */
     @JvmField
     val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
 
+    /**
+     * SPHINCS-256 hash-based signature scheme using SHA512 for message hashing. It provides 128bit security against
+     * post-quantum attackers at the cost of larger key nd signature sizes and loss of compatibility.
+     */
+    // TODO: change val name to SPHINCS256_SHA512. This will break backwards compatibility.
     @JvmField
     val SPHINCS256_SHA256 = SignatureScheme(
             5,
@@ -149,7 +151,8 @@ object Crypto {
                     "at the cost of larger key sizes and loss of compatibility."
     )
 
-    /** Corda composite key type. */
+    /** Corda [CompositeKey] signature type. */
+    // TODO: change the val name to a more descriptive one as it's now confusing and looks like a Key type.
     @JvmField
     val COMPOSITE_KEY = SignatureScheme(
             6,
