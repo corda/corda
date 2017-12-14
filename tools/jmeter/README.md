@@ -1,8 +1,11 @@
+## JMeter for controlling CORDA performance runs
 This module contains gradle tasks to make running the JMeter (http://jmeter.apache.org)
 load generation tool against Corda nodes much easier and more useful.  It does this by
 providing a simple way to launch JMeter with the actual JMeter install coming
 from downloaded dependencies, and by providing some Samplers that interact with
 the Corda node via RPC.
+
+### Running via the interactive GUI
 
 To run up the JMeter UI, using the jmeter.properties in the resources folder,
 type the following:
@@ -32,6 +35,8 @@ Embedded in the JAR is all of the corda code for flows and RPC, as well as the j
 JAR will also include a properties file based on the hostname in the JMeter configuration,
 so we allocate different SSH tunneled port numbers this way.
 
+#### SSH Tunnels
+
 To launch JMeter with the tunnels automatically created:
 
 `./gradlew tools:jmeter:run -PjmeterHosts="['hostname1', 'hostname2']"`
@@ -56,6 +61,8 @@ can be used to set this, or in the gradle call:
 
 `./gradlew tools:jmeter:runSsh -PjmeterHosts="['hostname1', 'hostname2']" -PsshUser="'username'"`
 
+#### Running locally with driver
+
 To run up 3 nodes (2 nodes, 1 non-validating notary) locally for testing anything in the `perftestcordapp` (e.g. samplers,
 custom flows), you can use gradle to run:
 
@@ -64,3 +71,18 @@ custom flows), you can use gradle to run:
 This uses the driver test infrastructure to fire up the nodes. See `StartLocalPerfCorDapp` for X500 names of nodes, 
 RPC user logins etc.  The RPC port of Bank A is typically 10004, but they are all reporting in the console output.  A
 sample JMeter config for this setup has been included as `LocalIssueAndPay Request.jmx` under resources.
+
+### Running in non-interactive test/batch mode
+
+To run Jmeter in performance test mode, we want to run a predefined test without starting the UI and record the results 
+in a csv file. In order to do this, additional arguments need to be passed to JMeter. Using gradle, the command line
+would look something like this:
+
+```./gradlew tools:jmeter:run -PjmeterArgs="['-n', '-t', 'build/resources/main/Testplans/CashIssuance_40k.jmx', '-l', 'CashIssuance_40k.jtl', '-R', '127.0.0.1:20100']" -PjmeterHosts="['perf-node-4.corda.r3cev.com']"```
+
+The interesting bit here are the `jmeterArgs`:
+- `-n` tells JMeter to run non-interactively
+- `-t <filename>` loads the testplan to run
+- `-l <filename>` specifies the output to write to (if it exists, it will be appended)
+- `-R <hostname:port>` specifies the host to run against - note this is localhost in this case as we are using ssh 
+tunnels to reach the test nodes. 

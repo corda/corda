@@ -100,7 +100,7 @@ run {
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
              "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
     if ( project.hasProperty("jmeterArgs") ) {
-        args+= Eval.me(jmeterHosts)
+        args+= Eval.me(jmeterArgs)
     }
     if ( project.hasProperty("sshUser") ){
         args+= "-XsshUser"

@@ -113,6 +113,7 @@ class Ssh {
             val session = jSch.getSession(remoteUserName, remoteHost, 22)
             // We don't check the host fingerprints because they may change often
             session.setConfig("StrictHostKeyChecking", "no")
+            session.setDaemonThread(true)
             log.info("Connecting to $remoteHost...")
             session.connect()
             log.info("Connected to $remoteHost!")
