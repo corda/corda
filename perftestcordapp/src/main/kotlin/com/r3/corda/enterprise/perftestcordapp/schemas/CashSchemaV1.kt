@@ -5,10 +5,10 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
+import org.hibernate.annotations.Type
+import javax.persistence.*
 
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
@@ -36,10 +36,11 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             @Column(name = "ccy_code", length = 3)
             var currency: String,
 
-            @Column(name = "issuer_key")
-            var issuerParty: String,
+            @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE)
+            var issuerPartyHash: String,
 
-            @Column(name = "issuer_ref")
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState()
 }

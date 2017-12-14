@@ -23,6 +23,7 @@ import com.r3.corda.enterprise.perftestcordapp.utils.sumCash
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashOrNull
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashOrZero
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.AbstractCashSelection
+import net.corda.core.crypto.toStringShort
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -81,7 +82,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         owner = this.owner,
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
-                        issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
+                        issuerPartyHash = this.amount.token.issuer.party.owningKey.toStringShort(),
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
             /** Additional schema mappings would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
@@ -341,10 +342,12 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 
+/** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
+val DUMMY_CASH_ISSUER_NAME = CordaX500Name(organisation = "Snake Oil Issuer", locality = "London", country = "GB")
 /** A randomly generated key. */
 val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_CASH_ISSUER by lazy { Party(CordaX500Name(organisation = "Snake Oil Issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
+val DUMMY_CASH_ISSUER by lazy { Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */
 val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NULL_PARTY)
 /** An extension property that lets you get a cash state from an issued token, under the [NULL_PARTY] */

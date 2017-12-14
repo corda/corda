@@ -1,2 +1,4 @@
 com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.CashSelectionH2Impl
-
+com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.CashSelectionMySQLImpl
+com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.CashSelectionPostgreSQLImpl
+com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.CashSelectionSQLServerImpl

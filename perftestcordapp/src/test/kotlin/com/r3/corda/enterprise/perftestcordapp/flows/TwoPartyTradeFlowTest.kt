@@ -174,8 +174,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, 3, 3,
-                        issuedBy = issuer)
+                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, issuedBy = issuer)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {

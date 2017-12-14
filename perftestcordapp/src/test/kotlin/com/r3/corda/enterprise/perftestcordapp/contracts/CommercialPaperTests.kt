@@ -226,7 +226,7 @@ class CommercialPaperTestsGeneric {
         aliceVaultService = aliceServices.vaultService
 
         databaseAlice.transaction {
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, issuerServices, issuedBy = DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
 
@@ -239,7 +239,7 @@ class CommercialPaperTestsGeneric {
         bigCorpVaultService = bigCorpServices.vaultService
 
         databaseBigCorp.transaction {
-            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, issuerServices, issuedBy = DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 
