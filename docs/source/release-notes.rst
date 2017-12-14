@@ -7,8 +7,8 @@ Unreleased
 ----------
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
-  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension and tools
-  to manage certificates including these extensions are being developed.
+  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
+  found at see https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/156860572/Certificate+identity+type+extension
 
 * **Enum Class Evolution**
   With the addition of AMQP serialization Corda now supports enum constant evolution.
