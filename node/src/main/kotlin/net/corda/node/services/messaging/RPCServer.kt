@@ -46,8 +46,11 @@ import rx.Notification
 import rx.Observable
 import rx.Subscriber
 import rx.Subscription
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import java.nio.file.Files
 import java.time.Duration
 import java.util.concurrent.*
 
@@ -273,22 +276,37 @@ class RPCServer(
         log.debug { "-> RPC -> $clientToServer" }
         when (clientToServer) {
             is RPCApi.ClientToServer.RpcRequest -> {
-                val arguments = Try.on {
-                    clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
-                }
+
                 val context = artemisMessage.context(clientToServer.sessionId)
                 context.invocation.pushToLoggingContext()
-                when (arguments) {
-                    is Try.Success -> {
-                        rpcExecutor!!.submit {
-                            val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                            sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
-                        }
+
+                if(artemisMessage.isLargeMessage) {
+                    val tempFile = Files.createTempFile("pre", null).toFile()
+                    tempFile.deleteOnExit()
+                    artemisMessage.saveToOutputStream(FileOutputStream(tempFile))
+
+                    rpcExecutor!!.submit {
+                        val result = invokeRpc(context, clientToServer.methodName, listOf(FileInputStream(tempFile)))
+                        sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
                     }
-                    is Try.Failure -> {
-                        // We failed to deserialise the arguments, route back the error
-                        log.warn("Inbound RPC failed", arguments.exception)
-                        sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
+
+                } else {
+                    val arguments = Try.on {
+                        clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
+                    }
+
+                    when (arguments) {
+                        is Try.Success -> {
+                            rpcExecutor!!.submit {
+                                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+                            }
+                        }
+                        is Try.Failure -> {
+                            // We failed to deserialise the arguments, route back the error
+                            log.warn("Inbound RPC failed", arguments.exception)
+                            sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
+                        }
                     }
                 }
             }

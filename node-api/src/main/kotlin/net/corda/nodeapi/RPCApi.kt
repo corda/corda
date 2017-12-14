@@ -18,6 +18,10 @@ import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
 import rx.Notification
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.nio.file.Files
 import java.time.Instant
 import java.util.*
 
@@ -109,7 +113,8 @@ object RPCApi {
                 val replyId: InvocationId,
                 val sessionId: SessionId,
                 val externalTrace: Trace? = null,
-                val impersonatedActor: Actor? = null
+                val impersonatedActor: Actor? = null,
+                val bodyInputStream: InputStream? = null
         ) : ClientToServer() {
             fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
@@ -122,7 +127,12 @@ object RPCApi {
                 impersonatedActor?.mapToImpersonated(message)
 
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
-                message.bodyBuffer.writeBytes(serialisedArguments)
+
+                if(bodyInputStream != null) {
+                    message.bodyInputStream = bodyInputStream
+                } else {
+                    message.bodyBuffer.writeBytes(serialisedArguments)
+                }
             }
         }
 
@@ -144,12 +154,11 @@ object RPCApi {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
                             clientAddress = MessageUtil.getJMSReplyTo(message),
                             methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                            serialisedArguments = message.getBodyAsByteArray(),
+                            serialisedArguments = if (message.isLargeMessage) kotlin.ByteArray(0) else message.getBodyAsByteArray(),
                             replyId = message.replyId(),
                             sessionId = message.sessionId(),
                             externalTrace = message.externalTrace(),
-                            impersonatedActor = message.impersonatedActor()
-                    )
+                            impersonatedActor = message.impersonatedActor())
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<InvocationId>()
                         val buffer = message.bodyBuffer
@@ -211,7 +220,15 @@ object RPCApi {
                     RPCApi.ServerToClient.Tag.RPC_REPLY -> {
                         val id = message.invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot parse invocation id from client message.")
                         val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id)
-                        RpcReply(id, message.getBodyAsByteArray().deserialize(context = poolWithIdContext))
+
+                        if(message.isLargeMessage) {
+                            val tempFile = Files.createTempFile("pre", null).toFile()
+                            tempFile.deleteOnExit()
+                            message.saveToOutputStream(FileOutputStream(tempFile))
+                            RpcReply(id, Try.on {FileInputStream(tempFile)})
+                        } else {
+                            RpcReply(id, message.getBodyAsByteArray().deserialize(context = poolWithIdContext))
+                        }
                     }
                     RPCApi.ServerToClient.Tag.OBSERVATION -> {
                         val observableId = message.invocationId(OBSERVABLE_ID_FIELD_NAME, OBSERVABLE_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot parse invocation id from client message.")
