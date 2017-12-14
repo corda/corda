@@ -372,6 +372,15 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             role = CertRole.TLS
     ),
 
+    SERVICE_IDENTITY(
+            KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false,
+            role = CertRole.SERVICE_IDENTITY
+    ),
+
     // TODO: Identity certs should have tight name constraints on child certificates
     WELL_KNOWN_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),

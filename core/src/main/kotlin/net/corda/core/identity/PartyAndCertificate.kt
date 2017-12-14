@@ -51,8 +51,9 @@ class PartyAndCertificate(val certPath: CertPath) {
                 if (role == null) {
                     throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
                 }
-                if (role.parent != parentRole) {
-                    throw CertPathValidatorException("Expected certificate $certificate to have parent ${role.parent} but was $parentRole")
+                if (!role.isValidParent(parentRole)) {
+                    val certificateString = (certificate as? X509Certificate)?.subjectDN?.toString() ?: certificate.toString()
+                    throw CertPathValidatorException("The issuing certificate for $certificateString has role $parentRole, expected one of ${role.validParents}")
                 }
             }
             parentRole = role
