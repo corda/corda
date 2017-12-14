@@ -93,7 +93,7 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
         bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
         issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
         notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)

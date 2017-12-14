@@ -41,7 +41,7 @@ import kotlin.test.fail
 
 class VaultWithCashTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
