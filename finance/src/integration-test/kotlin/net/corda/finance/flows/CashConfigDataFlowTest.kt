@@ -4,11 +4,17 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.EUR
 import net.corda.finance.USD
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
 
 class CashConfigDataFlowTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
     @Test
     fun `issuable currencies are read in from node config`() {
         driver {

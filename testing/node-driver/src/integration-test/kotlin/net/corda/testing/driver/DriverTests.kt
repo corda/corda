@@ -15,29 +15,42 @@ import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.AfterClass
+import org.junit.Rule
 import org.json.simple.JSONObject
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 class DriverTests {
-    private companion object {
-        val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
-        val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
-        fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
+    companion object {
+        private val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
+        private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+        @AfterClass
+        @JvmStatic
+        fun shutdown() {
+            executorService.shutdown()
+        }
+
+        private fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = nodeInfo.addresses.first()
             // Check that the port is bound
             addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
         }
 
-        fun nodeMustBeDown(handle: NodeHandle) {
+        private fun nodeMustBeDown(handle: NodeHandle) {
             val hostAndPort = handle.nodeInfo.addresses.first()
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
 
     @Test
     fun `simple node startup and shutdown`() {

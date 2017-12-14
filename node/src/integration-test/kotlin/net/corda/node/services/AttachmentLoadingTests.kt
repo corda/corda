@@ -28,12 +28,16 @@ import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.rigorousMock
 import net.corda.testing.withTestSerialization
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val attachments = MockAttachmentStorage()
     private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
     private val cordapp get() = provider.cordapps.first()
@@ -80,7 +84,7 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test a wire transaction has loaded the correct attachment`() = withTestSerialization {
+    fun `test a wire transaction has loaded the correct attachment`() {
         val appClassLoader = appContext.classLoader
         val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
         val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)

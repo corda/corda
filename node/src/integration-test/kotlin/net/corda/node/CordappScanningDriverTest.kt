@@ -9,12 +9,19 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.chooseIdentity
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
 
 class CordappScanningDriverTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
     @Test
     fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))
