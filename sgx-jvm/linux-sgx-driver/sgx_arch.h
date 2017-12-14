@@ -4,7 +4,7 @@
  *
  * GPL LICENSE SUMMARY
  *
- * Copyright(c) 2016 Intel Corporation.
+ * Copyright(c) 2016-2017 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -21,7 +21,7 @@
  *
  * BSD LICENSE
  *
- * Copyright(c) 2016 Intel Corporation.
+ * Copyright(c) 2016-2017 Intel Corporation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,20 +52,87 @@
  * Authors:
  *
  * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
- * Suresh Siddha <suresh.b.siddha@intel.com>
- * Serge Ayoun <serge.ayoun@intel.com>
- * Shay Katz-zamir <shay.katz-zamir@intel.com>
  */
 
-#ifndef _ASM_X86_SGX_H
-#define _ASM_X86_SGX_H
-
-#include <asm/asm.h>
-#include <linux/bitops.h>
-#include <linux/err.h>
 #include <linux/types.h>
+#ifndef _ASM_X86_SGX_ARCH_H
+#define _ASM_X86_SGX_ARCH_H
 
-#define SGX_CPUID		0x12
+#define SGX_SSA_GPRS_SIZE		182
+#define SGX_SSA_MISC_EXINFO_SIZE	16
+
+enum sgx_misc {
+	SGX_MISC_EXINFO		= 0x01,
+};
+
+#define SGX_MISC_RESERVED_MASK 0xFFFFFFFFFFFFFFFEL
+
+enum sgx_attribute {
+	SGX_ATTR_DEBUG		= 0x02,
+	SGX_ATTR_MODE64BIT	= 0x04,
+	SGX_ATTR_PROVISIONKEY	= 0x10,
+	SGX_ATTR_EINITTOKENKEY	= 0x20,
+};
+
+#define SGX_ATTR_RESERVED_MASK 0xFFFFFFFFFFFFFFC9L
+
+#define SGX_SECS_RESERVED1_SIZE 24
+#define SGX_SECS_RESERVED2_SIZE 32
+#define SGX_SECS_RESERVED3_SIZE 96
+#define SGX_SECS_RESERVED4_SIZE 3836
+
+struct sgx_secs {
+	uint64_t size;
+	uint64_t base;
+	uint32_t ssaframesize;
+	uint32_t miscselect;
+	uint8_t reserved1[SGX_SECS_RESERVED1_SIZE];
+	uint64_t attributes;
+	uint64_t xfrm;
+	uint32_t mrenclave[8];
+	uint8_t reserved2[SGX_SECS_RESERVED2_SIZE];
+	uint32_t mrsigner[8];
+	uint8_t	reserved3[SGX_SECS_RESERVED3_SIZE];
+	uint16_t isvvprodid;
+	uint16_t isvsvn;
+	uint8_t reserved4[SGX_SECS_RESERVED4_SIZE];
+};
+
+enum sgx_tcs_flags {
+	SGX_TCS_DBGOPTIN	= 0x01, /* cleared on EADD */
+};
+
+#define SGX_TCS_RESERVED_MASK 0xFFFFFFFFFFFFFFFEL
+
+struct sgx_tcs {
+	uint64_t state;
+	uint64_t flags;
+	uint64_t ossa;
+	uint32_t cssa;
+	uint32_t nssa;
+	uint64_t oentry;
+	uint64_t aep;
+	uint64_t ofsbase;
+	uint64_t ogsbase;
+	uint32_t fslimit;
+	uint32_t gslimit;
+	uint64_t reserved[503];
+};
+
+struct sgx_pageinfo {
+	uint64_t linaddr;
+	uint64_t srcpge;
+	union {
+		uint64_t secinfo;
+		uint64_t pcmd;
+	};
+	uint64_t secs;
+} __attribute__((aligned(32)));
+
+
+#define SGX_SECINFO_PERMISSION_MASK	0x0000000000000007L
+#define SGX_SECINFO_PAGE_TYPE_MASK	0x000000000000FF00L
+#define SGX_SECINFO_RESERVED_MASK	0xFFFFFFFFFFFF00F8L
 
 enum sgx_page_type {
 	SGX_PAGE_TYPE_SECS	= 0x00,
@@ -78,277 +145,125 @@ enum sgx_secinfo_flags {
 	SGX_SECINFO_R		= 0x01,
 	SGX_SECINFO_W		= 0x02,
 	SGX_SECINFO_X		= 0x04,
-	SGX_SECINFO_SECS	= 0x000ULL,
-	SGX_SECINFO_TCS		= 0x100ULL,
-	SGX_SECINFO_REG		= 0x200ULL,
+	SGX_SECINFO_SECS	= (SGX_PAGE_TYPE_SECS << 8),
+	SGX_SECINFO_TCS		= (SGX_PAGE_TYPE_TCS << 8),
+	SGX_SECINFO_REG		= (SGX_PAGE_TYPE_REG << 8),
 };
 
 struct sgx_secinfo {
-	u64	flags;
-	u64	reserved[7];
-} __aligned(128);
-
-struct sgx_einittoken {
-	u32	valid;
-	u8	reserved1[206];
-	u16	isvsvnle;
-	u8	reserved2[92];
-} __aligned(512);
-
-enum isgx_secs_attributes {
-	SGX_SECS_A_DEBUG		= BIT_ULL(1),
-	SGX_SECS_A_MODE64BIT		= BIT_ULL(2),
-	SGX_SECS_A_PROVISION_KEY	= BIT_ULL(4),
-	SGX_SECS_A_LICENSE_KEY		= BIT_ULL(5),
-	SGX_SECS_A_RESERVED_MASK	= (BIT_ULL(0) |
-					   BIT_ULL(3) |
-					   GENMASK_ULL(63, 6)),
-};
-
-#define SGX_SECS_RESERVED1_SIZE 28
-#define SGX_SECS_RESERVED2_SIZE 32
-#define SGX_SECS_RESERVED3_SIZE 96
-#define SGX_SECS_RESERVED4_SIZE 3836
-
-struct sgx_secs {
-	u64	size;
-	u64	base;
-	u32	ssaframesize;
-	uint8_t reserved1[SGX_SECS_RESERVED1_SIZE];
-	u64	flags;
-	u64	xfrm;
-	u32	mrenclave[8];
-	uint8_t	reserved2[SGX_SECS_RESERVED2_SIZE];
-	u32	mrsigner[8];
-	uint8_t	reserved3[SGX_SECS_RESERVED3_SIZE];
-	u16	isvvprodid;
-	u16	isvsvn;
-	uint8_t	reserved[SGX_SECS_RESERVED4_SIZE];
-};
-
-struct sgx_tcs {
-	u64 state;
-	u64 flags;
-	u64 ossa;
-	u32 cssa;
-	u32 nssa;
-	u64 oentry;
-	u64 aep;
-	u64 ofsbase;
-	u64 ogsbase;
-	u32 fslimit;
-	u32 gslimit;
-	u64 reserved[503];
-};
-
-enum sgx_secinfo_masks {
-	SGX_SECINFO_PERMISSION_MASK	= GENMASK_ULL(2, 0),
-	SGX_SECINFO_PAGE_TYPE_MASK	= GENMASK_ULL(15, 8),
-	SGX_SECINFO_RESERVED_MASK	= (GENMASK_ULL(7, 3) |
-					   GENMASK_ULL(63, 16)),
-};
+	uint64_t flags;
+	uint64_t reserved[7];
+} __attribute__((aligned(64)));
 
 struct sgx_pcmd {
 	struct sgx_secinfo secinfo;
-	u64 enclave_id;
-	u8 reserved[40];
-	u8 mac[16];
+	uint64_t enclave_id;
+	uint8_t reserved[40];
+	uint8_t mac[16];
 };
 
-struct sgx_page_info {
-	u64 linaddr;
-	u64 srcpge;
-	union {
-		u64 secinfo;
-		u64 pcmd;
-	};
-	u64 secs;
-} __aligned(32);
+#define SGX_MODULUS_SIZE 384
 
-#define SIGSTRUCT_SIZE 1808
-#define EINITTOKEN_SIZE 304
-
-enum {
-	ECREATE	= 0x0,
-	EADD	= 0x1,
-	EINIT	= 0x2,
-	EREMOVE	= 0x3,
-	EDGBRD	= 0x4,
-	EDGBWR	= 0x5,
-	EEXTEND	= 0x6,
-	ELDU	= 0x8,
-	EBLOCK	= 0x9,
-	EPA	= 0xA,
-	EWB	= 0xB,
-	ETRACK	= 0xC,
-	EAUG	= 0xD,
-	EMODPR	= 0xE,
-	EMODT	= 0xF,
+struct sgx_sigstruct_header {
+	uint64_t header1[2];
+	uint32_t vendor;
+	uint32_t date;
+	uint64_t header2[2];
+	uint32_t swdefined;
+	uint8_t reserved1[84];
 };
 
-#define __encls_ret(rax, rbx, rcx, rdx)			\
-	({						\
-	int ret;					\
-	asm volatile(					\
-	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
-	"2:\n"						\
-	".section .fixup,\"ax\"\n"			\
-	"3: jmp 2b\n"					\
-	".previous\n"					\
-	_ASM_EXTABLE(1b, 3b)				\
-	: "=a"(ret)					\
-	: "a"(rax), "b"(rbx), "c"(rcx), "d"(rdx)	\
-	: "memory");					\
-	ret;						\
-	})
+struct sgx_sigstruct_body {
+	uint32_t miscselect;
+	uint32_t miscmask;
+	uint8_t reserved2[20];
+	uint64_t attributes;
+	uint64_t xfrm;
+	uint8_t attributemask[16];
+	uint8_t mrenclave[32];
+	uint8_t reserved3[32];
+	uint16_t isvprodid;
+	uint16_t isvsvn;
+} __attribute__((__packed__));
 
-#ifdef CONFIG_X86_64
-#define __encls(rax, rbx, rcx, rdx...)			\
-	({						\
-	int ret;					\
-	asm volatile(					\
-	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
-	"   xor %%eax,%%eax;\n"				\
-	"2:\n"						\
-	".section .fixup,\"ax\"\n"			\
-	"3: movq $-1,%%rax\n"				\
-	"   jmp 2b\n"					\
-	".previous\n"					\
-	_ASM_EXTABLE(1b, 3b)				\
-	: "=a"(ret), "=b"(rbx), "=c"(rcx)		\
-	: "a"(rax), "b"(rbx), "c"(rcx), rdx		\
-	: "memory");					\
-	ret;						\
-	})
-#else
-#define __encls(rax, rbx, rcx, rdx...)			\
-	({						\
-	int ret;					\
-	asm volatile(					\
-	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
-	"   xor %%eax,%%eax;\n"				\
-	"2:\n"						\
-	".section .fixup,\"ax\"\n"			\
-	"3: mov $-1,%%eax\n"				\
-	"   jmp 2b\n"					\
-	".previous\n"					\
-	_ASM_EXTABLE(1b, 3b)				\
-	: "=a"(ret), "=b"(rbx), "=c"(rcx)		\
-	: "a"(rax), "b"(rbx), "c"(rcx), rdx		\
-	: "memory");					\
-	ret;						\
-	})
-#endif
-
-static inline unsigned long __ecreate(struct sgx_page_info *pginfo, void *secs)
-{
-	return __encls(ECREATE, pginfo, secs, "d"(0));
-}
-
-static inline int __eextend(void *secs, void *epc)
-{
-	return __encls(EEXTEND, secs, epc, "d"(0));
-}
-
-static inline int __eadd(struct sgx_page_info *pginfo, void *epc)
-{
-	return __encls(EADD, pginfo, epc, "d"(0));
-}
-
-static inline int __einit(void *sigstruct, struct sgx_einittoken *einittoken,
-			  void *secs)
-{
-	return __encls_ret(EINIT, sigstruct, secs, einittoken);
-}
-
-static inline int __eremove(void *epc)
-{
-	unsigned long rbx = 0;
-	unsigned long rdx = 0;
-
-	return __encls_ret(EREMOVE, rbx, epc, rdx);
-}
-
-static inline int __edbgwr(void *epc, unsigned long *data)
-{
-	return __encls(EDGBWR, *data, epc, "d"(0));
-}
-
-static inline int __edbgrd(void *epc, unsigned long *data)
-{
-	unsigned long rbx = 0;
-	int ret;
-
-	ret = __encls(EDGBRD, rbx, epc, "d"(0));
-	if (!ret)
-		*(unsigned long *) data = rbx;
-
-	return ret;
-}
-
-static inline int __etrack(void *epc)
-{
-	unsigned long rbx = 0;
-	unsigned long rdx = 0;
-
-	return __encls_ret(ETRACK, rbx, epc, rdx);
-}
-
-static inline int __eldu(unsigned long rbx, unsigned long rcx,
-			 unsigned long rdx)
-{
-	return __encls_ret(ELDU, rbx, rcx, rdx);
-}
-
-static inline int __eblock(unsigned long rcx)
-{
-	unsigned long rbx = 0;
-	unsigned long rdx = 0;
-
-	return __encls_ret(EBLOCK, rbx, rcx, rdx);
-}
-
-static inline int __epa(void *epc)
-{
-	unsigned long rbx = SGX_PAGE_TYPE_VA;
-
-	return __encls(EPA, rbx, epc, "d"(0));
-}
-
-static inline int __ewb(struct sgx_page_info *pginfo, void *epc, void *va)
-{
-	return __encls_ret(EWB, pginfo, epc, va);
-}
-
-static inline int __eaug(struct sgx_page_info *pginfo, void *epc)
-{
-	return __encls(EAUG, pginfo, epc, "d"(0));
-}
-
-static inline int __emodpr(struct sgx_secinfo *secinfo, void *epc)
-{
-	unsigned long rdx = 0;
-
-	return __encls_ret(EMODPR, secinfo, epc, rdx);
-}
-
-static inline int __emodt(struct sgx_secinfo *secinfo, void *epc)
-{
-	unsigned long rdx = 0;
-
-	return __encls_ret(EMODT, secinfo, epc, rdx);
-}
-
-struct sgx_encl;
-
-struct sgx_epc_page {
-	resource_size_t	pa;
-	struct list_head free_list;
+struct sgx_sigstruct {
+	struct sgx_sigstruct_header header;
+	uint8_t modulus[SGX_MODULUS_SIZE];
+	uint32_t exponent;
+	uint8_t signature[SGX_MODULUS_SIZE];
+	struct sgx_sigstruct_body body;
+	uint8_t reserved4[12];
+	uint8_t q1[SGX_MODULUS_SIZE];
+	uint8_t q2[SGX_MODULUS_SIZE];
 };
 
-extern struct sgx_epc_page *sgx_alloc_page(unsigned int flags);
-extern int sgx_free_page(struct sgx_epc_page *entry, struct sgx_encl *encl);
-extern void *sgx_get_page(struct sgx_epc_page *entry);
-extern void sgx_put_page(void *epc_page_vaddr);
+struct sgx_sigstruct_payload {
+	struct sgx_sigstruct_header header;
+	struct sgx_sigstruct_body body;
+};
 
-#endif /* _ASM_X86_SGX_H */
+struct sgx_einittoken_payload {
+	uint32_t valid;
+	uint32_t reserved1[11];
+	uint64_t attributes;
+	uint64_t xfrm;
+	uint8_t mrenclave[32];
+	uint8_t reserved2[32];
+	uint8_t mrsigner[32];
+	uint8_t reserved3[32];
+};
+
+struct sgx_einittoken {
+	struct sgx_einittoken_payload payload;
+	uint8_t cpusvnle[16];
+	uint16_t isvprodidle;
+	uint16_t isvsvnle;
+	uint8_t reserved2[24];
+	uint32_t maskedmiscselectle;
+	uint64_t maskedattributesle;
+	uint64_t maskedxfrmle;
+	uint8_t keyid[32];
+	uint8_t mac[16];
+};
+
+struct sgx_report {
+	uint8_t cpusvn[16];
+	uint32_t miscselect;
+	uint8_t reserved1[28];
+	uint64_t attributes;
+	uint64_t xfrm;
+	uint8_t mrenclave[32];
+	uint8_t reserved2[32];
+	uint8_t mrsigner[32];
+	uint8_t reserved3[96];
+	uint16_t isvprodid;
+	uint16_t isvsvn;
+	uint8_t reserved4[60];
+	uint8_t reportdata[64];
+	uint8_t keyid[32];
+	uint8_t mac[16];
+};
+
+struct sgx_targetinfo {
+	uint8_t mrenclave[32];
+	uint64_t attributes;
+	uint64_t xfrm;
+	uint8_t reserved1[4];
+	uint32_t miscselect;
+	uint8_t reserved2[456];
+};
+
+struct sgx_keyrequest {
+	uint16_t keyname;
+	uint16_t keypolicy;
+	uint16_t isvsvn;
+	uint16_t reserved1;
+	uint8_t cpusvn[16];
+	uint64_t attributemask;
+	uint64_t xfrmmask;
+	uint8_t keyid[32];
+	uint32_t miscmask;
+	uint8_t reserved2[436];
+};
+
+#endif /* _ASM_X86_SGX_ARCH_H */

@@ -53,8 +53,6 @@
  *
  * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
  * Suresh Siddha <suresh.b.siddha@intel.com>
- * Serge Ayoun <serge.ayoun@intel.com>
- * Shay Katz-zamir <shay.katz-zamir@intel.com>
  */
 
 #ifndef _UAPI_ASM_X86_SGX_H
@@ -89,7 +87,7 @@
 #define SGX_CHILD_PRESENT		13
 #define SGX_ENCLAVE_ACT			14
 #define SGX_ENTRYEPOCH_LOCKED		15
-#define SGX_INVALID_LICENSE		16
+#define SGX_INVALID_EINITTOKEN		16
 #define SGX_PREV_TRK_INCMPL		17
 #define SGX_PG_IS_SECS			18
 #define SGX_INVALID_CPUSVN		32
@@ -108,7 +106,7 @@
  */
 struct sgx_enclave_create  {
 	__u64	src;
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct sgx_enclave_add_page - parameter structure for the
@@ -123,23 +121,19 @@ struct sgx_enclave_add_page {
 	__u64	src;
 	__u64	secinfo;
 	__u16	mrmask;
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct sgx_enclave_init - parameter structure for the
  *                           %SGX_IOC_ENCLAVE_INIT ioctl
  * @addr:	address in the ELRANGE
  * @sigstruct:	address for the page data
- * @einittoken:	address for the SECINFO data
+ * @einittoken:	EINITTOKEN
  */
 struct sgx_enclave_init {
 	__u64	addr;
 	__u64	sigstruct;
 	__u64	einittoken;
-} __packed;
-
-struct sgx_enclave_destroy {
-	__u64	addr;
-} __packed;
+} __attribute__((__packed__));
 
 #endif /* _UAPI_ASM_X86_SGX_H */

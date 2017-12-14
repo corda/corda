@@ -4,7 +4,7 @@
  *
  * GPL LICENSE SUMMARY
  *
- * Copyright(c) 2016 Intel Corporation.
+ * Copyright(c) 2016-2017 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -21,7 +21,7 @@
  *
  * BSD LICENSE
  *
- * Copyright(c) 2016 Intel Corporation.
+ * Copyright(c) 2016-2017 Intel Corporation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@
 #ifndef __ARCH_INTEL_SGX_H__
 #define __ARCH_INTEL_SGX_H__
 
-#include "sgx_user.h"
+#include "sgx_asm.h"
 #include <linux/kref.h>
 #include <linux/version.h>
 #include <linux/rbtree.h>
@@ -70,12 +70,23 @@
 #include <linux/mmu_notifier.h>
 #include <linux/radix-tree.h>
 #include "sgx_arch.h"
+#include "sgx_user.h"
 
 #define SGX_EINIT_SPIN_COUNT	20
 #define SGX_EINIT_SLEEP_COUNT	50
 #define SGX_EINIT_SLEEP_TIME	20
 
 #define SGX_VA_SLOT_COUNT 512
+
+struct sgx_epc_page {
+	resource_size_t	pa;
+	struct list_head list;
+	struct sgx_encl_page *encl_page;
+};
+
+enum sgx_alloc_flags {
+	SGX_ALLOC_ATOMIC	= BIT(0),
+};
 
 struct sgx_va_page {
 	struct sgx_epc_page *epc_page;
@@ -108,7 +119,6 @@ struct sgx_encl_page {
 	unsigned long addr;
 	unsigned int flags;
 	struct sgx_epc_page *epc_page;
-	struct list_head load_list;
 	struct sgx_va_page *va_page;
 	unsigned int va_offset;
 };
@@ -130,6 +140,8 @@ enum sgx_encl_flags {
 
 struct sgx_encl {
 	unsigned int flags;
+	uint64_t attributes;
+	uint64_t xfrm;
 	unsigned int secs_child_cnt;
 	struct mutex lock;
 	struct mm_struct *mm;
@@ -139,22 +151,23 @@ struct sgx_encl {
 	struct kref refcount;
 	unsigned long base;
 	unsigned long size;
+	unsigned long ssaframesize;
 	struct list_head va_pages;
 	struct radix_tree_root page_tree;
 	struct list_head add_page_reqs;
 	struct work_struct add_page_work;
-	struct sgx_encl_page secs_page;
+	struct sgx_encl_page secs;
 	struct sgx_tgid_ctx *tgid_ctx;
 	struct list_head encl_list;
 	struct mmu_notifier mmu_notifier;
 };
 
 struct sgx_epc_bank {
+	unsigned long pa;
 #ifdef CONFIG_X86_64
-	void *mem;
+	unsigned long va;
 #endif
-	unsigned long start;
-	unsigned long end;
+	unsigned long size;
 };
 
 extern struct workqueue_struct *sgx_add_page_wq;
@@ -163,22 +176,36 @@ extern int sgx_nr_epc_banks;
 extern u64 sgx_encl_size_max_32;
 extern u64 sgx_encl_size_max_64;
 extern u64 sgx_xfrm_mask;
-extern u32 sgx_ssaframesize_tbl[64];
-extern bool sgx_has_sgx2;
+extern u32 sgx_misc_reserved;
+extern u32 sgx_xsave_size_tbl[64];
 
 extern const struct vm_operations_struct sgx_vm_ops;
-extern atomic_t sgx_nr_pids;
 
 #define sgx_pr_ratelimited(level, encl, fmt, ...)			  \
 	pr_ ## level ## _ratelimited("intel_sgx: [%d:0x%p] " fmt,	  \
 				     pid_nr((encl)->tgid_ctx->tgid),	  \
 				     (void *)(encl)->base, ##__VA_ARGS__)
 
-#define sgx_dbg(encl, fmt, ...) sgx_pr_ratelimited(debug, encl, fmt, ##__VA_ARGS__)
-#define sgx_info(encl, fmt, ...) sgx_pr_ratelimited(info, encl, fmt, ##__VA_ARGS__)
-#define sgx_warn(encl, fmt, ...) sgx_pr_ratelimited(warn, encl, fmt, ##__VA_ARGS__)
-#define sgx_err(encl, fmt, ...) sgx_pr_ratelimited(err, encl, fmt, ##__VA_ARGS__)
-#define sgx_crit(encl, fmt, ...) sgx_pr_ratelimited(crit, encl, fmt, ##__VA_ARGS__)
+#define sgx_dbg(encl, fmt, ...) \
+	sgx_pr_ratelimited(debug, encl, fmt, ##__VA_ARGS__)
+#define sgx_info(encl, fmt, ...) \
+	sgx_pr_ratelimited(info, encl, fmt, ##__VA_ARGS__)
+#define sgx_warn(encl, fmt, ...) \
+	sgx_pr_ratelimited(warn, encl, fmt, ##__VA_ARGS__)
+#define sgx_err(encl, fmt, ...) \
+	sgx_pr_ratelimited(err, encl, fmt, ##__VA_ARGS__)
+#define sgx_crit(encl, fmt, ...) \
+	sgx_pr_ratelimited(crit, encl, fmt, ##__VA_ARGS__)
+
+int sgx_encl_find(struct mm_struct *mm, unsigned long addr,
+		  struct vm_area_struct **vma);
+void sgx_tgid_ctx_release(struct kref *ref);
+int sgx_encl_create(struct sgx_secs *secs);
+int sgx_encl_add_page(struct sgx_encl *encl, unsigned long addr, void *data,
+		      struct sgx_secinfo *secinfo, unsigned int mrmask);
+int sgx_encl_init(struct sgx_encl *encl, struct sgx_sigstruct *sigstruct,
+		  struct sgx_einittoken *einittoken);
+void sgx_encl_release(struct kref *ref);
 
 long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg);
 #ifdef CONFIG_COMPAT
@@ -196,13 +223,10 @@ void sgx_insert_pte(struct sgx_encl *encl,
 		    struct sgx_epc_page *epc_page,
 		    struct vm_area_struct *vma);
 int sgx_eremove(struct sgx_epc_page *epc_page);
-struct vm_area_struct *sgx_find_vma(struct sgx_encl *encl, unsigned long addr);
 void sgx_zap_tcs_ptes(struct sgx_encl *encl,
 		      struct vm_area_struct *vma);
 void sgx_invalidate(struct sgx_encl *encl, bool flush_cpus);
 void sgx_flush_cpus(struct sgx_encl *encl);
-int sgx_find_encl(struct mm_struct *mm, unsigned long addr,
-		  struct vm_area_struct **vma);
 
 enum sgx_fault_flags {
 	SGX_FAULT_RESERVE	= BIT(0),
@@ -212,23 +236,19 @@ struct sgx_encl_page *sgx_fault_page(struct vm_area_struct *vma,
 				     unsigned long addr,
 				     unsigned int flags);
 
-void sgx_encl_release(struct kref *ref);
-void sgx_tgid_ctx_release(struct kref *ref);
 
 extern struct mutex sgx_tgid_ctx_mutex;
 extern struct list_head sgx_tgid_ctx_list;
-extern struct task_struct *ksgxswapd_tsk;
+extern atomic_t sgx_va_pages_cnt;
 
-enum sgx_alloc_flags {
-	SGX_ALLOC_ATOMIC	= BIT(0),
-};
-
-int ksgxswapd(void *p);
-int sgx_page_cache_init(resource_size_t start, unsigned long size);
+int sgx_add_epc_bank(resource_size_t start, unsigned long size, int bank);
+int sgx_page_cache_init(void);
 void sgx_page_cache_teardown(void);
 struct sgx_epc_page *sgx_alloc_page(unsigned int flags);
-int sgx_free_page(struct sgx_epc_page *entry, struct sgx_encl *encl);
+void sgx_free_page(struct sgx_epc_page *entry, struct sgx_encl *encl);
 void *sgx_get_page(struct sgx_epc_page *entry);
 void sgx_put_page(void *epc_page_vaddr);
+void sgx_eblock(struct sgx_encl *encl, struct sgx_epc_page *epc_page);
+void sgx_etrack(struct sgx_encl *encl);
 
 #endif /* __ARCH_X86_INTEL_SGX_H__ */

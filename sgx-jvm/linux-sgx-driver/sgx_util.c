@@ -4,7 +4,7 @@
  *
  * GPL LICENSE SUMMARY
  *
- * Copyright(c) 2016 Intel Corporation.
+ * Copyright(c) 2016-2017 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -21,7 +21,7 @@
  *
  * BSD LICENSE
  *
- * Copyright(c) 2016 Intel Corporation.
+ * Copyright(c) 2016-2017 Intel Corporation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,12 +61,11 @@
 #include "sgx.h"
 #include <linux/highmem.h>
 #include <linux/shmem_fs.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
-	#include <linux/sched/signal.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
+	#include <linux/sched/mm.h>
 #else
-	#include <linux/signal.h>
+	#include <linux/mm.h>
 #endif
-#include "linux/file.h"
 
 struct page *sgx_get_backing(struct sgx_encl *encl,
 			     struct sgx_encl_page *entry,
@@ -101,23 +100,13 @@ void sgx_put_backing(struct page *backing_page, bool write)
 	put_page(backing_page);
 }
 
-struct vm_area_struct *sgx_find_vma(struct sgx_encl *encl, unsigned long addr)
-{
-	struct vm_area_struct *vma;
-
-	vma = find_vma(encl->mm, addr);
-	if (vma && encl == vma->vm_private_data)
-		return vma;
-
-	sgx_dbg(encl, "cannot find VMA at 0x%lx\n", addr);
-	return NULL;
-}
-
 void sgx_zap_tcs_ptes(struct sgx_encl *encl, struct vm_area_struct *vma)
 {
+	struct sgx_epc_page *tmp;
 	struct sgx_encl_page *entry;
 
-	list_for_each_entry(entry, &encl->load_list, load_list) {
+	list_for_each_entry(tmp, &encl->load_list, list) {
+		entry = tmp->encl_page;
 		if ((entry->flags & SGX_ENCL_PAGE_TCS) &&
 		    entry->addr >= vma->vm_start &&
 		    entry->addr < vma->vm_end)
@@ -129,11 +118,12 @@ void sgx_invalidate(struct sgx_encl *encl, bool flush_cpus)
 {
 	struct vm_area_struct *vma;
 	unsigned long addr;
+	int ret;
 
 	for (addr = encl->base; addr < (encl->base + encl->size);
 	     addr = vma->vm_end) {
-		vma = sgx_find_vma(encl, addr);
-		if (vma)
+		ret = sgx_encl_find(encl->mm, addr, &vma);
+		if (!ret && encl == vma->vm_private_data)
 			sgx_zap_tcs_ptes(encl, vma);
 		else
 			break;
@@ -154,38 +144,6 @@ void sgx_flush_cpus(struct sgx_encl *encl)
 	on_each_cpu_mask(mm_cpumask(encl->mm), sgx_ipi_cb, NULL, 1);
 }
 
-/**
- * sgx_find_encl - find an enclave
- * @mm:		mm struct of the current process
- * @addr:	address in the ELRANGE
- * @vma:	the VMA that is located in the given address
- *
- * Finds an enclave identified by the given address. Gives back the VMA, that is
- * part of the enclave, located in that address.
- */
-int sgx_find_encl(struct mm_struct *mm, unsigned long addr,
-		  struct vm_area_struct **vma)
-{
-	struct sgx_encl *encl;
-
-	*vma = find_vma(mm, addr);
-	if (!(*vma) || (*vma)->vm_ops != &sgx_vm_ops ||
-	    addr < (*vma)->vm_start)
-		return -EINVAL;
-
-	encl = (*vma)->vm_private_data;
-	if (!encl) {
-		pr_debug("%s: VMA exists but there is no enclave at 0x%p\n",
-			 __func__, (void *)addr);
-		return -EINVAL;
-	}
-
-	if (encl->flags & SGX_ENCL_SUSPEND)
-		return SGX_POWER_LOST_ENCLAVE;
-
-	return 0;
-}
-
 static int sgx_eldu(struct sgx_encl *encl,
 		    struct sgx_encl_page *encl_page,
 		    struct sgx_epc_page *epc_page,
@@ -194,7 +152,7 @@ static int sgx_eldu(struct sgx_encl *encl,
 	struct page *backing;
 	struct page *pcmd;
 	unsigned long pcmd_offset;
-	struct sgx_page_info pginfo;
+	struct sgx_pageinfo pginfo;
 	void *secs_ptr = NULL;
 	void *epc_ptr;
 	void *va_ptr;
@@ -219,7 +177,7 @@ static int sgx_eldu(struct sgx_encl *encl,
 	}
 
 	if (!is_secs)
-		secs_ptr = sgx_get_page(encl->secs_page.epc_page);
+		secs_ptr = sgx_get_page(encl->secs.epc_page);
 
 	epc_ptr = sgx_get_page(epc_page);
 	va_ptr = sgx_get_page(encl_page->va_page->epc_page);
@@ -253,7 +211,8 @@ out:
 }
 
 static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
-					  unsigned long addr, unsigned int flags)
+					  unsigned long addr,
+					  unsigned int flags)
 {
 	struct sgx_encl *encl = vma->vm_private_data;
 	struct sgx_encl_page *entry;
@@ -317,11 +276,11 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 			goto out;
 		}
 
-		rc = sgx_eldu(encl, &encl->secs_page, secs_epc_page, true);
+		rc = sgx_eldu(encl, &encl->secs, secs_epc_page, true);
 		if (rc)
 			goto out;
 
-		encl->secs_page.epc_page = secs_epc_page;
+		encl->secs.epc_page = secs_epc_page;
 		encl->flags &= ~SGX_ENCL_SECS_EVICTED;
 
 		/* Do not free */
@@ -340,6 +299,7 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 	 */
 	encl->secs_child_cnt++;
 
+	epc_page->encl_page = entry;
 	entry->epc_page = epc_page;
 
 	if (reserve)
@@ -347,7 +307,7 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 
 	/* Do not free */
 	epc_page = NULL;
-	list_add_tail(&entry->load_list, &encl->load_list);
+	list_add_tail(&entry->epc_page->list, &encl->load_list);
 
 	rc = vm_insert_pfn(vma, entry->addr, PFN_DOWN(entry->epc_page->pa));
 	if (rc) {
@@ -384,54 +344,33 @@ struct sgx_encl_page *sgx_fault_page(struct vm_area_struct *vma,
 	return entry;
 }
 
-void sgx_encl_release(struct kref *ref)
+void sgx_eblock(struct sgx_encl *encl, struct sgx_epc_page *epc_page)
 {
-	struct sgx_encl_page *entry;
-	struct sgx_va_page *va_page;
-	struct sgx_encl *encl = container_of(ref, struct sgx_encl, refcount);
-	struct radix_tree_iter iter;
-	void **slot;
+	void *vaddr;
+	int ret;
 
-	mutex_lock(&sgx_tgid_ctx_mutex);
-	if (!list_empty(&encl->encl_list))
-		list_del(&encl->encl_list);
-	mutex_unlock(&sgx_tgid_ctx_mutex);
+	vaddr = sgx_get_page(epc_page);
+	ret = __eblock((unsigned long)vaddr);
+	sgx_put_page(vaddr);
 
-	if (encl->mmu_notifier.ops)
-		mmu_notifier_unregister_no_release(&encl->mmu_notifier,
-						   encl->mm);
-
-	radix_tree_for_each_slot(slot, &encl->page_tree, &iter, 0) {
-		entry = *slot;
-		if (entry->epc_page) {
-			list_del(&entry->load_list);
-			sgx_free_page(entry->epc_page, encl);
-		}
-		radix_tree_delete(&encl->page_tree, entry->addr >> PAGE_SHIFT);
-		kfree(entry);
+	if (ret) {
+		sgx_crit(encl, "EBLOCK returned %d\n", ret);
+		sgx_invalidate(encl, true);
 	}
 
-	while (!list_empty(&encl->va_pages)) {
-		va_page = list_first_entry(&encl->va_pages,
-					   struct sgx_va_page, list);
-		list_del(&va_page->list);
-		sgx_free_page(va_page->epc_page, encl);
-		kfree(va_page);
+}
+
+void sgx_etrack(struct sgx_encl *encl)
+{
+	void *epc;
+	int ret;
+
+	epc = sgx_get_page(encl->secs.epc_page);
+	ret = __etrack(epc);
+	sgx_put_page(epc);
+
+	if (ret) {
+		sgx_crit(encl, "ETRACK returned %d\n", ret);
+		sgx_invalidate(encl, true);
 	}
-
-	if (encl->secs_page.epc_page)
-		sgx_free_page(encl->secs_page.epc_page, encl);
-
-	encl->secs_page.epc_page = NULL;
-
-	if (encl->tgid_ctx)
-		kref_put(&encl->tgid_ctx->refcount, sgx_tgid_ctx_release);
-
-	if (encl->backing)
-		fput(encl->backing);
-
-	if (encl->pcmd)
-		fput(encl->pcmd);
-
-	kfree(encl);
 }
