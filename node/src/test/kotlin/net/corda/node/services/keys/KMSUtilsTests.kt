@@ -22,7 +22,7 @@ class KMSUtilsTests {
         val confidentialIdentity = mockServices.keyManagementService.freshKeyAndCert(wellKnownIdentity, false)
         val cert = confidentialIdentity.certificate
         val extensionData = DEROctetString.getInstance(cert.getExtensionValue(CordaOID.X509_EXTENSION_CORDA_ROLE))
-        val expected = CertRole.CONFIDENTIAL_IDENTITY
+        val expected = CertRole.CONFIDENTIAL_LEGAL_IDENTITY
         val actual = CertRole.getInstance(extensionData.octets)!!
         assertEquals(expected, actual)
     }

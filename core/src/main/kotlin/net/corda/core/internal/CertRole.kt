@@ -24,21 +24,19 @@ import java.security.cert.X509Certificate
 // TODO: Link to the specification once it has a permanent URL
 enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, val isWellKnown: Boolean) : ASN1Encodable {
     /**
-     * A Doorman (intermediate CA of some kind).
+     * Intermediate CA (Doorman service).
      */
     INTERMEDIATE_CA(setOf(null), false, false),
-    /** Signing key for the network map */
-    NETWORK_MAP(setOf(null), false, false),
-    /** The node level CA from which the TLS and well known identity certificates are issued. */
+    /** Well known (publicly visible) identity of a service such as the notary or network map */
+    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA), true, true),
+    /** Node level CA from which the TLS and well known identity certificates are issued. */
     NODE_CA(setOf(INTERMEDIATE_CA), false, false),
-    /** The transport layer security certificate */
+    /** Transport layer security certificate for a node */
     TLS(setOf(NODE_CA), false, false),
-    /** A well known (publicly visible) identity of a service */
-    WELL_KNOWN_SERVICE_IDENTITY(setOf(INTERMEDIATE_CA), true, true),
-    /** A well known (publicly visible) identity of a legal entity */
-    WELL_KNOWN_LEGAL_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
-    /** A confidential (limited visibility) identity */
-    CONFIDENTIAL_IDENTITY(setOf(WELL_KNOWN_LEGAL_IDENTITY), true, false);
+    /** Well known (publicly visible) identity of a legal entity */
+    LEGAL_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
+    /** Confidential (limited visibility) identity */
+    CONFIDENTIAL_LEGAL_IDENTITY(setOf(LEGAL_IDENTITY), true, false);
 
     companion object {
         private var cachedRoles: Array<CertRole>? = null

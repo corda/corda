@@ -43,8 +43,8 @@ object ServiceIdentityGenerator {
         val rootCert = customRootCert ?: caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
 
         keyPairs.zip(dirs) { keyPair, dir ->
-            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, serviceName, keyPair.public)
-            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, serviceName, notaryKey)
+            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, serviceName, keyPair.public)
+            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, serviceName, notaryKey)
             val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
             val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
             keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)

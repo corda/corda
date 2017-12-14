@@ -92,8 +92,6 @@ fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
     val intermediate: CertificateAndKeyPair = DEV_CA
 
     val nodeCaName = party.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN)
-    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, party.name.x500Name))), arrayOf())
-    val issuerKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val nodeCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val nodeCaCert = X509Utilities.createCertificate(
             CertificateType.NODE_CA,
@@ -104,7 +102,7 @@ fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
             nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, party.name.x500Name))), arrayOf()))
 
     val identityCert = X509Utilities.createCertificate(
-            CertificateType.WELL_KNOWN_LEGAL_IDENTITY,
+            CertificateType.LEGAL_IDENTITY,
             nodeCaCert,
             nodeCaKeyPair,
             party.name,

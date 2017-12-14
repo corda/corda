@@ -345,13 +345,13 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             role = CertRole.INTERMEDIATE_CA
     ),
 
-    NETWORK_MAP(
-            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
+    SERVICE_IDENTITY(
+            KeyUsage(KeyUsage.digitalSignature),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
-            role = CertRole.NETWORK_MAP
+            role = CertRole.SERVICE_IDENTITY
     ),
 
     NODE_CA(
@@ -372,32 +372,23 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             role = CertRole.TLS
     ),
 
-    WELL_KNOWN_SERVICE_IDENTITY(
-            KeyUsage(KeyUsage.digitalSignature),
-            KeyPurposeId.id_kp_serverAuth,
-            KeyPurposeId.id_kp_clientAuth,
-            KeyPurposeId.anyExtendedKeyUsage,
-            isCA = false,
-            role = CertRole.WELL_KNOWN_SERVICE_IDENTITY
-    ),
-
     // TODO: Identity certs should have tight name constraints on child certificates
-    WELL_KNOWN_LEGAL_IDENTITY(
+    LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
-            role = CertRole.WELL_KNOWN_LEGAL_IDENTITY
+            role = CertRole.LEGAL_IDENTITY
     ),
 
-    CONFIDENTIAL_IDENTITY(
+    CONFIDENTIAL_LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
-            role = CertRole.CONFIDENTIAL_IDENTITY
+            role = CertRole.CONFIDENTIAL_LEGAL_IDENTITY
     )
 }
 
