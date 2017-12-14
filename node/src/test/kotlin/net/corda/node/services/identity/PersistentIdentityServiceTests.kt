@@ -21,6 +21,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -41,6 +42,9 @@ class PersistentIdentityServiceTests {
         val BOB_PUBKEY get() = bob.publicKey
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var database: CordaPersistence
     private lateinit var identityService: IdentityService
 
@@ -138,17 +142,15 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `assert unknown anonymous key is unrecognised`() {
-        withTestSerialization {
-            val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
-            val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)
-            val identity = Party(rootCert.cert)
-            val txIdentity = AnonymousParty(txKey.public)
+        val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
+        val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)
+        val identity = Party(rootCert.cert)
+        val txIdentity = AnonymousParty(txKey.public)
 
-            assertFailsWith<UnknownAnonymousPartyException> {
-                database.transaction {
-                    identityService.assertOwnership(identity, txIdentity)
-                }
+        assertFailsWith<UnknownAnonymousPartyException> {
+            database.transaction {
+                identityService.assertOwnership(identity, txIdentity)
             }
         }
     }
@@ -191,38 +193,36 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `assert ownership`() {
-        withTestSerialization {
-            val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
-            val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
+        val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
+        val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
+        database.transaction {
+            // Now we have identities, construct the service and let it know about both
+            identityService.verifyAndRegisterIdentity(anonymousAlice)
+            identityService.verifyAndRegisterIdentity(anonymousBob)
+        }
+
+        // Verify that paths are verified
+        database.transaction {
+            identityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
+            identityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
+        }
+        assertFailsWith<IllegalArgumentException> {
             database.transaction {
-                // Now we have identities, construct the service and let it know about both
-                identityService.verifyAndRegisterIdentity(anonymousAlice)
-                identityService.verifyAndRegisterIdentity(anonymousBob)
+                identityService.assertOwnership(alice.party, anonymousBob.party.anonymise())
             }
-
-            // Verify that paths are verified
+        }
+        assertFailsWith<IllegalArgumentException> {
             database.transaction {
-                identityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
-                identityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
+                identityService.assertOwnership(bob.party, anonymousAlice.party.anonymise())
             }
-            assertFailsWith<IllegalArgumentException> {
-                database.transaction {
-                    identityService.assertOwnership(alice.party, anonymousBob.party.anonymise())
-                }
-            }
-            assertFailsWith<IllegalArgumentException> {
-                database.transaction {
-                    identityService.assertOwnership(bob.party, anonymousAlice.party.anonymise())
-                }
-            }
+        }
 
-            assertFailsWith<IllegalArgumentException> {
-                val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
-                database.transaction {
-                    val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
-                    identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
-                }
+        assertFailsWith<IllegalArgumentException> {
+            val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
+            database.transaction {
+                val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
+                identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
             }
         }
     }

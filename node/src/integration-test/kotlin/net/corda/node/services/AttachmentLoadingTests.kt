@@ -24,16 +24,20 @@ import net.corda.testing.*
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.withoutTestSerialization
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.rigorousMock
-import net.corda.testing.withTestSerialization
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
     private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
     private val cordapp get() = provider.cordapps.first()
@@ -80,7 +84,7 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test a wire transaction has loaded the correct attachment`() = withTestSerialization {
+    fun `test a wire transaction has loaded the correct attachment`() {
         val appClassLoader = appContext.classLoader
         val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
         val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)
@@ -96,7 +100,7 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test that attachments retrieved over the network are not used for code`() {
+    fun `test that attachments retrieved over the network are not used for code`() = withoutTestSerialization {
         driver {
             installIsolatedCordappTo(bankAName)
             val (bankA, bankB) = createTwoNodes()
@@ -104,15 +108,17 @@ class AttachmentLoadingTests {
                 bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
             }
         }
+        Unit
     }
 
     @Test
-    fun `tests that if the attachment is loaded on both sides already that a flow can run`() {
+    fun `tests that if the attachment is loaded on both sides already that a flow can run`() = withoutTestSerialization {
         driver {
             installIsolatedCordappTo(bankAName)
             installIsolatedCordappTo(bankBName)
             val (bankA, bankB) = createTwoNodes()
             bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
         }
+        Unit
     }
 }
