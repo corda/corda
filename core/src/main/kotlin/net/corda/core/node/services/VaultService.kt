@@ -55,8 +55,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         /** Filters an update by [clazz]. */
         fun <T : ContractState> filterByType(clazz: Class<T>) =
                 copy(
-                        consumed = consumed.filterTo(HashSet()) { clazz.isAssignableFrom(it.state.data.javaClass) },
-                        produced = produced.filterTo(HashSet()) { clazz.isAssignableFrom(it.state.data.javaClass) }
+                        consumed = consumed.filterTo(LinkedHashSet()) { clazz.isAssignableFrom(it.state.data.javaClass) },
+                        produced = produced.filterTo(LinkedHashSet()) { clazz.isAssignableFrom(it.state.data.javaClass) }
                 )
 
         /**
