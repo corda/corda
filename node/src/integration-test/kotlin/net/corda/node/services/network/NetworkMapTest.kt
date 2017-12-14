@@ -2,9 +2,8 @@ package net.corda.node.services.network
 
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.seconds
+import net.corda.testing.*
 import net.corda.testing.node.internal.CompatibilityZoneParams
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.internalDriver
@@ -12,10 +11,16 @@ import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.net.URL
 
-class NetworkMapTest {
+class NetworkMapTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
     private val cacheTimeout = 1.seconds
     private val portAllocation = PortAllocation.Incremental(10000)
 

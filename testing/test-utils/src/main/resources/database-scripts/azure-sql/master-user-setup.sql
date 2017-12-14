@@ -1,4 +1,5 @@
 --once off script to run against master database (not a user database)
+CREATE LOGIN Alice WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN AliceCorp WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN AliceCorp_10000 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN AliceCorp_10003 WITH PASSWORD = 'yourStrong(!)Password';
@@ -10,6 +11,8 @@ CREATE LOGIN BankA_10003 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN BankA_10006 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN BankA_10012 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN BankB WITH PASSWORD = 'yourStrong(!)Password';
+CREATE LOGIN BankOfCorda WITH PASSWORD = 'yourStrong(!)Password';
+CREATE LOGIN BigCorporation WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN BobPlc WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN BobPlc_10000 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN BobPlc_10003 WITH PASSWORD = 'yourStrong(!)Password';

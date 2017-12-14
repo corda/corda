@@ -426,9 +426,7 @@ class DriverDSLImpl(
                 providedName = nodeNames[0],
                 rpcUsers = spec.rpcUsers,
                 verifierType = spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress) + mapOf(
-                        "database.serverNameTablePrefix" to nodeNames[0].toString().replace(Regex("[^0-9A-Za-z]+"), "")
-                )
+                customOverrides = notaryConfig(clusterAddress) //TODO discrepancy with OS - check if 'serverNameTablePrefix' can be removed in OS
         )
 
         // All other nodes will join the cluster
@@ -438,9 +436,7 @@ class DriverDSLImpl(
                     providedName = it,
                     rpcUsers = spec.rpcUsers,
                     verifierType = spec.verifierType,
-                    customOverrides = notaryConfig(nodeAddress, clusterAddress) + mapOf(
-                            "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), "")
-                    )
+                    customOverrides = notaryConfig(nodeAddress, clusterAddress) //TODO discrepancy with OS - check if 'serverNameTablePrefix' can be removed in OS
             )
         }
 
