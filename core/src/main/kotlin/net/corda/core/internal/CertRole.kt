@@ -5,6 +5,7 @@ import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1Primitive
 import org.bouncycastle.asn1.DEROctetString
+import java.math.BigInteger
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 
@@ -41,9 +42,22 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
     CONFIDENTIAL_IDENTITY(setOf(WELL_KNOWN_IDENTITY), true, false);
 
     companion object {
+        private var cachedRoles: Array<CertRole>? = null
+        @Throws(IllegalArgumentException::class)
         fun getInstance(id: ASN1Integer): CertRole {
-            val ordinal = id.positiveValue.toInt() - 1
-            return CertRole.values().get(ordinal)
+            if (cachedRoles == null) {
+                cachedRoles = CertRole.values()
+            }
+            val idVal = id.value
+            require(idVal.compareTo(BigInteger.ZERO) > 0)
+            return try {
+                val ordinal =idVal.intValueExact() - 1
+                cachedRoles!![ordinal]
+            } catch(ex: ArithmeticException) {
+                throw IllegalArgumentException("Invalid role ID")
+            } catch(ex: ArrayIndexOutOfBoundsException) {
+                throw IllegalArgumentException("Invalid role ID")
+            }
         }
         fun getInstance(data: ByteArray): CertRole? = getInstance(ASN1Integer.getInstance(data))
 
