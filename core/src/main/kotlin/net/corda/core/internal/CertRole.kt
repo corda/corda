@@ -32,7 +32,8 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean) :
     /** The transport layer security certificate */
     TLS(setOf(NODE_CA), false),
     /** A well known (publicly visible) identity of a service */
-    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA), true),
+    // TODO: Lock this down to INTERMEDIATE_CA only
+    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true),
     /** A well known (publicly visible) identity of a legal entity */
     WELL_KNOWN_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true),
     /** A confidential (limited visibility) identity */
