@@ -10,12 +10,11 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.toBase58String
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -35,11 +34,14 @@ class AMQPBridgeTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
+    private val ALICE = TestIdentity(ALICE_NAME)
     private val BOB = TestIdentity(BOB_NAME)
 
     private val artemisPort = freePort()
+    private val artemisPort2 = freePort()
     private val amqpPort = freePort()
     private val artemisAddress = NetworkHostAndPort("localhost", artemisPort)
+    private val artemisAddress2 = NetworkHostAndPort("localhost", artemisPort2)
     private val amqpAddress = NetworkHostAndPort("localhost", amqpPort)
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
@@ -124,7 +126,43 @@ class AMQPBridgeTest {
         artemisServer.stop()
     }
 
-    private fun createArtemis(sourceQueueName: String): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+    @Test
+    fun `Test legacy bridge still works`() {
+        // Create local queue
+        val sourceQueueName = "internal.peers." + ALICE.publicKey.toBase58String()
+        val (artemisLegacyServer, artemisLegacyClient) = createLegacyArtemis(sourceQueueName)
+
+
+        val (artemisServer, artemisClient) = createArtemis(null)
+
+        val artemis = artemisLegacyClient.started!!
+        for (i in 0 until 3) {
+            val artemisMessage = artemis.session.createMessage(true).apply {
+                putIntProperty("CountProp", i)
+                writeBodyBufferBytes("Test$i".toByteArray())
+                // Use the magic deduplication property built into Artemis as our message identity too
+                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+            }
+            artemis.producer.send(sourceQueueName, artemisMessage)
+        }
+
+
+        val subs = artemisClient.started!!.session.createConsumer(P2P_QUEUE)
+        for (i in 0 until 3) {
+            val msg = subs.receive()
+            val messageBody = ByteArray(msg.bodySize).apply { msg.bodyBuffer.readBytes(this) }
+            assertArrayEquals("Test$i".toByteArray(), messageBody)
+            assertEquals(i, msg.getIntProperty("CountProp"))
+        }
+
+        artemisClient.stop()
+        artemisServer.stop()
+        artemisLegacyClient.stop()
+        artemisLegacyServer.stop()
+
+    }
+
+    private fun createArtemis(sourceQueueName: String?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
@@ -140,8 +178,37 @@ class AMQPBridgeTest {
             doReturn(listOf(NodeInfo(listOf(amqpAddress), listOf(BOB.identity), 1, 1L))).whenever(it).getNodesByLegalIdentityKey(any())
         }
         val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService)
-        val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
+        artemisServer.start()
+        artemisClient.start()
+        val artemis = artemisClient.started!!
+        if (sourceQueueName != null) {
+            // Local queue for outgoing messages
+            artemis.session.createQueue(sourceQueueName, RoutingType.MULTICAST, sourceQueueName, true)
+        }
+        return Pair(artemisServer, artemisClient)
+    }
+
+    private fun createLegacyArtemis(sourceQueueName: String): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+        val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(temporaryFolder.root.toPath() / "artemis2").whenever(it).baseDirectory
+            doReturn(BOB_NAME).whenever(it).myLegalName
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn("").whenever(it).exportJMXto
+            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(false).whenever(it).useAMQPBridges
+            doReturn(ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0))).whenever(it).activeMQServer
+        }
+        artemisConfig.configureWithDevSSLCertificate()
+        val networkMap = rigorousMock<NetworkMapCache>().also {
+            doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
+            doReturn(listOf(NodeInfo(listOf(artemisAddress), listOf(ALICE.identity), 1, 1L))).whenever(it).getNodesByLegalIdentityKey(any())
+        }
+        val userService = rigorousMock<RPCSecurityManager>()
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress2, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
         val artemis = artemisClient.started!!

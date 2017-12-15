@@ -233,8 +233,8 @@ class ProtonWrapperTests {
             doReturn(never<NetworkMapCache.MapChange>()).whenever(it).changed
         }
         val userService = rigorousMock<RPCSecurityManager>()
-        val server = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService)
-        val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort))
+        val server = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), MAX_MESSAGE_SIZE)
         server.start()
         client.start()
         return Pair(server, client)

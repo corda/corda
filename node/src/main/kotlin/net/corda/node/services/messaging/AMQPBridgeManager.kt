@@ -12,6 +12,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.AMQPBridgeManager.AMQPBridge.Companion.getBridgeName
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -32,7 +33,7 @@ import kotlin.concurrent.withLock
  *  independent Session for message consumption.
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
-internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: NetworkHostAndPort) : BridgeManager {
+internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: NetworkHostAndPort, val maxMessageSize: Int) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
@@ -131,7 +132,7 @@ internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: 
                     properties[key.toString()] = value
                 }
                 log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
-                val sendableMessage = amqpClient.createMessage(data, "p2p.inbound",
+                val sendableMessage = amqpClient.createMessage(data, P2P_QUEUE,
                         legalNames.first().toString(),
                         properties)
                 sendableMessage.onComplete.then {
@@ -180,7 +181,7 @@ internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: 
 
     override fun start() {
         sharedEventLoopGroup = NioEventLoopGroup(NUM_BRIDGE_THREADS)
-        val artemis = ArtemisMessagingClient(config, p2pAddress)
+        val artemis = ArtemisMessagingClient(config, p2pAddress, maxMessageSize)
         this.artemis = artemis
         artemis.start()
     }

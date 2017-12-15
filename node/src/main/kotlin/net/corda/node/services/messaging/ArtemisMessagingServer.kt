@@ -151,7 +151,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
         // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
         bridgeManager = if (config.useAMQPBridges) {
-            AMQPBridgeManager(config, NetworkHostAndPort("localhost", p2pPort))
+            AMQPBridgeManager(config, NetworkHostAndPort("localhost", p2pPort), maxMessageSize)
         } else {
             CoreBridgeManager(config, activeMQServer)
         }
