@@ -24,7 +24,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
 
     data class DummyCommand(val dummy: Int = 0) : CommandData
 
-    data class State(override val participants: List<AbstractParty>, private val discriminator: Int) : ContractState
+    data class State(override val participants: List<AbstractParty>, val discriminator: Int) : ContractState
 
     @Suspendable
     override fun call(): SignedTransaction {
