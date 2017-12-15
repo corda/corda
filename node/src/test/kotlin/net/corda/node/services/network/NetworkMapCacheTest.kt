@@ -13,7 +13,7 @@ import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class NetworkMapCacheTest {
-    private val mockNet = MockNetwork()
+    private val mockNet = MockNetwork(emptyList())
 
     @After
     fun teardown() {

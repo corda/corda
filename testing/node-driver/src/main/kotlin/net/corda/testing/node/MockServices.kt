@@ -110,10 +110,17 @@ open class MockServices private constructor(
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal, initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>) : this(cordappLoader, MockTransactionStorage(), identityService, initialIdentity, moreKeys)
-    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentity: TestIdentity, vararg moreKeys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentity, moreKeys)
-    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, key: KeyPair, vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity(initialIdentityName, key), *moreKeys)
-    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(cordappPackages, identityService, TestIdentity(initialIdentityName))
-    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity.fresh("MockServices"), *moreKeys)
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal = makeTestIdentityService(), initialIdentity: TestIdentity, vararg moreKeys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentity, moreKeys)
+
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal = makeTestIdentityService(), initialIdentityName: CordaX500Name, key: KeyPair, vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity(initialIdentityName, key), *moreKeys)
+
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal = makeTestIdentityService(), initialIdentityName: CordaX500Name) : this(cordappPackages, identityService, TestIdentity(initialIdentityName))
+
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal = makeTestIdentityService(), vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity.fresh("MockServices"), *moreKeys)
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {

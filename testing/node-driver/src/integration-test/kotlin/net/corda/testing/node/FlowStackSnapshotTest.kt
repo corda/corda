@@ -288,7 +288,7 @@ class FlowStackSnapshotTest {
 
     @Test
     fun `flowStackSnapshot object is serializable`() {
-        val mockNet = MockNetwork(threadPerNode = true)
+        val mockNet = MockNetwork(emptyList(), threadPerNode = true)
         val node = mockNet.createPartyNode()
         node.registerInitiatedFlow(DummyFlow::class.java)
         node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).resultFuture.get()

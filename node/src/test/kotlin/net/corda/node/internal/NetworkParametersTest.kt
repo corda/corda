@@ -21,6 +21,7 @@ import org.assertj.core.api.Assertions.*
 
 class NetworkParametersTest {
     private val mockNet = MockNetwork(
+            emptyList(),
             MockNetworkParameters(networkSendManuallyPumped = true),
             notarySpecs = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME)))
 
