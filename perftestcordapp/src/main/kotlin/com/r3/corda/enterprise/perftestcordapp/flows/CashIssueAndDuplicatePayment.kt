@@ -18,7 +18,8 @@ import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
 /**
- * Initiates a flow that self-issues cash and then is immediately sent to another party, without coin selection.
+ * Initiates a flow that self-issues cash and then immediately spends it without coin selection.  It also then attempts
+ * to notarise exactly the same transaction again, which should succeed since it is exactly the same notarisation request.
  *
  * @param amount the amount of currency to issue.
  * @param issueRef a reference to put on the issued currency.
@@ -27,12 +28,12 @@ import java.util.*
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
-class CashIssueAndPaymentNoSelection(val amount: Amount<Currency>,
-                                     val issueRef: OpaqueBytes,
-                                     val recipient: Party,
-                                     val anonymous: Boolean,
-                                     val notary: Party,
-                                     progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
+                                   val issueRef: OpaqueBytes,
+                                   val recipient: Party,
+                                   val anonymous: Boolean,
+                                   val notary: Party,
+                                   progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(request: CashIssueAndPaymentFlow.IssueAndPaymentRequest) : this(request.amount, request.issueRef, request.recipient, request.anonymous, request.notary, tracker())
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes, payTo: Party, anonymous: Boolean, notary: Party) : this(amount, issueRef, payTo, anonymous, notary, tracker())
 
@@ -65,7 +66,9 @@ class CashIssueAndPaymentNoSelection(val amount: Amount<Currency>,
         val tx = serviceHub.signInitialTransaction(spendTx, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
-        return Result(notarised, recipient)
+        val notarised1 = finaliseTx(tx, setOf(recipient), "Unable to notarise spend first time")
+        val notarised2 = finaliseTx(tx, setOf(recipient), "Unable to notarise spend second time")
+
+        return Result(notarised2, recipient)
     }
 }
