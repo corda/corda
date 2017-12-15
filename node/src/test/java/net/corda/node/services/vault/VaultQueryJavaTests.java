@@ -72,10 +72,10 @@ public class VaultQueryJavaTests {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
-                Arrays.asList(MEGA_CORP.getKeyPair(), DUMMY_NOTARY.getKeyPair()),
-                identitySvc,
                 cordappPackages,
-                MEGA_CORP.getName());
+                identitySvc,
+                MEGA_CORP,
+                DUMMY_NOTARY.getKeyPair());
         issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();

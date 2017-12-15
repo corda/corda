@@ -86,10 +86,9 @@ class NodeVaultServiceTest {
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
-                listOf(MEGA_CORP_KEY),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
                 cordappPackages,
-                MEGA_CORP.name)
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                megaCorp)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)

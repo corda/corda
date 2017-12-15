@@ -118,8 +118,10 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
     return getTestPartyAndCertificate(Party(name, publicKey))
 }
 
-class TestIdentity @JvmOverloads constructor(val name: CordaX500Name, entropy: Long? = null) {
-    val keyPair: KeyPair = if (entropy != null) entropyToKeyPair(BigInteger.valueOf(entropy)) else generateKeyPair()
+class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
+    constructor(name: CordaX500Name, entropy: Long) : this(name, entropyToKeyPair(BigInteger.valueOf(entropy)))
+    constructor(name: CordaX500Name) : this(name, generateKeyPair())
+
     val publicKey: PublicKey get() = keyPair.public
     val party: Party = Party(name, publicKey)
     val identity: PartyAndCertificate by lazy { getTestPartyAndCertificate(party) } // Often not needed.
