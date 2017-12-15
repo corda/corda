@@ -1,13 +1,10 @@
 package net.corda.nodeapi.internal
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toWireTransaction
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -39,13 +36,7 @@ class AttachmentsClassLoaderTests {
         private val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         private val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
         private fun SerializationContext.withAttachmentStorage(attachmentStorage: AttachmentStorage): SerializationContext {
-            val serviceHub = rigorousMock<ServiceHub>()
-            doReturn(attachmentStorage).whenever(serviceHub).attachments
-            return this.withServiceHub(serviceHub)
-        }
-
-        private fun SerializationContext.withServiceHub(serviceHub: ServiceHub): SerializationContext {
-            return this.withTokenContext(SerializeAsTokenContextImpl(serviceHub) {}).withProperty(attachmentsClassLoaderEnabledPropertyName, true)
+            return withTokenContext(SerializeAsTokenContextImpl(attachmentStorage) {}).withProperty(attachmentsClassLoaderEnabledPropertyName, true)
         }
     }
 
@@ -57,9 +48,6 @@ class AttachmentsClassLoaderTests {
     private val cordapp get() = cordappProvider.cordapps.first()
     private val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = cordappProvider.getAppContext(cordapp)
-    private val serviceHub = rigorousMock<ServiceHub>().also {
-        doReturn(attachments).whenever(it).attachments
-    }
 
     // These ClassLoaders work together to load 'AnotherDummyContract' in a disposable way, such that even though
     // the class may be on the unit test class path (due to default IDE settings, etc), it won't be loaded into the
@@ -270,7 +258,7 @@ class AttachmentsClassLoaderTests {
                 .withWhitelisted(contract.javaClass)
                 .withWhitelisted(Class.forName("$ISOLATED_CONTRACT_CLASS_NAME\$State", true, child))
                 .withWhitelisted(Class.forName("$ISOLATED_CONTRACT_CLASS_NAME\$Commands\$Create", true, child))
-                .withServiceHub(serviceHub)
+                .withAttachmentStorage(attachments)
                 .withClassLoader(child)
 
         val bytes = run {
@@ -296,7 +284,7 @@ class AttachmentsClassLoaderTests {
                 val attachmentRef = attachmentId
                 val bytes = run {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
-                            .withServiceHub(serviceHub)
+                            .withAttachmentStorage(attachments)
                             .withClassLoader(child)
                     val wireTransaction = tx.toWireTransaction(cordappProvider, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
@@ -331,7 +319,7 @@ class AttachmentsClassLoaderTests {
                     .defaultFactory
                     .defaultContext
                     .withWhitelisted(contract.javaClass)
-                    .withServiceHub(serviceHub)
+                    .withAttachmentStorage(attachments)
                     .withAttachmentsClassLoader(listOf(attachmentRef))
 
             // Serialize with custom context to avoid populating the default context with the specially loaded class
@@ -358,7 +346,7 @@ class AttachmentsClassLoaderTests {
                         .defaultFactory
                         .defaultContext
                         .withWhitelisted(contract.javaClass)
-                        .withServiceHub(serviceHub)
+                        .withAttachmentStorage(attachments)
                         .withAttachmentsClassLoader(listOf(attachmentRef))
                 serialized.deserialize(context = inboundContext)
             }

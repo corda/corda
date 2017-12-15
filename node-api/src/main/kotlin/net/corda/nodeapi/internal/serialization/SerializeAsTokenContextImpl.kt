@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializeAsToken
@@ -19,8 +20,8 @@ fun SerializationContext.withTokenContext(serializationContext: SerializeAsToken
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
+class SerializeAsTokenContextImpl(override val attachments: AttachmentStorage, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
+    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, attachments: AttachmentStorage) : this(attachments, {
         serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
     })
 

@@ -47,7 +47,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
                 val missing = ArrayList<SecureHash>()
                 val attachments = ArrayList<Attachment>()
                 attachmentHashes.forEach { id ->
-                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+                    serializationContext.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
                 AttachmentsClassLoader(attachments, parent = deserializationClassLoader)

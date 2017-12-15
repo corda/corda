@@ -1,6 +1,6 @@
 package net.corda.core.serialization
 
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 
 /**
@@ -34,7 +34,7 @@ interface SerializationToken {
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
  */
 interface SerializeAsTokenContext {
-    val serviceHub: ServiceHub
+    val attachments: AttachmentStorage
     fun putSingleton(toBeTokenized: SerializeAsToken)
     fun getSingleton(className: String): SerializeAsToken
 }
