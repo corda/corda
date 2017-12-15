@@ -44,7 +44,7 @@ import java.sql.Connection
 import java.time.Clock
 import java.util.*
 
-fun makeTestIdentityService(identities: Iterable<PartyAndCertificate> = emptySet()) = InMemoryIdentityService(identities, DEV_TRUST_ROOT)
+fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_TRUST_ROOT)
 /**
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
@@ -113,8 +113,7 @@ open class MockServices private constructor(
     constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentity: TestIdentity, vararg moreKeys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentity, moreKeys)
     constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, key: KeyPair, vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity(initialIdentityName, key), *moreKeys)
     constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(cordappPackages, identityService, TestIdentity(initialIdentityName))
-    constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, key: KeyPair, vararg moreKeys: KeyPair) : this(emptyList(), identityService, TestIdentity(initialIdentityName, key), *moreKeys)
-    constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(emptyList(), identityService, TestIdentity(initialIdentityName))
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity.fresh("MockServices"), *moreKeys)
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {

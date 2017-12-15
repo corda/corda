@@ -151,9 +151,13 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val networkId = random63BitValue()
     private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    private val serializationEnv = try {
+        setGlobalSerialization(initialiseSerialization)
+    } catch (e: IllegalStateException) {
+        throw IllegalStateException("Using more than one MockNetwork simultaneously is not supported.", e)
+    }
     private val sharedUserCount = AtomicInteger(0)
-    /** A read only view of the current set of executing nodes. */
+    /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
 
     /**

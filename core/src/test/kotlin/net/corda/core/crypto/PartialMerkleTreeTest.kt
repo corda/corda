@@ -51,7 +51,7 @@ class PartialMerkleTreeTest {
         hashed = nodes.map { it.serialize().sha256() }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
-        testLedger = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        testLedger = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         }, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
