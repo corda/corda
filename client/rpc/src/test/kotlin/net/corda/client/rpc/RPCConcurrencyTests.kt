@@ -12,7 +12,7 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.internal.testThreadFactory
-import org.apache.activemq.artemis.utils.collections.ConcurrentHashSet
+import org.apache.activemq.artemis.utils.ConcurrentHashSet
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
