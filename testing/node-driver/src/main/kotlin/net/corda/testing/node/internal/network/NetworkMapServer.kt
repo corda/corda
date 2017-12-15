@@ -38,7 +38,7 @@ class NetworkMapServer(cacheTimeout: Duration,
                        root_ca: CertificateAndKeyPair = ROOT_CA, // Default to ROOT_CA for testing.
                        vararg additionalServices: Any) : Closeable {
     companion object {
-        val stubNetworkParameter = NetworkParameters(1, emptyList(), 40000, 40000, Instant.now(), 10)
+        val stubNetworkParameter = NetworkParameters(1, emptyList(), 10485760, 40000, Instant.now(), 10)
         private val serializedParameters = stubNetworkParameter.serialize()
 
         private fun networkMapKeyAndCert(rootCAKeyAndCert: CertificateAndKeyPair): CertificateAndKeyPair {
