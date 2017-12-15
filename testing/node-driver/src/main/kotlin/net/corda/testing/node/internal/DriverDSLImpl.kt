@@ -245,6 +245,7 @@ class DriverDSLImpl(
     }
 
     internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
+        check(compatibilityZone == null) { "Cordform nodes should be run without compatibilityZone configuration" }
         val clusterNodes = HashMultimap.create<ClusterType, CordaX500Name>()
         val notaryInfos = ArrayList<NotaryInfo>()
 
@@ -354,7 +355,7 @@ class DriverDSLImpl(
         }
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        if (compatibilityZone == null) networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
@@ -519,7 +520,7 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
         nodeInfoFilesCopier?.addConfig(baseDirectory)
-        networkParameters!!.install(baseDirectory)
+        networkParameters?.install(baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)

@@ -143,7 +143,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 minimumPlatformVersion = 1,
                 notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
                 modifiedTime = Instant.now(),
-                eventHorizon = 10000.days,
                 maxMessageSize = 40000,
                 maxTransactionSize = 40000,
                 epoch = 1

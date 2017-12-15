@@ -12,8 +12,8 @@ import net.corda.nodeapi.internal.crypto.getX509Certificate
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 
-class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort) : SingletonSerializeAsToken() {
-    private val artemis = ArtemisMessagingClient(config, serverAddress)
+class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort, private val maxMessageSize: Int) : SingletonSerializeAsToken() {
+    private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     private var rpcServer: RPCServer? = null
 
     fun start(rpcOps: RPCOps, securityManager: RPCSecurityManager) = synchronized(this) {

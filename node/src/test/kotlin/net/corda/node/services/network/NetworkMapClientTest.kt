@@ -6,9 +6,7 @@ import net.corda.core.internal.cert
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
 import net.corda.node.services.network.TestNodeInfoFactory.createNodeInfo
-import net.corda.testing.DEV_CA
 import net.corda.testing.DEV_TRUST_ROOT
-import net.corda.testing.ROOT_CA
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.network.NetworkMapServer
@@ -71,7 +69,7 @@ class NetworkMapClientTest {
     @Test
     fun `download NetworkParameter correctly`() {
         // The test server returns same network parameter for any hash.
-        val networkParameter = networkMapClient.getNetworkParameter(SecureHash.randomSHA256())
+        val networkParameter = networkMapClient.getNetworkParameter(SecureHash.randomSHA256())?.verified()
         assertNotNull(networkParameter)
         assertEquals(NetworkMapServer.stubNetworkParameter, networkParameter)
     }
