@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.internalDriver
@@ -24,6 +25,7 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -38,6 +40,9 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 class NodeRegistrationTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val portAllocation = PortAllocation.Incremental(13000)
     private val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
     private val registrationHandler = RegistrationHandler(rootCertAndKeyPair)
@@ -47,7 +52,7 @@ class NodeRegistrationTest {
 
     @Before
     fun startServer() {
-        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), registrationHandler)
+        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), rootCertAndKeyPair, registrationHandler)
         serverHostAndPort = server.start()
     }
 
@@ -64,7 +69,8 @@ class NodeRegistrationTest {
         internalDriver(
                 portAllocation = portAllocation,
                 notarySpecs = emptyList(),
-                compatibilityZone = compatibilityZone
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false
         ) {
             startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
             assertThat(registrationHandler.idsPolled).contains("Alice")

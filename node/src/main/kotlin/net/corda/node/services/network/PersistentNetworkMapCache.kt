@@ -207,9 +207,6 @@ open class PersistentNetworkMapCache(
             getAllInfos(session).map { it.toNodeInfo() }
         }
 
-    // Changes related to NetworkMap redesign
-    // TODO It will be properly merged into network map cache after services removal.
-
     private fun getAllInfos(session: Session): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
@@ -291,7 +288,6 @@ open class PersistentNetworkMapCache(
         return if (result.isEmpty()) null
         else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
     }
-
 
     /** Object Relational Mapping support. */
     private fun generateMappedObject(nodeInfo: NodeInfo): NodeInfoSchemaV1.PersistentNodeInfo {

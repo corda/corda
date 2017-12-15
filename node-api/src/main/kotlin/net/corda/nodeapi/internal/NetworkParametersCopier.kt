@@ -6,7 +6,6 @@ import net.corda.core.crypto.sign
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.NetworkParameters
 import java.math.BigInteger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -24,7 +23,7 @@ class NetworkParametersCopier(networkParameters: NetworkParameters) {
 
     fun install(dir: Path) {
         try {
-            serializedNetworkParameters.open().copyTo(dir / "network-parameters")
+            serializedNetworkParameters.open().copyTo(dir / NETWORK_PARAMS_FILE_NAME)
         } catch (e: FileAlreadyExistsException) {
             // Leave the file untouched if it already exists
         }

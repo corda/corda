@@ -51,3 +51,6 @@ val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
 
 object DummyCommandData : TypeOnlyCommandData()
+
+/** Maximum artemis message size. 10 MiB maximum allowed file size for attachments, including message headers. */
+const val MAX_MESSAGE_SIZE: Int = 1048576

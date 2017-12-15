@@ -25,6 +25,7 @@ import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.testing.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
@@ -227,8 +228,8 @@ data class RPCDriverDSL(
     fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I
     ): CordaFuture<RpcServerHandle> {
@@ -295,8 +296,8 @@ data class RPCDriverDSL(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             customPort: NetworkHostAndPort? = null,
             ops: I
@@ -378,8 +379,8 @@ data class RPCDriverDSL(
     fun startRpcBroker(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             customPort: NetworkHostAndPort? = null
     ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
@@ -402,8 +403,8 @@ data class RPCDriverDSL(
 
     fun startInVmRpcBroker(
             rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE
     ): CordaFuture<RpcBrokerHandle> {
         return driverDSL.executorService.fork {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
@@ -431,7 +432,7 @@ data class RPCDriverDSL(
             brokerHandle: RpcBrokerHandle
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
-            minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
         val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))

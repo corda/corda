@@ -22,6 +22,7 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.node.VersionInfo
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
@@ -91,7 +92,8 @@ data class MockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {}) {
+        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val version: VersionInfo = MOCK_VERSION_INFO) {
     fun setForcedID(forcedID: Int?) = copy(forcedID = forcedID)
     fun setLegalName(legalName: CordaX500Name?) = copy(legalName = legalName)
     fun setEntropyRoot(entropyRoot: BigInteger) = copy(entropyRoot = entropyRoot)
@@ -102,7 +104,8 @@ data class MockNodeArgs(
         val config: NodeConfiguration,
         val network: MockNetwork,
         val id: Int,
-        val entropyRoot: BigInteger
+        val entropyRoot: BigInteger,
+        val version: VersionInfo = MOCK_VERSION_INFO
 )
 
 /**
@@ -241,7 +244,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     open class MockNode(args: MockNodeArgs) : AbstractNode(
             args.config,
             TestClock(Clock.systemUTC()),
-            MOCK_VERSION_INFO,
+            args.version,
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch
     ) {
@@ -392,7 +395,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
         _nodes += node
         if (start) {
             node.start()

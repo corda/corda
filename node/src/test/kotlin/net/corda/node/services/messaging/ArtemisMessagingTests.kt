@@ -165,7 +165,7 @@ class ArtemisMessagingTests {
         return Pair(messagingClient, receivedMessages)
     }
 
-    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1): P2PMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1, maxMessageSize: Int = MAX_MESSAGE_SIZE): P2PMessagingClient {
         return database.transaction {
             P2PMessagingClient(
                     config,
@@ -173,16 +173,16 @@ class ArtemisMessagingTests {
                     server,
                     identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
-                    database
-            ).apply {
+                    database,
+                    maxMessageSize = maxMessageSize).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }
         }
     }
 
-    private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager).apply {
+    private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager, maxMessageSize).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }
