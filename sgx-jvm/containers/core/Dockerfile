@@ -34,13 +34,13 @@ RUN apt-get install -qqy \
     libcurl3=7.47.0-1ubuntu2.5 \
     libcurl4-openssl-dev=7.47.0-1ubuntu2.5 \
     libprotobuf8=2.5.0-9ubuntu1 \
-    libssl-dev=1.0.2g-1ubuntu4.9 \
+    libssl-dev=1.0.2g-1ubuntu4.10 \
     libtool=2.4.6-0.1 \
     libunwind8=1.1-4.1 \
     make=4.1-6 \
     ocaml=4.02.3-5ubuntu2 \
     openjdk-8-jdk=8u151-b12-0ubuntu0.16.04.2 \
-    openssl=1.0.2g-1ubuntu4.9 \
+    openssl=1.0.2g-1ubuntu4.10 \
     patch=2.7.5-1 \
     proguard=5.2.1-3 \
     python2.7=2.7.12-1ubuntu0~16.04.2 \
