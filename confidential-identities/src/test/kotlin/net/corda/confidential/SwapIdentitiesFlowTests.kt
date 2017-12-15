@@ -15,7 +15,7 @@ class SwapIdentitiesFlowTests {
     @Before
     fun setup() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
+        mockNet = MockNetwork(emptyList(), networkSendManuallyPumped = false, threadPerNode = true)
     }
 
     @Test

@@ -73,13 +73,13 @@ data class MockNetworkParameters(
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         val defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode = MockNetwork::MockNode,
         val initialiseSerialization: Boolean = true,
-        val cordappPackages: List<String> = emptyList()) {
+        val notarySpecs: List<MockNetwork.NotarySpec> = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME))) {
     fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
     fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
     fun setDefaultFactory(defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode) = copy(defaultFactory = defaultFactory)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setCordappPackages(cordappPackages: List<String>) = copy(cordappPackages = cordappPackages)
+    fun setNotarySpecs(notarySpecs: List<MockNetwork.NotarySpec>) = copy(notarySpecs = notarySpecs)
 }
 
 /**
@@ -124,16 +124,17 @@ data class MockNodeArgs(
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+class MockNetwork(private val cordappPackages: List<String>,
+                  defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                   private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                   private val threadPerNode: Boolean = defaultParameters.threadPerNode,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                  private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
+                  private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
-    constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
@@ -151,9 +152,13 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val networkId = random63BitValue()
     private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    private val serializationEnv = try {
+        setGlobalSerialization(initialiseSerialization)
+    } catch (e: IllegalStateException) {
+        throw IllegalStateException("Using more than one MockNetwork simultaneously is not supported.", e)
+    }
     private val sharedUserCount = AtomicInteger(0)
-    /** A read only view of the current set of executing nodes. */
+    /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
 
     /**

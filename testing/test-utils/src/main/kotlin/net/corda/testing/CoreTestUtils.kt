@@ -5,10 +5,7 @@ package net.corda.testing
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -119,7 +116,22 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
 }
 
 class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
+    companion object {
+        /**
+         * Creates an identity that won't equal any other. This is mostly useful as a throwaway for test helpers.
+         * @param organisation the organisation part of the new identity's name.
+         */
+        fun fresh(organisation: String): TestIdentity {
+            val keyPair = generateKeyPair()
+            val name = CordaX500Name(organisation, keyPair.public.toStringShort(), CordaX500Name.unspecifiedCountry)
+            return TestIdentity(name, keyPair)
+        }
+    }
+
+    /** Creates an identity with a deterministic [keyPair] i.e. same [entropy] same keyPair .*/
     constructor(name: CordaX500Name, entropy: Long) : this(name, entropyToKeyPair(BigInteger.valueOf(entropy)))
+
+    /** Creates an identity with the given name and a fresh keyPair. */
     constructor(name: CordaX500Name) : this(name, generateKeyPair())
 
     val publicKey: PublicKey get() = keyPair.public

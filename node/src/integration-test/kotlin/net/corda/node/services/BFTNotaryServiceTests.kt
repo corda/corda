@@ -42,7 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
-    private val mockNet = MockNetwork()
+    private val mockNet = MockNetwork(emptyList())
     private lateinit var notary: Party
     private lateinit var node: StartedNode<MockNode>
 
