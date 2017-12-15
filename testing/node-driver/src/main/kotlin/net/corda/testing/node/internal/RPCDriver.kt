@@ -52,6 +52,7 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import javax.security.cert.X509Certificate
 
 inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
         username: String = rpcTestUser.username,
@@ -133,7 +134,7 @@ fun <A> rpcDriver(
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
-    override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
+    override fun validateUser(user: String?, password: String?, certificates: Array<out X509Certificate>?): String? {
         return validate(user, password)
     }
 
