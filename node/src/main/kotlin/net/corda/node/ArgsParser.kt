@@ -1,5 +1,6 @@
 package net.corda.node
 
+import com.typesafe.config.ConfigException
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
@@ -73,6 +74,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean) {
+    @Throws(ConfigException::class)
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
         if (isRegistration) {

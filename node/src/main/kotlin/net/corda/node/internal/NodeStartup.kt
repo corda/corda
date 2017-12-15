@@ -39,7 +39,11 @@ open class NodeStartup(val args: Array<String>) {
      */
     open fun run(): Boolean {
         val startTime = System.currentTimeMillis()
-        assertCanNormalizeEmptyPath()
+        if (!canNormalizeEmptyPath()) {
+            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            println("Corda will now exit...")
+            return false
+        }
         val (argsParser, cmdlineOptions) = parseArguments()
 
         // We do the single node check before we initialise logging so that in case of a double-node start it
@@ -92,25 +96,26 @@ open class NodeStartup(val args: Array<String>) {
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
-
-            try {
-                cmdlineOptions.baseDirectory.createDirectories()
-                startNode(conf, versionInfo, startTime, cmdlineOptions)
-            } catch (e: Exception) {
-                if (e.message?.startsWith("Unknown named curve:") == true) {
-                    logger.error("Exception during node startup - ${e.message}. " +
-                            "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-                } else {
-                    logger.error("Exception during node startup", e)
-                }
-                return false
-            }
-
-            logger.info("Node exiting successfully")
-            return true
         } catch (e: Exception) {
+            logger.error("Exception during node registration", e)
             return false
         }
+
+        try {
+            cmdlineOptions.baseDirectory.createDirectories()
+            startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: Exception) {
+            if (e.message?.startsWith("Unknown named curve:") == true) {
+                logger.error("Exception during node startup - ${e.message}. " +
+                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            } else {
+                logger.error("Exception during node startup", e)
+            }
+            return false
+        }
+
+        logger.info("Node exiting successfully")
+        return true
     }
 
     open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
@@ -186,14 +191,8 @@ open class NodeStartup(val args: Array<String>) {
         NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration {
-        try {
-            return cmdlineOptions.loadConfig()
-        } catch (configException: ConfigException) {
-            println("Unable to load the configuration file: ${configException.rootCause.message}")
-            throw configException
-        }
-    }
+    @Throws(ConfigException::class)
+    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
     open protected fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
@@ -285,12 +284,13 @@ open class NodeStartup(val args: Array<String>) {
         return hostName
     }
 
-    private fun assertCanNormalizeEmptyPath() {
+    private fun canNormalizeEmptyPath(): Boolean {
         // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
-        try {
+        return try {
             Paths.get("").normalize()
+            true
         } catch (e: ArrayIndexOutOfBoundsException) {
-            Node.failStartUp("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            false
         }
     }
 
