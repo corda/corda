@@ -71,10 +71,10 @@ class VaultWithCashTest {
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf(servicesKey, dummyNotary.keyPair),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
                 cordappPackages,
-                MEGA_CORP.name)
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
+                TestIdentity(MEGA_CORP.name, servicesKey),
+                dummyNotary.keyPair)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
