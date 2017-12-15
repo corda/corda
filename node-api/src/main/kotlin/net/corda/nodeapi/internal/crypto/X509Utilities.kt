@@ -345,6 +345,15 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             role = CertRole.INTERMEDIATE_CA
     ),
 
+    NETWORK_MAP(
+            KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false,
+            role = CertRole.NETWORK_MAP
+    ),
+
     SERVICE_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature),
             KeyPurposeId.id_kp_serverAuth,
