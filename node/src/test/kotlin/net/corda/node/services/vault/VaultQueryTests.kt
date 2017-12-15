@@ -1677,7 +1677,7 @@ open class VaultQueryTests {
     @Test
     fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
         val start = Instant.now()
-        val end = start.plus(3, ChronoUnit.SECONDS)
+        val end = start.plus(6, ChronoUnit.SECONDS) //Enterprise: extended timeout for TC
 
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
