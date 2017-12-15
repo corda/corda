@@ -290,8 +290,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 identity
             }
         }
-
-        var info = NodeInfo(
+        var info: NodeInfo = NodeInfoImpl(
                 myAddresses(),
                 setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
@@ -300,7 +299,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // Check if we have already stored a version of 'our own' NodeInfo, this is to avoid regenerating it with
         // a different timestamp.
         networkMapCache.getNodesByLegalName(myLegalName).firstOrNull()?.let {
-            if (info.copy(serial = it.serial) == it) {
+            if (info.equalsWithoutSerial(it)) {
                 info = it
             }
         }

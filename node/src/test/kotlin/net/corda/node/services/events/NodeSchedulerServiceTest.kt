@@ -15,7 +15,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.node.internal.FlowStarterImpl
 import net.corda.node.internal.cordapp.CordappLoader
@@ -55,7 +54,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val ALICE_KEY = TestIdentity(ALICE_NAME, 70).keyPair
         val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-        val myInfo = NodeInfo(listOf(NetworkHostAndPort("mockHost", 30000)), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
     }
 
     @Rule
@@ -108,7 +106,10 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(MonitoringService(MetricRegistry())).whenever(it).monitoringService
                 doReturn(validatedTransactions).whenever(it).validatedTransactions
                 doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database), identityService)).whenever(it).networkMapCache
-                doReturn(myInfo).whenever(it).myInfo
+                doReturn(rigorousMock<NodeInfo>().also {
+                    doReturn(1).whenever(it).platformVersion
+                    doReturn(listOf(DUMMY_IDENTITY_1)).whenever(it).legalIdentitiesAndCerts
+                }).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
                 doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
                 doReturn(NodeVaultService(testClock, kms, validatedTransactions, database.hibernateConfig)).whenever(it).vaultService

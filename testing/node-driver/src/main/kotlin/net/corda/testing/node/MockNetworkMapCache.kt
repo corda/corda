@@ -4,7 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.node.NodeInfo
+import net.corda.core.node.NodeInfoImpl
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NodeConfiguration
@@ -30,8 +30,8 @@ class MockNetworkMapCache(database: CordaPersistence) : PersistentNetworkMapCach
     override val nodeReady: CordaFuture<Void?> get() = doneFuture(null)
 
     init {
-        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), listOf(BANK_C), 1, serial = 1L)
-        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), listOf(BANK_D), 1, serial = 1L)
+        val mockNodeA = NodeInfoImpl(listOf(BANK_C_ADDR), listOf(BANK_C), 1, serial = 1L)
+        val mockNodeB = NodeInfoImpl(listOf(BANK_D_ADDR), listOf(BANK_D), 1, serial = 1L)
         addNode(mockNodeA)
         addNode(mockNodeB)
     }

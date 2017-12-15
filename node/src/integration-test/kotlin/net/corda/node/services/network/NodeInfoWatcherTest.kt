@@ -7,6 +7,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NodeInfoImpl
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.NodeInfoFilesCopier
@@ -29,7 +30,7 @@ import kotlin.test.assertTrue
 class NodeInfoWatcherTest {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
-        val nodeInfo = NodeInfo(listOf(), listOf(alice.identity), 0, 0)
+        val nodeInfo = NodeInfoImpl(listOf(), listOf(alice.identity), 0, 0)
     }
 
     @Rule

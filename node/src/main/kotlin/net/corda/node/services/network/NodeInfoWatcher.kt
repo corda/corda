@@ -48,7 +48,7 @@ class NodeInfoWatcher(private val nodePath: Path,
          * @param path the path where to write the file, if non-existent it will be created.
          * @param signedNodeInfo the signed NodeInfo.
          */
-        fun saveToFile(path: Path, signedNodeInfo: SignedData<NodeInfo>) {
+        fun saveToFile(path: Path, signedNodeInfo: SignedData<out NodeInfo>) {
             try {
                 path.createDirectories()
                 signedNodeInfo.serialize()
@@ -85,8 +85,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                 .flatMapIterable { loadFromDirectory() }
     }
 
-    fun saveToFile(signedNodeInfo: SignedData<NodeInfo>) = Companion.saveToFile(nodePath, signedNodeInfo)
-
+    fun saveToFile(signedNodeInfo: SignedData<out NodeInfo>) = Companion.saveToFile(nodePath, signedNodeInfo)
     /**
      * Loads all the files contained in a given path and returns the deserialized [NodeInfo]s.
      * Signatures are checked before returning a value.

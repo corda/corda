@@ -133,7 +133,7 @@ open class MockServices private constructor(
     override val myInfo: NodeInfo
         get() {
             val identity = getTestPartyAndCertificate(initialIdentityName, key.public)
-            return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
+            return NodeInfoImpl(emptyList(), listOf(identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
