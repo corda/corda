@@ -47,11 +47,12 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 AMQP
 ====
 
-As The long term goal is to migrate the current serialization format for everything except checkpoints away from the current
-``Kryo``-based format to a more sustainable, self-describing and controllable format based on AMQP 1.0.  The primary drivers for that move are:
+Originally Corda used a ``Kryo``-based serialization scheme throughout for all serialization contexts. However, it was realised there
+was a compelling use case for the definition and development of a custom format based upon AMQP 1.0. The primary drivers for this were
 
     #.  A desire to have a schema describing what has been serialized along-side the actual data:
-        #.  To assist with versioning, both in terms of being able to interpret long ago archived data (e.g. trades from
+
+        #.  To assist with versioning, both in terms of being able to interpret long ago archivEd data (e.g. trades from
             a decade ago, long after the code has changed) and between differing code versions.
         #.  To make it easier to write user interfaces that can navigate the serialized form of data.
         #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted.
@@ -63,7 +64,24 @@ As The long term goal is to migrate the current serialization format for everyth
         data poked directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
         supposed invariants.
 
-Documentation on that format, and how JVM classes are translated to AMQP, will be linked here when it is available.
+Delivering this is an ongoing effort by the Corda development team. At present, the ``Kryo``-based format is still used by the RPC framework on
+both the client and server side. However, it is planned that this will move to the AMQP framework when ready.
+
+The AMQP framework is currently used for:
+
+    #.  The peer to peer context, representing inter-node communication.
+    #.  The persistence layer, representing contract states persisted into the vault.
+
+Finally, for the checkpointing of flows Corda will continue to use the existing ``Kryo`` scheme.
+
+This separation of serialization schemes into differenet contexts allows us to use the most suitable framework for that context rather than
+attempting to force a one size fits all approach. Where ``Kryo`` is more suited to the serialization of a programs stack frames, being more flexible
+than our AMQP framework in what it can construct and serialize, that flexability makes it exceptionally difficult to make secure. Conversly
+our AMQP framework allwos us to concentrate on a robust a secure framework that can be reasoned about thus made safer with far fewer unforseen
+security holes.
+
+.. note:: Selection of serialization context should, for the most part, be opaque to CorDapp developers, the Corda framework selecting
+    the correct context as confugred.
 
 .. For information on our choice of AMQP 1.0, see :doc:`amqp-choice`.  For detail on how we utilise AMQP 1.0 and represent
    objects in AMQP types, see :doc:`amqp-format`.
@@ -280,7 +298,7 @@ We will describe here the rules and features for evolvability as part of a futur
 
 Enum Evolution
 ``````````````
-Corda supports interoperability of enumerated type versions. This allows such type to be changed over time without breaking
+Corda supports interoperability of enumerated type versions. This allows such types to be changed over time without breaking
 backward (or forward) compatibility. The rules and mechanisms for doing this are discussed in :doc:`serialization-enum-evolution``
 
 

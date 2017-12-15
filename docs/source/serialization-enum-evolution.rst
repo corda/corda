@@ -6,7 +6,7 @@ Enum Evolution
 In the continued development of a CorDapp an enumerated type that was fit for purpose at one time may
 require changing. Normally, this would be problematic as anything serialised (and kept in a vault) would
 run the risk of being unable to be deserialized in the future or older versions of the app still alive
-within a compatibility zone my fail to deserialize a message.
+within a compatibility zone may fail to deserialize a message.
 
 To facilitate backward and forward support for alterations to enumerated types Corda's serialization
 framework supports the evolution of such types through a well defined framework that allows different
@@ -33,12 +33,12 @@ For this, we use the annotations to allow developers to express their backward c
 In the case of renaming constants this is somewhat obvious, the deserializing node will simply treat any
 constants it doesn't understand as their "old" values, i.e. those values that it currently knows about.
 
-In the case of adding new constants the developer must chose which constant (that existed before adding
-the new) one a deserializing system should treat any instances of the new one as.
+In the case of adding new constants the developer must chose which constant (that existed *before* adding
+the new one) a deserializing system should treat any instances of the new one as.
 
 .. note:: Ultimately, this may mean some design compromises are required. If an enumeration is
-    planned as being often extend and no sensible defaults will exist then including a constant
-    in the original iteration of the class that all new additions can default to may make sense
+    planned as being often extended and no sensible defaults will exist then including a constant
+    in the original version of the class that all new additions can default to may make sense
 
 Evolution Transmission
 ----------------------
@@ -57,15 +57,15 @@ header of the corresponding class. If they match then we are sure that the two c
 the same and no further steps are required save the deserialization of the serialized information into an instance
 of the class.
 
-If, however, the finger prints differ then we know that the class we are attempting to deserialize is different
+If, however, the fingerprints differ then we know that the class we are attempting to deserialize is different
 than the version we will be deserializing it into. What we cannot know is which version is newer, at least
-not by examining the finger print
+not by examining the fingerprint
 
 .. note:: Corda's AMQP fingerprinting for enumerated types include the type name and the enum constants
 
 Newer vs older is important as the deserializer needs to use the more recent set of transforms to ensure it
 can transform the serialised object into the form as it exists in the deserializer. Newness is determined simply
-by length of the list of all transforms. This is sufficient as annotations should only ever be added
+by length of the list of all transforms. This is sufficient as transform annotations should only ever be added
 
 .. warning:: technically there is nothing to prevent annotations being removed in newer versions. However,
     this will break backward compatibility and should thus be avoided unless a rigorous upgrade procedure
@@ -109,7 +109,7 @@ If we were to rename constant C to D this would be done as follows:
             A, B, D
         }
 
-.. note:: The parameters to the ``CordaSerializationTransformRename`` annotation are as defined 'to' and 'from,
+.. note:: The parameters to the ``CordaSerializationTransformRename`` annotation are defined as 'to' and 'from,
     so in the above example it can be read as constant D (given that is how the class now exists) was renamed
     from C
 
@@ -144,11 +144,11 @@ Rules
 ~~~~~
 
     #.  A constant cannot be renamed to match an existing constant, this is enforced through language constraints
-    #.  A constant cannot be renamed to a value that matching any previous name of any other constant
+    #.  A constant cannot be renamed to a value that matches any previous name of any other constant
 
 If either of these covenants are inadvertently broken, a ``NotSerializableException`` will be thrown on detection
 by the serialization engine as soon as they are detected. Normally this will be the first time an object doing
-so is serialized but in some circumstances it will be at the point of deserialization.
+so is serialized. However, in some circumstances, it could be at the point of deserialization.
 
 Adding Constants
 ----------------
@@ -156,7 +156,8 @@ Adding Constants
 Enumeration constants can be added with the ``@CordaSerializationTransformEnumDefaults`` meta annotation that
 wraps a list of ``CordaSerializationTransformEnumDefault`` annotations. For each constant added an annotation
 must be included that signifies, on deserialization, which constant value should be used in place of the
-serialised property if that value doesn't exist on the deserializer.
+serialised property if that value doesn't exist on the version of the class as it exists on the deserializing
+node.
 
 .. container:: codeset
 
@@ -179,9 +180,9 @@ If we were to add the constant D
             A, B, C, D
         }
 
-.. note:: The parameters to the ``CordaSerializationTransformEnumDefault`` annotation are as defined 'new' and 'old',
-    so in the above example it can be read as constant D should be treated as constant C if you, the deserializer,
-    doesn't know anything about constant D
+.. note:: The parameters to the ``CordaSerializationTransformEnumDefault`` annotation are defined as 'new' and 'old',
+    so in the above example it can be read as constant D should be treated as constant C if you, the deserializing
+    node, don't know anything about constant D
 
 .. note:: Just as with the ``CordaSerializationTransformRename`` transformation if a single transform is being applied
     then the meta transform may be omitted.
@@ -275,7 +276,7 @@ Combining Evolutions
 ---------------------
 
 Renaming constants and adding constants can be combined over time as a class changes freely. Added constants can
-in term be renamed and everything will continue to be deserializeable. For example, consider the following enum:
+in turn be renamed and everything will continue to be deserializeable. For example, consider the following enum:
 
 .. container:: codeset
 
