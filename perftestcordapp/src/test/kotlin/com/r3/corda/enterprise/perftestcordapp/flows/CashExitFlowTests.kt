@@ -7,12 +7,11 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.testing.BOC
-import net.corda.testing.chooseIdentity
+import net.corda.testing.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.startFlow
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,10 +30,8 @@ class CashExitFlowTests {
     fun start() {
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
 			    cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
-        bankOfCordaNode = mockNet.createPartyNode(BOC.name)
-        bankOfCorda = bankOfCordaNode.info.chooseIdentity()
-
-        mockNet.runNetwork()
+        bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
+        bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()

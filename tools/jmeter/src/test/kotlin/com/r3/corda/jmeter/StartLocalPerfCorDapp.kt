@@ -3,7 +3,7 @@ package com.r3.corda.jmeter
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
@@ -20,11 +20,11 @@ class StartLocalPerfCorDapp {
             net.corda.testing.driver.driver(startNodesInProcess = false,
                     waitForAllNodesToFinish = true,
                     //isDebug = true,
-                    notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, validating = false)),
+                    notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
                     extraCordappPackagesToScan = listOf("com.r3.corda.enterprise.perftestcordapp")) {
                 val (nodeA, nodeB) = listOf(
-                        startNode(providedName = net.corda.testing.DUMMY_BANK_A.name, rpcUsers = listOf(demoUser), maximumHeapSize = "1G"),
-                        startNode(providedName = net.corda.testing.DUMMY_BANK_B.name, rpcUsers = listOf(demoUser), maximumHeapSize = "1G")
+                        startNode(providedName = net.corda.testing.DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), maximumHeapSize = "1G"),
+                        startNode(providedName = net.corda.testing.DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), maximumHeapSize = "1G")
                 ).map { it.getOrThrow() }
                 log.info("Nodes started!")
                 val input = BufferedReader(InputStreamReader(System.`in`))

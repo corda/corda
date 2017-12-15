@@ -14,6 +14,7 @@ import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,8 +32,8 @@ class CashIssueAndPaymentFlowTests {
     @Before
     fun start() {
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
-        bankOfCordaNode = mockNet.createPartyNode(BOC.name)
-        aliceNode = mockNet.createPartyNode(ALICE.name)
+        bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
+        aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         mockNet.runNetwork()
         notary = mockNet.defaultNotaryIdentity
