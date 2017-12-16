@@ -18,8 +18,7 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val initialiseSchema: Boolean = true,
-        val serverNameTablePrefix: String = "",
+        val runMigration: Boolean = true,
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
         val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = false
@@ -47,6 +46,7 @@ class CordaPersistence(
 ) : Closeable {
     val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
+
         transaction {
             HibernateConfiguration(schemas, databaseConfig, attributeConverters)
         }

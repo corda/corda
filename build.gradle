@@ -52,6 +52,7 @@ buildscript {
     ext.spring_jdbc_version ='5.0.0.RELEASE'
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+    ext.liquibase_version = '3.5.3'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'

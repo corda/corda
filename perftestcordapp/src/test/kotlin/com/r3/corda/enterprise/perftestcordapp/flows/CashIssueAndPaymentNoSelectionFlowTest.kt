@@ -40,7 +40,7 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
     @Before
     fun start() {
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
-                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
+                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()

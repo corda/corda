@@ -93,15 +93,15 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock<IdentityServiceInternal>().also {
             doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
         }, MINI_CORP.name, MINI_CORP_KEY)
         val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf(generateKeyPair()),
                 makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
-                listOf("net.corda.finance.contracts.asset"),
+                listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 CordaX500Name("Me", "London", "GB"))
         database = databaseAndServices.first
         ourServices = databaseAndServices.second

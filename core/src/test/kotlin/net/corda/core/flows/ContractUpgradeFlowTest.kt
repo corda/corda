@@ -49,7 +49,7 @@ class ContractUpgradeFlowTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows", "net.corda.finance.schemas"))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         notary = mockNet.defaultNotaryIdentity

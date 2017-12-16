@@ -21,7 +21,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.finance.sampleschemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -30,6 +30,7 @@ import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.schemas.DummyDealStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -91,7 +92,8 @@ open class VaultQueryTests {
             "net.corda.testing.contracts",
             "net.corda.finance.contracts",
             CashSchemaV1::class.packageName,
-            DummyLinearStateSchemaV1::class.packageName)
+            DummyLinearStateSchemaV1::class.packageName,
+            DummyDealStateSchemaV1::class.packageName)
     private lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     private lateinit var vaultFillerCashNotary: VaultFiller

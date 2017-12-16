@@ -1,0 +1,27 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="tudormalene (generated)" id="1512743551377-2">
+        <createTable tableName="cash_states_v3">
+            <column name="output_index" type="INT(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ccy_code" type="VARCHAR(3)"/>
+            <column name="issuer_name" type="VARCHAR(255)"/>
+            <column name="issuer_ref" type="VARBINARY(512)"/>
+            <column name="owner_name" type="VARCHAR(255)"/>
+            <column name="pennies" type="BIGINT(19)"/>
+        </createTable>
+
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_DC"
+                       tableName="cash_states_v3"/>
+
+    </changeSet>
+
+</databaseChangeLog>

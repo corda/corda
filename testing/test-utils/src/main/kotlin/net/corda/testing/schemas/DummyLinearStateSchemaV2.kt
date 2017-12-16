@@ -14,6 +14,9 @@ import javax.persistence.Table
  */
 object DummyLinearStateSchemaV2 : MappedSchema(schemaFamily = DummyLinearStateSchema.javaClass, version = 2,
         mappedTypes = listOf(PersistentDummyLinearState::class.java)) {
+
+    override val migrationResource = "dummy-linear-v2.changelog-init"
+
     @Entity
     @Table(name = "dummy_linear_states_v2")
     class PersistentDummyLinearState(

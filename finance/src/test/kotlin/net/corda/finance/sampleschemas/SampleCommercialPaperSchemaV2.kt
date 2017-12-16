@@ -1,4 +1,4 @@
-package net.corda.finance.schemas
+package net.corda.finance.sampleschemas
 
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.identity.AbstractParty
@@ -19,6 +19,9 @@ import javax.persistence.Table
  */
 object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1,
         mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
+
+    override val migrationResource = "sample-cp-v2.changelog-init"
+
     @Entity
     @Table(name = "cp_states_v2",
             indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),

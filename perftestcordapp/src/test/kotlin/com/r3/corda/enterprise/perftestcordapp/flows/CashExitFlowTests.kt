@@ -29,7 +29,7 @@ class CashExitFlowTests {
     @Before
     fun start() {
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
-			    cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
+                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity

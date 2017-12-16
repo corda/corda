@@ -79,7 +79,8 @@ internal fun CheckpointStorage.checkpoints(): List<SerializedBytes<Checkpoint>> 
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
-        private val cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts")
+        private val cordappPackages = listOf(
+                "com.r3.corda.enterprise.perftestcordapp.contracts", "com.r3.corda.enterprise.perftestcordapp.schemas")
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> = listOf(true, false)

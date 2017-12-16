@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.Vault
+import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -55,7 +56,9 @@ class HibernateObserverTests {
         val testSchema = TestSchema
         val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
-            override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = emptyMap()
+            override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(
+                    CommonSchemaV1 to SchemaService.SchemaOptions(),
+                    testSchema to SchemaService.SchemaOptions())
 
             override fun selectSchemas(state: ContractState): Iterable<MappedSchema> = setOf(testSchema)
 

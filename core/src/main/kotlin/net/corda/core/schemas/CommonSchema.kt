@@ -4,9 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import org.hibernate.annotations.Type
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.MappedSuperclass
+import javax.persistence.*
 
 /**
  * JPA representation of the common schema entities
@@ -18,6 +16,8 @@ object CommonSchema
  */
 object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, version = 1, mappedTypes = emptyList()) {
 
+    override val migrationResource = "common.changelog-master"
+
     @MappedSuperclass
     open class LinearState(
             /** [ContractState] attributes */
@@ -25,6 +25,9 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
+            @CollectionTable(name="state_participants",joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             var participants: MutableSet<AbstractParty>? = null,
 
             /**
@@ -34,6 +37,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
+            @Type(type = "uuid-char")
             var uuid: UUID
 
     ) : PersistentState() {
@@ -50,6 +54,9 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
+            @CollectionTable(name="state_participants",joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */

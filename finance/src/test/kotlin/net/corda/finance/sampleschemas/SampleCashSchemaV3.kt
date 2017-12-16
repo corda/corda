@@ -1,14 +1,11 @@
-package net.corda.finance.schemas
+package net.corda.finance.sampleschemas
 
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import org.hibernate.annotations.Type
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.Entity
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
@@ -16,6 +13,9 @@ import javax.persistence.Table
  */
 object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 3,
         mappedTypes = listOf(PersistentCashState::class.java)) {
+
+    override val migrationResource = "sample-cash-v3.changelog-init"
+
     @Entity
     @Table(name = "cash_states_v3")
     class PersistentCashState(
@@ -23,6 +23,9 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
 
             /** X500Name of participant parties **/
             @ElementCollection
+            @CollectionTable(name="state_participants", joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             var participants: MutableSet<AbstractParty>? = null,
 
             /** X500Name of owner party **/

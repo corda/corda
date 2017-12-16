@@ -11,6 +11,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
@@ -45,7 +46,7 @@ class DistributedServiceTests : IntegrationTest() {
         )
 
         driver(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()

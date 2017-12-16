@@ -72,8 +72,11 @@ class NodeSchemaServiceTest {
 class SchemaFamily
 
 object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {
+
+    override val migrationResource = "test.changelog-init"
+
     @Entity
-    @Table(name = "Parents")
+    @Table(name = "parents")
     class Parent : PersistentState() {
         @OneToMany(fetch = FetchType.LAZY)
         @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
@@ -84,7 +87,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
 
     @Suppress("unused")
     @Entity
-    @Table(name = "Children")
+    @Table(name = "children")
     class Child {
         @Id
         @GeneratedValue

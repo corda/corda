@@ -47,25 +47,17 @@ class HibernateConfiguration(
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
-        // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
-        // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
-        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (databaseConfig.initialiseSchema) "update" else "validate")
-                .setProperty("hibernate.format_sql", "true")
-                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
-        if (databaseConfig.schema != null) {
-            // This property helps 'hibernate.hbm2ddl.auto' to work properly when many schemas have similar table names.
-            config.setProperty("hibernate.default_schema", databaseConfig.schema)
-        }
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
+                .setProperty("hibernate.hbm2ddl.auto", "validate")
+                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix)
+        val sessionFactory = buildSessionFactory(config, metadataSources)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -92,15 +84,9 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
         val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
-            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                    val default = super.toPhysicalTableName(name, context)
-                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-                }
-            })
             // register custom converters
             attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.

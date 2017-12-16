@@ -7,6 +7,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import java.util.*
 import javax.persistence.LockModeType
 import javax.persistence.criteria.CriteriaBuilder
@@ -35,7 +36,13 @@ fun configureDatabase(dataSourceProperties: Properties,
                       databaseConfig: DatabaseConfig = DatabaseConfig()): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    return CordaPersistence(dataSource, databaseConfig, setOf(NetworkManagementSchemaServices.SchemaV1), emptyList())
+
+    val schemas = setOf(NetworkManagementSchemaServices.SchemaV1)
+    if (databaseConfig.runMigration) {
+        SchemaMigration(schemas, dataSource).runMigration()
+    }
+
+    return CordaPersistence(dataSource, databaseConfig, schemas, emptyList())
 }
 
 sealed class NetworkManagementSchemaServices {
@@ -45,5 +52,7 @@ sealed class NetworkManagementSchemaServices {
                     CertificateDataEntity::class.java,
                     NodeInfoEntity::class.java,
                     NetworkParametersEntity::class.java,
-                    NetworkMapEntity::class.java))
+                    NetworkMapEntity::class.java)) {
+        override val migrationResource = "network-manager.changelog-master"
+    }
 }

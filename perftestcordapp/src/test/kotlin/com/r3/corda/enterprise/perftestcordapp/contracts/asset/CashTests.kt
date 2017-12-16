@@ -133,13 +133,19 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
-        }, MINI_CORP.name, MINI_CORP_KEY)
-        val notaryServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        megaCorpServices = MockServices(
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        miniCorpServices = MockServices(
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                rigorousMock<IdentityServiceInternal>().also {
+                    doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
+                }, MINI_CORP.name, MINI_CORP_KEY)
+        val notaryServices = MockServices(
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"),
+                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
                 initialIdentityName = CordaX500Name(organisation = "Me", locality = "London", country = "GB"),
                 keys = listOf(generateKeyPair()),
                 identityService = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)))
@@ -247,9 +253,9 @@ class CashTests {
         transaction {
             attachment(Cash.PROGRAM_ID)
             output(Cash.PROGRAM_ID,
-                Cash.State(
-                        amount = 1000.DOLLARS `issued by` MINI_CORP.ref(12, 34),
-                        owner = AnonymousParty(ALICE_PUBKEY)))
+                    Cash.State(
+                            amount = 1000.DOLLARS `issued by` MINI_CORP.ref(12, 34),
+                            owner = AnonymousParty(ALICE_PUBKEY)))
             command(MINI_CORP_PUBKEY, Cash.Commands.Issue())
             this.verifies()
         }
@@ -432,9 +438,9 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
             input(Cash.PROGRAM_ID,
-                inState.copy(
-                        amount = 150.POUNDS `issued by` defaultIssuer,
-                        owner = AnonymousParty(BOB_PUBKEY)))
+                    inState.copy(
+                            amount = 150.POUNDS `issued by` defaultIssuer,
+                            owner = AnonymousParty(BOB_PUBKEY)))
             output(Cash.PROGRAM_ID, outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer))
             command(ALICE_PUBKEY, Cash.Commands.Move())
             this `fails with` "the amounts balance"
@@ -851,16 +857,17 @@ class CashTests {
     // Double spend.
     @Test
     fun chainCashDoubleSpendFailsWith() {
-        val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
+        val mockService = MockServices(
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         }, MEGA_CORP.name, MEGA_CORP_KEY)
         mockService.ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",
-                    Cash.State(
-                            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                            owner = MEGA_CORP))
+                        Cash.State(
+                                amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                                owner = MEGA_CORP))
             }
 
             transaction {

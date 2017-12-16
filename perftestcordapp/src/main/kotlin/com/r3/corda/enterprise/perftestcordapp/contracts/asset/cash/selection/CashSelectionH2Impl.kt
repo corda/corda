@@ -56,9 +56,9 @@ class CashSelectionH2Impl : AbstractCashSelection() {
             if (notary != null)
                 psSelectJoin.setString(++pIndex, notary.name.toString())
             if (onlyFromIssuerParties.isNotEmpty())
-                psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any }.toTypedArray())
+                psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any}.toTypedArray() )
             if (withIssuerRefs.isNotEmpty())
-                psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
+                psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
             log.debug { psSelectJoin.toString() }
 
             psSelectJoin.executeQuery().use { rs ->

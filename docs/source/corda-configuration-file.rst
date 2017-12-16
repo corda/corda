@@ -70,7 +70,6 @@ path to the node's base directory.
 
 :database: Database configuration:
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
@@ -81,12 +80,12 @@ path to the node's base directory.
 
 :database:  This section is used to configure JDBC and Hibernate related properties:
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
-
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
 
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+        :runMigration: Boolean on whether to run the database migration scripts. Defaults to true.
 
         :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
              (the value is passed to Hibernate property 'hibernate.hbm2ddl.auto').

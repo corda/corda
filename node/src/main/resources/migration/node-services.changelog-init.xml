@@ -1,0 +1,213 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="tudormalene (generated)" id="1511451595465-5">
+        <createTable tableName="node_attachments">
+            <column name="att_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="blob"/>
+            <column name="filename" type="VARCHAR(255)"/>
+            <column name="insertion_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploader" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-6">
+        <createTable tableName="node_bft_committed_states">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consuming_input_index" type="INT"/>
+            <column name="consuming_transaction_id" type="VARCHAR(255)"/>
+            <column name="requesting_party_name" type="VARCHAR(255)"/>
+            <column name="requesting_party_key" type="varbinary(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-7">
+        <createTable tableName="node_checkpoints">
+            <column name="checkpoint_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checkpoint_value" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-8">
+        <createTable tableName="node_contract_upgrades">
+            <column name="state_ref" type="VARCHAR(96)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contract_class_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-9">
+        <createTable tableName="node_identities">
+            <column name="pk_hash" type="VARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="identity_value" type="blob"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="tudormalene (generated)" id="1511451595465-13">
+        <createTable tableName="node_message_ids">
+            <column name="message_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="insertion_time" type="timestamp"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-14">
+        <createTable tableName="node_message_retry">
+            <column name="message_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="blob"/>
+            <column name="recipients" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-15">
+        <createTable tableName="node_named_identities">
+            <column name="name" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pk_hash" type="VARCHAR(130)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-16">
+        <createTable tableName="node_notary_commit_log">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consuming_input_index" type="INT"/>
+            <column name="consuming_transaction_id" type="VARCHAR(255)"/>
+            <column name="requesting_party_name" type="VARCHAR(255)"/>
+            <column name="requesting_party_key" type="varbinary(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-17">
+        <createTable tableName="node_our_key_pairs">
+            <column name="public_key_hash" type="VARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="private_key" type="blob"/>
+            <column name="public_key" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-18">
+        <createTable tableName="node_raft_committed_states">
+            <column name="id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state_index" type="BIGINT"/>
+            <column name="state_value" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-19">
+        <createTable tableName="node_scheduled_states">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scheduled_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-20">
+        <createTable tableName="node_transaction_mappings">
+            <column name="tx_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state_machine_run_id" type="VARCHAR(36)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-21">
+        <createTable tableName="node_transactions">
+            <column name="tx_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_value" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene" id="create mutual exclusion">
+        <createTable tableName="node_mutual_exclusion">
+            <column name="mutual_exclusion_id" type="CHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MACHINE_NAME" type="VARCHAR(255)"/>
+            <column name="PID" type="VARCHAR(255)"/>
+            <column name="MUTUAL_EXCLUSION_TIMESTAMP" type="timestamp"/>
+        </createTable>
+        <addPrimaryKey columnNames="mutual_exclusion_id" constraintName="node_mutual_exclusion_pkey" tableName="node_mutual_exclusion"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-30">
+        <addPrimaryKey columnNames="att_id" constraintName="node_attachments_pkey" tableName="node_attachments"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-31">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_bft_committed_states_pkey"
+                       tableName="node_bft_committed_states"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-32">
+        <addPrimaryKey columnNames="checkpoint_id" constraintName="node_checkpoints_pkey" tableName="node_checkpoints"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-33">
+        <addPrimaryKey columnNames="state_ref" constraintName="node_contract_upgrades_pkey"
+                       tableName="node_contract_upgrades"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-34">
+        <addPrimaryKey columnNames="pk_hash" constraintName="node_identities_pkey" tableName="node_identities"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-38">
+        <addPrimaryKey columnNames="message_id" constraintName="node_message_ids_pkey" tableName="node_message_ids"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-39">
+        <addPrimaryKey columnNames="message_id" constraintName="node_message_retry_pkey"
+                       tableName="node_message_retry"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-40">
+        <addPrimaryKey columnNames="name" constraintName="node_named_identities_pkey"
+                       tableName="node_named_identities"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-41">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_notary_commit_log_pkey"
+                       tableName="node_notary_commit_log"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-42">
+        <addPrimaryKey columnNames="public_key_hash" constraintName="node_our_key_pairs_pkey"
+                       tableName="node_our_key_pairs"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-43">
+        <addPrimaryKey columnNames="id" constraintName="node_raft_committed_states_pkey"
+                       tableName="node_raft_committed_states"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-44">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_scheduled_states_pkey"
+                       tableName="node_scheduled_states"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-45">
+        <addPrimaryKey columnNames="tx_id" constraintName="node_transaction_mappings_pkey"
+                       tableName="node_transaction_mappings"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-46">
+        <addPrimaryKey columnNames="tx_id" constraintName="node_transactions_pkey" tableName="node_transactions"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-61">
+        <addForeignKeyConstraint baseColumnNames="party_name" baseTableName="node_link_nodeinfo_party"
+                                 constraintName="fk1ua3h6nwwfji0mn23c5d1xx8e" deferrable="false"
+                                 initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
+    </changeSet>
+</databaseChangeLog>

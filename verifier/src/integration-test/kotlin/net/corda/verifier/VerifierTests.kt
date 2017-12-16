@@ -138,7 +138,7 @@ class VerifierTests  : IntegrationTest() {
     @Test
     fun `single verifier works with a node`() {
         verifierDriver(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, verifierType = VerifierType.OutOfProcess))
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()

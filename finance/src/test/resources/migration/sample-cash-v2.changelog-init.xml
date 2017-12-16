@@ -1,0 +1,31 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="tudormalene (generated)" id="1512743551377-1">
+        <createTable tableName="cash_states_v2">
+            <column name="output_index" type="INT(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer_name" type="VARCHAR(255)"/>
+            <column name="issuer_ref" type="VARBINARY(512)"/>
+            <column name="owner_name" type="VARCHAR(255)"/>
+            <column name="quantity" type="BIGINT(19)"/>
+            <column name="ccy_code" type="VARCHAR(3)"/>
+        </createTable>
+
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_D"
+                       tableName="cash_states_v2"/>
+
+        <createIndex indexName="ccy_code_idx2" tableName="cash_states_v2">
+            <column name="ccy_code"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>

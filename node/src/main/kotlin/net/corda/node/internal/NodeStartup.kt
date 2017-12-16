@@ -120,6 +120,14 @@ open class NodeStartup(val args: Array<String>) {
             node.generateNodeInfo()
             return
         }
+        if (cmdlineOptions.justRunDbMigration) {
+            node.runDbMigration()
+            return
+        }
+        if (cmdlineOptions.generateDatabaseMigrationToFile.first) {
+            node.generateDatabaseSchema(cmdlineOptions.generateDatabaseMigrationToFile.second!!)
+            return
+        }
         val startedNode = node.start()
         Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
         startedNode.internals.nodeReadyFuture.thenMatch({

@@ -27,6 +27,7 @@ import net.corda.testing.TestIdentity;
 import net.corda.testing.contracts.DummyLinearContract;
 import net.corda.testing.contracts.VaultFiller;
 import net.corda.testing.node.MockServices;
+import net.corda.testing.schemas.DummyLinearStateSchemaV1;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -69,7 +70,11 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
-        List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        List<String> cordappPackages = Arrays.asList(
+                "net.corda.testing.contracts",
+                "net.corda.finance.contracts.asset",
+                CashSchemaV1.class.getPackage().getName(),
+                DummyLinearStateSchemaV1.class.getPackage().getName());
         IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 Arrays.asList(MEGA_CORP.getKey(), DUMMY_NOTARY.getKey()),

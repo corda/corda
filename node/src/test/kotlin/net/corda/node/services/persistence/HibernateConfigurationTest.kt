@@ -25,8 +25,8 @@ import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV2
-import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.finance.sampleschemas.SampleCashSchemaV2
+import net.corda.finance.sampleschemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
@@ -40,6 +40,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.schemas.DummyDealStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
@@ -105,7 +106,7 @@ class HibernateConfigurationTest {
                 doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
-        val schemaService = NodeSchemaService()
+        val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1 ))
         database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig

@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="tudormalene (generated)" id="1512743551377-11">
+        <createTable tableName="parents">
+            <column name="output_index" type="INT(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_F" tableName="parents"/>
+    </changeSet>
+
+    <changeSet author="tudormalene (generated)" id="1512743551377-18">
+        <createTable tableName="children">
+            <column name="child_id" type="INT(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="output_index" type="INT(10)"/>
+            <column name="transaction_id" type="VARCHAR(64)"/>
+        </createTable>
+
+        <addPrimaryKey columnNames="child_id" constraintName="CONSTRAINT_9" tableName="children"/>
+    </changeSet>
+
+</databaseChangeLog>

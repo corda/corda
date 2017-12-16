@@ -59,6 +59,7 @@ import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -68,6 +69,7 @@ import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
+import java.io.File
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.lang.reflect.InvocationTargetException
@@ -192,6 +194,18 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val signature = identityKeypair.sign(serialisedNodeInfo)
             // TODO: Signed data might not be sufficient for multiple identities, as it only contains one signature.
             NodeInfoWatcher.saveToFile(configuration.baseDirectory, SignedData(serialisedNodeInfo, signature))
+        }
+    }
+
+    fun generateDatabaseSchema(outputFile: String) {
+        HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource).generateMigrationScript(File(outputFile))
+        }
+    }
+
+    fun runDbMigration() {
+        HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource).runMigration()
         }
     }
 
@@ -829,6 +843,12 @@ fun configureDatabase(dataSourceProperties: Properties,
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
+
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
+
+    if(databaseConfig.runMigration){
+        SchemaMigration(schemaService.schemaOptions.keys, dataSource).runMigration()
+    }
+
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }

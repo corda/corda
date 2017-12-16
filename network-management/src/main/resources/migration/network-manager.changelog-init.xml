@@ -1,0 +1,176 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="tudormalene (generated)" id="1513267683777-1">
+        <createSequence sequenceName="HIBERNATE_SEQUENCE"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-2">
+        <createTable tableName="certificatesigningrequestentity_modifiedby">
+            <column name="certificatesigningrequestentity_request_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(512)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-3">
+        <createTable tableName="certificatesigningrequestentity_modifiedby_aud">
+            <column name="REV" type="INT(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="certificatesigningrequestentity_request_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revtype" type="TINYINT(3)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-4">
+        <createTable tableName="certificate_data">
+            <column name="ID" type="BIGINT(19)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="certificate_path_bytes" type="BLOB"/>
+            <column name="certificate_status" type="INT(10)"/>
+            <column name="public_key_hash" type="VARCHAR(64)"/>
+            <column name="certificate_signing_request" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-5">
+        <createTable tableName="certificate_signing_request">
+            <column name="request_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="legal_name" type="VARCHAR(256)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="remark" type="VARCHAR(256)"/>
+            <column name="request_bytes" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-6">
+        <createTable tableName="certificate_signing_request_aud">
+            <column name="request_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rev" type="INT(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revtype" type="TINYINT(3)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+            <column name="remark" type="VARCHAR(256)"/>
+            <column name="status" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-7">
+        <createTable tableName="network_map">
+            <column name="version" type="BIGINT(19)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="certificate" type="BLOB"/>
+            <column name="serialized_network_map" type="BLOB"/>
+            <column name="signature" type="BLOB"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-8">
+        <createTable tableName="network_parameters">
+            <column name="version" type="BIGINT(19)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bytes" type="BLOB"/>
+            <column name="hash" type="VARCHAR(64)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-9">
+        <createTable tableName="node_info">
+            <column name="node_info_hash" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="node_info_bytes" type="BLOB"/>
+            <column name="signature_bytes" type="BLOB"/>
+            <column name="signature_public_key_algorithm" type="CLOB"/>
+            <column name="signature_public_key_bytes" type="BLOB"/>
+            <column name="certificate_signing_request" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-10">
+        <createTable tableName="revinfo">
+            <column autoIncrement="true" name="rev" type="INT(10)">
+                <constraints primaryKey="true" primaryKeyName="CONSTRAINT_6"/>
+            </column>
+            <column name="revtstmp" type="BIGINT(19)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-11">
+        <addPrimaryKey columnNames="version" constraintName="CONSTRAINT_3" tableName="network_parameters"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-12">
+        <addPrimaryKey columnNames="id" constraintName="CONSTRAINT_7" tableName="certificate_data"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-13">
+        <addPrimaryKey columnNames="rev, certificatesigningrequestentity_request_id, modified_by" constraintName="CONSTRAINT_B" tableName="certificatesigningrequestentity_modifiedby_aud"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-14">
+        <addPrimaryKey columnNames="request_id, rev" constraintName="CONSTRAINT_C" tableName="certificate_signing_request_aud"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-15">
+        <addPrimaryKey columnNames="node_info_hash" constraintName="CONSTRAINT_C3" tableName="node_info"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-16">
+        <addPrimaryKey columnNames="version" constraintName="CONSTRAINT_CB" tableName="network_map"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-17">
+        <addPrimaryKey columnNames="request_id" constraintName="CONSTRAINT_D" tableName="certificate_signing_request"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-18">
+        <addUniqueConstraint columnNames="hash" constraintName="UK_3XJ82Q6C0LT4D7XV085CUUX4Q" tableName="network_parameters"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-19">
+        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_4MJ3D7DDYMYV6OA2284VWDFHV" tableName="certificate_data"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-20">
+        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_P37OS0TPLQ2ER2TM9JSDTF1CL" tableName="node_info"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-21">
+        <createIndex indexName="FK5G5CAGCRX7SIU8LWTAVIRUNXD_INDEX_C" tableName="certificate_signing_request_aud">
+            <column name="rev"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-22">
+        <createIndex indexName="FKLFW2KLKDPLYDROVIBVEOMF9PU_INDEX_C" tableName="certificatesigningrequestentity_modifiedby">
+            <column name="certificatesigningrequestentity_request_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-23">
+        <createIndex indexName="IDX_PUB_KEY_HASH" tableName="certificate_data">
+            <column name="public_key_hash"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-24">
+        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificate_signing_request_aud" constraintName="FK5G5CAGCRX7SIU8LWTAVIRUNXD" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="rev" referencedTableName="revinfo"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-25">
+        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificatesigningrequestentity_modifiedby_aud" constraintName="FKCNMAJ1J6TO8D5GBY6N1Q3CK9C" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="rev" referencedTableName="revinfo"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-26">
+        <addForeignKeyConstraint baseColumnNames="certificatesigningrequestentity_request_id" baseTableName="certificatesigningrequestentity_modifiedby" constraintName="FKLFW2KLKDPLYDROVIBVEOMF9PU" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-27">
+        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="certificate_data" constraintName="FKLQK11Q68B23W062SH0CLNQKLY" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-28">
+        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="node_info" constraintName="FKOLO0DB56L1GS6AAY86TBNIXRH" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
+    </changeSet>
+</databaseChangeLog>

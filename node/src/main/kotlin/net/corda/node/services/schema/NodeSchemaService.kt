@@ -51,7 +51,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet()) : SchemaSe
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     RunOnceService.MutualExclusion::class.java
-            ))
+            )){
+        override val migrationResource = "node-services.changelog-master"
+    }
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)

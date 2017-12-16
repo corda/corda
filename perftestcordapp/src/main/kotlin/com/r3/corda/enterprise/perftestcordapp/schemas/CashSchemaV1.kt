@@ -21,6 +21,8 @@ object CashSchema
  */
 @CordaSerializable
 object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
+    override val migrationResource = "cash-pt.changelog-master"
+
     @Entity
     @Table(name = "contract_pt_cash_states",
            indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),

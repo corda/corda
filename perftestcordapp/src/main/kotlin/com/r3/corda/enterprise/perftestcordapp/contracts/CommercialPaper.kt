@@ -18,6 +18,7 @@ import net.corda.core.transactions.TransactionBuilder
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.schemas.CommercialPaperSchemaV1
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashBy
+import net.corda.core.crypto.toStringShort
 import java.time.Instant
 import java.util.*
 
@@ -76,13 +77,13 @@ class CommercialPaper : Contract {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
-                        issuanceParty = this.issuance.party.owningKey.toBase58String(),
+                        issuancePartyHash = this.issuance.party.owningKey.toStringShort(),
                         issuanceRef = this.issuance.reference.bytes,
-                        owner = this.owner.owningKey.toBase58String(),
+                        ownerHash = this.owner.owningKey.toStringShort(),
                         maturity = this.maturityDate,
                         faceValue = this.faceValue.quantity,
                         currency = this.faceValue.token.product.currencyCode,
-                        faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
+                        faceValueIssuerPartyHash = this.faceValue.token.issuer.party.owningKey.toStringShort(),
                         faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
             /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */

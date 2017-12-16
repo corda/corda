@@ -6,6 +6,13 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Integrate database migration tool: http://www.liquibase.org/ :
+ * The migration files are split per ``MappedSchemas``. (added new property: migrationResource used to point to the resource file containing the db changes corresponding to the JPA entities)
+ * config flag ``database.initialiseSchema`` was renamed to: ``database.runMigration``  (if true then the migration is run during startup just before hibernate is initialised.)
+ * config flag: ``database.serverNameTablePrefix`` was removed as we no longer need table prefixes
+ * New command line argument: “—just-generate-database-migration outputSqlFile”: This will generate the delta from the last release, and will output the resulting sql into the outputSqlFile. It will not write to the db. It will not start the node!
+ * New command line argument: “--just-run-db-migration”: This will only run the db migration. It will not start the node!
+
 * Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using
   DriverDSL and/or cordformation node runner.
 

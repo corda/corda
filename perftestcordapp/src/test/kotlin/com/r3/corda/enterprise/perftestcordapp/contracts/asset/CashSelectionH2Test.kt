@@ -17,7 +17,9 @@ import org.junit.Test
 import java.util.Collections.nCopies
 
 class CashSelectionH2Test {
-    private val mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
+    private val mockNet = MockNetwork(
+            threadPerNode = true,
+            cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
 
     @After
     fun cleanUp() {

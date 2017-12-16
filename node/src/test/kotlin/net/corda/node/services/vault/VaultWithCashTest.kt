@@ -25,6 +25,7 @@ import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -39,7 +40,8 @@ import kotlin.test.fail
 
 class VaultWithCashTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        private val cordappPackages = listOf(
+                "net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName)
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)

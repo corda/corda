@@ -190,4 +190,4 @@ private fun makeTestDataSourceProperties(): Properties {
     return props
 }
 
-internal fun makeNotInitialisingTestDatabaseProperties() = DatabaseConfig(initialiseSchema = false)
+internal fun makeNotInitialisingTestDatabaseProperties() = DatabaseConfig(runMigration = false)

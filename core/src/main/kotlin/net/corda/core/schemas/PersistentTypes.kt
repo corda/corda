@@ -38,9 +38,16 @@ interface QueryableState : ContractState {
  * @param mappedTypes The JPA entity classes that the ORM layer needs to be configure with for this schema.
  */
 open class MappedSchema(schemaFamily: Class<*>,
-                        val version: Int,
-                        val mappedTypes: Iterable<Class<*>>) {
+                            val version: Int,
+                            val mappedTypes: Iterable<Class<*>>) {
     val name: String = schemaFamily.name
+
+    /**
+     * Points to a classpath resource containing the database changes for the [mappedTypes]
+     */
+    protected open val migrationResource: String? = null
+    internal fun getMigrationResource(): String = migrationResource!!
+
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
 }
 //DOCEND MappedSchema
@@ -70,3 +77,5 @@ data class PersistentStateRef(
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
 interface StatePersistable
+
+fun getMigrationResource(schema: MappedSchema): String = schema.getMigrationResource()

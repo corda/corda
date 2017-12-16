@@ -18,6 +18,9 @@ object DummyDealStateSchema
  * at the time of writing.
  */
 object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema.javaClass, version = 1, mappedTypes = listOf(PersistentDummyDealState::class.java)) {
+
+    override val migrationResource = "dummy-deal.changelog-init"
+
     @Entity
     @Table(name = "dummy_deal_states")
     class PersistentDummyDealState(

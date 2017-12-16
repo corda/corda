@@ -426,7 +426,7 @@ class DriverDSLImpl(
                 providedName = nodeNames[0],
                 rpcUsers = spec.rpcUsers,
                 verifierType = spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress) //TODO discrepancy with OS - check if 'serverNameTablePrefix' can be removed in OS
+                customOverrides = notaryConfig(clusterAddress)
         )
 
         // All other nodes will join the cluster
@@ -436,7 +436,7 @@ class DriverDSLImpl(
                     providedName = it,
                     rpcUsers = spec.rpcUsers,
                     verifierType = spec.verifierType,
-                    customOverrides = notaryConfig(nodeAddress, clusterAddress) //TODO discrepancy with OS - check if 'serverNameTablePrefix' can be removed in OS
+                    customOverrides = notaryConfig(nodeAddress, clusterAddress)
             )
         }
 

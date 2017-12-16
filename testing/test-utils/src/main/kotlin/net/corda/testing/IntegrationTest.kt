@@ -30,6 +30,7 @@ abstract class IntegrationTest {
         @JvmStatic
         fun globalSetUp() {
             if (dbProvider.isNotEmpty()) {
+                runDbScript(dbProvider,"$testDbScriptDir/db-global-cleanup.sql", databaseSchemas)
                 runDbScript(dbProvider,"$testDbScriptDir/db-global-setup.sql", databaseSchemas)
             }
         }

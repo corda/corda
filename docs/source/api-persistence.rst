@@ -144,3 +144,94 @@ which is then referenced within a custom flow:
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
 
+Database Migration
+==================
+
+As a database migration tool, we use the open source library liquibase  <http://www.liquibase.org/>.
+
+If migration is enabled, the database state is checked (and updated) during node startup. (After deploying a new version of the code that contains database migrations, they are executed at that point).
+Possible database changes range from schema changes to data changes.
+
+Liquibase will create a table called ``DATABASECHANGELOG``, that will store useful information about each change ( like timestamp, description, user, md5 hash so it can't be changed, etc)
+We can also "tag" the database at each release to make rollback easier.
+
+Database changes are maintained in several xml files per ``MappedSchema``, so that only migrations corresponding to the node’s configured schemas are run.
+For example, on the node-info schema, if there are any database changes for release 12, the changes will be added to a new file called:  ``node-info.changelog-v12.xml`` which has to be included in ``node-info.changelog-master.xml``.
+
+
+Example:
+--------
+
+Let's suppose that at some point, at version 12, there is a need to add a new column: ``contentSize`` to the ``DBAttachment`` entity.
+
+This means we have to:
+    - In the source code, add the ``contentSize`` property and map it to a new column.
+    - create the column in the ``node_attachments`` table.
+    - Run an update to set the size of all existing attachments, to not break the code that uses the new property
+
+.. code-block:: kotlin
+
+    class DBAttachment(
+        ...
+        @Column(name = "content")
+        @Lob
+        var content: ByteArray,
+
+        //newly added column
+        @Column(name = "content_size")
+        var contentSize: Int,
+        ...
+    )
+
+The ``DBAttachment`` entity is included in the ``NodeServicesV1`` schema, so we create a file ``node-services.changelog-v12.xml`` with this changeset:
+
+.. code-block:: xml
+
+    <changeSet author="developer_name" id="add content_size column">
+        <addColumn tableName="node_attachments">
+            <column name="content_size" type="INT"/>
+        </addColumn>
+        <update tableName="node_attachments">
+            <column name="content_size" valueComputed="length(content)"/>
+        </update>
+        <rollback>
+            <dropColumn tableName="node_attachments" columnName="content_size"/>
+        </rollback>
+    </changeSet>
+
+And include it in `node-services.changelog-master.xml`:
+
+.. code-block:: xml
+
+    <databaseChangeLog>
+        <!--the original schema-->
+        <include file="migration/node-services.changelog-init.xml"/>
+
+        <!--migrations from previous releases-->
+        <include file="migration/node-services.changelog-v4.xml"/>
+        <include file="migration/node-services.changelog-v7.xml"/>
+
+        <!--added now-->
+        <include file="migration/node-services.changelog-v12.xml"/>
+    </databaseChangeLog>
+
+
+By adding the rollback script, we give users the option to revert to an older version of the software.
+
+An easy way to manage the db version is to tag it on every release (or on every release that has migrations)
+<http://www.liquibase.org/documentation/changes/tag_database.html>
+
+
+Usage:
+------
+
+Configurations:
+
+- To enable migration at startup, set:
+	- database.runMigration = true   // true by default
+
+Command line arguments:
+
+- To export the migration to a file use `—just-generate-database-migration outputSqlFile`. This will generate the delta from the last release, and will output the resulting sql into the outputSqlFile. It will not write to the db. It will not start the node! ( default value for `outputSqlFile` is a `.sql` file with the current date )
+
+- To run the migration without starting the node: `--just-run-db-migration`

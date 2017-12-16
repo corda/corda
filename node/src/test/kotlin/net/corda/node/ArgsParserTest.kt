@@ -25,7 +25,10 @@ class ArgsParserTest {
                 noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false,
-                bootstrapRaftCluster = false))
+                justRunDbMigration = false,
+                bootstrapRaftCluster = false,
+                generateDatabaseMigrationToFile = Pair(false, null)
+        ))
     }
 
     @Test
