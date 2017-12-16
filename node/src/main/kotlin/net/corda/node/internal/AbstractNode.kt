@@ -219,14 +219,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
-            val flowStarter = FlowStarterImpl(serverThread, smm)
+            val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+            val flowStarter = FlowStarterImpl(serverThread, smm, flowLogicRefFactory)
             val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
                     flowStarter,
                     transactionStorage,
                     unfinishedSchedules = busyNodeLatch,
-                    serverThread = serverThread)
+                    serverThread = serverThread,
+                    flowLogicRefFactory = flowLogicRefFactory)
             if (serverThread is ExecutorService) {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -235,7 +237,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, SECONDS)
                 }
             }
-            makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService)
+            makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService, flowLogicRefFactory)
             val rpcOps = makeRPCOps(flowStarter, database, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
@@ -243,7 +245,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             tokenizableServices = nodeServices + cordaServices + schedulerService
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-            FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
             startShell(rpcOps)
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
@@ -560,10 +561,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(database: CordaPersistence): WritableTransactionStorage = DBTransactionStorage()
-
-    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService) {
+    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
         VaultSoftLockManager.install(services.vaultService, smm)
-        ScheduledActivityObserver.install(services.vaultService, schedulerService)
+        ScheduledActivityObserver.install(services.vaultService, schedulerService, flowLogicRefFactory)
         HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
     }
 
@@ -825,9 +825,18 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 }
 
-internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager) : FlowStarter {
+internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
     override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
         return serverThread.fetchFrom { smm.startFlow(logic, context) }
+    }
+
+    override fun <T> invokeFlowAsync(
+            logicType: Class<out FlowLogic<T>>,
+            context: InvocationContext,
+            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
+        val logicRef = flowLogicRefFactory.createForRPC(logicType, *args)
+        val logic: FlowLogic<T> = uncheckedCast(flowLogicRefFactory.toFlowLogic(logicRef))
+        return startFlow(logic, context)
     }
 }
 

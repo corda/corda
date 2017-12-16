@@ -63,6 +63,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+    private val flowLogicRefFactory = FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl::class.java.classLoader)
     private val realClock: Clock = Clock.systemUTC()
     private val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     private val testClock = TestClock(stoppedClock)
@@ -121,7 +122,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
-            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), validatedTransactions, schedulerGatedExecutor, serverThread = smmExecutor)
+            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM, flowLogicRefFactory), validatedTransactions, schedulerGatedExecutor, serverThread = smmExecutor, flowLogicRefFactory = flowLogicRefFactory)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()
@@ -304,7 +305,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database.transaction {
             apply {
                 val freshKey = kms.freshKey()
-                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, DUMMY_IDENTITY_1.party)
+                val state = TestState(flowLogicRefFactory.createForRPC(TestFlowLogic::class.java, increment), instant, DUMMY_IDENTITY_1.party)
                 val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DummyContract.PROGRAM_ID, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)

@@ -10,6 +10,7 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
@@ -22,7 +23,6 @@ import net.corda.core.utilities.trace
 import net.corda.node.internal.MutableClock
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.SchedulerService
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -61,7 +61,8 @@ class NodeSchedulerService(private val clock: Clock,
                            private val stateLoader: StateLoader,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val serverThread: AffinityExecutor)
+                           private val serverThread: AffinityExecutor,
+                           private val flowLogicRefFactory: FlowLogicRefFactory)
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
@@ -279,7 +280,7 @@ class NodeSchedulerService(private val clock: Clock,
                     scheduledStatesQueue.remove(scheduledState)
                     scheduledStatesQueue.add(newState)
                 } else {
-                    val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
+                    val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
                     log.trace { "Scheduler starting FlowLogic $flowLogic" }
                     scheduledFlow = flowLogic
                     scheduledStates.remove(scheduledState.ref)
@@ -297,7 +298,7 @@ class NodeSchedulerService(private val clock: Clock,
         val state = txState.data as SchedulableState
         return try {
             // This can throw as running contract code.
-            state.nextScheduledActivity(scheduledState.ref, FlowLogicRefFactoryImpl)
+            state.nextScheduledActivity(scheduledState.ref, flowLogicRefFactory)
         } catch (e: Exception) {
             log.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
             null
