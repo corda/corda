@@ -24,7 +24,7 @@ import javax.annotation.concurrent.ThreadSafe
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
 @ThreadSafe
-class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
+class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
                               trustRoot: X509CertificateHolder) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()

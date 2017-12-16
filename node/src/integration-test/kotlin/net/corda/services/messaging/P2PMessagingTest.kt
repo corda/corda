@@ -99,7 +99,7 @@ class P2PMessagingTest {
             }
 
             // Wait until the first request is received
-            crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
+            crashingNodes.firstRequestReceived.await()
             // Stop alice's node after we ensured that the first request was delivered and ignored.
             alice.dispose()
             val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
@@ -109,8 +109,7 @@ class P2PMessagingTest {
 
             // Restart the node and expect a response
             val aliceRestarted = startAlice()
-            val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
-
+            val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow()
             assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
             assertThat(response).isEqualTo(responseMessage)
         }

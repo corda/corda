@@ -2,6 +2,7 @@ package net.corda.core.identity
 
 import com.google.common.collect.ImmutableSet
 import net.corda.core.internal.LegalNameValidator
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.ASN1Encodable
@@ -78,8 +79,9 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_ORGANISATION_UNIT = 64
         const val MAX_LENGTH_COMMON_NAME = 64
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
-        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries())
-
+        @VisibleForTesting
+        val unspecifiedCountry = "ZZ"
+        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries() + unspecifiedCountry)
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
             val x500Name = X500Name.getInstance(principal.encoded)

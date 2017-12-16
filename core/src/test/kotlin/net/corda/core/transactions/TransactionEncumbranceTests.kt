@@ -62,7 +62,7 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
     }, MEGA_CORP.name)
 

@@ -108,7 +108,7 @@ class VaultQueryTests {
         // register additional identities
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 megaCorp,
                 DUMMY_NOTARY_KEY)
         database = databaseAndServices.first

@@ -70,7 +70,7 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity()));
+        IdentityServiceInternal identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
                 identitySvc,
