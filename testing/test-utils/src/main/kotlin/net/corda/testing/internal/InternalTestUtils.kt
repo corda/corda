@@ -1,5 +1,6 @@
 package net.corda.testing.internal
 
+import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.mockito.Mockito
@@ -42,3 +43,6 @@ fun <T> rigorousMock(clazz: Class<T>): T = Mockito.mock(clazz) {
         it.callRealMethod()
     }
 }
+
+/** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
+fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }

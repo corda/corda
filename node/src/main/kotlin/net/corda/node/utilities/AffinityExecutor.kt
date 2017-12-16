@@ -1,11 +1,9 @@
 package net.corda.node.utilities
 
 import com.google.common.util.concurrent.SettableFuture
-import com.google.common.util.concurrent.Uninterruptibles
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.function.Supplier
 
@@ -81,33 +79,6 @@ interface AffinityExecutor : Executor {
                 val f = SettableFuture.create<Boolean>()
                 execute { f.set(queue.isEmpty() && activeCount == 1) }
             } while (!f.get())
-        }
-    }
-
-    /**
-     * An executor useful for unit tests: allows the current thread to block until a command arrives from another
-     * thread, which is then executed. Inbound closures/commands stack up until they are cleared by looping.
-     *
-     * @param alwaysQueue If true, executeASAP will never short-circuit and will always queue up.
-     */
-    class Gate(private val alwaysQueue: Boolean = false) : AffinityExecutor {
-        private val thisThread = Thread.currentThread()
-        private val commandQ = LinkedBlockingQueue<Runnable>()
-
-        override val isOnThread: Boolean
-            get() = !alwaysQueue && Thread.currentThread() === thisThread
-
-        override fun execute(command: Runnable) {
-            Uninterruptibles.putUninterruptibly(commandQ, command)
-        }
-
-        fun waitAndRun() {
-            val runnable = Uninterruptibles.takeUninterruptibly(commandQ)
-            runnable.run()
-        }
-
-        override fun flush() {
-            throw UnsupportedOperationException()
         }
     }
 }
