@@ -17,7 +17,7 @@ class InMemoryMessagingTests {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(emptyList())
     }
 
     @After

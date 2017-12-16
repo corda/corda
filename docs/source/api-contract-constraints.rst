@@ -1,15 +1,18 @@
 API: Contract Constraints
 =========================
 
-A basic understanding of contract key concepts, which can be found :doc:`here </key-concepts-contracts>`,
-is required reading for this page.
+.. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-contracts`.
 
+.. contents::
+
+Contract constraints
+--------------------
 Transaction states specify a constraint over the contract that will be used to verify it.  For a transaction to be
 valid, the ``verify`` function associated with each state must run successfully. However, for this to be secure, it is
 not sufficient to specify the ``verify`` function by name as there may exist multiple different implementations with
 the same method signature and enclosing class. Contract constraints solve this problem by allowing a contract developer
 to constrain which ``verify`` functions out of the universe of implementations can be used (i.e. the universe is
-everything that matches the signature and contract constraints restricts this universe to a subset).
+everything that matches the signature and contract constraints restrict this universe to a subset).
 
 A typical constraint is the hash of the CorDapp JAR that contains the contract and states but will in future releases
 include constraints that require specific signers of the JAR, or both the signer and the hash. Constraints can be
@@ -60,10 +63,10 @@ that they were loaded from. This makes it possible to find the attachment for an
 automatic resolution of attachments is done by the ``TransactionBuilder`` and how, when verifying the constraints and
 contracts, attachments are associated with their respective contracts.
 
-Implementations
----------------
+Implementations of AttachmentConstraint
+---------------------------------------
 
-There are three implementations of ``AttachmentConstraints`` with more planned in the future.
+There are three implementations of ``AttachmentConstraint`` with more planned in the future.
 
 ``AlwaysAcceptAttachmentConstraint``: Any attachment (except a missing one) will satisfy this constraint.
 
@@ -137,3 +140,18 @@ Full Nodes
 **********
 
 When testing against full nodes simply place your CorDapp into the cordapps directory of the node.
+
+Debugging
+---------
+If an attachment constraint cannot be resolved, a ``MissingContractAttachments`` exception is thrown. There are two
+common sources of ``MissingContractAttachments`` exceptions:
+
+Not setting CorDapp packages in tests
+*************************************
+You are running a test and have not specified the CorDapp packages to scan. See the instructions above.
+
+Wrong fully-qualified contract name
+***********************************
+You are specifying the fully-qualified name of the contract incorrectly. For example, you've defined ``MyContract`` in
+the package ``com.mycompany.myapp.contracts``, but the fully-qualified contract name you pass to the
+``TransactionBuilder`` is ``com.mycompany.myapp.MyContract`` (instead of ``com.mycompany.myapp.contracts.MyContract``).

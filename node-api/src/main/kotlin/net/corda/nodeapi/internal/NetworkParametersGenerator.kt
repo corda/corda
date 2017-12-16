@@ -41,8 +41,7 @@ class NetworkParametersGenerator {
                     minimumPlatformVersion = 1,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
-                    eventHorizon = 10000.days,
-                    maxMessageSize = 40000,
+                    maxMessageSize = 10485760,
                     maxTransactionSize = 40000,
                     epoch = 1
             ))

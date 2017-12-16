@@ -71,23 +71,19 @@ Fine grained permissions allow a user to invoke a specific RPC operation, or to 
 RPC security management
 -----------------------
 
-Hard coding user accounts in the ``rpcUsers`` field provides a quick way of allowing node's RPC to be accessed by a fixed
-set of authenticated users but has some obvious shortcomings. To support use cases aiming for higher security and flexibility,
-Corda RPC security system offers additional features such as:
+Setting ``rpcUsers`` provides a simple way of granting RPC permissions to a fixed set of users, but has some
+obvious shortcomings. To support use cases aiming for higher security and flexibility, Corda offers additional security
+features such as:
 
- * Fetching users credentials and permissions from external data source (e.g.: a remote RDBMS), with optional caching
-   in node memory. In particular, this allows user credentials and permissions externally to be updated externally without
-   requiring node's restart.
+ * Fetching users credentials and permissions from an external data source (e.g.: a remote RDBMS), with optional in-memory
+   caching. In particular, this allows credentials and permissions to be updated externally without requiring nodes to be
+   restarted.
  * Password stored in hash-encrypted form. This is regarded as must-have when security is a concern. Corda currently supports
-   a flexible password hash format conforming to the Modular Crypt Format and defined by the `Apache Shiro framework <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_
+   a flexible password hash format conforming to the Modular Crypt Format provided by the `Apache Shiro framework <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_
 
-These features are controlled by a set of options nested in the ``security`` field of a node configuration.
-
-.. warning:: The ``rpcUsers`` field is now deprecated in favour of the set the ``security`` config structure. A node
-   configuration specifying both ``rpcUsers`` and ``security`` fields will trigger an exception during node startup.
-
-The following example configuration points the node to a remote RDBMS storing hash-encrypted passwords and enable caching
-of user data in node's memory:
+These features are controlled by a set of options nested in the ``security`` field of ``node.conf``.
+The following example shows how to configure retrieval of users credentials and permissions from a remote database with
+passwords in hash-encrypted format and enable in-memory caching of users data:
 
 .. container:: codeset
 
@@ -114,8 +110,8 @@ of user data in node's memory:
             }
         }
 
-Moreover, for practical reasons, we can still have an hard-coded static list of users embedded in the ``security``
-structure like in the old ``rpcUsers`` format, by specifying a ``dataSource`` of ``INMEMORY`` type:
+It is also possible to have a static list of users embedded in the ``security`` structure by specifying a ``dataSource``
+of ``INMEMORY`` type:
 
 .. container:: codeset
 
@@ -137,33 +133,35 @@ structure like in the old ``rpcUsers`` format, by specifying a ``dataSource`` of
             }
         }
 
+.. warning:: A valid configuration cannot specify both the ``rpcUsers`` and ``security`` fields. Doing so will trigger
+   an exception at node startup.
+
 Authentication/authorisation data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``dataSource`` field defines the data provider supplying credentials and permissions for users. It currently exists
-in two forms, identified by the subfield ``type``:
+The ``dataSource`` structure defines the data provider supplying credentials and permissions for users. There exist two
+supported types of such data source, identified by the ``dataSource.type`` field:
 
- :INMEMORY: A list of user credentials and permissions hard-coded in configuration in the ``users`` field (see example above)
+ :INMEMORY: A static list of user credentials and permissions specified by the ``users`` field.
 
- :DB: An external RDBMS accessed via the JDBC connection described by ``connection``. The current implementation
-  expect the database to store data according to the following schema:
+ :DB: An external RDBMS accessed via the JDBC connection described by ``connection``. Note that, unlike the ``INMEMORY``
+  case, in a user database permissions are assigned to *roles* rather than individual users. The current implementation
+  expects the database to store data according to the following schema:
 
        - Table ``users`` containing columns ``username`` and ``password``. The ``username`` column *must have unique values*.
-       - Table ``user_roles`` containing columns ``username`` and ``role_name`` associating a user to a set of *roles*
+       - Table ``user_roles`` containing columns ``username`` and ``role_name`` associating a user to a set of *roles*.
        - Table ``roles_permissions`` containing columns ``role_name`` and ``permission`` associating a role to a set of
-         permission strings
+         permission strings.
 
-   Unlike the ``INMEMORY`` case, in the user database permissions are assigned to *roles* rather than individual users.
-
-  .. note:: There is no prescription on the SQL type of the columns (although our tests were conducted on ``username`` and
+  .. note:: There is no prescription on the SQL type of each column (although our tests were conducted on ``username`` and
     ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type). It is also possible to have extra columns
     in each table alongside the expected ones.
 
 Password encryption
 ^^^^^^^^^^^^^^^^^^^
 
-Storing passwords in plain text is discouraged in production environment where security is critical. Passwords are assumed
-to be in plain format by default, unless a different format is specified ny the ``passwordEncryption`` field, like:
+Storing passwords in plain text is discouraged in applications where security is critical. Passwords are assumed
+to be in plain format by default, unless a different format is specified by the ``passwordEncryption`` field, like:
 
 .. container:: codeset
 
@@ -173,13 +171,13 @@ to be in plain format by default, unless a different format is specified ny the 
 
 ``SHIRO_1_CRYPT`` identifies the `Apache Shiro fully reversible
 Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_,
-currently the only non-plain password hash-encryption format supported by Corda. Passwords can be hash-encrypted in this
-format using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
+it is currently the only non-plain password hash-encryption format supported. Hash-encrypted passwords in this
+format can be produced by using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
 
-Caching users data
-^^^^^^^^^^^^^^^^^^
+Caching user accounts data
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A cache layer on top of the external data source of users credentials and permissions can significantly benefit
+A cache layer on top of the external data source of users credentials and permissions can significantly improve
 performances in some cases, with the disadvantage of causing a (controllable) delay in picking up updates to the underlying data.
 Caching is disabled by default, it can be enabled by defining the ``options.cache`` field in ``security.authService``,
 for example:
@@ -196,7 +194,7 @@ for example:
         }
 
 This will enable a non-persistent cache contained in the node's memory with maximum number of entries set to ``maxEntries``
-with entries expiring and refreshed after ``expireAfterSecs`` number of seconds.
+where entries are expired and refreshed after ``expireAfterSecs`` seconds.
 
 Observables
 -----------

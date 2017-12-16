@@ -57,6 +57,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.internal.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -69,6 +70,7 @@ import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Files
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
@@ -82,6 +84,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.collections.set
 import kotlin.reflect.KClass
+import kotlin.streams.toList
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -135,11 +138,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected val networkMapClient: NetworkMapClient? by lazy {
-        configuration.compatibilityZoneURL?.let {
-            NetworkMapClient(it, services.identityService.trustRoot)
-        }
-    }
+    protected var networkMapClient: NetworkMapClient? = null
 
     lateinit var securityManager: RPCSecurityManager get
 
@@ -197,10 +196,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
-        readNetworkParameters()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
+        networkMapClient = configuration.compatibilityZoneURL?.let {
+            NetworkMapClient(it, identityService.trustRoot)
+        }
+        readNetworkParameters()
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
@@ -238,10 +240,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startShell(rpcOps)
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
-
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
-                networkMapClient)
+                networkMapClient,
+                networkParameters.serialize().hash)
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.updateNodeInfo(services.myInfo) {
@@ -636,10 +638,28 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun readNetworkParameters() {
-        val file = configuration.baseDirectory / "network-parameters"
-        networkParameters = file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
-        log.info(networkParameters.toString())
-        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
+        val files = Files.list(configuration.baseDirectory).filter { NETWORK_PARAMS_FILE_NAME == it.fileName.toString() }.toList()
+        val paramsFromFile = try {
+            // It's fine at this point if we don't have network parameters or have corrupted file, later we check if parameters can be downloaded from network map server.
+            files[0].readAll().deserialize<SignedData<NetworkParameters>>().verified()
+        } catch (t: Exception) {
+            log.warn("Couldn't find correct network parameters file in the base directory")
+            null
+        }
+        networkParameters = if (paramsFromFile != null) {
+            paramsFromFile
+        } else if (networkMapClient != null) {
+            log.info("Requesting network parameters from network map server...")
+            val (networkMap, _) = networkMapClient!!.getNetworkMap()
+            val signedParams = networkMapClient!!.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
+            val verifiedParams = signedParams.verified() // Verify before saving.
+            signedParams.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+            verifiedParams
+        } else {
+            throw IllegalArgumentException("Couldn't load network parameters file")
+        }
+        log.info("Loaded network parameters $networkParameters")
+        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node's platform version is lower than network's required minimumPlatformVersion" }
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {

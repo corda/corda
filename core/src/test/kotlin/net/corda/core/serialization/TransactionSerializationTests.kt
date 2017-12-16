@@ -106,7 +106,7 @@ class TransactionSerializationTests {
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)
-            val dummyServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
+            val dummyServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
             stx.copy(sigs = stx2.sigs).verifyRequiredSignatures()
@@ -124,8 +124,7 @@ class TransactionSerializationTests {
     @Test
     fun storeAndLoadWhenSigning() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
-        ptx.verifySignaturesExcept(notaryServices.key.public)
-
+        ptx.verifySignaturesExcept(DUMMY_NOTARY_KEY.public)
         val stored = ptx.serialize()
         val loaded = stored.deserialize()
 

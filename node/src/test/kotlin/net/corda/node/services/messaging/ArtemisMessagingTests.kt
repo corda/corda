@@ -5,16 +5,16 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
+import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.internal.configureDatabase
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
@@ -72,6 +72,7 @@ class ArtemisMessagingTests {
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+            doReturn(true).whenever(it).useAMQPBridges
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
@@ -163,7 +164,7 @@ class ArtemisMessagingTests {
         return Pair(messagingClient, receivedMessages)
     }
 
-    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1): P2PMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1, maxMessageSize: Int = MAX_MESSAGE_SIZE): P2PMessagingClient {
         return database.transaction {
             P2PMessagingClient(
                     config,
@@ -171,16 +172,16 @@ class ArtemisMessagingTests {
                     server,
                     identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
-                    database
-            ).apply {
+                    database,
+                    maxMessageSize = maxMessageSize).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }
         }
     }
 
-    private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager).apply {
+    private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager, maxMessageSize).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

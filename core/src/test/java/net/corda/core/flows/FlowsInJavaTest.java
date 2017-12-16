@@ -13,21 +13,22 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static java.util.Collections.emptyList;
 import static net.corda.testing.CoreTestUtils.singleIdentity;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 import static net.corda.testing.node.NodeTestUtils.startFlow;
 
 public class FlowsInJavaTest {
-    private final MockNetwork mockNet = new MockNetwork();
+    private final MockNetwork mockNet = new MockNetwork(emptyList());
     private StartedNode<MockNetwork.MockNode> aliceNode;
     private StartedNode<MockNetwork.MockNode> bobNode;
     private Party bob;
 
     @Before
     public void setUp() throws Exception {
-        aliceNode = mockNet.createPartyNode(TestConstants.getALICE_NAME());
-        bobNode = mockNet.createPartyNode(TestConstants.getBOB_NAME());
+        aliceNode = mockNet.createPartyNode(TestConstants.ALICE_NAME);
+        bobNode = mockNet.createPartyNode(TestConstants.BOB_NAME);
         bob = singleIdentity(bobNode.getInfo());
     }
 

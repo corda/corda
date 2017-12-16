@@ -127,6 +127,9 @@ UNRELEASED
 * Values for the ``database.transactionIsolationLevel`` config now follow the ``java.sql.Connection`` int constants but
   without the "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
 
+* Peer-to-peer communications is now via AMQP 1.0 as default.
+  Although the legacy Artemis CORE bridging can still be used by setting the ``useAMQPBridges`` configuration property to false.
+
 .. _changelog_v1:
 
 Release 1.0

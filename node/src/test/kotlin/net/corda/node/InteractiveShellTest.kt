@@ -52,7 +52,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = makeTestIdentityService(listOf(megaCorp.identity))
+    private val ids = makeTestIdentityService(megaCorp.identity)
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {

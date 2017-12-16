@@ -23,12 +23,13 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.node.VersionInfo
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
@@ -37,14 +38,14 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
-import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -73,13 +74,13 @@ data class MockNetworkParameters(
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         val defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode = MockNetwork::MockNode,
         val initialiseSerialization: Boolean = true,
-        val cordappPackages: List<String> = emptyList()) {
+        val notarySpecs: List<MockNetwork.NotarySpec> = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME))) {
     fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
     fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
     fun setDefaultFactory(defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode) = copy(defaultFactory = defaultFactory)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setCordappPackages(cordappPackages: List<String>) = copy(cordappPackages = cordappPackages)
+    fun setNotarySpecs(notarySpecs: List<MockNetwork.NotarySpec>) = copy(notarySpecs = notarySpecs)
 }
 
 /**
@@ -92,7 +93,8 @@ data class MockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {}) {
+        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val version: VersionInfo = MOCK_VERSION_INFO) {
     fun setForcedID(forcedID: Int?) = copy(forcedID = forcedID)
     fun setLegalName(legalName: CordaX500Name?) = copy(legalName = legalName)
     fun setEntropyRoot(entropyRoot: BigInteger) = copy(entropyRoot = entropyRoot)
@@ -103,7 +105,8 @@ data class MockNodeArgs(
         val config: NodeConfiguration,
         val network: MockNetwork,
         val id: Int,
-        val entropyRoot: BigInteger
+        val entropyRoot: BigInteger,
+        val version: VersionInfo = MOCK_VERSION_INFO
 )
 
 /**
@@ -122,16 +125,17 @@ data class MockNodeArgs(
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+class MockNetwork(private val cordappPackages: List<String>,
+                  defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                   private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                   private val threadPerNode: Boolean = defaultParameters.threadPerNode,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                  private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
+                  private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
-    constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
@@ -149,9 +153,13 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val networkId = random63BitValue()
     private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    private val serializationEnv = try {
+        setGlobalSerialization(initialiseSerialization)
+    } catch (e: IllegalStateException) {
+        throw IllegalStateException("Using more than one MockNetwork simultaneously is not supported.", e)
+    }
     private val sharedUserCount = AtomicInteger(0)
-    /** A read only view of the current set of executing nodes. */
+    /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
 
     /**
@@ -242,7 +250,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     open class MockNode(args: MockNodeArgs) : AbstractNode(
             args.config,
             TestClock(Clock.systemUTC()),
-            MOCK_VERSION_INFO,
+            args.version,
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch
     ) {
@@ -393,7 +401,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
         _nodes += node
         if (start) {
             node.start()
@@ -494,5 +502,6 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
+        doReturn(true).whenever(it).useAMQPBridges
     }
 }

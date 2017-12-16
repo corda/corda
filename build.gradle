@@ -20,7 +20,21 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '0.5.3'
-    ext.artemis_version = '2.4.0'
+
+    /*
+     * TODO Upgrade to version 2.4 for large message streaming support
+     *
+     * Due to a memory leak in the connection handling code in Artemis, we are
+     * temporarily downgrading to version 2.2.0.
+     *
+     * The memory leak essentially triggers an out-of-memory exception within
+     * less than 10 seconds and can take down a node if a non-TLS connection is
+     * attempted against the P2P port.
+     *
+     * The issue has been reported to upstream:
+     * https://issues.apache.org/jira/browse/ARTEMIS-1559
+     */
+    ext.artemis_version = '2.2.0'
     ext.jackson_version = '2.9.2'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'

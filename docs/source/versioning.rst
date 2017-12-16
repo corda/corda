@@ -32,8 +32,8 @@ Flow versioning
 ---------------
 
 In addition to the evolution of the platform, flows that run on top of the platform can also evolve. It may be that the
-flow protocol between an initiating flow and it's intiated flow changes from one CorDapp release to the next in such as
-way to be backwards incompatible with existing flows. For example, if a sequence of sends and receives needs to change
+flow protocol between an initiating flow and its initiated flow changes from one CorDapp release to the next in such a
+way to be backward incompatible with existing flows. For example, if a sequence of sends and receives needs to change
 or if the semantics of a particular receive changes.
 
 The ``InitiatingFlow`` annotation (see :doc:`flow-state-machine` for more information on the flow annotations) has a ``version``
