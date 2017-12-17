@@ -100,7 +100,7 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(val configuration: NodeConfiguration,
-                            val platformClock: Clock,
+                            val platformClock: CordaClock,
                             protected val versionInfo: VersionInfo,
                             protected val cordappLoader: CordappLoader,
                             private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {

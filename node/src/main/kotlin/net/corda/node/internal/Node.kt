@@ -2,7 +2,6 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -67,7 +66,7 @@ open class Node(configuration: NodeConfiguration,
             exitProcess(1)
         }
 
-        private fun createClock(configuration: NodeConfiguration): Clock {
+        private fun createClock(configuration: NodeConfiguration): CordaClock {
             return (if (configuration.useTestClock) ::DemoClock else ::SimpleClock)(Clock.systemUTC())
         }
 

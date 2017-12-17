@@ -20,6 +20,7 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.node.internal.CordaClock
 import net.corda.node.internal.MutableClock
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.SchedulerService
@@ -55,7 +56,7 @@ import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
  * activity.  Only replace this for unit testing purposes.  This is not the executor the [FlowLogic] is launched on.
  */
 @ThreadSafe
-class NodeSchedulerService(private val clock: Clock,
+class NodeSchedulerService(private val clock: CordaClock,
                            private val database: CordaPersistence,
                            private val flowStarter: FlowStarter,
                            private val stateLoader: StateLoader,
@@ -79,16 +80,12 @@ class NodeSchedulerService(private val clock: Clock,
         @Suspendable
         @VisibleForTesting
                 // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
-        fun awaitWithDeadline(clock: Clock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
+        fun awaitWithDeadline(clock: CordaClock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
             var nanos: Long
             do {
                 val originalFutureCompleted = makeStrandFriendlySettableFuture(future)
-                val subscription = if (clock is MutableClock) {
-                    clock.mutations.first().subscribe {
-                        originalFutureCompleted.set(false)
-                    }
-                } else {
-                    null
+                val subscription = clock.mutations.first().subscribe {
+                    originalFutureCompleted.set(false)
                 }
                 nanos = (clock.instant() until deadline).toNanos()
                 if (nanos > 0) {
@@ -103,7 +100,7 @@ class NodeSchedulerService(private val clock: Clock,
                         // No need to take action as will fall out of the loop due to future.isDone
                     }
                 }
-                subscription?.unsubscribe()
+                subscription.unsubscribe()
                 originalFutureCompleted.cancel(false)
             } while (nanos > 0 && !future.isDone)
             return future.isDone
