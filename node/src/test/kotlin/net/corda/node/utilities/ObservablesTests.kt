@@ -6,7 +6,7 @@ import net.corda.core.internal.tee
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test

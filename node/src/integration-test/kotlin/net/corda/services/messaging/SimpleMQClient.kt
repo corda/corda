@@ -1,4 +1,4 @@
-package net.corda.testing.messaging
+package net.corda.services.messaging
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal.nodeSerializationEnv

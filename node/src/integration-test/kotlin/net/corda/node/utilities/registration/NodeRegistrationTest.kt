@@ -18,7 +18,7 @@ import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.internalDriver
-import net.corda.testing.node.network.NetworkMapServer
+import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest

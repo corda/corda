@@ -3,7 +3,7 @@ package net.corda.demobench.pty
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test

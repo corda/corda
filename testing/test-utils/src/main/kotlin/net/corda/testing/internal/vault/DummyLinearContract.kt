@@ -1,4 +1,4 @@
-package net.corda.testing.contracts
+package net.corda.testing.internal.vault
 
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.LinearState
@@ -10,12 +10,10 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
-import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
 
-const val DUMMY_LINEAR_CONTRACT_PROGRAM_ID = "net.corda.testing.contracts.DummyLinearContract"
+const val DUMMY_LINEAR_CONTRACT_PROGRAM_ID = "net.corda.testing.internal.vault.DummyLinearContract"
 
 class DummyLinearContract : Contract {
     override fun verify(tx: LedgerTransaction) {

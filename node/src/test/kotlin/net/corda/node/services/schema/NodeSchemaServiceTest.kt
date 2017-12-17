@@ -12,7 +12,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Test

@@ -18,7 +18,11 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.*
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
-import net.corda.testing.contracts.VaultFiller
+import net.corda.testing.dsl.EnforceVerifyOrFail
+import net.corda.testing.dsl.TransactionDSL
+import net.corda.testing.dsl.TransactionDSLInterpreter
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.ledger

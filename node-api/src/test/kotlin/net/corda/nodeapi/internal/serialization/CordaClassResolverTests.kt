@@ -13,7 +13,7 @@ import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException

@@ -26,11 +26,14 @@ import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
-import net.corda.testing.contracts.*
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*

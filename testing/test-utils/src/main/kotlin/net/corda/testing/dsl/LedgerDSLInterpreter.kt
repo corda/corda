@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.dsl
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef

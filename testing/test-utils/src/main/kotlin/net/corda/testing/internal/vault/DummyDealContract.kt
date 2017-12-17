@@ -1,4 +1,4 @@
-package net.corda.testing.contracts
+package net.corda.testing.internal.vault
 
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.UniqueIdentifier
@@ -10,9 +10,8 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
-import net.corda.testing.schemas.DummyDealStateSchemaV1
 
-val DUMMY_DEAL_PROGRAM_ID = "net.corda.testing.contracts.DummyDealContract"
+val DUMMY_DEAL_PROGRAM_ID = "net.corda.testing.internal.vault.DummyDealContract"
 
 class DummyDealContract : Contract {
     override fun verify(tx: LedgerTransaction) {}

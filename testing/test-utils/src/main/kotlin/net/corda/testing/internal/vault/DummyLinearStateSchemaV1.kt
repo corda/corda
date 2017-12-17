@@ -1,4 +1,4 @@
-package net.corda.testing.schemas
+package net.corda.testing.internal.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
