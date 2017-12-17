@@ -26,7 +26,7 @@ import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.withoutTestSerialization
 import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

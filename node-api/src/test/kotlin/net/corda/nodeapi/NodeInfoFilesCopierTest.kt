@@ -2,7 +2,6 @@ package net.corda.nodeapi
 
 import net.corda.cordform.CordformNode
 import net.corda.nodeapi.internal.NodeInfoFilesCopier
-import net.corda.testing.eventually
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

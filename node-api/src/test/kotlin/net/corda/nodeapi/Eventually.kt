@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.nodeapi
 
 import java.time.Duration
 

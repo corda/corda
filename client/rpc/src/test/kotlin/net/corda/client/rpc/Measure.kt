@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.client.rpc
 
 import net.corda.core.internal.uncheckedCast
 import kotlin.reflect.KCallable
