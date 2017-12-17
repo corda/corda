@@ -14,10 +14,12 @@ data class NotarySpec(
 )
 
 @DoNotImplement
-sealed class ClusterSpec {
+abstract class ClusterSpec {
     abstract val clusterSize: Int
 
-    data class Raft(override val clusterSize: Int) : ClusterSpec() {
+    data class Raft(
+            override val clusterSize: Int
+    ) : ClusterSpec() {
         init {
             require(clusterSize > 0)
         }
