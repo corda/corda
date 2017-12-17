@@ -3572,7 +3572,3 @@ public @interface net.corda.client.rpc.RPCSinceVersion
 public final class net.corda.client.rpc.UtilsKt extends java.lang.Object
   public static final void notUsed(rx.Observable)
 ##
-public abstract class net.corda.testing.TestDependencyInjectionBase extends java.lang.Object
-  public <init>()
-  @org.junit.Rule @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public final net.corda.testing.SerializationEnvironmentRule testSerialization
-##
