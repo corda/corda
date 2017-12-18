@@ -7,8 +7,8 @@ import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.SerializationEnvironmentRule
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.junit.Rule
@@ -62,7 +62,6 @@ abstract class TestBase {
         return NetworkParameters(
                 minimumPlatformVersion = minimumPlatformVersion,
                 notaries = notaries,
-                eventHorizon = eventHorizon,
                 maxMessageSize = maxMessageSize,
                 maxTransactionSize = maxTransactionSize,
                 modifiedTime = modifiedTime,

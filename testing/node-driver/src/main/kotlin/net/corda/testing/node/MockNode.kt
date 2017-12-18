@@ -398,7 +398,7 @@ class MockNetwork(private val cordappPackages: List<String>,
         val config = mockNodeConfiguration().also {
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
-            doReturn(makeTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
             parameters.configOverrides(it)
         }
@@ -503,6 +503,5 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doReturn(true).whenever(it).useAMQPBridges
-        doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
     }
 }

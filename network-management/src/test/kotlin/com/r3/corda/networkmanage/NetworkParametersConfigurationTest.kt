@@ -17,7 +17,6 @@ class NetworkParametersConfigurationTest {
     fun `reads an existing file`() {
         val networkParameters = parseNetworkParametersFrom(validOverrideNetworkConfigPath)
         assertThat(networkParameters.minimumPlatformVersion).isEqualTo(1)
-        assertThat(networkParameters.eventHorizon).isEqualTo(100.days)
         val notaries = networkParameters.notaries
         assertThat(notaries).hasSize(2)
         assertThat(notaries[0].validating).isTrue()

@@ -19,10 +19,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.NetworkMap
-import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.testing.SerializationEnvironmentRule
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
@@ -82,7 +82,7 @@ class NodeInfoWebServiceTest {
             val conn = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}").openConnection() as HttpURLConnection
             val signedNetworkMap = conn.inputStream.readBytes().deserialize<SignedNetworkMap>()
             verify(networkMapStorage, times(1)).getCurrentNetworkMap()
-            assertEquals(signedNetworkMap.verified(), networkMap)
+            assertEquals(signedNetworkMap.verified(rootCACert.cert), networkMap)
         }
     }
 

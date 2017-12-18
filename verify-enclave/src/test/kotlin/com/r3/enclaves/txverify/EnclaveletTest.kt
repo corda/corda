@@ -32,17 +32,16 @@ class EnclaveletTest {
         val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
-        val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).publicKey
+        val MEGA_CORP_PUBKEY get() = megaCorp.keyPair.public
+        val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).keyPair.public
     }
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private val identityService = rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }
-    private val ledgerServices = MockServices(emptyList(), identityService, MEGA_CORP.name)
+    }, MEGA_CORP.name)
 
     @Ignore("Pending Gradle bug: https://github.com/gradle/gradle/issues/2657")
     @Test

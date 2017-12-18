@@ -11,10 +11,10 @@ import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.NetworkMap
-import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -58,7 +58,7 @@ class NetworkMapSignerTest : TestBase() {
         verify(networkMapStorage).getLatestNetworkParameters()
         argumentCaptor<SignedNetworkMap>().apply {
             verify(networkMapStorage).saveNetworkMap(capture())
-            val networkMap = firstValue.verified()
+            val networkMap = firstValue.verified(rootCACert.cert)
             assertEquals(networkMapParameters.serialize().hash, networkMap.networkParameterHash)
             assertEquals(signedNodeInfoHashes.size, networkMap.nodeInfoHashes.size)
             assertTrue(networkMap.nodeInfoHashes.containsAll(signedNodeInfoHashes))
@@ -104,7 +104,7 @@ class NetworkMapSignerTest : TestBase() {
         verify(networkMapStorage).getLatestNetworkParameters()
         argumentCaptor<SignedNetworkMap>().apply {
             verify(networkMapStorage).saveNetworkMap(capture())
-            val networkMap = firstValue.verified()
+            val networkMap = firstValue.verified(rootCACert.cert)
             assertEquals(networkMapParameters.serialize().hash, networkMap.networkParameterHash)
         }
     }

@@ -46,10 +46,8 @@ import java.util.stream.StreamSupport;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.testing.TestConstants.*;
 import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
-import static net.corda.testing.TestConstants.BOC_NAME;
-import static net.corda.testing.TestConstants.CHARLIE_NAME;
-import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,7 +72,8 @@ public class VaultQueryJavaTests {
                 "net.corda.testing.internal.vault",
                 "net.corda.finance.contracts.asset",
                 CashSchemaV1.class.getPackage().getName(),
-                DummyLinearStateSchemaV1.class.getPackage().getName());
+                DummyLinearStateSchemaV1.class.getPackage().getName()
+        );
         IdentityServiceInternal identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,

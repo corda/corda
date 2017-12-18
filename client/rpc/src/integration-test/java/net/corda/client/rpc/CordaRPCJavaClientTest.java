@@ -63,8 +63,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    public void setUp() throws ExecutionException, InterruptedException {
         node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
