@@ -28,22 +28,26 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
      * Intermediate CA (Doorman service).
      */
     INTERMEDIATE_CA(setOf(null), false, false),
-    /** Well known (publicly visible) identity of a service such as the notary or network map */
+    /** Signing certificate for the network map. */
     NETWORK_MAP(setOf(null), false, false),
-    /** Well known (publicly visible) identity of a service such as the notary or network map */
+    /** Well known (publicly visible) identity of a service (such as notary). */
     SERVICE_IDENTITY(setOf(INTERMEDIATE_CA), true, true),
     /** Node level CA from which the TLS and well known identity certificates are issued. */
     NODE_CA(setOf(INTERMEDIATE_CA), false, false),
-    /** Transport layer security certificate for a node */
+    /** Transport layer security certificate for a node. */
     TLS(setOf(NODE_CA), false, false),
-    /** Well known (publicly visible) identity of a legal entity */
+    /** Well known (publicly visible) identity of a legal entity. */
     LEGAL_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
-    /** Confidential (limited visibility) identity */
+    /** Confidential (limited visibility) identity of a legal entity. */
     CONFIDENTIAL_LEGAL_IDENTITY(setOf(LEGAL_IDENTITY), true, false);
 
     companion object {
         private var cachedRoles: Array<CertRole>? = null
-        @Throws(IllegalArgumentException::class)
+        /**
+         * Get a role from its ASN.1 encoded form.
+         *
+         * @throws IllegalArgumentException if the encoded data is not a valid role.
+         */
         fun getInstance(id: ASN1Integer): CertRole {
             if (cachedRoles == null) {
                 cachedRoles = CertRole.values()
@@ -51,16 +55,28 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
             val idVal = id.value
             require(idVal.compareTo(BigInteger.ZERO) > 0) { "Invalid role ID" }
             return try {
-                val ordinal =idVal.intValueExact() - 1
+                val ordinal = idVal.intValueExact() - 1
                 cachedRoles!![ordinal]
-            } catch(ex: ArithmeticException) {
+            } catch (ex: ArithmeticException) {
                 throw IllegalArgumentException("Invalid role ID")
-            } catch(ex: ArrayIndexOutOfBoundsException) {
+            } catch (ex: ArrayIndexOutOfBoundsException) {
                 throw IllegalArgumentException("Invalid role ID")
             }
         }
-        fun getInstance(data: ByteArray): CertRole? = getInstance(ASN1Integer.getInstance(data))
 
+        /**
+         * Get a role from its ASN.1 encoded form.
+         *
+         * @throws IllegalArgumentException if the encoded data is not a valid role.
+         */
+        fun getInstance(data: ByteArray): CertRole = getInstance(ASN1Integer.getInstance(data))
+
+        /**
+         * Get a role from a certificate.
+         *
+         * @return the role if the extension is present, or null otherwise.
+         * @throws IllegalArgumentException if the extension is present but is invalid.
+         */
         fun extract(cert: Certificate): CertRole? {
             val x509Cert = cert as? X509Certificate
             return if (x509Cert != null) {
@@ -70,6 +86,12 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
             }
         }
 
+        /**
+         * Get a role from a certificate.
+         *
+         * @return the role if the extension is present, or null otherwise.
+         * @throws IllegalArgumentException if the extension is present but is invalid.
+         */
         fun extract(cert: X509Certificate): CertRole? {
             val extensionData: ByteArray? = cert.getExtensionValue(CordaOID.X509_EXTENSION_CORDA_ROLE)
             return if (extensionData != null) {

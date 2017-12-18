@@ -42,7 +42,8 @@ class PartyAndCertificate(val certPath: CertPath) {
         val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = false }
         val validator = CertPathValidator.getInstance("PKIX")
         val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
-        // Apply Corda-specific validity rules to the chain
+        // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
+        // an all-null chain is in theory valid.
         var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)
         for (certIdx in (0 until certPath.certificates.size).reversed()) {
             val certificate = certPath.certificates[certIdx]

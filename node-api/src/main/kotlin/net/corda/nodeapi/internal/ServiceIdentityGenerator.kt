@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -10,7 +9,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.crypto.*
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.cert.X509Certificate
