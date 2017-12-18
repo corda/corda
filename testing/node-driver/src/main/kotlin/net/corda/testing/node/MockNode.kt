@@ -9,6 +9,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
@@ -124,15 +125,14 @@ data class MockNodeArgs(
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-class MockNetwork(private val cordappPackages: List<String>,
-                  defaultParameters: MockNetworkParameters = MockNetworkParameters(),
-                  private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
-                  private val threadPerNode: Boolean = defaultParameters.threadPerNode,
-                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-                  private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
-                  initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                  private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
-                  createNotaries: MockNetwork.() -> List<StartedNode<MockNode>> = MockNetwork.Companion::createNotariesImpl) {
+open class MockNetwork(private val cordappPackages: List<String>,
+                       defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+                       private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+                       private val threadPerNode: Boolean = defaultParameters.threadPerNode,
+                       servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+                       private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
+                       initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                       private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
@@ -227,7 +227,8 @@ class MockNetwork(private val cordappPackages: List<String>,
             val notaryInfos = generateNotaryIdentities()
             // The network parameters must be serialised before starting any of the nodes
             networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
-            notaryNodes = this.createNotaries()
+            @Suppress("LeakingThis")
+            notaryNodes = createNotaries()
         } catch (t: Throwable) {
             stopNodes()
             throw t
@@ -244,13 +245,12 @@ class MockNetwork(private val cordappPackages: List<String>,
         }
     }
 
-    companion object {
-        private fun createNotariesImpl(mockNet: MockNetwork): List<StartedNode<MockNode>> {
-            return mockNet.notarySpecs.map { spec ->
-                mockNet.createNode(MockNodeParameters(legalName = spec.name, configOverrides = {
-                    doReturn(NotaryConfig(spec.validating)).whenever(it).notary
-                }))
-            }
+    @VisibleForTesting
+    internal open fun createNotaries(): List<StartedNode<MockNode>> {
+        return notarySpecs.map { spec ->
+            createNode(MockNodeParameters(legalName = spec.name, configOverrides = {
+                doReturn(NotaryConfig(spec.validating)).whenever(it).notary
+            }))
         }
     }
 
