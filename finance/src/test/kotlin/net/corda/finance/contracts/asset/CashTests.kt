@@ -103,7 +103,7 @@ class CashTests {
         }, MINI_CORP.name, MINI_CORP_KEY)
         val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts.asset"),
+                listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(CordaX500Name("Me", "London", "GB")))
         database = databaseAndServices.first

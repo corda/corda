@@ -270,7 +270,7 @@ class CommercialPaperTestsGeneric {
     @Test
     fun `issue move and then redeem`() {
         val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts"),
+                listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(MEGA_CORP.name, ALICE_KEY))
         val databaseAlice = aliceDatabaseAndServices.first
@@ -282,7 +282,7 @@ class CommercialPaperTestsGeneric {
             aliceVaultService = aliceServices.vaultService
         }
         val bigCorpDatabaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts"),
+                listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(MEGA_CORP.name, BIG_CORP_KEY))
         val databaseBigCorp = bigCorpDatabaseAndServices.first
