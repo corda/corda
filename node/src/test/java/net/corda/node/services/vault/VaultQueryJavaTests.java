@@ -25,6 +25,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;
 import net.corda.testing.TestIdentity;
 import net.corda.testing.internal.vault.DummyLinearContract;
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1;
 import net.corda.testing.internal.vault.VaultFiller;
 import net.corda.testing.node.MockServices;
 import org.junit.After;

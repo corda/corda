@@ -17,9 +17,9 @@ import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.TestIdentity
 import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import net.corda.testing.rigorousMock
 import org.junit.Ignore
 import org.junit.Test
 import java.math.BigInteger
@@ -34,13 +34,14 @@ class NativeSgxApiTest {
         val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
-        val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+        val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).publicKey
     }
 
-    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
-        doReturn(NativeSgxApiTest.MEGA_CORP).whenever(it).partyFromKey(NativeSgxApiTest.MEGA_CORP_PUBKEY)
-    }, NativeSgxApiTest.MEGA_CORP.name)
+    private val identityService = rigorousMock<IdentityServiceInternal>().also {
+        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+    }
+    private val ledgerServices = MockServices(emptyList(), identityService, MEGA_CORP.name)
 
     @Ignore("The SGX code is not part of the standard build yet")
     @Test

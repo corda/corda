@@ -11,7 +11,6 @@ import com.r3.corda.enterprise.perftestcordapp.utils.sumCashOrNull
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashOrZero
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -28,6 +27,11 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.dsl.EnforceVerifyOrFail
+import net.corda.testing.dsl.TransactionDSL
+import net.corda.testing.dsl.TransactionDSLInterpreter
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.ledger
@@ -77,27 +81,27 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
 class CashTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
-        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).pubkey
+        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).publicKey
         val charlie = TestIdentity(CHARLIE_NAME, 90)
         val DUMMY_CASH_ISSUER_IDENTITY = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).identity
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
         val CHARLIE get() = charlie.party
         val CHARLIE_IDENTITY get() = charlie.identity
         val DUMMY_NOTARY get() = dummyNotary.party
         val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
-        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
         val MEGA_CORP get() = megaCorp.party
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_KEY get() = megaCorp.key
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
         val MINI_CORP_IDENTITY get() = miniCorp.identity
-        val MINI_CORP_KEY get() = miniCorp.key
-        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        val MINI_CORP_KEY get() = miniCorp.keyPair
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Rule
@@ -133,22 +137,15 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(
-                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
-                rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(
-                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
-                rigorousMock<IdentityServiceInternal>().also {
-                    doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
-                }, MINI_CORP.name, MINI_CORP_KEY)
-        val notaryServices = MockServices(
-                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
-                rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock<IdentityServiceInternal>().also {
+            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
+        }, MINI_CORP.name, MINI_CORP_KEY)
+        val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
-                initialIdentityName = CordaX500Name(organisation = "Me", locality = "London", country = "GB"),
-                keys = listOf(generateKeyPair()),
-                identityService = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)))
+                listOf("net.corda.finance.contracts.asset"),
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
+                TestIdentity(CordaX500Name("Me", "London", "GB")))
         database = databaseAndServices.first
         ourServices = databaseAndServices.second
 
@@ -184,7 +181,7 @@ class CashTests {
     }
 
     private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-        MockServices(rigorousMock<IdentityServiceInternal>().also {
+        MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
             doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
@@ -882,7 +879,7 @@ class CashTests {
                 transaction {
                     attachment(Cash.PROGRAM_ID)
                     input("MEGA_CORP cash")
-                    // We send it to another pubkey so that the transaction is not identical to the previous one
+                    // We send it to another publicKey so that the transaction is not identical to the previous one
                     output(Cash.PROGRAM_ID, "MEGA_CORP cash 3", "MEGA_CORP cash".output<Cash.State>().copy(owner = ALICE))
                     command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                     this.verifies()
