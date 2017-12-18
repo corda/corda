@@ -191,7 +191,6 @@ open class NodeStartup(val args: Array<String>) {
         NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
     }
 
-    @Throws(ConfigException::class)
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
     open protected fun banJavaSerialisation(conf: NodeConfiguration) {

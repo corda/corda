@@ -74,7 +74,6 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean) {
-    @Throws(ConfigException::class)
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
         if (isRegistration) {
