@@ -6,10 +6,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -55,11 +55,12 @@ fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val custom: Boolean = false
+                        val custom: Boolean = false,
+                        val mysql: Properties? = null
 ) {
     init {
-        require(raft == null || bftSMaRt == null || !custom) {
-            "raft, bftSMaRt, and custom configs cannot be specified together"
+        require(raft == null || bftSMaRt == null || !custom || mysql == null) {
+            "raft, bftSMaRt, custom, and mysql configs cannot be specified together"
         }
     }
     val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
