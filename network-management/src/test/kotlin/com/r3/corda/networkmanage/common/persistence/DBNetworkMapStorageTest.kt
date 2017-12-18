@@ -81,7 +81,7 @@ class DBNetworkMapStorageTest : TestBase() {
         val persistedSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
 
         assertEquals(signedNetworkMap.signature, persistedSignedNetworkMap?.signature)
-        assertEquals(signedNetworkMap.verified(), persistedSignedNetworkMap?.verified())
+        assertEquals(signedNetworkMap.verified(rootCACert.cert), persistedSignedNetworkMap?.verified(rootCACert.cert))
     }
 
     @Test

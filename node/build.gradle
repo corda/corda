@@ -127,6 +127,8 @@ dependencies {
     compile "org.postgresql:postgresql:$postgresql_version"
     //For Azure SQL and SQL Server support in persistence
     compile 'com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8'
+    // For the MySQLUniquenessProvider
+    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.5.1"

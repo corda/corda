@@ -15,10 +15,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.IntegrationTest
-import net.corda.testing.IntegrationTestSchemas
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
@@ -27,7 +26,6 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
-import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -42,11 +40,7 @@ import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
-class NodeRegistrationTest : IntegrationTest() {
-    companion object {
-        @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas("Alice")
-    }
+class NodeRegistrationTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)

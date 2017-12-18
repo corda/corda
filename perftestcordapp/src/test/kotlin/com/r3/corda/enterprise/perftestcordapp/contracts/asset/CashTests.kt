@@ -137,13 +137,19 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
-        }, MINI_CORP.name, MINI_CORP_KEY)
-        val notaryServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-        val databaseAndServices = makeTestDatabaseAndMockServices(
+        megaCorpServices = MockServices(
                 listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        miniCorpServices = MockServices(
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                rigorousMock<IdentityServiceInternal>().also {
+                    doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
+                }, MINI_CORP.name, MINI_CORP_KEY)
+        val notaryServices = MockServices(
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        val databaseAndServices = makeTestDatabaseAndMockServices(
+                listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(CordaX500Name("Me", "London", "GB")))
         database = databaseAndServices.first
@@ -879,7 +885,7 @@ class CashTests {
                 transaction {
                     attachment(Cash.PROGRAM_ID)
                     input("MEGA_CORP cash")
-                    // We send it to another publicKey so that the transaction is not identical to the previous one
+                    // We send it to another pubkey so that the transaction is not identical to the previous one
                     output(Cash.PROGRAM_ID, "MEGA_CORP cash 3", "MEGA_CORP cash".output<Cash.State>().copy(owner = ALICE))
                     command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                     this.verifies()

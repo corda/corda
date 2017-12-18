@@ -1,9 +1,6 @@
 package com.r3.corda.networkmanage.hsm
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
@@ -17,9 +14,11 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.crypto.*
@@ -28,7 +27,7 @@ import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.CHARLIE_NAME
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.node.testNodeConfiguration
+import net.corda.testing.internal.rigorousMock
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.h2.tools.Server
@@ -101,14 +100,12 @@ class SigningServiceIntegrationTest {
 
         NetworkManagementServer().use { server ->
             server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)
+            val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.
-            val config = testNodeConfiguration(
-                    baseDirectory = tempFolder.root.toPath(),
-                    myLegalName = ALICE_NAME).also {
-                val doormanHostAndPort = server.hostAndPort
-                whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
+            val config = createConfig().also {
+                doReturn(ALICE_NAME).whenever(it).myLegalName
+                doReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}")).whenever(it).compatibilityZoneURL
             }
-
             val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties()))
 
             val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
@@ -149,6 +146,7 @@ class SigningServiceIntegrationTest {
      * The split is done due to the limited console support while executing tests and inability to capture user's input there.
      *
      */
+    @Ignore
     @Test
     fun `DEMO - Create CSR and poll`() {
         //Start doorman server
@@ -162,21 +160,39 @@ class SigningServiceIntegrationTest {
             }
 
             // Start Corda network registration.
-            (1..3).map {
+            (1..3).map { num ->
                 thread(start = true) {
-                    val config = testNodeConfiguration(
-                            baseDirectory = tempFolder.root.toPath(),
-                            myLegalName = when (it) {
-                                1 -> ALICE_NAME
-                                2 -> BOB_NAME
-                                3 -> CHARLIE_NAME
-                                else -> throw IllegalArgumentException("Unrecognised option")
-                            }).also {
-                        whenever(it.compatibilityZoneURL).thenReturn(URL("http://$HOST:${server.hostAndPort.port}"))
+                    // Start Corda network registration.
+                    val config = createConfig().also {
+                        doReturn(when (num) {
+                            1 -> ALICE_NAME
+                            2 -> BOB_NAME
+                            3 -> CHARLIE_NAME
+                            else -> throw IllegalArgumentException("Unrecognised option")
+                        }).whenever(it).myLegalName
+                        doReturn(URL("http://$HOST:${server.hostAndPort.port}")).whenever(it).compatibilityZoneURL
+                    }
+                    config.trustStoreFile.parent.createDirectories()
+                    loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
+                        it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
+                        it.save(config.trustStoreFile, config.trustStorePassword)
                     }
                     NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
                 }
             }.map { it.join() }
+        }
+    }
+
+    fun createConfig(): NodeConfiguration {
+        return rigorousMock<NodeConfiguration>().also {
+            doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
+            doReturn(it.baseDirectory / "certificates").whenever(it).certificatesDirectory
+            doReturn(it.certificatesDirectory / "truststore.jks").whenever(it).trustStoreFile
+            doReturn(it.certificatesDirectory / "nodekeystore.jks").whenever(it).nodeKeystore
+            doReturn(it.certificatesDirectory / "sslkeystore.jks").whenever(it).sslKeystore
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn("iTest@R3.com").whenever(it).emailAddress
         }
     }
 }

@@ -6,11 +6,9 @@ import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import net.corda.testing.node.startFlow
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.*
 
-@Ignore
 class SwapIdentitiesFlowTests {
     private lateinit var mockNet: MockNetwork
 

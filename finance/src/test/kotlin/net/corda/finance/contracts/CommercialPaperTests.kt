@@ -15,7 +15,9 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.asset.*
+import net.corda.finance.contracts.asset.CASH
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.STATE
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.dsl.EnforceVerifyOrFail

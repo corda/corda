@@ -1,6 +1,9 @@
 package net.corda.node.services.vault
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -42,7 +45,7 @@ import kotlin.test.fail
 class VaultWithCashTest {
     private companion object {
         private val cordappPackages = listOf(
-                "net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName)
+                "net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName)
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)

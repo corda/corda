@@ -697,14 +697,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
-            if (raft != null) {
-                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
-                (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
-            } else if (bftSMaRt != null) {
-                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
-                BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
-            } else {
-                (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
+            when {
+                raft != null -> {
+                    val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
+                    (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
+                }
+                bftSMaRt != null -> {
+                    if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
+                    BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
+                }
+                mysql != null -> {
+                    (if (validating) ::MySQLValidatingNotaryService else ::MySQLNonValidatingNotaryService)(services, notaryKey, mysql, configuration.devMode)
+                }
+                else -> (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
             }
         }
     }
@@ -754,7 +759,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             Pair("identity", myLegalName)
         } else {
             val notaryId = notaryConfig.run {
-                NotaryService.constructId(validating, raft != null, bftSMaRt != null, custom)
+                NotaryService.constructId(validating, raft != null, bftSMaRt != null, custom, mysql != null)
             }
             // The node is part of a distributed notary whose identity must already be generated beforehand.
             Pair(notaryId, null)

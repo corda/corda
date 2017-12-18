@@ -6,7 +6,6 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
    * The previous design was never intended to be final but was rather a quick implementation in the earliest days of the
