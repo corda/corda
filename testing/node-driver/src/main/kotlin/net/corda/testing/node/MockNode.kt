@@ -9,6 +9,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
@@ -124,14 +125,14 @@ data class MockNodeArgs(
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-class MockNetwork(private val cordappPackages: List<String>,
-                  defaultParameters: MockNetworkParameters = MockNetworkParameters(),
-                  private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
-                  private val threadPerNode: Boolean = defaultParameters.threadPerNode,
-                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-                  private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
-                  initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                  private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
+open class MockNetwork(private val cordappPackages: List<String>,
+                       defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+                       private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+                       private val threadPerNode: Boolean = defaultParameters.threadPerNode,
+                       servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+                       private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
+                       initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                       private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
@@ -140,7 +141,7 @@ class MockNetwork(private val cordappPackages: List<String>,
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
-        SecurityUtils.setAPrioriDisabledProvider("BC", true)
+        SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
     }
 
     var nextNodeId = 0
@@ -221,11 +222,17 @@ class MockNetwork(private val cordappPackages: List<String>,
     }
 
     init {
-        filesystem.getPath("/nodes").createDirectory()
-        val notaryInfos = generateNotaryIdentities()
-        // The network parameters must be serialised before starting any of the nodes
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
-        notaryNodes = createNotaries()
+        try {
+            filesystem.getPath("/nodes").createDirectory()
+            val notaryInfos = generateNotaryIdentities()
+            // The network parameters must be serialised before starting any of the nodes
+            networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+            @Suppress("LeakingThis")
+            notaryNodes = createNotaries()
+        } catch (t: Throwable) {
+            stopNodes()
+            throw t
+        }
     }
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
@@ -238,7 +245,8 @@ class MockNetwork(private val cordappPackages: List<String>,
         }
     }
 
-    private fun createNotaries(): List<StartedNode<MockNode>> {
+    @VisibleForTesting
+    internal open fun createNotaries(): List<StartedNode<MockNode>> {
         return notarySpecs.map { spec ->
             createNode(MockNodeParameters(legalName = spec.name, configOverrides = {
                 doReturn(NotaryConfig(spec.validating)).whenever(it).notary
@@ -455,8 +463,11 @@ class MockNetwork(private val cordappPackages: List<String>,
     }
 
     fun stopNodes() {
-        nodes.forEach { it.started?.dispose() }
-        serializationEnv.unset()
+        try {
+            nodes.forEach { it.started?.dispose() }
+        } finally {
+            serializationEnv.unset() // Must execute even if other parts of this method fail.
+        }
         messagingNetwork.stop()
     }
 
