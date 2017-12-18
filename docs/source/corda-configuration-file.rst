@@ -101,6 +101,9 @@ path to the node's base directory.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
+:security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
+    :doc:`clientrpc` for details.
+
 :webAddress: The host and port on which the webserver will listen if it is started. This is not used by the node itself.
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
@@ -192,3 +195,6 @@ path to the node's base directory.
 
 :exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
     Default Jolokia access url is http://127.0.0.1:7005/jolokia/
+
+:useAMQPBridges: Optionally can be set to ``false`` to use Artemis CORE Bridges for peer-to-peer communications.
+        Otherwise, defaults to ``true`` and the AMQP 1.0 protocol will be used for message transfer between nodes.

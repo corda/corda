@@ -6,9 +6,9 @@ import net.corda.core.crypto.sha256
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.NetworkMap
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.SignedNetworkMap
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 /**
@@ -34,8 +34,8 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         database.transaction {
             val networkMapEntity = NetworkMapEntity(
                     networkMap = signedNetworkMap.raw.bytes,
-                    signature = signedNetworkMap.sig.signatureBytes,
-                    certificate = signedNetworkMap.sig.by.encoded
+                    signature = signedNetworkMap.signature.signatureBytes,
+                    certificate = signedNetworkMap.signature.by.encoded
             )
             session.save(networkMapEntity)
         }

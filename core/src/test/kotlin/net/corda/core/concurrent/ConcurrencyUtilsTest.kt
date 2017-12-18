@@ -3,7 +3,7 @@ package net.corda.core.concurrent
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger

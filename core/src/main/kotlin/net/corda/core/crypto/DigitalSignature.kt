@@ -22,7 +22,7 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun verify(content: ByteArray) = by.verify(content, this)
+        fun verify(content: ByteArray): Boolean = by.verify(content, this)
 
         /**
          * Utility to simplify the act of verifying a signature.
@@ -32,7 +32,7 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun verify(content: OpaqueBytes) = by.verify(content.bytes, this)
+        fun verify(content: OpaqueBytes): Boolean = by.verify(content.bytes, this)
 
         /**
          * Utility to simplify the act of verifying a signature. In comparison to [verify] doesn't throw an
@@ -45,7 +45,8 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @return whether the signature is correct for this key.
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun isValid(content: ByteArray) = by.isValid(content, this)
-        fun withoutKey() : DigitalSignature = DigitalSignature(this.bytes)
+        fun isValid(content: ByteArray): Boolean = by.isValid(content, this)
+
+        fun withoutKey(): DigitalSignature = DigitalSignature(this.bytes)
     }
 }

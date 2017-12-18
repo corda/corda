@@ -25,6 +25,8 @@ import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.dsl.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -39,14 +41,14 @@ private val DUMMY_PARTY = Party(CordaX500Name("Dummy", "Madrid", "ES"), generate
 private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
 private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
 private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
-private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).pubkey
+private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).publicKey
 private val DUMMY_NOTARY get() = dummyNotary.party
-private val DUMMY_NOTARY_KEY get() = dummyNotary.key
+private val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
 private val MEGA_CORP get() = megaCorp.party
-private val MEGA_CORP_KEY get() = megaCorp.key
-private val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+private val MEGA_CORP_KEY get() = megaCorp.keyPair
+private val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
 private val MINI_CORP get() = miniCorp.party
-private val MINI_CORP_KEY get() = miniCorp.key
+private val MINI_CORP_KEY get() = miniCorp.keyPair
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {
@@ -236,7 +238,7 @@ class IRSTests {
     private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
     private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
     private val ledgerServices
-        get() = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        get() = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
         }, MEGA_CORP.name)

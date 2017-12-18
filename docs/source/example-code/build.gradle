@@ -36,6 +36,7 @@ dependencies {
     compile project(':core')
     compile project(':client:jfx')
     compile project(':node-driver')
+    compile project(':webserver')
     testCompile project(':verifier')
     testCompile project(':test-utils')
 

@@ -24,25 +24,26 @@ import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.sampleschemas.SampleCashSchemaV2
 import net.corda.finance.sampleschemas.SampleCashSchemaV3
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
+import net.corda.node.internal.configureDatabase
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.node.internal.configureDatabase
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.*
-import net.corda.testing.contracts.*
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DummyDealStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.schemas.DummyDealStateSchemaV1
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
-import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
@@ -62,7 +63,7 @@ class HibernateConfigurationTest {
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val BOC get() = bankOfCorda.party
-        val BOC_KEY get() = bankOfCorda.key
+        val BOC_KEY get() = bankOfCorda.keyPair
     }
 
     @Rule
@@ -93,7 +94,7 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
         bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
         issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
         notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)
@@ -113,7 +114,7 @@ class HibernateConfigurationTest {
             // `consumeCash` expects we can self-notarise transactions
             services = object : MockServices(cordappPackages, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
-            }, BOB_NAME, generateKeyPair(), dummyNotary.key) {
+            }, BOB_NAME, generateKeyPair(), dummyNotary.keyPair) {
                 override val vaultService = makeVaultService(database.hibernateConfig, schemaService)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

@@ -8,12 +8,11 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.days
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import tornadofx.*
 import java.io.IOException
@@ -143,8 +142,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 minimumPlatformVersion = 1,
                 notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
                 modifiedTime = Instant.now(),
-                eventHorizon = 10000.days,
-                maxMessageSize = 40000,
+                maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
                 epoch = 1
         ))

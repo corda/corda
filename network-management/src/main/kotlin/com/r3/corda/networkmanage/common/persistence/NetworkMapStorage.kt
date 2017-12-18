@@ -1,8 +1,8 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import net.corda.core.crypto.SecureHash
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.SignedNetworkMap
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 
 /**
  * Data access object interface for NetworkMap persistence layer

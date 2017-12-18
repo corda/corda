@@ -1,6 +1,9 @@
 package net.corda.node.services.vault
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -21,11 +24,12 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
-import net.corda.testing.contracts.*
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -51,13 +55,14 @@ class VaultWithCashTest {
         val DUMMY_NOTARY get() = dummyNotary.party
         val MEGA_CORP get() = megaCorp.party
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
         val MINI_CORP_IDENTITY get() = miniCorp.identity
     }
 
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+    private val servicesKey = generateKeyPair()
     lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     lateinit var issuerServices: MockServices
@@ -70,10 +75,10 @@ class VaultWithCashTest {
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf(generateKeyPair(), dummyNotary.key),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
                 cordappPackages,
-                MEGA_CORP.name)
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
+                TestIdentity(MEGA_CORP.name, servicesKey),
+                dummyNotary.keyPair)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -100,8 +105,7 @@ class VaultWithCashTest {
 
             val state = w[0].state.data
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(services.key.public, state.owner.owningKey)
-
+            assertEquals(servicesKey.public, state.owner.owningKey)
             assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
             assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
         }

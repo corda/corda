@@ -14,6 +14,10 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.dsl.LedgerDSL
+import net.corda.testing.dsl.TestLedgerDSLInterpreter
+import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.Before
@@ -31,9 +35,9 @@ class PartialMerkleTreeTest {
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
-        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Rule
@@ -51,7 +55,7 @@ class PartialMerkleTreeTest {
         hashed = nodes.map { it.serialize().sha256() }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
-        testLedger = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        testLedger = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         }, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {

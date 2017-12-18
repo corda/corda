@@ -6,6 +6,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
@@ -23,7 +24,7 @@ class TransactionTests {
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
     }
 
     @Rule

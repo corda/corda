@@ -6,9 +6,17 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import kotlin.reflect.jvm.jvmName
+import net.corda.webserver.services.WebServerPluginRegistry
+import java.util.function.Function
+import javax.ws.rs.GET
+import javax.ws.rs.Path
+import javax.ws.rs.Produces
+import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.Response
 // DOCEND 01
 
 @InitiatingFlow
@@ -25,14 +33,13 @@ class IOUFlow(val iouValue: Int,
         // We retrieve the notary identity from the network map.
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
-        // We create a transaction builder
+        // DOCSTART 02
+        // We create a transaction builder.
         val txBuilder = TransactionBuilder(notary = notary)
 
-        // DOCSTART 02
         // We create the transaction components.
         val outputState = IOUState(iouValue, ourIdentity, otherParty)
-        val outputContract = IOUContract::class.jvmName
-        val outputContractAndState = StateAndContract(outputState, outputContract)
+        val outputContractAndState = StateAndContract(outputState, IOU_CONTRACT_ID)
         val cmd = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
 
         // We add the items to the builder.

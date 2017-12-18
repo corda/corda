@@ -51,7 +51,7 @@ class X509UtilitiesTest {
         val bob = TestIdentity(BOB_NAME, 80)
         val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
         val BOB get() = bob.party
-        val BOB_PUBKEY get() = bob.pubkey
+        val BOB_PUBKEY get() = bob.publicKey
     }
 
     @Rule

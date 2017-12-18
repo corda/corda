@@ -24,7 +24,6 @@ interface is defined as follows:
             val participants: List<AbstractParty>
         }
 
-<<<<<<< HEAD
 The first thing you'll probably notice about this interface declaration is that its not written in Java or another
 common language. The core Corda platform, including the interface declaration above, is entirely written in Kotlin.
 
@@ -70,7 +69,7 @@ later is often as simple as adding an additional property to your class definiti
 
 Defining IOUState
 -----------------
-Let's get started by opening ``TemplateState.java`` (for Java) or ``App.kt`` (for Kotlin) and updating
+Let's get started by opening ``TemplateState.java`` (for Java) or ``StatesAndContracts.kt`` (for Kotlin) and updating
 ``TemplateState`` to define an ``IOUState``:
 
 .. container:: codeset

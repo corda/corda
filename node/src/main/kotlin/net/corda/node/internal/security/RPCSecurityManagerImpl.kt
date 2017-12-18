@@ -95,8 +95,8 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                 // Setup optional cache layer if configured
                 it.cacheManager = config.options?.cache?.let {
                     GuavaCacheManager(
-                            timeToLiveSeconds = it.expiryTimeInSecs,
-                            maxSize = it.capacity)
+                            timeToLiveSeconds = it.expireAfterSecs,
+                            maxSize = it.maxEntries)
                 }
             }
         }
@@ -149,22 +149,29 @@ private object RPCPermissionResolver : PermissionResolver {
     private val ACTION_START_FLOW = "startflow"
     private val ACTION_INVOKE_RPC = "invokerpc"
     private val ACTION_ALL = "all"
-
-    private val FLOW_RPC_CALLS = setOf("startFlowDynamic", "startTrackedFlowDynamic")
+    private val FLOW_RPC_CALLS = setOf(
+            "startFlowDynamic",
+            "startTrackedFlowDynamic",
+            "startFlow",
+            "startTrackedFlow")
 
     override fun resolvePermission(representation: String): Permission {
-
-        val action = representation.substringBefore(SEPARATOR).toLowerCase()
+    	val action = representation.substringBefore(SEPARATOR).toLowerCase()
         when (action) {
             ACTION_INVOKE_RPC -> {
-                val rpcCall = representation.substringAfter(SEPARATOR)
-                require(representation.count { it == SEPARATOR } == 1) {
+                val rpcCall = representation.substringAfter(SEPARATOR, "")
+                require(representation.count { it == SEPARATOR } == 1 && !rpcCall.isEmpty()) {
                     "Malformed permission string"
                 }
-                return RPCPermission(setOf(rpcCall))
+                val permitted = when(rpcCall) {
+                    "startFlow" -> setOf("startFlowDynamic", rpcCall)
+                    "startTrackedFlow" -> setOf("startTrackedFlowDynamic", rpcCall)
+                    else -> setOf(rpcCall)
+                }
+                return RPCPermission(permitted)
             }
             ACTION_START_FLOW -> {
-                val targetFlow = representation.substringAfter(SEPARATOR)
+                val targetFlow = representation.substringAfter(SEPARATOR, "")
                 require(targetFlow.isNotEmpty()) {
                     "Missing target flow after StartFlow"
                 }

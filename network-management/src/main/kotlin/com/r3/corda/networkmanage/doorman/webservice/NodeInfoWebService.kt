@@ -12,7 +12,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.SignedNetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException

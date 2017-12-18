@@ -29,6 +29,7 @@ import org.apache.qpid.proton.codec.EncoderImpl
 import org.assertj.core.api.Assertions.*
 import org.junit.Assert.*
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -49,10 +50,14 @@ class SerializationOutputTests {
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
-        val MINI_CORP_PUBKEY get() = miniCorp.pubkey
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     data class Foo(val bar: String, val pub: Int)
 
@@ -473,9 +478,9 @@ class SerializationOutputTests {
         assertSerializedThrowableEquivalent(t, desThrowable)
     }
 
-    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable = withTestSerialization {
+    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable {
         val newContext = SerializationFactory.defaultFactory.defaultContext.withProperty(CommonPropertyNames.IncludeInternalInfo, true)
-        SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
+        return SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
     }
 
     @Test

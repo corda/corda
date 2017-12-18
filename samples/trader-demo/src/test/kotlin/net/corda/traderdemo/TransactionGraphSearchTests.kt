@@ -9,6 +9,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockTransactionStorage
 import org.junit.Rule
@@ -46,13 +47,13 @@ class TransactionGraphSearchTests {
         val notaryServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), dummyNotary)
         val originBuilder = TransactionBuilder(dummyNotary.party)
                 .addOutputState(DummyState(random31BitValue()), DummyContract.PROGRAM_ID)
-                .addCommand(command, megaCorp.pubkey)
+                .addCommand(command, megaCorp.publicKey)
 
         val originPtx = megaCorpServices.signInitialTransaction(originBuilder)
         val originTx = notaryServices.addSignature(originPtx)
         val inputBuilder = TransactionBuilder(dummyNotary.party)
                 .addInputState(originTx.tx.outRef<DummyState>(0))
-                .addCommand(dummyCommand(megaCorp.pubkey))
+                .addCommand(dummyCommand(megaCorp.publicKey))
 
         val inputPtx = megaCorpServices.signInitialTransaction(inputBuilder)
         val inputTx = megaCorpServices.addSignature(inputPtx)

@@ -10,9 +10,11 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -33,10 +35,10 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.*
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -58,12 +60,14 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
@@ -139,11 +143,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected val networkMapClient: NetworkMapClient? by lazy {
-        configuration.compatibilityZoneURL?.let {
-            NetworkMapClient(it, services.identityService.trustRoot)
-        }
-    }
+    protected var networkMapClient: NetworkMapClient? = null
 
     lateinit var securityManager: RPCSecurityManager get
 
@@ -178,6 +178,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         validateKeystore()
     }
 
+    private inline fun signNodeInfo(nodeInfo: NodeInfo, sign: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
+        // For now we assume the node has only one identity (excluding any composite ones)
+        val owningKey = nodeInfo.legalIdentities.single { it.owningKey !is CompositeKey }.owningKey
+        val serialised = nodeInfo.serialize()
+        val signature = sign(owningKey, serialised)
+        return SignedNodeInfo(serialised, listOf(signature))
+    }
+
     open fun generateNodeInfo() {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
@@ -189,11 +197,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             // a code smell.
             val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-            val identityKeypair = keyPairs.first { it.public == info.legalIdentities.first().owningKey }
-            val serialisedNodeInfo = info.serialize()
-            val signature = identityKeypair.sign(serialisedNodeInfo)
-            // TODO: Signed data might not be sufficient for multiple identities, as it only contains one signature.
-            NodeInfoWatcher.saveToFile(configuration.baseDirectory, SignedData(serialisedNodeInfo, signature))
+            val signedNodeInfo = signNodeInfo(info) { publicKey, serialised ->
+                val privateKey = keyPairs.single { it.public == publicKey }.private
+                privateKey.sign(serialised.bytes)
+            }
+            NodeInfoWatcher.saveToFile(configuration.baseDirectory, signedNodeInfo)
         }
     }
 
@@ -213,10 +221,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
-        readNetworkParameters()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
+        networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
+        retrieveNetworkParameters()
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
@@ -260,16 +269,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startShell(rpcOps)
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
-
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
-                networkMapClient)
+                networkMapClient,
+                networkParameters.serialize().hash)
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.updateNodeInfo(services.myInfo) {
-            val serialisedNodeInfo = it.serialize()
-            val signature = services.keyManagementService.sign(serialisedNodeInfo.bytes, it.legalIdentities.first().owningKey)
-            SignedData(serialisedNodeInfo, signature)
+            signNodeInfo(it) { publicKey, serialised ->
+                services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
+            }
         }
         networkMapUpdater.subscribeToNetworkMap()
 
@@ -658,11 +667,31 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
-    private fun readNetworkParameters() {
-        val file = configuration.baseDirectory / "network-parameters"
-        networkParameters = file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
-        log.info(networkParameters.toString())
-        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
+    private fun retrieveNetworkParameters() {
+        val networkParamsFile = configuration.baseDirectory.list { paths ->
+            paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().orElse(null)
+        }
+
+        networkParameters = if (networkParamsFile != null) {
+            networkParamsFile.readAll().deserialize<SignedData<NetworkParameters>>().verified()
+        } else {
+            log.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
+            val networkMapClient = checkNotNull(networkMapClient) {
+                "Node hasn't been configured to connect to a network map from which to get the network parameters"
+            }
+            val (networkMap, _) = networkMapClient.getNetworkMap()
+            val signedParams = checkNotNull(networkMapClient.getNetworkParameter(networkMap.networkParameterHash)) {
+                "Failed loading network parameters from network map server"
+            }
+            val verifiedParams = signedParams.verified()
+            signedParams.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+            verifiedParams
+        }
+
+        log.info("Loaded network parameters: $networkParameters")
+        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
+            "Node's platform version is lower than network's required minimumPlatformVersion"
+        }
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {

@@ -18,7 +18,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.testing.contracts.VaultFiller.Companion.calculateRandomlySizedAmounts
+import net.corda.testing.internal.vault.VaultFiller.Companion.calculateRandomlySizedAmounts
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import java.util.*

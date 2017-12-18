@@ -10,6 +10,7 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
@@ -34,7 +35,8 @@ import net.corda.node.services.transactions.RaftNonValidatingNotaryService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.internal.*
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
@@ -42,8 +44,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.*
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -244,6 +251,7 @@ class DriverDSLImpl(
     }
 
     internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
+        check(compatibilityZone == null) { "Cordform nodes should be run without compatibilityZone configuration" }
         val clusterNodes = HashMultimap.create<ClusterType, CordaX500Name>()
         val notaryInfos = ArrayList<NotaryInfo>()
 
@@ -353,7 +361,7 @@ class DriverDSLImpl(
         }
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        if (compatibilityZone == null) networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
@@ -514,7 +522,7 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
         nodeInfoFilesCopier?.addConfig(baseDirectory)
-        networkParameters!!.install(baseDirectory)
+        networkParameters?.install(baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)
@@ -889,7 +897,8 @@ fun <A> internalDriver(
 }
 
 fun getTimestampAsDirectoryName(): String {
-    return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now())
+    // Add a random number in case 2 tests are started in the same instant.
+    return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now()) + random63BitValue()
 }
 
 fun writeConfig(path: Path, filename: String, config: Config) {

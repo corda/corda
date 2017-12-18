@@ -19,6 +19,9 @@ import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
+import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
@@ -38,7 +41,7 @@ class NodeInterestRatesTest {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val MEGA_CORP_KEY = generateKeyPair()
         val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.pubkey
+        val ALICE_PUBKEY get() = alice.publicKey
     }
 
     @Rule

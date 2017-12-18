@@ -12,6 +12,7 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -23,7 +24,6 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
@@ -31,10 +31,13 @@ import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.services.MockAttachmentStorage
@@ -43,7 +46,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -53,7 +55,7 @@ import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     private companion object {
-        val ALICE_KEY = TestIdentity(ALICE_NAME, 70).key
+        val ALICE_KEY = TestIdentity(ALICE_NAME, 70).keyPair
         val DUMMY_IDENTITY_1 = getTestPartyAndCertificate(Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public))
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val myInfo = NodeInfo(listOf(NetworkHostAndPort("mockHost", 30000)), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
@@ -98,14 +100,19 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
         val identityService = makeTestIdentityService()
         kms = MockKeyManagementService(identityService, ALICE_KEY)
-        val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))
+        val configuration = rigorousMock<NodeConfiguration>().also {
+            doReturn(true).whenever(it).devMode
+            doReturn(null).whenever(it).devModeOptions
+        }
         val validatedTransactions = MockTransactionStorage()
         database.transaction {
             services = rigorousMock<Services>().also {
                 doReturn(configuration).whenever(it).configuration
                 doReturn(MonitoringService(MetricRegistry())).whenever(it).monitoringService
                 doReturn(validatedTransactions).whenever(it).validatedTransactions
-                doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database), identityService)).whenever(it).networkMapCache
+                doReturn(rigorousMock<NetworkMapCacheInternal>().also {
+                    doReturn(doneFuture(null)).whenever(it).nodeReady
+                }).whenever(it).networkMapCache
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
                 doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider

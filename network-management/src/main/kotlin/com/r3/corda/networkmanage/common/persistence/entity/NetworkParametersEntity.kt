@@ -1,7 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.network.NetworkParameters
 import javax.persistence.*
 
 @Entity

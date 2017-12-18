@@ -144,9 +144,9 @@ open class Node(configuration: NodeConfiguration,
         val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-        rpcMessagingClient = RPCMessagingClient(configuration, serverAddress)
+        rpcMessagingClient = RPCMessagingClient(configuration, serverAddress, networkParameters.maxMessageSize)
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics)
+            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
         }
         return P2PMessagingClient(
@@ -156,12 +156,13 @@ open class Node(configuration: NodeConfiguration,
                 info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
-                advertisedAddress)
+                advertisedAddress,
+                networkParameters.maxMessageSize)
     }
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }

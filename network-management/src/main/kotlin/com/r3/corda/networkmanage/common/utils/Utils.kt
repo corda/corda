@@ -7,8 +7,8 @@ import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.sha256
-import net.corda.nodeapi.internal.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
 import java.security.cert.CertPath

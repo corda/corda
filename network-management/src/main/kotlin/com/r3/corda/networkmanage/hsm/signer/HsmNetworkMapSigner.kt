@@ -13,7 +13,7 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
-import net.corda.nodeapi.internal.DigitalSignatureWithCert
+import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.time.Duration

@@ -41,7 +41,12 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
-import net.corda.testing.contracts.VaultFiller
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.dsl.LedgerDSL
+import net.corda.testing.dsl.TestLedgerDSLInterpreter
+import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

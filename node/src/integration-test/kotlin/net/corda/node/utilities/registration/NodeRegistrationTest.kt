@@ -14,22 +14,18 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.testing.ALICE_NAME
 import net.corda.testing.IntegrationTest
 import net.corda.testing.IntegrationTestSchemas
-import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
-import net.corda.testing.node.network.NetworkMapServer
-import net.corda.testing.toDatabaseSchemaName
+import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.junit.After
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.*
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
@@ -47,7 +43,9 @@ class NodeRegistrationTest : IntegrationTest() {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas("Alice")
     }
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val portAllocation = PortAllocation.Incremental(13000)
     private val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
     private val registrationHandler = RegistrationHandler(rootCertAndKeyPair)
@@ -57,7 +55,7 @@ class NodeRegistrationTest : IntegrationTest() {
 
     @Before
     fun startServer() {
-        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), registrationHandler)
+        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), rootCertAndKeyPair, registrationHandler)
         serverHostAndPort = server.start()
     }
 
@@ -74,7 +72,8 @@ class NodeRegistrationTest : IntegrationTest() {
         internalDriver(
                 portAllocation = portAllocation,
                 notarySpecs = emptyList(),
-                compatibilityZone = compatibilityZone
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false
         ) {
             startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
             assertThat(registrationHandler.idsPolled).contains("Alice")
