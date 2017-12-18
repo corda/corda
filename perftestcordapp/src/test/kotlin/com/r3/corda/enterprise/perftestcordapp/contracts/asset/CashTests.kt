@@ -137,13 +137,13 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock<IdentityServiceInternal>().also {
+        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        miniCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock<IdentityServiceInternal>().also {
             doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
         }, MINI_CORP.name, MINI_CORP_KEY)
-        val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        val notaryServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts.asset"),
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(CordaX500Name("Me", "London", "GB")))
         database = databaseAndServices.first

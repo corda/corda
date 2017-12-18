@@ -256,12 +256,12 @@ class CommercialPaperTestsGeneric {
 
     private lateinit var moveTX: SignedTransaction
 
-        @Test
-    fun `issue move and then redeem`() = {
-            val aliceDatabaseAndServices = MockServices.makeTestDatabaseAndMockServices(
-                    listOf("net.corda.finance.contracts"),
-                    makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
-                    TestIdentity(MEGA_CORP.name, ALICE_KEY))
+    @Test
+    fun `issue move and then redeem`() {
+        val aliceDatabaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+                listOf("net.corda.finance.contracts"),
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
+                TestIdentity(MEGA_CORP.name, ALICE_KEY))
         val databaseAlice = aliceDatabaseAndServices.first
         aliceServices = aliceDatabaseAndServices.second
         aliceVaultService = aliceServices.vaultService
