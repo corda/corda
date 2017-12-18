@@ -1,7 +1,6 @@
 package net.corda.testing.node
 
 import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.node.internal.StartedNode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 

@@ -463,8 +463,11 @@ open class MockNetwork(private val cordappPackages: List<String>,
     }
 
     fun stopNodes() {
-        serializationEnv.unset() // Must execute even if other parts of this method fail.
-        nodes.forEach { it.started?.dispose() }
+        try {
+            nodes.forEach { it.started?.dispose() }
+        } finally {
+            serializationEnv.unset() // Must execute even if other parts of this method fail.
+        }
         messagingNetwork.stop()
     }
 
