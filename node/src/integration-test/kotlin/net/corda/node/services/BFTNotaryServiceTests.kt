@@ -27,6 +27,8 @@ import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.testing.IntegrationTest
+import net.corda.testing.IntegrationTestSchemas
 import net.corda.testing.chooseIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -37,19 +39,24 @@ import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class BFTNotaryServiceTests {
-    private lateinit var mockNet: MockNetwork
+class BFTNotaryServiceTests : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
+                "node_6", "node_7", "node_8", "node_9")
+    }
+    private val mockNet = MockNetwork(emptyList())
     private lateinit var notary: Party
     private lateinit var node: StartedNode<MockNode>
 
     @Before
     fun before() {
-        mockNet = MockNetwork(emptyList())
         node = mockNet.createNode()
     }
     @After
