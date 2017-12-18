@@ -38,37 +38,36 @@ open class NodeStartup(val args: Array<String>) {
      * @return true if the node startup was successful. This value is intended to be the exit code of the process.
      */
     open fun run(): Boolean {
-        try {
-            val startTime = System.currentTimeMillis()
-            assertCanNormalizeEmptyPath()
-            val (argsParser, cmdlineOptions) = parseArguments()
+        val startTime = System.currentTimeMillis()
+        assertCanNormalizeEmptyPath()
+        val (argsParser, cmdlineOptions) = parseArguments()
 
-            // We do the single node check before we initialise logging so that in case of a double-node start it
-            // doesn't mess with the running node's logs.
-            enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
+        // We do the single node check before we initialise logging so that in case of a double-node start it
+        // doesn't mess with the running node's logs.
+        enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
-            initLogging(cmdlineOptions)
+        initLogging(cmdlineOptions)
 
-            val versionInfo = getVersionInfo()
+        val versionInfo = getVersionInfo()
 
-            if (cmdlineOptions.isVersion) {
-                println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
-                println("Revision ${versionInfo.revision}")
-                println("Platform Version ${versionInfo.platformVersion}")
-                return true
-            }
+        if (cmdlineOptions.isVersion) {
+            println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
+            println("Revision ${versionInfo.revision}")
+            println("Platform Version ${versionInfo.platformVersion}")
+            return true
+        }
 
-            // Maybe render command line help.
-            if (cmdlineOptions.help) {
-                argsParser.printHelp(System.out)
-                return true
-            }
+        // Maybe render command line help.
+        if (cmdlineOptions.help) {
+            argsParser.printHelp(System.out)
+            return true
+        }
 
-            drawBanner(versionInfo)
-            Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
+        drawBanner(versionInfo)
+        Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
+        val conf = try {
             val conf0 = loadConfigFile(cmdlineOptions)
-
-            val conf = if (cmdlineOptions.bootstrapRaftCluster) {
+            if (cmdlineOptions.bootstrapRaftCluster) {
                 if (conf0 is NodeConfigurationImpl) {
                     println("Bootstrapping raft cluster (starting up as seed node).")
                     // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
@@ -80,14 +79,19 @@ open class NodeStartup(val args: Array<String>) {
             } else {
                 conf0
             }
+        } catch (e: Exception) {
+            logger.error("Exception during node configuration", e)
+            return false
+        }
 
-        banJavaSerialisation(conf)
-        preNetworkRegistration(conf)
-        if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
+        try {
+            banJavaSerialisation(conf)
+            preNetworkRegistration(conf)
+            if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
                 registerWithNetwork(cmdlineOptions, conf)
                 return true
             }
-        logStartupInfo(versionInfo, cmdlineOptions, conf)
+            logStartupInfo(versionInfo, cmdlineOptions, conf)
 
             try {
                 cmdlineOptions.baseDirectory.createDirectories()
