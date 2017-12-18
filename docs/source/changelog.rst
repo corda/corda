@@ -10,7 +10,7 @@ UNRELEASED
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
   until final documentation is prepared. Certificates at ``NODE_CA``, ``WELL_KNOWN_SERVICE_IDENTITY`` and above must
-  only ever by issued by network services and are therefore issuance constraints are not relevant to end users.
+  only ever by issued by network services and therefore issuance constraints are not relevant to end users.
   The ``TLS``, ``WELL_KNOWN_LEGAL_IDENTITY`` roles must be issued by the ``NODE_CA`` certificate issued by the
   Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
   For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
