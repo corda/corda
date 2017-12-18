@@ -5,11 +5,10 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.exists
-import net.corda.core.utilities.days
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.NotaryInfo
 import java.nio.file.Path
 import java.time.Instant
 
@@ -57,7 +56,6 @@ fun parseNetworkParametersFrom(configFile: Path, epoch: Int = DEFAULT_EPOCH): Ne
 
     return NetworkParameters(networkParametersConfig.minimumPlatformVersion,
             networkParametersConfig.notaries.map { it.toNotaryInfo() },
-            networkParametersConfig.eventHorizonDays.days,
             networkParametersConfig.maxMessageSize,
             networkParametersConfig.maxTransactionSize,
             Instant.now(),

@@ -1,9 +1,6 @@
 package com.r3.corda.networkmanage.common.signer
 
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.DigitalSignatureWithCert
-import java.security.cert.CertPath
+import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 
 /**
  * An interface for arbitrary data signing functionality.

@@ -1,7 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
-import net.corda.nodeapi.internal.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import javax.persistence.*
 
 @Entity

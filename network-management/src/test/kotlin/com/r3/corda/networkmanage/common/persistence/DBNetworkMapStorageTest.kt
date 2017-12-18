@@ -13,10 +13,10 @@ import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.NetworkMap
-import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -80,7 +80,7 @@ class DBNetworkMapStorageTest : TestBase() {
         // then
         val persistedSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
 
-        assertEquals(signedNetworkMap.sig, persistedSignedNetworkMap?.sig)
+        assertEquals(signedNetworkMap.signature, persistedSignedNetworkMap?.signature)
         assertEquals(signedNetworkMap.verified(), persistedSignedNetworkMap?.verified())
     }
 

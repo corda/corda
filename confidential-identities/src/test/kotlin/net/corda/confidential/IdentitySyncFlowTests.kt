@@ -19,11 +19,13 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@Ignore
 class IdentitySyncFlowTests {
     private lateinit var mockNet: MockNetwork
 

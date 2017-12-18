@@ -8,11 +8,9 @@ import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
-import net.corda.core.internal.createDirectories
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
@@ -25,7 +23,6 @@ import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.node.testNodeConfiguration
 import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Rule
 import org.junit.Test

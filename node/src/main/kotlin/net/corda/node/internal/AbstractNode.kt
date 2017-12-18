@@ -13,8 +13,8 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -60,8 +60,6 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
@@ -69,6 +67,7 @@ import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
