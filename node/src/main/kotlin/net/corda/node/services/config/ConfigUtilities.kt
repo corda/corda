@@ -101,7 +101,7 @@ fun createKeystoreForCordaNode(sslKeyStorePath: Path,
     val clientName = legalName.copy(commonName = null)
 
     val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, clientName.x500Name))), arrayOf())
-    val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA,
+    val clientCACert = X509Utilities.createCertificate(CertificateType.NODE_CA,
             intermediateCACert,
             intermediateCAKeyPair,
             clientName.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),

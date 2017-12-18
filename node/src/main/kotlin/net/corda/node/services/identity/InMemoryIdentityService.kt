@@ -3,6 +3,7 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.UnknownAnonymousPartyException
@@ -61,14 +62,10 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
         }
 
         // Ensure we record the first identity of the same name, first
-        val identityPrincipal = identity.name.x500Principal
-        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
-            val principal = (it as? X509Certificate)?.subjectX500Principal
-            principal == identityPrincipal
-        }
-        if (firstCertWithThisName != identity.certificate) {
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
+        if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val idx = certificates.lastIndexOf(wellKnownCert)
             val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }

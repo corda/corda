@@ -4,6 +4,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.UnknownAnonymousPartyException
@@ -13,8 +14,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -125,14 +126,10 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         }
 
         // Ensure we record the first identity of the same name, first
-        val identityPrincipal = identity.name.x500Principal
-        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
-            val principal = (it as? X509Certificate)?.subjectX500Principal
-            principal == identityPrincipal
-        }
-        if (firstCertWithThisName != identity.certificate) {
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
+        if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val idx = certificates.lastIndexOf(wellKnownCert)
             val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }

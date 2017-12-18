@@ -79,20 +79,19 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `verifies signature`() {
         // Set up values we'll need
-        val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val alice: PartyAndCertificate = aliceNode.info.singleIdentityAndCert()
         val bob: PartyAndCertificate = bobNode.info.singleIdentityAndCert()
-        val notary: PartyAndCertificate = mockNet.defaultNotaryIdentityAndCert
-        // Check that the wrong signature is rejected
-        notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notary, false)
-        }.let { anonymousNotary ->
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotary)
-            val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
+        // Check that the right name but wrong key is rejected
+        val evilBobNode = mockNet.createPartyNode(BOB_NAME)
+        val evilBob = evilBobNode.info.singleIdentityAndCert()
+        evilBobNode.database.transaction {
+            val anonymousEvilBob = evilBobNode.services.keyManagementService.freshKeyAndCert(evilBob, false)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(evilBob)
+            val signature = evilBobNode.services.keyManagementService.sign(sigData, anonymousEvilBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousNotary, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousEvilBob, signature.withoutKey())
             }
         }
         // Check that the right signing key, but wrong identity is rejected
