@@ -29,11 +29,13 @@ class ArtemisTcpTransport {
         // but we allow classical RSA certificates to work in case:
         // a) we need to use keytool certificates in some demos,
         // b) we use cloud providers or HSMs that do not support ECC.
-        private val CIPHER_SUITES = listOf(
+        val CIPHER_SUITES = listOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
         )
+
+        val TLS_VERSIONS = listOf("TLSv1.2")
 
         fun tcpTransport(
                 direction: ConnectionDirection,
@@ -68,7 +70,7 @@ class ArtemisTcpTransport {
                         TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStoreFile,
                         TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
                         TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
-                        TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
+                        TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to TLS_VERSIONS.joinToString(","),
                         TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
                         VERIFY_PEER_LEGAL_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonNames
                 )

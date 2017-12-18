@@ -26,7 +26,7 @@ permissions that RPC can use for fine-grain access control.
 
 These users are added to the node's ``node.conf`` file.
 
-The syntax for adding an RPC user is:
+The simplest way of adding an RPC user is to include it in the ``rpcUsers`` list:
 
 .. container:: codeset
 
@@ -59,9 +59,6 @@ Users need permissions to invoke any RPC call. By default, nothing is allowed. T
             ...
         ]
 
-.. note:: Currently, the node's web server has super-user access, meaning that it can run any RPC operation without
-   logging in. This will be changed in a future release.
-
 Permissions Syntax
 ^^^^^^^^^^^^^^^^^^
 
@@ -70,6 +67,134 @@ Fine grained permissions allow a user to invoke a specific RPC operation, or to 
 - to start a specific flow: ``StartFlow.<fully qualified flow name>`` e.g., ``StartFlow.net.corda.flows.ExampleFlow1``.
 - to invoke a RPC operation: ``InvokeRpc.<rpc method name>`` e.g., ``InvokeRpc.nodeInfo``.
 .. note:: Permission ``InvokeRpc.startFlow`` allows a user to initiate all flows.
+
+RPC security management
+-----------------------
+
+Setting ``rpcUsers`` provides a simple way of granting RPC permissions to a fixed set of users, but has some
+obvious shortcomings. To support use cases aiming for higher security and flexibility, Corda offers additional security
+features such as:
+
+ * Fetching users credentials and permissions from an external data source (e.g.: a remote RDBMS), with optional in-memory
+   caching. In particular, this allows credentials and permissions to be updated externally without requiring nodes to be
+   restarted.
+ * Password stored in hash-encrypted form. This is regarded as must-have when security is a concern. Corda currently supports
+   a flexible password hash format conforming to the Modular Crypt Format provided by the `Apache Shiro framework <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_
+
+These features are controlled by a set of options nested in the ``security`` field of ``node.conf``.
+The following example shows how to configure retrieval of users credentials and permissions from a remote database with
+passwords in hash-encrypted format and enable in-memory caching of users data:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        security = {
+            authService = {
+                dataSource = {
+                    type = "DB",
+                    passwordEncryption = "SHIRO_1_CRYPT",
+                    connection = {
+                       jdbcUrl = "<jdbc connection string>"
+                       username = "<db username>"
+                       password = "<db user password>"
+                       driverClassName = "<JDBC driver>"
+                    }
+                }
+                options = {
+                     cache = {
+                        expireAfterSecs = 120
+                        maxEntries = 10000
+                     }
+                }
+            }
+        }
+
+It is also possible to have a static list of users embedded in the ``security`` structure by specifying a ``dataSource``
+of ``INMEMORY`` type:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        security = {
+            authService = {
+                dataSource = {
+                    type = "INMEMORY",
+                    users = [
+                        {
+                            username = "<username>",
+                            password = "<password>",
+                            permissions = ["<permission 1>", "<permission 2>", ...]
+                        },
+                        ...
+                    ]
+                }
+            }
+        }
+
+.. warning:: A valid configuration cannot specify both the ``rpcUsers`` and ``security`` fields. Doing so will trigger
+   an exception at node startup.
+
+Authentication/authorisation data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``dataSource`` structure defines the data provider supplying credentials and permissions for users. There exist two
+supported types of such data source, identified by the ``dataSource.type`` field:
+
+ :INMEMORY: A static list of user credentials and permissions specified by the ``users`` field.
+
+ :DB: An external RDBMS accessed via the JDBC connection described by ``connection``. Note that, unlike the ``INMEMORY``
+  case, in a user database permissions are assigned to *roles* rather than individual users. The current implementation
+  expects the database to store data according to the following schema:
+
+       - Table ``users`` containing columns ``username`` and ``password``. The ``username`` column *must have unique values*.
+       - Table ``user_roles`` containing columns ``username`` and ``role_name`` associating a user to a set of *roles*.
+       - Table ``roles_permissions`` containing columns ``role_name`` and ``permission`` associating a role to a set of
+         permission strings.
+
+  .. note:: There is no prescription on the SQL type of each column (although our tests were conducted on ``username`` and
+    ``role_name`` declared of SQL type ``VARCHAR`` and ``password`` of ``TEXT`` type). It is also possible to have extra columns
+    in each table alongside the expected ones.
+
+Password encryption
+^^^^^^^^^^^^^^^^^^^
+
+Storing passwords in plain text is discouraged in applications where security is critical. Passwords are assumed
+to be in plain format by default, unless a different format is specified by the ``passwordEncryption`` field, like:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        passwordEncryption = SHIRO_1_CRYPT
+
+``SHIRO_1_CRYPT`` identifies the `Apache Shiro fully reversible
+Modular Crypt Format <https://shiro.apache.org/static/1.2.5/apidocs/org/apache/shiro/crypto/hash/format/Shiro1CryptFormat.html>`_,
+it is currently the only non-plain password hash-encryption format supported. Hash-encrypted passwords in this
+format can be produced by using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
+
+Caching user accounts data
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A cache layer on top of the external data source of users credentials and permissions can significantly improve
+performances in some cases, with the disadvantage of causing a (controllable) delay in picking up updates to the underlying data.
+Caching is disabled by default, it can be enabled by defining the ``options.cache`` field in ``security.authService``,
+for example:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        options = {
+             cache = {
+                expireAfterSecs = 120
+                maxEntries = 10000
+             }
+        }
+
+This will enable a non-persistent cache contained in the node's memory with maximum number of entries set to ``maxEntries``
+where entries are expired and refreshed after ``expireAfterSecs`` seconds.
 
 Observables
 -----------

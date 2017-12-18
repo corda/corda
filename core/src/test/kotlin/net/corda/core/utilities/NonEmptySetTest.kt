@@ -7,9 +7,10 @@ import com.google.common.collect.testing.features.CollectionSize
 import junit.framework.TestSuite
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.testing.withTestSerialization
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
@@ -36,6 +37,10 @@ class NonEmptySetTest {
     }
 
     class General {
+        @Rule
+        @JvmField
+        val testSerialization = SerializationEnvironmentRule()
+
         @Test
         fun `copyOf - empty source`() {
             assertThatThrownBy { NonEmptySet.copyOf(HashSet<Int>()) }.isInstanceOf(IllegalArgumentException::class.java)
@@ -48,11 +53,9 @@ class NonEmptySetTest {
 
         @Test
         fun `serialize deserialize`() {
-            withTestSerialization {
-                val original = NonEmptySet.of(-17, 22, 17)
-                val copy = original.serialize().deserialize()
-                assertThat(copy).isEqualTo(original).isNotSameAs(original)
-            }
+            val original = NonEmptySet.of(-17, 22, 17)
+            val copy = original.serialize().deserialize()
+            assertThat(copy).isEqualTo(original).isNotSameAs(original)
         }
     }
 

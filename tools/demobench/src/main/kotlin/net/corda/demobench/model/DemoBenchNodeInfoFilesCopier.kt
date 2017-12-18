@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-import net.corda.nodeapi.internal.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import tornadofx.*

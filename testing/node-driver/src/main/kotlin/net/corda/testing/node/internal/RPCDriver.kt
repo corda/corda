@@ -17,7 +17,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
@@ -25,6 +24,7 @@ import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.testing.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
@@ -46,7 +46,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
-import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
+import org.apache.activemq.artemis.spi.core.remoting.Connection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
 import java.nio.file.Path
@@ -133,11 +133,11 @@ fun <A> rpcDriver(
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
-    override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
+    override fun validateUser(user: String?, password: String?, connection: Connection?): String? {
         return validate(user, password)
     }
 
-    override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
+    override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: Connection?): String? {
         return validate(user, password)
     }
 
@@ -226,8 +226,8 @@ data class RPCDriverDSL(
     fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I
     ): CordaFuture<RpcServerHandle> {
@@ -294,8 +294,8 @@ data class RPCDriverDSL(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             customPort: NetworkHostAndPort? = null,
             ops: I
@@ -377,8 +377,8 @@ data class RPCDriverDSL(
     fun startRpcBroker(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             customPort: NetworkHostAndPort? = null
     ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
@@ -401,8 +401,8 @@ data class RPCDriverDSL(
 
     fun startInVmRpcBroker(
             rpcUser: User = rpcTestUser,
-            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
+            maxFileSize: Int = MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE
     ): CordaFuture<RpcBrokerHandle> {
         return driverDSL.executorService.fork {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
@@ -430,7 +430,7 @@ data class RPCDriverDSL(
             brokerHandle: RpcBrokerHandle
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
-            minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
         val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))

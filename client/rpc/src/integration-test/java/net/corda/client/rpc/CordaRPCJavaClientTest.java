@@ -31,8 +31,8 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
-import static net.corda.testing.TestConstants.getALICE_NAME;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY_NAME;
+import static net.corda.testing.TestConstants.ALICE_NAME;
+import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
@@ -41,7 +41,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @ClassRule
     public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(getALICE_NAME()),
-            IntegrationTestKt.toDatabaseSchemaName(getDUMMY_NOTARY_NAME()));
+            IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),
@@ -65,7 +65,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        node = startNode(getALICE_NAME(), 1, singletonList(rpcUser));
+        node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

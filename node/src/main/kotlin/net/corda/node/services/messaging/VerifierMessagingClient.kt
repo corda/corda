@@ -17,13 +17,13 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import java.util.concurrent.*
 
-class VerifierMessagingClient(config: SSLConfiguration, serverAddress: NetworkHostAndPort, metrics: MetricRegistry) : SingletonSerializeAsToken() {
+class VerifierMessagingClient(config: SSLConfiguration, serverAddress: NetworkHostAndPort, metrics: MetricRegistry, private val maxMessageSize: Int) : SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<VerifierMessagingClient>()
         private val verifierResponseAddress = "$VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX.${random63BitValue()}"
     }
 
-    private val artemis = ArtemisMessagingClient(config, serverAddress)
+    private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     /** An executor for sending messages */
     private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
     private var verificationResponseConsumer: ClientConsumer? = null

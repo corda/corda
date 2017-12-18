@@ -13,11 +13,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.LogHelper
+import net.corda.testing.internal.LogHelper
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule

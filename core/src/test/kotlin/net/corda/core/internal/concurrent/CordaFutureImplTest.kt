@@ -4,7 +4,7 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.join
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import org.slf4j.Logger

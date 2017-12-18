@@ -6,10 +6,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -44,6 +44,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val relay: RelayConfiguration?
+    val useAMQPBridges: Boolean get() = true
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
@@ -120,7 +121,8 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val database: DatabaseConfig = DatabaseConfig(exportHibernateJMXStatistics = devMode)
+        override val database: DatabaseConfig = DatabaseConfig(exportHibernateJMXStatistics = devMode),
+        override val useAMQPBridges: Boolean = true
         ) : NodeConfiguration {
 
     override val exportJMXto: String get() = "http"
@@ -200,7 +202,7 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         data class Options(val cache: Options.Cache?) {
 
             // Cache parameters
-            data class Cache(val expiryTimeInSecs: Long, val capacity: Long)
+            data class Cache(val expireAfterSecs: Long, val maxEntries: Long)
 
         }
 

@@ -24,10 +24,12 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
-import net.corda.testing.*
+import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.testing.chooseIdentity
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.testing.IntegrationTest
+import net.corda.testing.IntegrationTestSchemas
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
@@ -55,7 +57,7 @@ class BFTNotaryServiceTests : IntegrationTest() {
 
     @Before
     fun before() {
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(emptyList())
         node = mockNet.createNode()
     }
     @After

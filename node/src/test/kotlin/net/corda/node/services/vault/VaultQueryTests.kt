@@ -26,12 +26,15 @@ import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
-import net.corda.testing.contracts.*
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.schemas.DummyDealStateSchemaV1
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
@@ -65,17 +68,17 @@ open class VaultQueryTests {
         val BOB_IDENTITY get() = bob.identity
         val BOC get() = bankOfCorda.party
         val BOC_IDENTITY get() = bankOfCorda.identity
-        val BOC_KEY get() = bankOfCorda.key
-        val BOC_PUBKEY get() = bankOfCorda.pubkey
+        val BOC_KEY get() = bankOfCorda.keyPair
+        val BOC_PUBKEY get() = bankOfCorda.publicKey
         val CASH_NOTARY get() = cashNotary.party
         val CASH_NOTARY_IDENTITY get() = cashNotary.identity
         val CHARLIE get() = charlie.party
         val CHARLIE_IDENTITY get() = charlie.identity
         val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_KEY get() = dummyNotary.key
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_PUBKEY get() = megaCorp.pubkey
-        val MEGA_CORP_KEY get() = megaCorp.key
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
         val MEGA_CORP get() = megaCorp.party
         val MINI_CORP_IDENTITY get() = miniCorp.identity
         val MINI_CORP get() = miniCorp.party
@@ -105,15 +108,15 @@ open class VaultQueryTests {
     open fun setUp() {
         // register additional identities
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)),
                 cordappPackages,
-                MEGA_CORP.name)
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
+                megaCorp,
+                DUMMY_NOTARY_KEY)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary, dummyCashIssuer.key, BOC_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary, dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
         identitySvc = services.identityService
         // Register all of the identities we're going to use
         (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->

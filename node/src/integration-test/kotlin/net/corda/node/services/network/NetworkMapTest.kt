@@ -1,26 +1,37 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.SignedData
+import net.corda.core.internal.list
+import net.corda.core.internal.readAll
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.*
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.internalDriver
-import net.corda.testing.node.network.NetworkMapServer
+import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.*
 import java.net.URL
+import kotlin.test.assertEquals
 
 class NetworkMapTest : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val cacheTimeout = 1.seconds
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -40,8 +51,21 @@ class NetworkMapTest : IntegrationTest() {
     }
 
     @Test
+    fun `node correctly downloads and saves network parameters file on startup`() {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val networkParameters = alice.configuration.baseDirectory
+                    .list { paths -> paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().get() }
+                    .readAll()
+                    .deserialize<SignedData<NetworkParameters>>()
+                    .verified()
+            assertEquals(NetworkMapServer.stubNetworkParameter, networkParameters)
+        }
+    }
+
+    @Test
     fun `nodes can see each other using the http network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val alice = startNode(providedName = ALICE_NAME)
             val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()
@@ -56,7 +80,7 @@ class NetworkMapTest : IntegrationTest() {
 
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val alice = startNode(providedName = ALICE_NAME)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
@@ -77,7 +101,7 @@ class NetworkMapTest : IntegrationTest() {
 
     @Test
     fun `nodes process network map remove updates correctly`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val alice = startNode(providedName = ALICE_NAME)
             val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()

@@ -9,9 +9,9 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver
-import net.corda.testing.internal.testThreadFactory
 import org.apache.activemq.artemis.utils.collections.ConcurrentHashSet
 import org.junit.After
 import org.junit.Test

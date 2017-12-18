@@ -12,7 +12,6 @@ import net.corda.testing.node.internal.performance.startPublishingFixedRateInjec
 import net.corda.testing.node.internal.performance.startReporter
 import net.corda.testing.node.internal.performance.startTightLoopInjector
 import net.corda.testing.node.internal.rpcDriver
-import net.corda.testing.measure
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith

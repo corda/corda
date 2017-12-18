@@ -101,13 +101,10 @@ class P2PMessagingTest : IntegrationTest() {
 
             // Restart the node and expect a response
             val aliceRestarted = startAlice()
-
-            val responseFuture = openFuture<Any>()
-            aliceRestarted.network.runOnNextMessage("test.response") {
+            val responseFuture = openFuture<Any>() aliceRestarted.network.runOnNextMessage("test.response") {
                 responseFuture.set(it.data.deserialize())
             }
             val response = responseFuture.getOrThrow()
-
             assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
             assertThat(response).isEqualTo(responseMessage)
         }
