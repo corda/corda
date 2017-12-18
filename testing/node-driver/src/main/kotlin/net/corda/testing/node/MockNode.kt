@@ -503,5 +503,6 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doReturn(true).whenever(it).useAMQPBridges
+        doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
     }
 }
