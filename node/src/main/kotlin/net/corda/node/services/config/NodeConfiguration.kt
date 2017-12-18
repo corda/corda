@@ -56,11 +56,12 @@ fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val custom: Boolean = false
+                        val custom: Boolean = false,
+                        val mysql: Properties? = null
 ) {
     init {
-        require(raft == null || bftSMaRt == null || !custom) {
-            "raft, bftSMaRt, and custom configs cannot be specified together"
+        require(raft == null || bftSMaRt == null || !custom || mysql == null) {
+            "raft, bftSMaRt, custom, and mysql configs cannot be specified together"
         }
     }
     val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
