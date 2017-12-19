@@ -1,5 +1,6 @@
 package net.corda.node
 
+import com.typesafe.config.ConfigException
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div

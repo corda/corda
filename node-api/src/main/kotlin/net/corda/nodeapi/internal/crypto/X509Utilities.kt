@@ -1,18 +1,17 @@
 package net.corda.nodeapi.internal.crypto
 
+import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.CertRole
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.read
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
-import org.bouncycastle.asn1.ASN1EncodableVector
-import org.bouncycastle.asn1.ASN1Sequence
-import org.bouncycastle.asn1.DERSequence
-import org.bouncycastle.asn1.DERUTF8String
+import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
@@ -221,6 +220,7 @@ object X509Utilities {
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
+        val role = certificateType.role
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second,
                 subject, subjectPublicKey)
@@ -229,9 +229,13 @@ object X509Utilities {
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
 
+        if (role != null) {
+            builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, role)
+        }
         if (nameConstraints != null) {
             builder.addExtension(Extension.nameConstraints, true, nameConstraints)
         }
+
         return builder
     }
 
@@ -322,13 +326,14 @@ class X509CertificateFactory {
     }
 }
 
-enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
+enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: CertRole?) {
     ROOT_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = null
     ),
 
     INTERMEDIATE_CA(
@@ -336,7 +341,26 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = CertRole.INTERMEDIATE_CA
+    ),
+
+    NETWORK_MAP(
+            KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false,
+            role = CertRole.NETWORK_MAP
+    ),
+
+    SERVICE_IDENTITY(
+            KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false,
+            role = CertRole.SERVICE_IDENTITY
     ),
 
     NODE_CA(
@@ -344,7 +368,8 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = CertRole.NODE_CA
     ),
 
     TLS(
@@ -352,24 +377,27 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = false
+            isCA = false,
+            role = CertRole.TLS
     ),
 
-    // TODO: Identity certs should have only limited depth (i.e. 1) CA signing capability, with tight name constraints
-    WELL_KNOWN_IDENTITY(
+    // TODO: Identity certs should have tight name constraints on child certificates
+    LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = CertRole.LEGAL_IDENTITY
     ),
 
-    CONFIDENTIAL_IDENTITY(
+    CONFIDENTIAL_LEGAL_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = false
+            isCA = false,
+            role = CertRole.CONFIDENTIAL_LEGAL_IDENTITY
     )
 }
 

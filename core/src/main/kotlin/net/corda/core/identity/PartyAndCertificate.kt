@@ -1,5 +1,6 @@
 package net.corda.core.identity
 
+import net.corda.core.internal.CertRole
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
@@ -19,6 +20,8 @@ class PartyAndCertificate(val certPath: CertPath) {
         val certs = certPath.certificates
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         certificate = certs[0] as X509Certificate
+        val role = CertRole.extract(certificate)
+        require(role?.isIdentity ?: false) { "Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role" }
     }
 
     @Transient
@@ -38,6 +41,24 @@ class PartyAndCertificate(val certPath: CertPath) {
     fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult {
         val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = false }
         val validator = CertPathValidator.getInstance("PKIX")
-        return validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
+        val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
+        // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
+        // an all-null chain is in theory valid.
+        var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)
+        for (certIdx in (0 until certPath.certificates.size).reversed()) {
+            val certificate = certPath.certificates[certIdx]
+            val role = CertRole.extract(certificate)
+            if (parentRole != null) {
+                if (role == null) {
+                    throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
+                }
+                if (!role.isValidParent(parentRole)) {
+                    val certificateString = (certificate as? X509Certificate)?.subjectDN?.toString() ?: certificate.toString()
+                    throw CertPathValidatorException("The issuing certificate for $certificateString has role $parentRole, expected one of ${role.validParents}")
+                }
+            }
+            parentRole = role
+        }
+        return result
     }
 }
