@@ -28,18 +28,18 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
 
         dataSource.connection.use { connection ->
 
+            //collect all changelog file referenced in the included schemas
+            val changelogList = schemas.map { mappedSchema ->
+                getMigrationResource(mappedSchema).let {
+                    "${MIGRATION_PREFIX}/${it}.xml"
+                }
+            }
+
             //create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream
             val customResourceAccessor = object : ClassLoaderResourceAccessor() {
                 override fun getResourcesAsStream(path: String): Set<InputStream> {
 
                     if (path == dynamicInclude) {
-                        //collect all changelog file referenced in the included schemas
-                        val changelogList = schemas.map { mappedSchema ->
-                            getMigrationResource(mappedSchema).let {
-                                "${MIGRATION_PREFIX}/${it}.xml"
-                            }
-                        }
-
                         //create a map in liquibase format including all migration files
                         val includeAllFiles = mapOf("databaseChangeLog" to changelogList.map { file -> mapOf("include" to mapOf("file" to file)) })
 
