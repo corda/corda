@@ -2,10 +2,10 @@ package com.r3.corda.networkmanage.doorman.signer
 
 import com.r3.corda.networkmanage.common.signer.Signer
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.common.utils.withCert
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -33,13 +33,14 @@ class LocalSigner(private val caKeyPair: KeyPair, private val caCertPath: Array<
         val nameConstraints = NameConstraints(
                 arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject))),
                 arrayOf())
-        val clientCertificate = X509Utilities.createCertificate(CertificateType.NODE_CA,
+        val nodeCaCert = X509Utilities.createCertificate(
+                CertificateType.NODE_CA,
                 caCertPath.first().toX509CertHolder(),
                 caKeyPair,
-                CordaX500Name.parse(request.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),
+                CordaX500Name.parse(request.subject.toString()),
                 request.publicKey,
-                nameConstraints = nameConstraints).toX509Certificate()
-        return buildCertPath(clientCertificate, *caCertPath)
+                nameConstraints = nameConstraints)
+        return buildCertPath(nodeCaCert.cert, *caCertPath)
     }
 
     override fun sign(data: ByteArray): DigitalSignatureWithCert {

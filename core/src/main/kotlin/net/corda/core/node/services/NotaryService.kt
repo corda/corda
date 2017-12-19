@@ -25,7 +25,6 @@ abstract class NotaryService : SingletonSerializeAsToken() {
                 if (raft) append(".raft")
                 if (bft) append(".bft")
                 if (custom) append(".custom")
-                if (mysql) append(".mysql")
             }.toString()
         }
     }

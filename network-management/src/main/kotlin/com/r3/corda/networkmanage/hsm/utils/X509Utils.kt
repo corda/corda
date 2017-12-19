@@ -7,7 +7,6 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.x500Name
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.getX509Certificate
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1Sequence
@@ -184,7 +183,7 @@ object X509Utilities {
         val certificateType = CertificateType.NODE_CA
         val validityWindow = getCertificateValidityWindow(0, validDays, issuerCertificate.notBefore, issuerCertificate.notAfter)
         val serial = BigInteger.valueOf(random63BitValue(provider))
-        val subject = CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Name
+        val subject = CordaX500Name.parse(jcaRequest.subject.toString()).x500Name
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(jcaRequest.publicKey.encoded))
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val builder = JcaX509v3CertificateBuilder(issuerCertificate.subject, serial, validityWindow.first, validityWindow.second, subject, jcaRequest.publicKey)

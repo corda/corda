@@ -23,8 +23,6 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
-import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.IdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
