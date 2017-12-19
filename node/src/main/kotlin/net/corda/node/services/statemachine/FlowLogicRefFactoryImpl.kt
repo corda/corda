@@ -41,11 +41,14 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
     }
 
     override fun create(flowClassName: String, vararg args: Any?): FlowLogicRef {
-        val flowClass = Class.forName(flowClassName) as? Class<FlowLogic<*>>
+        val flowClass = Class.forName(flowClassName, true, classloader).asSubclass(FlowLogic::class.java)
         if (flowClass == null) {
             throw IllegalArgumentException("The class $flowClassName is not a subclass of FlowLogic.")
         } else {
-            return create(flowClass, *args)
+            if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
+                throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
+            }
+            return createForRPC(flowClass, *args)
         }
     }
 

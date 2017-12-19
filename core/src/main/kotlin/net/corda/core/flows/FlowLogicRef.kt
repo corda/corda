@@ -14,6 +14,7 @@ interface FlowLogicRefFactory {
      * Construct a FlowLogicRef. This is intended for cases where the calling code has the relevant class already
      * and can provide it directly.
      */
+    @Deprecated("This should be avoided, and the version which takes a class name used instead to avoid requiring the class on the classpath to deserialize calling code")
     fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
     /**
      * Construct a FlowLogicRef. This is intended for cases where the calling code does not want to require the flow
