@@ -1,6 +1,6 @@
 'use strict';
 
-define([], () => {
+define([], function () {
     return {
         "30/360": {
             "day": "D30",
@@ -29,6 +29,6 @@ define([], () => {
         "ACT/ACT ICMA": {
             "day": "DActual",
             "year": "YICMA"
-        },
+        }
     };
 });

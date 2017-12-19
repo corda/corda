@@ -1,16 +1,27 @@
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+
+
 buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-        classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlin_version}")
-    }
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlin_version}")
+		classpath 'com.bmuschko:gradle-docker-plugin:3.2.1'
+		classpath "org.yaml:snakeyaml:1.19"
+	}
 }
 
+import org.yaml.snakeyaml.DumperOptions
+
+
 plugins {
-    id 'com.craigburke.client-dependencies' version '1.4.0'
+	id 'com.craigburke.client-dependencies' version '1.4.0'
 }
+
+group = "${parent.group}.irs-demo"
 
 clientDependencies {
     registry 'realBower', type:'bower', url:'https://registry.bower.io'
@@ -69,6 +80,8 @@ jar {
     dependsOn clientInstall
 }
 
+def docker_dir = file("$project.buildDir/docker")
+
 task deployWebapps(type: Copy, dependsOn: ['jar', 'bootRepackage']) {
     ext.webappDir = file("build/webapps")
 
@@ -89,4 +102,58 @@ task demoJar(type: Jar) {
 
 artifacts {
     demoArtifacts demoJar
+}
+
+task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, dependsOn: [bootRepackage]) {
+	destFile = file("$docker_dir/Dockerfile")
+
+	from 'azul/zulu-openjdk-alpine:8u152'
+	copyFile jar.archiveName, "/opt/irs/web/"
+	workingDir "/opt/irs/web/"
+	defaultCommand "sh", "-c", "java -Dcorda.host=\$CORDA_HOST -jar ${jar.archiveName}"
+}
+
+task prepareDockerDir(type: Copy, dependsOn: [bootRepackage, createDockerfile]) {
+	from jar
+	into docker_dir
+}
+
+task generateDockerCompose(dependsOn: [prepareDockerDir]) {
+
+	def outFile = new File(project.buildDir, "docker-compose.yml")
+
+	ext['dockerComposePath'] = outFile
+
+	doLast {
+		def dockerComposeObject = [
+			"version": "3",
+			"services": [
+				"web-a": [
+					"build": "$docker_dir".toString(),
+					"environment": [
+						"CORDA_HOST": "bank-a:10003"
+					],
+					"ports": ["8080"]
+				],
+				"web-b": [
+					"build": "$docker_dir".toString(),
+					"environment": [
+						"CORDA_HOST": "bank-b:10003"
+					],
+					"ports": ["8080"]
+				]
+			]
+		]
+
+
+		def options = new org.yaml.snakeyaml.DumperOptions()
+		options.indent = 2
+		options.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+
+		def dockerComposeContent = new org.yaml.snakeyaml.Yaml(options).dump(dockerComposeObject)
+
+		Files.write(outFile.toPath(), dockerComposeContent.getBytes(StandardCharsets.UTF_8))
+	}
+
+    outputs.file(outFile)
 }

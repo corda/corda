@@ -29,6 +29,20 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
+     * p2p Port.
+     */
+    private int p2pPort = 10002;
+
+    public int getP2pPort() { return p2pPort; }
+
+    /**
+     * RPC Port.
+     */
+    private int rpcPort = 10003;
+
+    public int getRpcPort() { return rpcPort; }
+
+    /**
      * Set the RPC users for this node. This configuration block allows arbitrary configuration.
      * The recommended current structure is:
      * [[['username': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
@@ -79,6 +93,7 @@ public class CordformNode implements NodeDefinition {
      */
     public void p2pPort(int p2pPort) {
         p2pAddress(DEFAULT_HOST + ':' + p2pPort);
+        this.p2pPort = p2pPort;
     }
 
     /**
@@ -110,6 +125,7 @@ public class CordformNode implements NodeDefinition {
     @Deprecated
     public void rpcPort(int rpcPort) {
         rpcAddress(DEFAULT_HOST + ':' + rpcPort);
+        this.rpcPort = rpcPort;
     }
 
     /**
