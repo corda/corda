@@ -31,6 +31,9 @@ include 'perftestcordapp'
 ['test-common', 'test-utils', 'smoke-test-utils', 'node-driver'].each {
     project(":$it").projectDir = new File("$settingsDir/testing/$it")
 }
+include 'network-management'
+include 'network-management:capsule'
+include 'network-management:capsule-hsm'
 include 'tools:jmeter'
 include 'tools:explorer'
 include 'tools:explorer:capsule'

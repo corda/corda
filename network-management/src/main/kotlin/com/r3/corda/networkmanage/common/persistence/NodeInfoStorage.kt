@@ -3,6 +3,7 @@ package com.r3.corda.networkmanage.common.persistence
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.node.NodeInfo
+import net.corda.nodeapi.internal.SignedNodeInfo
 import java.security.cert.CertPath
 
 /**
@@ -19,12 +20,12 @@ interface NodeInfoStorage {
      * Retrieve node info together with its signature using nodeInfo's hash
      * @return [NodeInfo] or null if the node info is not registered.
      */
-    fun getNodeInfo(nodeInfoHash: SecureHash): SignedData<NodeInfo>?
+    fun getNodeInfo(nodeInfoHash: SecureHash): SignedNodeInfo?
 
     /**
      * The [nodeInfo] is keyed by the public key, old node info with the same public key will be replaced by the new node info.
      * @param signedNodeInfo signed node info data to be stored
      * @return hash for the newly created node info entry
      */
-    fun putNodeInfo(signedNodeInfo: SignedData<NodeInfo>): SecureHash
+    fun putNodeInfo(signedNodeInfo: SignedNodeInfo): SecureHash
 }

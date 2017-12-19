@@ -8,7 +8,6 @@ import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -97,7 +96,6 @@ class DoormanIntegrationTest {
         doorman.close()
     }
 
-    @Ignore
     @Test
     fun `nodeInfo is published to the network map`() {
         // Given
@@ -149,7 +147,6 @@ class DoormanIntegrationTest {
             doReturn(it.certificatesDirectory / "sslkeystore.jks").whenever(it).sslKeystore
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-//            doReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}")).whenever(it).compatibilityZoneURL
             doReturn("iTest@R3.com").whenever(it).emailAddress
         }
     }

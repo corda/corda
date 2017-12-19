@@ -5,7 +5,6 @@ import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.common.utils.withCert
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -13,6 +12,7 @@ import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
@@ -64,7 +64,7 @@ class DBNetworkMapStorageTest : TestBase() {
         val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
         // Put signed node info data
         val nodeInfoBytes = nodeInfo.serialize()
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBytes, keyPair.sign(nodeInfoBytes)))
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoBytes, listOf(keyPair.sign(nodeInfoBytes))))
 
         // Create network parameters
         val networkParametersHash = networkMapStorage.saveNetworkParameters(testNetworkParameters(emptyList()))
@@ -131,15 +131,16 @@ class DBNetworkMapStorageTest : TestBase() {
         val requestIdA = requestStorage.saveRequest(createRequest(organisationA).first)
         requestStorage.markRequestTicketCreated(requestIdA)
         requestStorage.approveRequest(requestIdA, "TestUser")
-        val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCertA = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationA, locality = "London", country = "GB"), keyPair.public)
+        val keyPairA = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val clientCertA = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationA, locality = "London", country = "GB"), keyPairA.public)
         val certPathA = buildCertPath(clientCertA.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
         requestStorage.putCertificatePath(requestIdA, certPathA, emptyList())
         val organisationB = "TestB"
         val requestIdB = requestStorage.saveRequest(createRequest(organisationB).first)
         requestStorage.markRequestTicketCreated(requestIdB)
         requestStorage.approveRequest(requestIdB, "TestUser")
-        val clientCertB = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationB, locality = "London", country = "GB"), Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).public)
+        val keyPairB = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val clientCertB = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationB, locality = "London", country = "GB"), keyPairB.public)
         val certPathB = buildCertPath(clientCertB.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
         requestStorage.putCertificatePath(requestIdB, certPathB, emptyList())
         val nodeInfoA = NodeInfo(listOf(NetworkHostAndPort("my.companyA.com", 1234)), listOf(PartyAndCertificate(certPathA)), 1, serial = 1L)
@@ -147,14 +148,14 @@ class DBNetworkMapStorageTest : TestBase() {
         // Put signed node info data
         val nodeInfoABytes = nodeInfoA.serialize()
         val nodeInfoBBytes = nodeInfoB.serialize()
-        val nodeInfoHashA = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoABytes, keyPair.sign(nodeInfoABytes)))
-        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBBytes, keyPair.sign(nodeInfoBBytes)))
+        val nodeInfoHashA = nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoABytes, listOf(keyPairA.sign(nodeInfoABytes))))
+        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoBBytes, listOf(keyPairB.sign(nodeInfoBBytes))))
 
         // Create network parameters
         val networkParametersHash = networkMapStorage.saveNetworkParameters(createNetworkParameters())
         val networkMap = NetworkMap(listOf(nodeInfoHashA), networkParametersHash)
         val serializedNetworkMap = networkMap.serialize()
-        val signatureData = keyPair.sign(serializedNetworkMap).withCert(clientCertA.cert)
+        val signatureData = keyPairA.sign(serializedNetworkMap).withCert(clientCertA.cert)
         val signedNetworkMap = SignedNetworkMap(serializedNetworkMap, signatureData)
 
         // Sign network map

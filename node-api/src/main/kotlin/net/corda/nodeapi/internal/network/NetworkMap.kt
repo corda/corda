@@ -70,8 +70,8 @@ class SignedNetworkMap(val raw: SerializedBytes<NetworkMap>, val signature: Digi
     @Throws(SignatureException::class, CertPathValidatorException::class)
     fun verified(trustedRoot: X509Certificate?): NetworkMap {
         signature.by.publicKey.verify(raw.bytes, signature)
-        // Assume network map cert is under the default trust root.
         if (trustedRoot != null) {
+            // Assume network map cert is under the default trust root.
             X509Utilities.validateCertificateChain(trustedRoot, signature.by, trustedRoot)
         }
         return raw.deserialize()

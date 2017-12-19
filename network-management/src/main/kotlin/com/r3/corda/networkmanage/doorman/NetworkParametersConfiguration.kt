@@ -39,7 +39,6 @@ internal data class NotaryConfiguration(private val name: CordaX500Name,
  */
 internal data class NetworkParametersConfiguration(val minimumPlatformVersion: Int,
                                                    val notaries: List<NotaryConfiguration>,
-                                                   val eventHorizonDays: Int,
                                                    val maxMessageSize: Int,
                                                    val maxTransactionSize: Int)
 

@@ -96,10 +96,7 @@
             <column name="node_info_hash" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="node_info_bytes" type="BLOB"/>
-            <column name="signature_bytes" type="BLOB"/>
-            <column name="signature_public_key_algorithm" type="CLOB"/>
-            <column name="signature_public_key_bytes" type="BLOB"/>
+            <column name="signed_node_info_bytes" type="BLOB"/>
             <column name="certificate_signing_request" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>

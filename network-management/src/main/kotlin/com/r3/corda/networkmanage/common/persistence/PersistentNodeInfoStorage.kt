@@ -1,15 +1,13 @@
 package com.r3.corda.networkmanage.common.persistence
 
-import com.r3.corda.networkmanage.common.persistence.entity.CertificateDataEntity
-import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
-import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
+import com.r3.corda.networkmanage.common.persistence.entity.*
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.security.cert.CertPath
@@ -19,7 +17,7 @@ import java.security.cert.X509Certificate
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
-    override fun putNodeInfo(signedNodeInfo: SignedData<NodeInfo>): SecureHash = database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
+    override fun putNodeInfo(signedNodeInfo: SignedNodeInfo): SecureHash = database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
         val nodeInfo = signedNodeInfo.verified()
         val orgName = nodeInfo.legalIdentities.first().name.organisation
         // TODO: use cert extension to identify NodeCA cert when Ross's work is in.
@@ -45,23 +43,23 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
             builder.equal(path.get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name), request.certificateSigningRequest)
         }
         val hash = signedNodeInfo.raw.hash
+
         val hashedNodeInfo = NodeInfoEntity(
                 nodeInfoHash = hash.toString(),
                 certificateSigningRequest = request.certificateSigningRequest,
-                nodeInfoBytes = signedNodeInfo.raw.bytes,
-                signatureBytes = signedNodeInfo.sig.bytes,
-                signaturePublicKeyBytes = signedNodeInfo.sig.by.encoded,
-                signaturePublicKeyAlgorithm = signedNodeInfo.sig.by.algorithm)
+                signedNodeInfoBytes = signedNodeInfo.serialize().bytes)
         session.save(hashedNodeInfo)
         hash
     }
 
-    override fun getNodeInfo(nodeInfoHash: SecureHash): SignedData<NodeInfo>? = database.transaction {
-        val nodeInfoEntity = session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())
-        if (nodeInfoEntity?.signatureBytes == null) {
-            null
-        } else {
-            SignedData(SerializedBytes(nodeInfoEntity.nodeInfoBytes), nodeInfoEntity.signature()!!)
+    override fun getNodeInfo(nodeInfoHash: SecureHash): SignedNodeInfo? {
+        return database.transaction {
+            val nodeInfoEntity = session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())
+            if (nodeInfoEntity == null) {
+                null
+            } else {
+                nodeInfoEntity.signedNodeInfo()
+            }
         }
     }
 

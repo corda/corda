@@ -6,17 +6,16 @@ import com.r3.corda.networkmanage.common.utils.hashString
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
@@ -77,15 +76,16 @@ class PersitenceNodeInfoStorageTest : TestBase() {
         val requestIdA = requestStorage.saveRequest(createRequest(organisationA).first)
         requestStorage.markRequestTicketCreated(requestIdA)
         requestStorage.approveRequest(requestIdA, "TestUser")
-        val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCertA = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationA, locality = "London", country = "GB"), keyPair.public)
+        val keyPairA = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val clientCertA = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationA, locality = "London", country = "GB"), keyPairA.public)
         val certPathA = buildCertPath(clientCertA.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
         requestStorage.putCertificatePath(requestIdA, certPathA, emptyList())
         val organisationB = "TestB"
         val requestIdB = requestStorage.saveRequest(createRequest(organisationB).first)
         requestStorage.markRequestTicketCreated(requestIdB)
         requestStorage.approveRequest(requestIdB, "TestUser")
-        val clientCertB = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationB, locality = "London", country = "GB"), Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).public)
+        val keyPairB = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val clientCertB = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationB, locality = "London", country = "GB"), keyPairB.public)
         val certPathB = buildCertPath(clientCertB.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
         requestStorage.putCertificatePath(requestIdB, certPathB, emptyList())
         val nodeInfoA = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPathA)), 1, serial = 1L)
@@ -94,8 +94,8 @@ class PersitenceNodeInfoStorageTest : TestBase() {
         // Put signed node info data
         val nodeInfoABytes = nodeInfoA.serialize()
         val nodeInfoBBytes = nodeInfoB.serialize()
-        nodeInfoStorage.putNodeInfo(SignedData(nodeInfoABytes, keyPair.sign(nodeInfoABytes)))
-        nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBBytes, keyPair.sign(nodeInfoBBytes)))
+        nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoABytes, listOf(keyPairA.sign(nodeInfoABytes))))
+        nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoBBytes, listOf(keyPairB.sign(nodeInfoBBytes))))
 
         // when
         val persistedNodeInfoA = nodeInfoStorage.getNodeInfo(nodeInfoABytes.hash)
@@ -123,12 +123,12 @@ class PersitenceNodeInfoStorageTest : TestBase() {
         val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
         val nodeInfoSamePubKey = NodeInfo(listOf(NetworkHostAndPort("my.company2.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
         val nodeInfoBytes = nodeInfo.serialize()
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBytes, keyPair.sign(nodeInfoBytes)))
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoBytes, listOf(keyPair.sign(nodeInfoBytes))))
         assertEquals(nodeInfo, nodeInfoStorage.getNodeInfo(nodeInfoHash)?.verified())
 
         val nodeInfoSamePubKeyBytes = nodeInfoSamePubKey.serialize()
         // This should replace the node info.
-        nodeInfoStorage.putNodeInfo(SignedData(nodeInfoSamePubKeyBytes, keyPair.sign(nodeInfoSamePubKeyBytes)))
+        nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoSamePubKeyBytes, listOf(keyPair.sign(nodeInfoSamePubKeyBytes))))
 
         // Old node info should be removed.
         assertNull(nodeInfoStorage.getNodeInfo(nodeInfoHash))
@@ -153,12 +153,12 @@ class PersitenceNodeInfoStorageTest : TestBase() {
         val signature = keyPair.sign(nodeInfoBytes)
 
         // when
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBytes, signature))
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedNodeInfo(nodeInfoBytes, listOf(signature)))
 
         // then
         val persistedNodeInfo = nodeInfoStorage.getNodeInfo(nodeInfoHash)
         assertNotNull(persistedNodeInfo)
         assertEquals(nodeInfo, persistedNodeInfo!!.verified())
-        assertEquals(signature, persistedNodeInfo.sig)
+        assertEquals(signature, persistedNodeInfo.signatures.firstOrNull())
     }
 }

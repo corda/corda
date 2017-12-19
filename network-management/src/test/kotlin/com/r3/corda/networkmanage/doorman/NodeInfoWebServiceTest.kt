@@ -19,6 +19,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
@@ -64,7 +65,7 @@ class NodeInfoWebServiceTest {
         NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock(), testNetwotkMapConfig)).use {
             it.start()
             val registerURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/publish")
-            val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
+            val nodeInfoAndSignature = SignedNodeInfo(nodeInfo.serialize(), listOf(digitalSignature)).serialize().bytes
             // Post node info and signature to doorman, this should pass without any exception.
             doPost(registerURL, nodeInfoAndSignature)
         }
@@ -97,14 +98,14 @@ class NodeInfoWebServiceTest {
 
         val nodeInfoStorage: NodeInfoStorage = mock {
             val serializedNodeInfo = nodeInfo.serialize()
-            on { getNodeInfo(nodeInfoHash) }.thenReturn(SignedData(serializedNodeInfo, keyPair.sign(serializedNodeInfo)))
+            on { getNodeInfo(nodeInfoHash) }.thenReturn(SignedNodeInfo(serializedNodeInfo, listOf(keyPair.sign(serializedNodeInfo))))
         }
 
         NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock(), testNetwotkMapConfig)).use {
             it.start()
             val nodeInfoURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/node-info/$nodeInfoHash")
             val conn = nodeInfoURL.openConnection()
-            val nodeInfoResponse = conn.inputStream.readBytes().deserialize<SignedData<NodeInfo>>()
+            val nodeInfoResponse = conn.inputStream.readBytes().deserialize<SignedNodeInfo>()
             verify(nodeInfoStorage, times(1)).getNodeInfo(nodeInfoHash)
             assertEquals(nodeInfo, nodeInfoResponse.verified())
 

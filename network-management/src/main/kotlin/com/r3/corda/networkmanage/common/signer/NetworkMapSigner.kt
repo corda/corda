@@ -15,6 +15,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         val nodeInfoHashes = networkMapStorage.getNodeInfoHashes(CertificateStatus.VALID)
         val networkParameters = networkMapStorage.getLatestNetworkParameters()
         val networkMap = NetworkMap(nodeInfoHashes, networkParameters.serialize().hash)
+        // We wan only check if the data structure is same.
         if (networkMap != currentSignedNetworkMap?.verified(null)) {
             val digitalSignature = signer.sign(networkMap.serialize().bytes)
             val signedHashedNetworkMap = SignedNetworkMap(networkMap.serialize(), digitalSignature)

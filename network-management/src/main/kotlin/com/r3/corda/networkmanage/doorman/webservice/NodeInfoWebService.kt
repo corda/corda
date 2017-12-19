@@ -12,6 +12,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
@@ -44,7 +45,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun registerNode(input: InputStream): Response {
-        val registrationData = input.readBytes().deserialize<SignedData<NodeInfo>>()
+        val registrationData = input.readBytes().deserialize<SignedNodeInfo>()
         return try {
             // Store the NodeInfo
             nodeInfoStorage.putNodeInfo(registrationData)
