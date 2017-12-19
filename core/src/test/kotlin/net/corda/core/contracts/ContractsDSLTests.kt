@@ -4,6 +4,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.testing.TestIdentity
+import org.assertj.core.api.Assertions
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -11,8 +12,6 @@ import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.test.fail
-
 
 class ContractsDSLTests {
     class UnwantedCommand : CommandData
@@ -23,18 +22,12 @@ class ContractsDSLTests {
     }
 
     private companion object {
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
 
-        val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
-        val MEGA_CORP_PARTY get() = MEGA_CORP.party
-        val MEGA_CORP_KEY get() = MEGA_CORP.publicKey
-        val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
-        val MINI_CORP_PARTY get() = MINI_CORP.party
-        val MINI_CORP_KEY get() = MINI_CORP.publicKey
-
-        val VALID_COMMAND_ONE = CommandWithParties(listOf(MEGA_CORP_KEY, MINI_CORP_KEY), listOf(MEGA_CORP_PARTY, MINI_CORP_PARTY), TestCommands.CommandOne())
-        val VALID_COMMAND_TWO = CommandWithParties(listOf(MEGA_CORP_KEY), listOf(MEGA_CORP_PARTY), TestCommands.CommandTwo())
-        val INVALID_COMMAND = CommandWithParties(emptyList(), emptyList(), UnwantedCommand())
-
+        val validCommandOne = CommandWithParties(listOf(megaCorp.publicKey, miniCorp.publicKey), listOf(megaCorp.party, miniCorp.party), TestCommands.CommandOne())
+        val validCommandTwo = CommandWithParties(listOf(megaCorp.publicKey), listOf(megaCorp.party), TestCommands.CommandTwo())
+        val invalidCommand = CommandWithParties(emptyList(), emptyList(), UnwantedCommand())
     }
 
     @RunWith(Parameterized::class)
@@ -50,27 +43,23 @@ class ContractsDSLTests {
 
         @Test
         fun `check function returns one value`() {
-            val commands = listOf(VALID_COMMAND_ONE, INVALID_COMMAND)
+            val commands = listOf(validCommandOne, invalidCommand)
             val returnedCommand = testFunction(commands)
-            assertEquals(returnedCommand, VALID_COMMAND_ONE, "they should be the same")
+            assertEquals(returnedCommand, validCommandOne, "they should be the same")
         }
 
         @Test(expected = IllegalArgumentException::class)
         fun `check error is thrown if more than one valid command`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
+            val commands = listOf(validCommandOne, validCommandTwo)
             testFunction(commands)
         }
 
         @Test
         fun `check error is thrown when command is of wrong type`() {
-            val commands = listOf(INVALID_COMMAND)
-            try {
-                testFunction(commands)
-            } catch (e: IllegalStateException) {
-                assertEquals(e.message, "Required net.corda.core.contracts.ContractsDSLTests.TestCommands command")
-                return
-            }
-            fail("Should have returned an exception")
+            val commands = listOf(invalidCommand)
+            Assertions.assertThatThrownBy { testFunction(commands) }
+                    .isInstanceOf(IllegalStateException::class.java)
+                    .withFailMessage("Required net.corda.core.contracts.ContractsDSLTests.TestCommands command")
         }
     }
 
@@ -87,38 +76,38 @@ class ContractsDSLTests {
 
         @Test
         fun `check that function returns all values`() {
-            val commands = listOf (VALID_COMMAND_ONE, VALID_COMMAND_TWO)
+            val commands = listOf(validCommandOne, validCommandTwo)
             testFunction(commands, null, null)
             assertEquals(2, commands.size)
-            assertTrue(commands.contains(VALID_COMMAND_ONE))
-            assertTrue(commands.contains(VALID_COMMAND_TWO))
+            assertTrue(commands.contains(validCommandOne))
+            assertTrue(commands.contains(validCommandTwo))
         }
 
         @Test
         fun `check that function does not return invalid command types`() {
-            val commands = listOf(VALID_COMMAND_ONE, INVALID_COMMAND)
+            val commands = listOf(validCommandOne, invalidCommand)
             val filteredCommands = testFunction(commands, null, null).toList()
             assertEquals(1, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertFalse(filteredCommands.contains(INVALID_COMMAND))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertFalse(filteredCommands.contains(invalidCommand))
         }
 
         @Test
         fun `check that function returns commands from valid signers`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
-            val filteredCommands = testFunction(commands, MINI_CORP_KEY, null).toList()
+            val commands = listOf(validCommandOne, validCommandTwo)
+            val filteredCommands = testFunction(commands, miniCorp.publicKey, null).toList()
             assertEquals(1, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertFalse(filteredCommands.contains(VALID_COMMAND_TWO))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertFalse(filteredCommands.contains(validCommandTwo))
         }
 
         @Test
         fun `check that function returns commands from valid parties`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
-            val filteredCommands = testFunction(commands, null, MINI_CORP_PARTY).toList()
+            val commands = listOf(validCommandOne, validCommandTwo)
+            val filteredCommands = testFunction(commands, null, miniCorp.party).toList()
             assertEquals(1, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertFalse(filteredCommands.contains(VALID_COMMAND_TWO))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertFalse(filteredCommands.contains(validCommandTwo))
         }
     }
 
@@ -135,56 +124,56 @@ class ContractsDSLTests {
 
         @Test
         fun `check that function returns all values`() {
-            val commands = listOf (VALID_COMMAND_ONE, VALID_COMMAND_TWO)
+            val commands = listOf(validCommandOne, validCommandTwo)
             testFunction(commands, null, null)
             assertEquals(2, commands.size)
-            assertTrue(commands.contains(VALID_COMMAND_ONE))
-            assertTrue(commands.contains(VALID_COMMAND_TWO))
+            assertTrue(commands.contains(validCommandOne))
+            assertTrue(commands.contains(validCommandTwo))
         }
 
         @Test
         fun `check that function does not return invalid command types`() {
-            val commands = listOf(VALID_COMMAND_ONE, INVALID_COMMAND)
+            val commands = listOf(validCommandOne, invalidCommand)
             val filteredCommands = testFunction(commands, null, null).toList()
             assertEquals(1, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertFalse(filteredCommands.contains(INVALID_COMMAND))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertFalse(filteredCommands.contains(invalidCommand))
         }
 
         @Test
         fun `check that function returns commands from valid signers`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
-            val filteredCommands = testFunction(commands, listOf(MEGA_CORP_KEY), null).toList()
+            val commands = listOf(validCommandOne, validCommandTwo)
+            val filteredCommands = testFunction(commands, listOf(megaCorp.publicKey), null).toList()
             assertEquals(2, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertTrue(filteredCommands.contains(VALID_COMMAND_TWO))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertTrue(filteredCommands.contains(validCommandTwo))
         }
 
         @Test
         fun `check that function returns commands from all valid signers`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
-            val filteredCommands = testFunction(commands, listOf(MINI_CORP_KEY, MEGA_CORP_KEY), null).toList()
+            val commands = listOf(validCommandOne, validCommandTwo)
+            val filteredCommands = testFunction(commands, listOf(miniCorp.publicKey, megaCorp.publicKey), null).toList()
             assertEquals(1, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertFalse(filteredCommands.contains(VALID_COMMAND_TWO))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertFalse(filteredCommands.contains(validCommandTwo))
         }
 
         @Test
         fun `check that function returns commands from valid parties`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
-            val filteredCommands = testFunction(commands, null, listOf(MEGA_CORP_PARTY)).toList()
+            val commands = listOf(validCommandOne, validCommandTwo)
+            val filteredCommands = testFunction(commands, null, listOf(megaCorp.party)).toList()
             assertEquals(2, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertTrue(filteredCommands.contains(VALID_COMMAND_TWO))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertTrue(filteredCommands.contains(validCommandTwo))
         }
 
         @Test
         fun `check that function returns commands from all valid parties`() {
-            val commands = listOf(VALID_COMMAND_ONE, VALID_COMMAND_TWO)
-            val filteredCommands = testFunction(commands, null, listOf(MINI_CORP_PARTY, MEGA_CORP_PARTY)).toList()
+            val commands = listOf(validCommandOne, validCommandTwo)
+            val filteredCommands = testFunction(commands, null, listOf(miniCorp.party, megaCorp.party)).toList()
             assertEquals(1, filteredCommands.size)
-            assertTrue(filteredCommands.contains(VALID_COMMAND_ONE))
-            assertFalse(filteredCommands.contains(VALID_COMMAND_TWO))
+            assertTrue(filteredCommands.contains(validCommandOne))
+            assertFalse(filteredCommands.contains(validCommandTwo))
         }
     }
 }

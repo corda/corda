@@ -32,10 +32,7 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 /** Filters the command list by type, party and public key all at once. */
 inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.select(signer: PublicKey? = null,
                                                                                         party: AbstractParty? = null) =
-        filter { it.value is T }.
-                filter { if (signer == null) true else signer in it.signers }.
-                filter { if (party == null) true else party in it.signingParties }.
-                map { CommandWithParties(it.signers, it.signingParties, it.value as T) }
+        select(T::class.java, signer, party)
 
 /** Filters the command list by type, party and public key all at once. */
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: Class<C>,
@@ -49,10 +46,7 @@ fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: 
 /** Filters the command list by type, parties and public keys all at once. */
 inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.select(signers: Collection<PublicKey>?,
                                                                                         parties: Collection<Party>?) =
-        filter { it.value is T }.
-                filter { if (signers == null) true else it.signers.containsAll(signers) }.
-                filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
-                map { CommandWithParties(it.signers, it.signingParties, it.value as T) }
+        select(T::class.java, signers, parties)
 
 /** Filters the command list by type, parties and public keys all at once. */
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: Class<C>,
