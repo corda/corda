@@ -1,8 +1,10 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
+import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity
@@ -76,5 +78,15 @@ class NetworkMapCacheTest {
             assertThat(bobCache.getNodeByLegalIdentity(bob) != null)
             assertThat(bobCache.getNodeByLegalName(alice.name) == null)
         }
+    }
+
+    @Test
+    fun `add two nodes the same name different keys`() {
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val aliceCache = aliceNode.services.networkMapCache
+        val alicePartyAndCert2 = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public)
+        aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(alicePartyAndCert2)))
+        // This is correct behaviour as we may have distributed service nodes.
+        assertEquals(2, aliceCache.getNodesByLegalName(ALICE_NAME).size)
     }
 }

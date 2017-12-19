@@ -149,7 +149,9 @@ open class PersistentNetworkMapCache(
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             database.transaction { queryByIdentityKey(session, identityKey) }
 
-    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address) }
+    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address).singleOrNull() }
+
+    override fun getNodesByAddress(address: NetworkHostAndPort): List<NodeInfo> = database.transaction { queryByAddress(session, address) }
 
     override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = database.transaction { queryIdentityByLegalName(session, name) }
 
@@ -278,15 +280,14 @@ open class PersistentNetworkMapCache(
         return result.map { it.toNodeInfo() }
     }
 
-    private fun queryByAddress(session: Session, hostAndPort: NetworkHostAndPort): NodeInfo? {
+    private fun queryByAddress(session: Session, hostAndPort: NetworkHostAndPort): List<NodeInfo> {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.host = :host AND a.port = :port",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
         val result = query.resultList
-        return if (result.isEmpty()) null
-        else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
+        return result.map { it.toNodeInfo() }
     }
 
     /** Object Relational Mapping support. */

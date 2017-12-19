@@ -74,8 +74,13 @@ interface NetworkMapCacheBase {
      */
     fun getNodeByLegalName(name: CordaX500Name): NodeInfo?
 
+    // TODO We don't want to end up with two functions of this kind. Should I deprecate this one? On the other hand, we shouldn't allow to have
+    //  two different parites to advertise the same address?
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
+
+    /** Look up the node infos for a host and port. */
+    fun getNodesByAddress(address: NetworkHostAndPort): List<NodeInfo>
 
     /**
      * Look up a well known identity (including certificate path) of a legal name. This should be used in preference
