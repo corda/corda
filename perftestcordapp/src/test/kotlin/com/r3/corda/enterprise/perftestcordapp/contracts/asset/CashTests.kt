@@ -582,10 +582,9 @@ class CashTests {
 
     private fun makeSpend(services: ServiceHub, amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val ourIdentity = services.myInfo.singleIdentityAndCert()
-        val changeIdentity = services.keyManagementService.freshKeyAndCert(ourIdentity, false)
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            Cash.generateSpend(services, tx, amount, changeIdentity, dest)
+            Cash.generateSpend(services, tx, amount, ourIdentity, dest)
         }
         return tx.toWireTransaction(services)
     }
@@ -681,11 +680,10 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithParties() {
-        val changeIdentity = ourServices.keyManagementService.freshKeyAndCert(ourServices.myInfo.singleIdentityAndCert(), false)
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(ourServices, tx, 80.DOLLARS, changeIdentity, ALICE, setOf(MINI_CORP))
+            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -895,12 +893,11 @@ class CashTests {
     fun multiSpend() {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            val changeIdentity = ourServices.keyManagementService.freshKeyAndCert(ourServices.myInfo.singleIdentityAndCert(), false)
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(CHARLIE_ANONYMISED, 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, tx, payments, changeIdentity)
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
         val wtx = tx.toWireTransaction(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
