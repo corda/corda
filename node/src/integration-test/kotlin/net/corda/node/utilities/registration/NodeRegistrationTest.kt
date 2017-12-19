@@ -3,10 +3,15 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -14,11 +19,15 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.testing.ROOT_CA
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
+import net.corda.testing.singleIdentity
+import net.corda.testing.singleIdentityAndCert
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -45,14 +54,13 @@ class NodeRegistrationTest {
     val testSerialization = SerializationEnvironmentRule(true)
     private val portAllocation = PortAllocation.Incremental(13000)
     private val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
-    private val registrationHandler = RegistrationHandler(rootCertAndKeyPair)
-
+    private val registrationHandler = RegistrationHandler(ROOT_CA)
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort
 
     @Before
     fun startServer() {
-        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), rootCertAndKeyPair, registrationHandler)
+        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), ROOT_CA, registrationHandler)
         serverHostAndPort = server.start()
     }
 
@@ -61,19 +69,55 @@ class NodeRegistrationTest {
         server.close()
     }
 
-    // TODO Ideally this test should be checking that two nodes that register are able to transact with each other. However
-    // starting a second node hangs so that needs to be fixed.
     @Test
     fun `node registration correct root cert`() {
-        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = rootCertAndKeyPair.certificate.cert)
+        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = ROOT_CA.certificate.cert)
         internalDriver(
                 portAllocation = portAllocation,
-                notarySpecs = emptyList(),
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false
+                initialiseSerialization = false,
+                notarySpecs = listOf(NotarySpec(CordaX500Name(organisation = "NotaryService", locality = "Zurich", country = "CH"), validating = false)),
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                startNodesInProcess = true
         ) {
-            startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
-            assertThat(registrationHandler.idsPolled).contains("Alice")
+            val ALICE_NAME = "Alice"
+            val GENEVIEVE_NAME = "Genevieve"
+            val nodesFutures = listOf(startNode(providedName = CordaX500Name(ALICE_NAME, "London", "GB")),
+                    startNode(providedName = CordaX500Name(GENEVIEVE_NAME, "London", "GB")),
+                            defaultNotaryNode)
+            val (alice, genevieve, notary) = nodesFutures.transpose().get()
+            val nodes = listOf(alice, genevieve, notary)
+
+            assertThat(registrationHandler.idsPolled).contains(ALICE_NAME, GENEVIEVE_NAME)
+          //  assertThat(registrationHandler.idsPolled).doesNotContain("NotaryService")
+
+            val nodeParties = nodes.map { it.nodeInfo.singleIdentityAndCert().party }
+            val seenParties = nodes.map { it.rpc.networkMapSnapshot().map { it.singleIdentityAndCert().party } }
+            //System.out.println(seenKeys)
+            //System.out.println(nodeKeys)
+            val seenK1 = seenParties.first()
+            System.out.println("NodeInfos:")
+            for (party1 in nodeParties) {
+                System.out.println(party1.name to party1.owningKey)
+            }
+            System.out.println("Map snapshot:")
+            for (party in seenK1) {
+                System.out.println(party.name to party.owningKey)
+            }
+
+            System.out.println(notary.rpc.networkMapSnapshot())
+            System.out.println(alice.rpc.networkMapSnapshot())
+            System.out.println(genevieve.rpc.networkMapSnapshot())
+            val al2 = genevieve.rpc.wellKnownPartyFromX500Name(alice.nodeInfo.singleIdentityAndCert().party.name)!!
+
+            // Check we nodes communicate among themselves (and the notary).
+            val anonymous = false
+            genevieve.rpc.startFlow(::CashIssueAndPaymentFlow, 1000.DOLLARS, OpaqueBytes.of(12),
+                    alice.nodeInfo.singleIdentity(),
+                    anonymous,
+                    notary.nodeInfo.legalIdentities.first())
+                    .returnValue
+                    .getOrThrow()
         }
     }
 

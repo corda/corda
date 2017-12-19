@@ -10,13 +10,12 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.ThreadBox
+import net.corda.core.identity.Party
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.toFuture
@@ -46,6 +45,8 @@ import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
@@ -104,7 +105,8 @@ class DriverDSLImpl(
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
     override val notaryHandles: List<NotaryHandle> get() = _notaries
-    private var networkParameters: NetworkParametersCopier? = null
+    private var networkParametersCopier: NetworkParametersCopier? = null
+    lateinit var networkParameters: NetworkParameters
 
     class State {
         val processes = ArrayList<Process>()
@@ -225,6 +227,7 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
 
         configuration.trustStoreFile.parent.createDirectories()
+       // if (configuration.notary != null) configuration.configureDevKeyAndTrustStores(providedName)  // needed for notaries
         loadOrCreateKeyStore(configuration.trustStoreFile, configuration.trustStorePassword).also {
             it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
             it.save(configuration.trustStoreFile, configuration.trustStorePassword)
@@ -279,7 +282,8 @@ class DriverDSLImpl(
             notaryInfos += NotaryInfo(identity, type.validating)
         }
 
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        networkParameters = testNetworkParameters(notaryInfos)
+        networkParametersCopier = NetworkParametersCopier(networkParameters)
 
         return cordforms.map {
             val startedNode = startCordformNode(it)
@@ -348,10 +352,29 @@ class DriverDSLImpl(
         }
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
-        if (compatibilityZone == null) networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        if (compatibilityZone == null) networkParameters = testNetworkParameters(notaryInfos)
+        networkParametersCopier = NetworkParametersCopier(networkParameters)
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
+/*
+    private fun notaryFun(dir: Path): Party {
+        val storePassword = "cordacadevpass"
+        val djks = loadOrCreateKeyStore(dir / "certificates" / "distributedService.jks", storePassword)
+        val nodeCa = djks.getKey("identity-private-key",  "cordacadevkeypass".toCharArray())
+
+        val nodeKeyStorePath = dir / "certificates" / "nodekeystore.jks"
+        val nodeKeyStore = loadOrCreateKeyStore(nodeKeyStorePath, storePassword)
+        //val selfSignCert = X509Utilities.createSelfSignedCACertificate(serviceName, keyPair)
+        // Save to the key store.
+        nodeKeyStore.setKeyEntry(X509Utilities.CORDA_CLIENT_CA, keyPair.private, storePassword.toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
+        nodeKeyStore.save(nodeKeyStorePath, storePassword)
+        //nodeKeyStore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
+        val identityKey = "identity-private-key"
+        val ksw = KeyStoreWrapper(nodeKeyStorePath,storePassword)
+        val kp  = generateKeyPair()
+        ksw.signAndSaveNewKeyPair(serviceName, identityKey, kp)
+    }*/
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
@@ -504,7 +527,7 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
         nodeInfoFilesCopier?.addConfig(baseDirectory)
-        networkParameters?.install(baseDirectory)
+        networkParametersCopier?.install(baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)

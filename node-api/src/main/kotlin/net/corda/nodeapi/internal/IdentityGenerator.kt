@@ -59,6 +59,16 @@ object IdentityGenerator {
             keystore.setCertificateEntry("$aliasPrefix-composite-key", compositeKeyCert.cert)
             keystore.setKeyEntry("$aliasPrefix-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, intermediateCa.certificate.cert, rootCert))
             keystore.save(certPath, "cordacadevpass")
+
+            val storePassword = "cordacadevpass"
+            val nodeKeyStorePath = dir / "certificates" / "nodekeystore.jks"
+            val nodeKeyStorePassword = storePassword
+            val nodeKeyStore = loadOrCreateKeyStore(nodeKeyStorePath, nodeKeyStorePassword)
+            val selfSignCert = X509Utilities.createSelfSignedCACertificate(name, keyPair)
+            // Save to the key store.
+            nodeKeyStore.addOrReplaceKey("Self Signed Private Key", keyPair.private, nodeKeyStorePassword.toCharArray(),
+                    arrayOf(selfSignCert))
+            nodeKeyStore.save(nodeKeyStorePath, nodeKeyStorePassword)
         }
 
         return Party(name, key)

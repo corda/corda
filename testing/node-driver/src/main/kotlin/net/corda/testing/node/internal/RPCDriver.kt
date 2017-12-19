@@ -46,6 +46,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
+import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.remoting.Connection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method

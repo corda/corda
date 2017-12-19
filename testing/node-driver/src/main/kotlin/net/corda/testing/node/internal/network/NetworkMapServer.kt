@@ -1,5 +1,10 @@
 package net.corda.testing.node.internal.network
 
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.crypto.*
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
@@ -16,7 +21,6 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.ROOT_CA
-import org.bouncycastle.asn1.x500.X500Name
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -48,8 +52,11 @@ class NetworkMapServer(cacheTimeout: Duration,
                     CertificateType.INTERMEDIATE_CA,
                     rootCAKeyAndCert.certificate,
                     rootCAKeyAndCert.keyPair,
-                    X500Name("CN=Corda Network Map,L=London"),
+                    CordaX500Name("Corda Network Map", "R3 Ltd", "London","GB"),
                     networkMapKey.public).cert
+            // Check that the certificate validates. Nodes will perform this check upon receiving a network map,
+            // it's better to fail here than there.
+            X509Utilities.validateCertificateChain(rootCAKeyAndCert.certificate.cert, networkMapCert)
             return CertificateAndKeyPair(networkMapCert.toX509CertHolder(), networkMapKey)
         }
     }

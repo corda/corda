@@ -204,7 +204,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
         initCertificate()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity(null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
         retrieveNetworkParameters()

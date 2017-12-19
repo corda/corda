@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.createCertificate
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
@@ -90,6 +91,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             println("Certificate signing request approved, storing private key with the certificate chain.")
             // Save private key and certificate chain to the key store.
             caKeyStore.addOrReplaceKey(CORDA_CLIENT_CA, keyPair.private, privateKeyPassword.toCharArray(), certificates)
+            //caKeyStore.addOrReplaceKey("identity-private-key", keyPair.private, keystorePassword.toCharArray(), certificates)
             caKeyStore.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
             caKeyStore.save(config.nodeKeystore, keystorePassword)
             println("Node private key and certificate stored in ${config.nodeKeystore}.")

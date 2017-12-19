@@ -8,6 +8,7 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -116,7 +117,14 @@ class NotaryServiceTests {
 
         mockNet.runNetwork()
 
-        assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
+        val by1 = f1.resultFuture.getOrThrow().first()
+        val by2 = f2.resultFuture.getOrThrow().first()
+        by1.verify(stx.id)
+        by2.verify(stx.id)
+        assertThat(by1.by).isEqualTo(notary.owningKey)
+        assertThat(by2.by).isEqualTo(notary.owningKey)
+
+      //  assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
     }
 
     @Test

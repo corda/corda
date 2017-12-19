@@ -10,6 +10,7 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.ROOT_CA
 import net.corda.testing.BOB_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.NodeHandle
@@ -37,7 +38,7 @@ class NetworkMapTest {
 
     @Before
     fun start() {
-        networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
+        networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort(), ROOT_CA)
         val address = networkMapServer.start()
         compatibilityZone = CompatibilityZoneParams(URL("http://$address"))
     }
