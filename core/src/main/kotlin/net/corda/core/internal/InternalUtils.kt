@@ -5,6 +5,7 @@ package net.corda.core.internal
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.TransactionBuilder
@@ -118,6 +119,8 @@ fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(th
 inline val Path.size: Long get() = Files.size(this)
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
+fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
+fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
 fun Path.readAll(): ByteArray = Files.readAllBytes(this)
 inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
 inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
@@ -316,3 +319,8 @@ fun ExecutorService.join() {
         // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
     }
 }
+
+@Suppress("unused")
+@VisibleForTesting
+val CordaX500Name.Companion.unspecifiedCountry
+    get() = "ZZ"

@@ -4,13 +4,11 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.services.NotaryService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.IdentityGenerator
 import net.corda.testing.node.internal.demorun.*
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
@@ -24,7 +22,7 @@ private val notaryNames = createNotaryNames(clusterSize)
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
 class BFTNotaryCordform : CordformDefinition() {
-    private val clusterName = CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH")
+    private val clusterName = CordaX500Name("BFT", "Zurich", "CH")
 
     init {
         nodesDirectory = Paths.get("build", "nodes", "nodesBFT")
@@ -64,10 +62,10 @@ class BFTNotaryCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(
+        IdentityGenerator.generateDistributedNotaryIdentity(
                 notaryNames.map { context.baseDirectory(it.toString()) },
                 clusterName,
-                NotaryService.constructId(validating = false, bft = true),
-                minCorrectReplicas(clusterSize))
+                minCorrectReplicas(clusterSize)
+        )
     }
 }

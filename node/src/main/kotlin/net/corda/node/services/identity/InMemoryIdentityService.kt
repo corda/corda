@@ -24,6 +24,7 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
+// TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
 class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
                               trustRoot: X509CertificateHolder) : SingletonSerializeAsToken(), IdentityServiceInternal {
