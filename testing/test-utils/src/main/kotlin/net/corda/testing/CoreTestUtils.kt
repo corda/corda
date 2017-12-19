@@ -102,7 +102,7 @@ fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
             nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, party.name.x500Name))), arrayOf()))
 
     val identityCert = X509Utilities.createCertificate(
-            CertificateType.WELL_KNOWN_IDENTITY,
+            CertificateType.LEGAL_IDENTITY,
             nodeCaCert,
             nodeCaKeyPair,
             party.name,

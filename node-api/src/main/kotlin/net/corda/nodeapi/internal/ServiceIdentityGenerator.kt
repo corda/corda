@@ -37,16 +37,16 @@ object ServiceIdentityGenerator {
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
 
         val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-        val issuer = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+        val intermediateCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
         val rootCert = customRootCert ?: caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
 
         keyPairs.zip(dirs) { keyPair, dir ->
-            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, keyPair.public)
-            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
+            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, serviceName, keyPair.public)
+            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, serviceName, notaryKey)
             val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
             val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
             keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
-            keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
+            keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, intermediateCa.certificate.cert, rootCert))
             keystore.save(certPath, "cordacadevpass")
         }
         return Party(serviceName, notaryKey)

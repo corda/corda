@@ -1,11 +1,14 @@
 package net.corda.core.identity
 
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.internal.cert
 import net.corda.core.internal.read
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.save
+import net.corda.testing.DEV_CA
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.getTestPartyAndCertificate
 import org.assertj.core.api.Assertions.assertThat
@@ -14,11 +17,18 @@ import org.junit.Test
 import java.io.File
 import java.math.BigInteger
 import java.security.KeyStore
+import kotlin.test.assertFailsWith
 
 class PartyAndCertificateTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
+    @Test
+    fun `should reject a path with no roles`() {
+        val path =  X509CertificateFactory().generateCertPath(DEV_CA.certificate.cert)
+        assertFailsWith<IllegalArgumentException> { PartyAndCertificate(path) }
+    }
 
     @Test
     fun `kryo serialisation`() {
