@@ -341,9 +341,10 @@ in_container() {
         --network host \
         --add-host="localhost:${docker_ip}" \
         -v ${CODE}:/code \
-        -v ${HOME}/.container:/root \
+        -v ${HOME}/.container:/home \
         -v ${HOME}/.container/sgx:/sgx \
         -e "PORT=${ISV_PORT}" \
+        -u `id -u`:`id -g` \
         ${ports} \
         ${isgx_device} \
         ${mei0_device} \
