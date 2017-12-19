@@ -5,6 +5,7 @@ package net.corda.core.internal
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.TransactionBuilder
@@ -318,3 +319,8 @@ fun ExecutorService.join() {
         // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
     }
 }
+
+@Suppress("unused")
+@VisibleForTesting
+val CordaX500Name.Companion.unspecifiedCountry
+    get() = "ZZ"
