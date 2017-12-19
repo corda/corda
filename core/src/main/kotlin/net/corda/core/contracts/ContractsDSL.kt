@@ -12,7 +12,6 @@ import java.util.*
  * Defines a simple domain specific language for the specification of financial contracts. Currently covers:
  *
  *  - Some utilities for working with commands.
- *  - An Amount type that represents a positive quantity of a specific token.
  *  - A simple language extension for specifying requirements in English, along with logic to enforce them.
  */
 
@@ -38,7 +37,7 @@ inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>
                 filter { if (party == null) true else party in it.signingParties }.
                 map { CommandWithParties(it.signers, it.signingParties, it.value as T) }
 
-/** Filters the command list by type, parties and public keys all at once. */
+/** Filters the command list by type, party and public key all at once. */
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: Class<C>,
                                                                          signer: PublicKey? = null,
                                                                          party: AbstractParty? = null) =
