@@ -43,12 +43,15 @@ class Authenticator(private val provider: CryptoServerProvider,
                     autoUsername
                 }
                 when (mode) {
-                    AuthMode.CARD_READER -> provider.loginSign(user, ":cs2:cyb:USB0", null)
+                    AuthMode.CARD_READER -> {
+                        println("Authenticating using card reader")
+                        provider.loginSign(user, ":cs2:cyb:USB0", null)
+                    }
                     AuthMode.KEY_FILE -> {
-                        println("Authenticating using preconfigured key file")
+                        println("Authenticating using preconfigured key file $authKeyFilePath")
                         val password = if (authKeyFilePass == null) {
                             val input = readPassword("Enter key file password (or Q to quit): ")
-                            if ("q" == input.toLowerCase()) {
+                            if ("q" == input.toLowerCase().trim()) {
                                 authenticated.clear()
                                 break@loop
                             } else {
@@ -60,6 +63,7 @@ class Authenticator(private val provider: CryptoServerProvider,
                         provider.loginSign(user, authKeyFilePath.toString(), password)
                     }
                     AuthMode.PASSWORD -> {
+                        println("Authenticating using password")
                         val password = readPassword("Enter password (or Q to quit): ")
                         if ("q" == password.toLowerCase()) {
                             authenticated.clear()

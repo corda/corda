@@ -68,22 +68,22 @@ data class Parameters(val dataSourceProperties: Properties,
 fun parseParameters(vararg args: String): Parameters {
     val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
-        accepts("configFile", "Overriding configuration file. (default: <<current directory>>/node.conf)").withRequiredArg().describedAs("filepath")
-        accepts("device", "CryptoServer device address (default: $DEFAULT_DEVICE)").withRequiredArg()
+        accepts("configFile", "Overriding configuration file.").withRequiredArg().defaultsTo("node.conf").describedAs("filepath")
+        accepts("device", "CryptoServer device address").withRequiredArg().defaultsTo(DEFAULT_DEVICE)
         accepts("keyGroup", "CryptoServer key group").withRequiredArg()
-        accepts("keySpecifier", "CryptoServer key specifier (default: $DEFAULT_KEY_SPECIFIER)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_SPECIFIER)
+        accepts("keySpecifier", "CryptoServer key specifier").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_SPECIFIER)
         accepts("rootPrivateKeyPassword", "Password for the root certificate private key").withRequiredArg().describedAs("password")
         accepts("csrPrivateKeyPassword", "Password for the CSR signing certificate private key").withRequiredArg().describedAs("password")
-        accepts("keyGenAuthThreshold", "Authentication strength threshold for the HSM key generation (default: $DEFAULT_KEY_GEN_AUTH_THRESHOLD)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_GEN_AUTH_THRESHOLD)
-        accepts("signAuthThreshold", "Authentication strength threshold for the HSM CSR signing (default: $DEFAULT_SIGN_AUTH_THRESHOLD)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_SIGN_AUTH_THRESHOLD)
-        accepts("authMode", "Authentication mode. Allowed values: ${AuthMode.values()} (default: $DEFAULT_AUTH_MODE)").withRequiredArg().defaultsTo(DEFAULT_AUTH_MODE.name)
+        accepts("keyGenAuthThreshold", "Authentication strength threshold for the HSM key generation").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_GEN_AUTH_THRESHOLD)
+        accepts("signAuthThreshold", "Authentication strength threshold for the HSM CSR signing").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_SIGN_AUTH_THRESHOLD)
+        accepts("authMode", "Authentication mode. Allowed values: ${AuthMode.values().map(AuthMode::name)})").withRequiredArg().defaultsTo(DEFAULT_AUTH_MODE.name)
         accepts("authKeyFilePath", "Key file path when authentication is based on a key file (i.e. authMode=${AuthMode.KEY_FILE.name})").withRequiredArg().describedAs("filepath")
         accepts("authKeyFilePassword", "Key file password when authentication is based on a key file (i.e. authMode=${AuthMode.KEY_FILE.name})").withRequiredArg()
         accepts("autoUsername", "Username to be used for certificate signing (if not specified it will be prompted for input)").withRequiredArg()
-        accepts("csrCertificateName", "Name of the certificate to be used by this CA to sign CSR (default: $DEFAULT_CSR_CERTIFICATE_NAME)").withRequiredArg().defaultsTo(DEFAULT_CSR_CERTIFICATE_NAME)
-        accepts("rootCertificateName", "Name of the root certificate to be used by this CA (default: $DEFAULT_ROOT_CERTIFICATE_NAME)").withRequiredArg().defaultsTo(DEFAULT_ROOT_CERTIFICATE_NAME)
+        accepts("csrCertificateName", "Name of the certificate to be used by this CA to sign CSR").withRequiredArg().defaultsTo(DEFAULT_CSR_CERTIFICATE_NAME)
+        accepts("rootCertificateName", "Name of the root certificate to be used by this CA").withRequiredArg().defaultsTo(DEFAULT_ROOT_CERTIFICATE_NAME)
         accepts("validDays", "Validity duration in days").withRequiredArg().ofType(Int::class.java)
-        accepts("signInterval", "Time interval (in seconds) in which network map is signed (default: $DEFAULT_SIGN_INTERVAL)").withRequiredArg().ofType(Long::class.java).defaultsTo(DEFAULT_SIGN_INTERVAL)
+        accepts("signInterval", "Time interval (in seconds) in which network map is signed").withRequiredArg().ofType(Long::class.java).defaultsTo(DEFAULT_SIGN_INTERVAL)
     }
 
     val configFile = if (argConfig.hasPath("configFile")) {

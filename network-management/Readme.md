@@ -28,8 +28,12 @@ To run the HSM signing server:
 
 ```
 cd network-management
-java -jar capsule-hsm/build/libs/hsm-3.0-NETWORKMAP-20171204.134345-6-capsule.jar --configFile hsm.conf
+java -jar capsule-hsm/build/libs/hsm-3.0-NETWORKMAP-20171204.134345-6.jar --configFile hsm.conf
 ```
+
+For a list of options the HSM signing server takes, run with the `--help` option:
+
+java -jar capsule-hsm/build/libs/hsm-3.0-NETWORKMAP-20171204.134345-6.jar --help
 
 #Configuring network management service
 ### Local signing

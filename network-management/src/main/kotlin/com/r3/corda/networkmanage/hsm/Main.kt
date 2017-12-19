@@ -110,7 +110,7 @@ fun run(parameters: Parameters) {
 
 private fun processError(exception: Exception) {
     val processed = mapCryptoServerException(exception)
-    println("An error occured: ${processed.message}")
+    System.err.println("An error occurred: ${processed.message}")
 }
 
 private fun confirmedSign(selectedItems: List<ApprovedCertificateRequestData>): Boolean {
