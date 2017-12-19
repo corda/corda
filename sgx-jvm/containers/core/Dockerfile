@@ -86,7 +86,6 @@ VOLUME ${SGX_SDK}
 RUN mkdir -p ${CODE}
 RUN mkdir -p ${HOME}
 RUN mkdir -p ${SGX_SDK}
-RUN echo "PS1='container> '" > ${HOME}/.bashrc
 WORKDIR ${CODE}
 
 #  Set up Java and SGX environment

@@ -285,6 +285,7 @@ in_container() {
     local tty=""
     shift 1
     mkdir -p ${HOME}/.container
+    echo 'export PS1="$ "' > ${HOME}/.container/.bashrc
 
     if [ "${TTY_MODE}" == "on" ]; then
         tty="-t"
