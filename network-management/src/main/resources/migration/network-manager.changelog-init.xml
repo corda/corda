@@ -1,7 +1,13 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="tudormalene (generated)" id="1513267683777-1">
-        <createSequence sequenceName="HIBERNATE_SEQUENCE"/>
+    <changeSet author="tudormalene (generated)" id="1513267683777-1" dbms="mssql">
+        <createSequence sequenceName="hibernate_sequence" minValue="1"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-1.2" dbms="azure">
+        <createSequence sequenceName="hibernate_sequence" minValue="1"/>
+    </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-1.1" dbms="h2">
+        <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-2">
         <createTable tableName="certificatesigningrequestentity_modifiedby">
