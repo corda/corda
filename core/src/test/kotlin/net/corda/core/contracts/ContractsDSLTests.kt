@@ -59,7 +59,7 @@ class ContractsDSLTests {
             val commands = listOf(invalidCommand)
             Assertions.assertThatThrownBy { testFunction(commands) }
                     .isInstanceOf(IllegalStateException::class.java)
-                    .withFailMessage("Required net.corda.core.contracts.ContractsDSLTests.TestCommands command")
+                    .hasMessage("Required net.corda.core.contracts.ContractsDSLTests.TestCommands command")
         }
     }
 
