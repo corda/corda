@@ -14,6 +14,12 @@
   public void setMessage(String)
   public void setOriginalExceptionClassName(String)
 ##
+public final class net.corda.core.CordaOID extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public static final String CORDA_PLATFORM = "1.3.6.1.4.1.50530.1"
+  public static final net.corda.core.CordaOID INSTANCE
+  @org.jetbrains.annotations.NotNull public static final String R3_ROOT = "1.3.6.1.4.1.50530"
+  @org.jetbrains.annotations.NotNull public static final String X509_EXTENSION_CORDA_ROLE = "1.3.6.1.4.1.50530.1.1"
+##
 @net.corda.core.serialization.CordaSerializable public class net.corda.core.CordaRuntimeException extends java.lang.RuntimeException implements net.corda.core.CordaThrowable
   public <init>(String)
   public <init>(String, String, Throwable)
@@ -617,6 +623,7 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
   @org.jetbrains.annotations.NotNull public abstract String getName()
   @org.jetbrains.annotations.NotNull public abstract List getRpcFlows()
   @org.jetbrains.annotations.NotNull public abstract List getSchedulableFlows()
+  @org.jetbrains.annotations.NotNull public abstract List getSerializationCustomSerializers()
   @org.jetbrains.annotations.NotNull public abstract List getSerializationWhitelists()
   @org.jetbrains.annotations.NotNull public abstract List getServiceFlows()
   @org.jetbrains.annotations.NotNull public abstract List getServices()
@@ -1542,6 +1549,7 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract Iterable getVaultTransactionNotes(net.corda.core.crypto.SecureHash)
   @kotlin.Deprecated @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed internalVerifiedTransactionsFeed()
   @kotlin.Deprecated @org.jetbrains.annotations.NotNull public abstract List internalVerifiedTransactionsSnapshot()
+  public abstract boolean killFlow(net.corda.core.flows.StateMachineRunId)
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed networkMapFeed()
   @org.jetbrains.annotations.NotNull public abstract List networkMapSnapshot()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo nodeInfo()
@@ -1902,6 +1910,7 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
 @net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage extends net.corda.core.node.StateLoader
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.transactions.SignedTransaction getTransaction(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract rx.Observable getUpdates()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.concurrent.CordaFuture trackTransaction(net.corda.core.crypto.SecureHash)
 ##
@@ -2636,6 +2645,7 @@ public final class net.corda.core.schemas.CommonSchema extends java.lang.Object
   public static final net.corda.core.schemas.CommonSchema INSTANCE
 ##
 public final class net.corda.core.schemas.CommonSchemaV1 extends net.corda.core.schemas.MappedSchema
+  @org.jetbrains.annotations.NotNull protected String getMigrationResource()
   public static final net.corda.core.schemas.CommonSchemaV1 INSTANCE
 ##
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public static class net.corda.core.schemas.CommonSchemaV1$FungibleState extends net.corda.core.schemas.PersistentState
@@ -2666,6 +2676,7 @@ public final class net.corda.core.schemas.CommonSchemaV1 extends net.corda.core.
 public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public <init>(Class, int, Iterable)
   @org.jetbrains.annotations.NotNull public final Iterable getMappedTypes()
+  @org.jetbrains.annotations.Nullable protected String getMigrationResource()
   @org.jetbrains.annotations.NotNull public final String getName()
   public final int getVersion()
   @org.jetbrains.annotations.NotNull public String toString()
@@ -2690,6 +2701,9 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public final void setIndex(Integer)
   public final void setTxId(String)
   public String toString()
+##
+public final class net.corda.core.schemas.PersistentTypesKt extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public static final String getMigrationResource(net.corda.core.schemas.MappedSchema)
 ##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.schemas.QueryableState extends net.corda.core.contracts.ContractState
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.schemas.PersistentState generateMappedObject(net.corda.core.schemas.MappedSchema)

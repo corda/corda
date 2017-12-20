@@ -15,10 +15,10 @@ interface CheckpointStorage {
     fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>)
 
     /**
-     * Remove existing checkpoint from the store. It is an error to attempt to remove a checkpoint which doesn't exist
-     * in the store. Doing so will throw an [IllegalArgumentException].
+     * Remove existing checkpoint from the store.
+     * @return whether the id matched a checkpoint that was removed.
      */
-    fun removeCheckpoint(id: StateMachineRunId)
+    fun removeCheckpoint(id: StateMachineRunId): Boolean
 
     /**
      * Stream all checkpoints from the store. If this is backed by a database the stream will be valid until the

@@ -15,6 +15,10 @@ UNRELEASED
   Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
   For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
 
+* ``CordaRPCOps`` now exposes a function ``killFlow(id: StateMachineRunId): Boolean`` that attempts to terminate a flow.
+  This is not a clean termination and should be reserved for exceptional cases such as fibers that get stuck.
+  As usual, invoking this new function requires a user to be entitled with its specific permission.
+
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
    * The previous design was never intended to be final but was rather a quick implementation in the earliest days of the

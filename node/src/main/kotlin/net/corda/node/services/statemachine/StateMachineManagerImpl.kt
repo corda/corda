@@ -187,6 +187,30 @@ class StateMachineManagerImpl(
         )
     }
 
+    override fun killFlow(id: StateMachineRunId): Boolean {
+
+        return mutex.locked {
+            val flow = flows.remove(id)
+            if (flow != null) {
+                logger.debug("Killing flow known to physical node.")
+                decrementLiveFibers()
+                unfinishedFibers.countDown()
+                try {
+                    flow.fiber.interrupt()
+                    true
+                } finally {
+                    database.transaction {
+                        checkpointStorage.removeCheckpoint(id)
+                    }
+                }
+            } else {
+                // TODO replace with a clustered delete after we'll support clustered nodes
+                logger.debug("Unable to kill a flow unknown to physical node. Might be processed by another physical node.")
+                false
+            }
+        }
+    }
+
     override fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId) {
         val previousFlowId = sessionToFlow.put(sessionId, flowId)
         if (previousFlowId != null) {

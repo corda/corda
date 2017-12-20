@@ -78,6 +78,13 @@ interface StateMachineManager {
      * Returns all currently live flows.
      */
     val allStateMachines: List<FlowLogic<*>>
+
+    /**
+     * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
+     *
+     * @return whether the flow existed and was killed.
+     */
+    fun killFlow(id: StateMachineRunId): Boolean
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call

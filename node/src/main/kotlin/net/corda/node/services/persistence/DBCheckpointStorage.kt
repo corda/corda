@@ -42,13 +42,13 @@ class DBCheckpointStorage : CheckpointStorage {
         })
     }
 
-    override fun removeCheckpoint(id: StateMachineRunId) {
+    override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         val session = DatabaseTransactionManager.current().session
         val criteriaBuilder = session.criteriaBuilder
         val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
         val root = delete.from(DBCheckpoint::class.java)
         delete.where(criteriaBuilder.equal(root.get<String>(DBCheckpoint::checkpointId.name), id.uuid.toString()))
-        session.createQuery(delete).executeUpdate()
+        return session.createQuery(delete).executeUpdate() > 0
     }
 
     override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>> {

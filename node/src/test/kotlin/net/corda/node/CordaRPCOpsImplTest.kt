@@ -1,5 +1,6 @@
 package net.corda.node
 
+import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
 import net.corda.core.context.AuthServiceId
@@ -9,9 +10,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
@@ -19,6 +18,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
 import net.corda.finance.USD
@@ -33,12 +33,16 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.testActor
+import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -286,6 +290,71 @@ class CordaRPCOpsImplTest {
             assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }
+        }
+    }
+
+    @Test
+    fun `kill a stuck flow through RPC`() {
+
+        withPermissions(startFlow<NewJoinerFlow>(), invokeRpc(CordaRPCOps::killFlow), invokeRpc(CordaRPCOps::stateMachinesFeed), invokeRpc(CordaRPCOps::stateMachinesSnapshot)) {
+
+            val flow = rpc.startFlow(::NewJoinerFlow)
+
+            val killed = rpc.killFlow(flow.id)
+
+            assertThat(killed).isTrue()
+            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a waiting flow through RPC`() {
+
+        withPermissions(startFlow<HopefulFlow>(), invokeRpc(CordaRPCOps::killFlow), invokeRpc(CordaRPCOps::stateMachinesFeed), invokeRpc(CordaRPCOps::stateMachinesSnapshot)) {
+
+            val flow = rpc.startFlow(::HopefulFlow, alice)
+
+            val killed = rpc.killFlow(flow.id)
+
+            assertThat(killed).isTrue()
+            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a nonexistent flow through RPC`() {
+
+        withPermissions(invokeRpc(CordaRPCOps::killFlow)) {
+
+            val nonexistentFlowId = StateMachineRunId.createRandom()
+
+            val killed = rpc.killFlow(nonexistentFlowId)
+
+            assertThat(killed).isFalse()
+        }
+    }
+
+    @StartableByRPC
+    class NewJoinerFlow : FlowLogic<String>() {
+
+        @Suspendable
+        override fun call(): String {
+
+            logger.info("When can I join you say? Almost there buddy...")
+            Fiber.currentFiber().join()
+            return "You'll never get me!"
+        }
+    }
+
+    @StartableByRPC
+    class HopefulFlow(private val party: Party) : FlowLogic<String>() {
+
+        @Suspendable
+        override fun call(): String {
+
+            logger.info("Waiting for a miracle...")
+            val miracle = initiateFlow(party).receive<String>().unwrap { it }
+            return miracle
         }
     }
 
