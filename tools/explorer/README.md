@@ -44,6 +44,23 @@ Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and 
 Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
 Please note you are not allowed to login to the notary.
 
+## Business Network reference implementation
+
+It is now possible to see "IOU" panel on the Dashboard.
+I Owe YoU (IOU) CorDapp created specifically to demonstrate use of Business Networks reference implementation.
+
+Whenever IOU transaction is entered, membership checks are performed to ensure that participants are included into the same
+Business Network.
+Upon startup both "Alice" and "Bob" are included into Business Network and therefore can transact with each other. 
+"Transactions" GUI been also extended to be able to display details of the IOU transactions.
+
+In order to exclude "Alice" or "Bob" from Business Network file: 
+`samples\business-network-demo\build\resources\main\net\corda\sample\businessnetwork\membership\internal\AliceBobMembershipList.csv`
+could be modified (no restart necessary) and then IOU transaction will no longer be possible between "Alice" and "Bob".
+
+Please note Business Networks functionality only affects IOU CorDapp, Cash payments CorDapp will allow transactions between
+"Alice" and "Bob" at all times.
+
 ## TODOs:
 - Shows more useful information in the dashboard.
 - Improve Network View, display other nodes in the world map and show transactions between them.
