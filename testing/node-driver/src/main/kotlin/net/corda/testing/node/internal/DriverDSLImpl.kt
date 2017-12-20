@@ -19,6 +19,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NotaryService
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -29,9 +30,12 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -241,9 +245,9 @@ class DriverDSLImpl(
     }
 
     private enum class ClusterType(val validating: Boolean, val clusterName: CordaX500Name) {
-        VALIDATING_RAFT(true, CordaX500Name("Raft", "Zurich", "CH")),
-        NON_VALIDATING_RAFT(false, CordaX500Name("Raft", "Zurich", "CH")),
-        NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
+        VALIDATING_RAFT(true, CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")),
+        NON_VALIDATING_RAFT(false, CordaX500Name(RaftNonValidatingNotaryService.id, "Raft", "Zurich", "CH")),
+        NON_VALIDATING_BFT(false, CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH"))
     }
 
     internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
@@ -266,15 +270,24 @@ class DriverDSLImpl(
                 clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
             } else {
                 // We have all we need here to generate the identity for single node notaries
-                val identity = IdentityGenerator.generateNodeIdentity(baseDirectory(name), legalName = name)
+                val identity = ServiceIdentityGenerator.generateToDisk(
+                        dirs = listOf(baseDirectory(name)),
+                        serviceName = name,
+                        serviceId = "identity"
+                )
                 notaryInfos += NotaryInfo(identity, notaryConfig.validating)
             }
         }
 
         clusterNodes.asMap().forEach { type, nodeNames ->
-            val identity = IdentityGenerator.generateDistributedNotaryIdentity(
+            val identity = ServiceIdentityGenerator.generateToDisk(
                     dirs = nodeNames.map { baseDirectory(it) },
-                    notaryName = type.clusterName
+                    serviceName = type.clusterName,
+                    serviceId = NotaryService.constructId(
+                            validating = type.validating,
+                            raft = type in setOf(VALIDATING_RAFT, NON_VALIDATING_RAFT),
+                            bft = type == ClusterType.NON_VALIDATING_BFT
+                    )
             )
             notaryInfos += NotaryInfo(identity, type.validating)
         }
@@ -356,11 +369,20 @@ class DriverDSLImpl(
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
             val identity = if (spec.cluster == null) {
-                IdentityGenerator.generateNodeIdentity(baseDirectory(spec.name), spec.name, compatibilityZone?.rootCert)
+                ServiceIdentityGenerator.generateToDisk(
+                        dirs = listOf(baseDirectory(spec.name)),
+                        serviceName = spec.name,
+                        serviceId = "identity",
+                        customRootCert = compatibilityZone?.rootCert
+                )
             } else {
-                IdentityGenerator.generateDistributedNotaryIdentity(
+                ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
-                        notaryName = spec.name,
+                        serviceName = spec.name,
+                        serviceId = NotaryService.constructId(
+                                validating = spec.validating,
+                                raft = spec.cluster is ClusterSpec.Raft
+                        ),
                         customRootCert = compatibilityZone?.rootCert
                 )
             }

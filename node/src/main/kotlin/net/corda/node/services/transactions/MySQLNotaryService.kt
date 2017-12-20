@@ -35,6 +35,9 @@ class MySQLNonValidatingNotaryService(services: ServiceHubInternal,
                                       notaryIdentityKey: PublicKey,
                                       dataSourceProperties: Properties,
                                       devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, dataSourceProperties, devMode) {
+    companion object {
+        val id = constructId(validating = false, mysql = true)
+    }
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this)
 }
 
@@ -42,5 +45,8 @@ class MySQLValidatingNotaryService(services: ServiceHubInternal,
                                       notaryIdentityKey: PublicKey,
                                       dataSourceProperties: Properties,
                                       devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, dataSourceProperties, devMode) {
+    companion object {
+        val id = constructId(validating = true, mysql = true)
+    }
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ValidatingNotaryFlow(otherPartySession, this)
 }

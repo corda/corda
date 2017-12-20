@@ -13,6 +13,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
+import net.corda.core.node.services.NotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
@@ -23,7 +24,7 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.IntegrationTest
@@ -67,9 +68,10 @@ class BFTNotaryServiceTests : IntegrationTest() {
         (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
 
-        notary = IdentityGenerator.generateDistributedNotaryIdentity(
+        notary = ServiceIdentityGenerator.generateToDisk(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                CordaX500Name("BFT", "Zurich", "CH"))
+                CordaX500Name("BFT", "Zurich", "CH"),
+                NotaryService.constructId(validating = false, bft = true))
 
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notary, false))))
 

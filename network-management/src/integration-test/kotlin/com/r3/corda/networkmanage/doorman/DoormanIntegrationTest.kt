@@ -3,6 +3,7 @@ package com.r3.corda.networkmanage.doorman
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
+import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
@@ -29,6 +30,7 @@ import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
 import org.bouncycastle.cert.X509CertificateHolder
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -76,7 +78,7 @@ class DoormanIntegrationTest {
 
         loadKeyStore(config.nodeKeystore, config.keyStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_CLIENT_CA))
-            assertEquals(ALICE_NAME.x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subjectX500Principal)
+            assertEquals(ALICE_NAME.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subjectX500Principal)
             assertEquals(listOf(intermediateCACert.cert, rootCACert.cert), getCertificateChain(X509Utilities.CORDA_CLIENT_CA).drop(1).toList())
         }
 
@@ -118,18 +120,13 @@ class DoormanIntegrationTest {
 
         // Publish NodeInfo
         val networkMapClient = NetworkMapClient(config.compatibilityZoneURL!!, rootCertAndKey.certificate.cert)
-
-        val keyStore = loadKeyStore(config.nodeKeystore, config.keyStorePassword)
-        val clientCertPath = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-        val clientCA = keyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, config.keyStorePassword)
-        val identityKeyPair = Crypto.generateKeyPair()
-        val identityCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, clientCA.certificate, clientCA.keyPair, ALICE_NAME, identityKeyPair.public)
-        val certPath = X509CertificateFactory().generateCertPath(identityCert.cert, *clientCertPath)
-        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
+        val certs = loadKeyStore(config.nodeKeystore, config.keyStorePassword).getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+        val keyPair = loadKeyStore(config.nodeKeystore, config.keyStorePassword).getKeyPair(X509Utilities.CORDA_CLIENT_CA, config.keyStorePassword)
+        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(buildCertPath(*certs))), 1, serial = 1L)
         val nodeInfoBytes = nodeInfo.serialize()
 
         // When
-        val signedNodeInfo = SignedNodeInfo(nodeInfoBytes, listOf(identityKeyPair.private.sign(nodeInfoBytes.bytes)))
+        val signedNodeInfo = SignedNodeInfo(nodeInfoBytes, listOf(keyPair.sign(nodeInfoBytes)))
         networkMapClient.publish(signedNodeInfo)
 
         // Then
@@ -140,7 +137,7 @@ class DoormanIntegrationTest {
         doorman.close()
     }
 
-    private fun createConfig(): NodeConfiguration {
+    fun createConfig(): NodeConfiguration {
         return rigorousMock<NodeConfiguration>().also {
             doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName

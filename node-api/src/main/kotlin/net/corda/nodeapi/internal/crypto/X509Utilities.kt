@@ -7,8 +7,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.CertRole
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
-import net.corda.core.internal.reader
-import net.corda.core.internal.writer
+import net.corda.core.internal.read
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -48,6 +47,8 @@ object X509Utilities {
     const val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
     const val CORDA_CLIENT_TLS = "cordaclienttls"
     const val CORDA_CLIENT_CA = "cordaclientca"
+
+    const val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
@@ -161,7 +162,7 @@ object X509Utilities {
      */
     @JvmStatic
     fun saveCertificateAsPEMFile(x509Certificate: X509Certificate, file: Path) {
-        JcaPEMWriter(file.writer()).use {
+        JcaPEMWriter(file.toFile().writer()).use {
             it.writeObject(x509Certificate)
         }
     }
@@ -173,8 +174,9 @@ object X509Utilities {
      */
     @JvmStatic
     fun loadCertificateFromPEMFile(file: Path): X509Certificate {
-        return file.reader().use {
-            val pemObject = PemReader(it).readPemObject()
+        return file.read {
+            val reader = PemReader(it.reader())
+            val pemObject = reader.readPemObject()
             val certHolder = X509CertificateHolder(pemObject.content)
             certHolder.isValidOn(Date())
             certHolder.cert

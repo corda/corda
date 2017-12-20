@@ -22,7 +22,7 @@ service.
         directory "./build/nodes"
         node {
             name "O=Controller,L=London,C=GB"
-            notary = [validating : true]
+            advertisedServices = ["corda.notary.validating"]
             p2pPort 10002
             rpcPort 10003
             cordapps = ["net.corda:corda-finance:$corda_release_version"]

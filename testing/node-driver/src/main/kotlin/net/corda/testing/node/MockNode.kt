@@ -9,7 +9,6 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
@@ -38,7 +37,7 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
@@ -126,14 +125,14 @@ data class MockNodeArgs(
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-open class MockNetwork(private val cordappPackages: List<String>,
-                       defaultParameters: MockNetworkParameters = MockNetworkParameters(),
-                       private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
-                       private val threadPerNode: Boolean = defaultParameters.threadPerNode,
-                       servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-                       private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
-                       initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                       private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
+class MockNetwork(private val cordappPackages: List<String>,
+                  defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+                  private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+                  private val threadPerNode: Boolean = defaultParameters.threadPerNode,
+                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+                  private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
+                  initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                  private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
@@ -142,7 +141,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
-        SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
+        SecurityUtils.setAPrioriDisabledProvider("BC", true)
     }
 
     var nextNodeId = 0
@@ -160,7 +159,6 @@ open class MockNetwork(private val cordappPackages: List<String>,
         throw IllegalStateException("Using more than one MockNetwork simultaneously is not supported.", e)
     }
     private val sharedUserCount = AtomicInteger(0)
-
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
 
@@ -174,29 +172,32 @@ open class MockNetwork(private val cordappPackages: List<String>,
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode> get() {
-        return when (notaryNodes.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryNodes[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryNode: StartedNode<MockNode>
+        get() {
+            return when (notaryNodes.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryNodes[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentity: Party get() {
-        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentity: Party
+        get() {
+            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
-        return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentityAndCert: PartyAndCertificate
+        get() {
+            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
@@ -221,31 +222,27 @@ open class MockNetwork(private val cordappPackages: List<String>,
     }
 
     init {
-        try {
-            filesystem.getPath("/nodes").createDirectory()
-            val notaryInfos = generateNotaryIdentities()
-            // The network parameters must be serialised before starting any of the nodes
-            networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
-            @Suppress("LeakingThis")
-            notaryNodes = createNotaries()
-        } catch (t: Throwable) {
-            stopNodes()
-            throw t
-        }
+        filesystem.getPath("/nodes").createDirectory()
+        val notaryInfos = generateNotaryIdentities()
+        // The network parameters must be serialised before starting any of the nodes
+        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        notaryNodes = createNotaries()
     }
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.mapIndexed { index, (name, validating) ->
-            val identity = IdentityGenerator.generateNodeIdentity(baseDirectory(nextNodeId + index), name)
+            val identity = ServiceIdentityGenerator.generateToDisk(
+                    dirs = listOf(baseDirectory(nextNodeId + index)),
+                    serviceName = name,
+                    serviceId = "identity")
             NotaryInfo(identity, validating)
         }
     }
 
-    @VisibleForTesting
-    internal open fun createNotaries(): List<StartedNode<MockNode>> {
-        return notarySpecs.map { (name, validating) ->
-            createNode(MockNodeParameters(legalName = name, configOverrides = {
-                doReturn(NotaryConfig(validating)).whenever(it).notary
+    private fun createNotaries(): List<StartedNode<MockNode>> {
+        return notarySpecs.map { spec ->
+            createNode(MockNodeParameters(legalName = spec.name, configOverrides = {
+                doReturn(NotaryConfig(spec.validating)).whenever(it).notary
             }))
         }
     }
@@ -302,7 +299,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
                     id,
                     serverThread,
                     myNotaryIdentity,
-                    configuration.myLegalName,
+                    myLegalName,
                     database).also { runOnStop += it::stop }
         }
 
@@ -460,11 +457,8 @@ open class MockNetwork(private val cordappPackages: List<String>,
     }
 
     fun stopNodes() {
-        try {
-            nodes.forEach { it.started?.dispose() }
-        } finally {
-            serializationEnv.unset() // Must execute even if other parts of this method fail.
-        }
+        nodes.forEach { it.started?.dispose() }
+        serializationEnv.unset()
         messagingNetwork.stop()
     }
 
