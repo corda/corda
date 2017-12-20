@@ -1,4 +1,4 @@
-package net.corda.sample.businessnetwork
+package net.corda.sample.businessnetwork.iou
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
@@ -9,19 +9,19 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.sample.businessnetwork.membership.MembershipAware
-import net.corda.sample.businessnetwork.membership.CheckMembershipFlow
-import net.corda.sample.businessnetwork.membership.CheckMembershipResult
+import net.corda.sample.businessnetwork.membership.flow.CheckMembershipFlow
+import net.corda.sample.businessnetwork.membership.flow.CheckMembershipResult
 import kotlin.reflect.jvm.jvmName
 
 @InitiatingFlow
 @StartableByRPC
 class IOUFlow(val iouValue: Int,
-              val otherParty: Party) : FlowLogic<SignedTransaction>(), MembershipAware {
+              val otherParty: Party) : FlowLogic<SignedTransaction>() {
 
     companion object {
+        // TODO: Derive membership name from CorDapp config.
         val allowedMembershipName =
-                CordaX500Name("AliceBobMembershipList", "AliceBob", "Washington", "US")
+                CordaX500Name("AliceBobMembershipList", "Oslo", "NO")
     }
 
     /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */

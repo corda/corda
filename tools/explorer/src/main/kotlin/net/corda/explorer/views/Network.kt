@@ -83,9 +83,10 @@ class Network : CordaView() {
                     .map { it.stateAndRef.state.data }.getParties()
             val outputParties = it.transaction.tx.outputStates.observable().getParties()
             val signingParties = it.transaction.sigs.map { it.by.toKnownParty() }
-            // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
+            // Input parties fire a bullets to all output parties, then to the signing parties and then signing parties to output parties.
+            // !! This is a rough guess of how the message moves in the network.
             // TODO : Expose artemis queue to get real message information.
-            inputParties.cross(outputParties) + inputParties.cross(signingParties)
+            inputParties.cross(outputParties) + inputParties.cross(signingParties) + signingParties.cross(outputParties)
         }
     }
 

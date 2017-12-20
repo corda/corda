@@ -14,8 +14,8 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.sample.businessnetwork.IOUFlow
-import net.corda.sample.businessnetwork.membership.ObtainMembershipListContentFlow
+import net.corda.sample.businessnetwork.iou.IOUFlow
+import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListContentFlow
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
@@ -32,8 +32,14 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import java.time.Instant
 import java.util.*
+import kotlin.reflect.KClass
 
 class ExplorerSimulation(private val options: OptionSet) {
+
+    private companion object {
+        fun packagesOfClasses(vararg classes: KClass<*>): List<String> = classes.map { it.java.`package`.name }
+    }
+
     private val user = User("user1", "test", permissions = setOf(
             startFlow<CashPaymentFlow>(),
             startFlow<CashConfigDataFlow>(),
@@ -52,6 +58,7 @@ class ExplorerSimulation(private val options: OptionSet) {
     private lateinit var bobNode: NodeHandle
     private lateinit var issuerNodeGBP: NodeHandle
     private lateinit var issuerNodeUSD: NodeHandle
+    private lateinit var bnoNode: NodeHandle
     private lateinit var notary: Party
 
     private val RPCConnections = ArrayList<CordaRPCConnection>()
@@ -65,7 +72,8 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance", IOUFlow::class.java.`package`.name),
+        driver(portAllocation = portAllocation,
+                extraCordappPackagesToScan = packagesOfClasses(CashPaymentFlow::class, IOUFlow::class, ObtainMembershipListContentFlow::class),
                 isDebug = true, waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true)) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
@@ -76,14 +84,16 @@ class ExplorerSimulation(private val options: OptionSet) {
                     customOverrides = mapOf("issuableCurrencies" to listOf("GBP")))
             val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
                     customOverrides = mapOf("issuableCurrencies" to listOf("USD")))
+            val bno = startNode(providedName = IOUFlow.allowedMembershipName, rpcUsers = listOf(user))
 
             notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()
             bobNode = bob.get()
             issuerNodeGBP = issuerGBP.get()
             issuerNodeUSD = issuerUSD.get()
+            bnoNode = bno.get()
 
-            arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
+            arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD, bnoNode).forEach {
                 println("${it.nodeInfo.legalIdentities.first()} started on ${it.configuration.rpcAddress}")
             }
 

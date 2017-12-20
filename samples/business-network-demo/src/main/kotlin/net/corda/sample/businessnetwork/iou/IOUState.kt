@@ -1,4 +1,4 @@
-package net.corda.sample.businessnetwork
+package net.corda.sample.businessnetwork.iou
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party

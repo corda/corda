@@ -1,4 +1,4 @@
-package net.corda.sample.businessnetwork
+package net.corda.sample.businessnetwork.iou
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.requireThat
@@ -7,14 +7,14 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.sample.businessnetwork.membership.MembershipAware
+import net.corda.sample.businessnetwork.membership.flow.CheckMembershipFlow
+import net.corda.sample.businessnetwork.membership.flow.CheckMembershipResult
 
 @InitiatedBy(IOUFlow::class)
-class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>(), MembershipAware {
+class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-
-        otherPartySession.counterparty.checkMembership(IOUFlow.allowedMembershipName, this)
+        check(subFlow(CheckMembershipFlow(otherPartySession.counterparty, IOUFlow.allowedMembershipName)) == CheckMembershipResult.PASS)
 
         subFlow(object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
