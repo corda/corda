@@ -46,19 +46,20 @@ Please note you are not allowed to login to the notary.
 
 ## Business Network reference implementation
 
-It is now possible to see "IOU" panel on the Dashboard.
-I Owe YoU (IOU) CorDapp created specifically to demonstrate use of Business Networks reference implementation.
+An additional "IOU" panel is now visible in the main Explorer dashboard to demonstrate the new Business Networks concept using a sample IOU product.
 
-Whenever IOU transaction is entered, membership checks are performed to ensure that participants are included into the same
+Business Networks are introduced in order to segregate Corda Nodes that do not need to transact with each other or indeed even know of each other existence.
+
+Whenever an IOU transaction is entered, membership checks are performed to ensure that participants are included in the same
 Business Network.
-Upon startup both "Alice" and "Bob" are included into Business Network and therefore can transact with each other. 
-"Transactions" GUI been also extended to be able to display details of the IOU transactions.
+Upon startup both "Alice" and "Bob" are configured to be part of the same Business Network and therefore can transact with each other. 
+The transactions panel been also extended to be able to display details of the IOU transactions.
 
-In order to exclude "Alice" or "Bob" from Business Network file: 
+Use the following Business Network configuration file to define what participants are included within its membership:
 `samples\business-network-demo\build\resources\main\net\corda\sample\businessnetwork\membership\internal\AliceBobMembershipList.csv`
 could be modified (no restart necessary) and then IOU transaction will no longer be possible between "Alice" and "Bob".
 
-Please note Business Networks functionality only affects IOU CorDapp, Cash payments CorDapp will allow transactions between
+Please note Business Networks functionality only applies to the same IOU CorDapp, Cash payments CorDapp will allow transactions between
 "Alice" and "Bob" at all times.
 
 ## TODOs:
