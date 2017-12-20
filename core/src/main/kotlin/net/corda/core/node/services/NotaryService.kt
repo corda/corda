@@ -15,22 +15,16 @@ import java.security.PublicKey
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
+        @Deprecated("No longer used")
         const val ID_PREFIX = "corda.notary."
-        @JvmOverloads
-        fun constructId(
-                validating: Boolean,
-                raft: Boolean = false,
-                bft: Boolean = false,
-                custom: Boolean = false,
-                mysql: Boolean = false
-        ): String {
-            require(Booleans.countTrue(raft, bft, custom, mysql) <= 1) { "At most one of raft, bft, mysql or custom may be true" }
+        @Deprecated("No longer used")
+        fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false, custom: Boolean = false): String {
+            require(Booleans.countTrue(raft, bft, custom) <= 1) { "At most one of raft, bft or custom may be true" }
             return StringBuffer(ID_PREFIX).apply {
                 append(if (validating) "validating" else "simple")
                 if (raft) append(".raft")
                 if (bft) append(".bft")
                 if (custom) append(".custom")
-                if (mysql) append(".mysql")
             }.toString()
         }
     }

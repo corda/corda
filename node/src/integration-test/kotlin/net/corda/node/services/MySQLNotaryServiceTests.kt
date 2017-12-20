@@ -14,7 +14,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.IdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.*
@@ -49,11 +49,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     @Before
     fun before() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        notaryParty = ServiceIdentityGenerator.generateToDisk(
-                listOf(mockNet.baseDirectory(mockNet.nextNodeId)),
-                notaryName,
-                "identity"
-        )
+        notaryParty = IdentityGenerator.generateNodeIdentity(mockNet.baseDirectory(mockNet.nextNodeId), notaryName)
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryParty, false))))
         val notaryNodeUnstarted = createNotaryNode()
         val nodeUnstarted = mockNet.createUnstartedNode()

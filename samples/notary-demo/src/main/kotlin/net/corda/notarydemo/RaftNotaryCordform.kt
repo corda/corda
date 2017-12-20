@@ -8,8 +8,7 @@ import net.corda.core.node.services.NotaryService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RaftConfig
-import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.IdentityGenerator
 import net.corda.testing.node.internal.demorun.*
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
@@ -24,7 +23,7 @@ private val notaryNames = createNotaryNames(3)
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
 class RaftNotaryCordform : CordformDefinition() {
-    private val clusterName = CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")
+    private val clusterName = CordaX500Name("Raft", "Zurich", "CH")
 
     init {
         nodesDirectory = Paths.get("build", "nodes", "nodesRaft")
@@ -60,9 +59,9 @@ class RaftNotaryCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(
+        IdentityGenerator.generateDistributedNotaryIdentity(
                 notaryNames.map { context.baseDirectory(it.toString()) },
-                clusterName,
-                NotaryService.constructId(validating = true, raft = true))
+                clusterName
+        )
     }
 }
