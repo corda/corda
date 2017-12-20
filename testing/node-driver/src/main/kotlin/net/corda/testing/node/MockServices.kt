@@ -251,8 +251,8 @@ fun inMemoryH2DataSourceConfig(nodeName: String? = null, postfix: String? = null
     val h2InstanceName = if (postfix != null) nodeName + "_" + postfix else nodeName
 
     return ConfigFactory.parseMap(mapOf(
-            "dataSourceClassName" to "org.h2.jdbcx.JdbcDataSource",
-            "dataSource.url" to "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
-            "dataSource.user" to "sa",
-            "dataSource.password" to ""))
+            "dataSourceProperties.dataSourceClassName" to "org.h2.jdbcx.JdbcDataSource",
+            "dataSourceProperties.dataSource.url" to "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
+            "dataSourceProperties.dataSource.user" to "sa",
+            "dataSourceProperties.dataSource.password" to ""))
 }
