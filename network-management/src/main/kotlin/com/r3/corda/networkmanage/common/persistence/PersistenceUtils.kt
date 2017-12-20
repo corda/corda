@@ -39,7 +39,7 @@ fun configureDatabase(dataSourceProperties: Properties,
 
     val schemas = setOf(NetworkManagementSchemaServices.SchemaV1)
     if (databaseConfig.runMigration) {
-        SchemaMigration(schemas, dataSource).runMigration()
+        SchemaMigration(schemas, dataSource, databaseConfig.schema).runMigration()
     }
 
     return CordaPersistence(dataSource, databaseConfig, schemas, emptyList())

@@ -52,6 +52,10 @@ class HibernateConfiguration(
                 .setProperty("hibernate.hbm2ddl.auto", "validate")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
+        databaseConfig.schema?.apply {
+            config.setProperty("hibernate.default_schema", databaseConfig.schema)
+        }
+
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }

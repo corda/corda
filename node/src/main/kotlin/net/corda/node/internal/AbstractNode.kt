@@ -205,13 +205,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     fun generateDatabaseSchema(outputFile: String) {
         HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource).generateMigrationScript(File(outputFile))
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource, configuration.database.schema).generateMigrationScript(File(outputFile))
         }
     }
 
     fun runDbMigration() {
         HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource).runMigration()
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource, configuration.database.schema).runMigration()
         }
     }
 
@@ -876,7 +876,7 @@ fun configureDatabase(dataSourceProperties: Properties,
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
 
     if(databaseConfig.runMigration){
-        SchemaMigration(schemaService.schemaOptions.keys, dataSource).runMigration()
+        SchemaMigration(schemaService.schemaOptions.keys, dataSource, databaseConfig.schema).runMigration()
     }
 
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
