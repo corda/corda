@@ -58,11 +58,7 @@ fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: 
                 map { CommandWithParties(it.signers, it.signingParties, it.value) }
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
-inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand() = try {
-    select<T>().single()
-} catch (e: NoSuchElementException) {
-    throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
-}
+inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand() = requireSingleCommand(T::class.java)
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>) = try {
