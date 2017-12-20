@@ -28,7 +28,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.utilities.toBase58String
-import net.corda.sample.businessnetwork.IOUState
+import net.corda.sample.businessnetwork.iou.IOUState
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.Formatter

@@ -1,6 +1,7 @@
 package net.corda.explorer.views.cordapps.iou
 
 import com.google.common.base.Splitter
+import com.sun.javafx.collections.ImmutableObservableList
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.BooleanBinding
 import javafx.collections.FXCollections
@@ -15,13 +16,15 @@ import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.isNotNull
 import net.corda.client.jfx.utils.map
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
-import net.corda.sample.businessnetwork.IOUFlow
+import net.corda.core.utilities.loggerFor
+import net.corda.sample.businessnetwork.iou.IOUFlow
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.MembershipListModel
 import net.corda.explorer.views.bigDecimalFormatter
@@ -46,7 +49,12 @@ class NewTransaction : Fragment() {
     fun show(window: Window) {
 
         // Every time re-query from the server side
-        val elementsFromServer = MembershipListModel().allParties
+        val elementsFromServer = try {
+            MembershipListModel().allParties
+        } catch (ex: Exception) {
+            loggerFor<NewTransaction>().error("Unexpected error fetching membership list content", ex)
+            ImmutableObservableList<AbstractParty>()
+        }
 
         partyBChoiceBox.apply {
             items = FXCollections.observableList(parties.map { it.chooseIdentityAndCert() }).filtered { elementsFromServer.contains(it.party) }.sorted()

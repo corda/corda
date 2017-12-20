@@ -9,8 +9,8 @@ import net.corda.client.jfx.utils.map
 import net.corda.core.identity.AbstractParty
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.sample.businessnetwork.IOUFlow
-import net.corda.sample.businessnetwork.membership.ObtainMembershipListContentFlow
+import net.corda.sample.businessnetwork.iou.IOUFlow
+import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListContentFlow
 
 class MembershipListModel {
     private val proxy by observableValue(NodeMonitorModel::proxyObservable)

@@ -4,7 +4,7 @@ import com.opencsv.CSVReaderBuilder
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.sample.businessnetwork.membership.MembershipList
+import net.corda.sample.businessnetwork.membership.flow.MembershipList
 import java.io.InputStream
 
 /**

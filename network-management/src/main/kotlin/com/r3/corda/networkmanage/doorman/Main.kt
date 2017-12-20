@@ -23,7 +23,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -301,7 +301,7 @@ fun main(args: Array<String>) {
 }
 
 private fun initialiseSerialization() {
-    val context = KRYO_P2P_CONTEXT
+    val context = AMQP_P2P_CONTEXT
     nodeSerializationEnv = SerializationEnvironmentImpl(
             SerializationFactoryImpl().apply {
                 registerScheme(AMQPClientSerializationScheme())

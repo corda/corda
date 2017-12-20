@@ -1,4 +1,4 @@
-package net.corda.sample.businessnetwork.membership
+package net.corda.sample.businessnetwork.membership.flow
 
 import net.corda.core.identity.AbstractParty
 

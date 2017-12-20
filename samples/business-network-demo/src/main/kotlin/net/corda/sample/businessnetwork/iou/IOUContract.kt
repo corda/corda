@@ -1,4 +1,4 @@
-package net.corda.sample.businessnetwork
+package net.corda.sample.businessnetwork.iou
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
