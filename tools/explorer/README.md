@@ -48,7 +48,7 @@ Please note you are not allowed to login to the notary.
 
 An additional "IOU" panel is now visible in the main Explorer dashboard to demonstrate the new Business Networks concept using a sample IOU product.
 
-Business Networks are introduced in order to segregate Corda Nodes that do not need to transact with each other or indeed even know of each other existence.
+Business Networks are introduced in order to segregate Corda Nodes that do not need to transact with each other or indeed even know of each others existence.
 
 Whenever an IOU transaction is entered, membership checks are performed to ensure that participants are included in the same
 Business Network.
