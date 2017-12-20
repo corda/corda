@@ -185,6 +185,7 @@ class ExplorerSimulation(private val options: OptionSet) {
     private fun startErrorFlowsSimulation() {
         println("Running flows with errors simulation mode ...")
         setUpRPC()
+        notary = aliceNode.rpc.notaryIdentities().first()
         val eventGenerator = ErrorFlowsEventGenerator(
                 parties = parties.map { it.first },
                 notary = notary,
