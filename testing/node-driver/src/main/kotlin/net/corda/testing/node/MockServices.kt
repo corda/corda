@@ -1,6 +1,8 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -63,16 +65,19 @@ open class MockServices private constructor(
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
          *
-         * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.  Defaults to a random string.
+         * @param nameExtension Provides additional name extension for the "instance" of in-memory database to provide uniqueness when running integration unit tests against H2.
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nameExtension: String? = null,
+                                         configSupplier: (String, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
+            val config = configSupplier(nodeName, nameExtension)
             val props = Properties()
-            props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-            props.setProperty("dataSource.user", "sa")
-            props.setProperty("dataSource.password", "")
+            props.setProperty("dataSourceClassName", config.getString("dataSourceProperties.dataSourceClassName"))
+            props.setProperty("dataSource.url", config.getString("dataSourceProperties.dataSource.url"))
+            props.setProperty("dataSource.user", config.getString("dataSourceProperties.dataSource.user"))
+            props.setProperty("dataSource.password", config.getString("dataSourceProperties.dataSource.password"))
             return props
         }
 
@@ -89,7 +94,7 @@ open class MockServices private constructor(
                                             initialIdentity: TestIdentity,
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
-            val dataSourceProps = makeTestDataSourceProperties()
+            val dataSourceProps = makeTestDataSourceProperties(initialIdentity.name.organisation)
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
@@ -239,4 +244,15 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
         }
     }
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
+}
+
+fun inMemoryH2DataSourceConfig(nodeName: String? = null, postfix: String? = null) : Config {
+    val nodeName = nodeName ?: SecureHash.randomSHA256().toString()
+    val h2InstanceName = if (postfix != null) nodeName + "_" + postfix else nodeName
+
+    return ConfigFactory.parseMap(mapOf(
+            "dataSourceClassName" to "org.h2.jdbcx.JdbcDataSource",
+            "dataSource.url" to "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
+            "dataSource.user" to "sa",
+            "dataSource.password" to ""))
 }

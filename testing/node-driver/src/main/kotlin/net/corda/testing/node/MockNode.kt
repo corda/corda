@@ -400,7 +400,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
         val config = mockNodeConfiguration().also {
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
-            doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(makeTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
