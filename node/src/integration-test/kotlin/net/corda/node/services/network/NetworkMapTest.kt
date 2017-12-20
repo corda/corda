@@ -38,7 +38,7 @@ class NetworkMapTest {
 
     @Before
     fun start() {
-        networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort(), ROOT_CA)
+        networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
         compatibilityZone = CompatibilityZoneParams(URL("http://$address"))
     }
@@ -50,20 +50,22 @@ class NetworkMapTest {
 
     @Test
     fun `node correctly downloads and saves network parameters file on startup`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
+                initialiseSerialization = false, notarySpecs = emptyList()) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val networkParameters = alice.configuration.baseDirectory
                     .list { paths -> paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().get() }
                     .readAll()
                     .deserialize<SignedData<NetworkParameters>>()
                     .verified()
-            assertEquals(NetworkMapServer.stubNetworkParameter, networkParameters)
+            assertEquals(networkMapServer.networkParameters, networkParameters)
         }
     }
 
     @Test
     fun `nodes can see each other using the http network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
+                initialiseSerialization = false, onNetworkParametersGeneration = { networkMapServer.networkParameters = it }) {
             val alice = startNode(providedName = ALICE_NAME)
             val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()
@@ -78,7 +80,8 @@ class NetworkMapTest {
 
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
+                initialiseSerialization = false, onNetworkParametersGeneration = { networkMapServer.networkParameters = it }) {
             val alice = startNode(providedName = ALICE_NAME)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
@@ -99,7 +102,8 @@ class NetworkMapTest {
 
     @Test
     fun `nodes process network map remove updates correctly`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
+                initialiseSerialization = false, onNetworkParametersGeneration = { networkMapServer.networkParameters = it }) {
             val alice = startNode(providedName = ALICE_NAME)
             val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()

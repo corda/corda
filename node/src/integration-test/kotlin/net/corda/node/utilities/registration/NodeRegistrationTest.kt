@@ -6,10 +6,7 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.*
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -19,6 +16,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.ROOT_CA
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
@@ -53,14 +51,13 @@ class NodeRegistrationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
     private val portAllocation = PortAllocation.Incremental(13000)
-    private val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
     private val registrationHandler = RegistrationHandler(ROOT_CA)
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort
 
     @Before
     fun startServer() {
-        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), ROOT_CA, registrationHandler)
+        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), ROOT_CA, "localhost", registrationHandler)
         serverHostAndPort = server.start()
     }
 
@@ -78,44 +75,36 @@ class NodeRegistrationTest {
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(CordaX500Name(organisation = "NotaryService", locality = "Zurich", country = "CH"), validating = false)),
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
-                startNodesInProcess = true
+                onNetworkParametersGeneration = { server.networkParameters = it }
         ) {
+            val notary = defaultNotaryNode.get()
+
             val ALICE_NAME = "Alice"
             val GENEVIEVE_NAME = "Genevieve"
             val nodesFutures = listOf(startNode(providedName = CordaX500Name(ALICE_NAME, "London", "GB")),
-                    startNode(providedName = CordaX500Name(GENEVIEVE_NAME, "London", "GB")),
-                            defaultNotaryNode)
-            val (alice, genevieve, notary) = nodesFutures.transpose().get()
+                    startNode(providedName = CordaX500Name(GENEVIEVE_NAME, "London", "GB")))
+
+            val (alice, genevieve) = nodesFutures.transpose().get()
             val nodes = listOf(alice, genevieve, notary)
 
             assertThat(registrationHandler.idsPolled).contains(ALICE_NAME, GENEVIEVE_NAME)
-          //  assertThat(registrationHandler.idsPolled).doesNotContain("NotaryService")
+            // Notary identities are generated beforehand hence notary nodes don't go through registration.
+            // This test isn't specifically testing this, or relying on this behavior, though if this check fail,
+            // this will probably lead to the rest of the test to fail.
+            assertThat(registrationHandler.idsPolled).doesNotContain("NotaryService")
 
-            val nodeParties = nodes.map { it.nodeInfo.singleIdentityAndCert().party }
-            val seenParties = nodes.map { it.rpc.networkMapSnapshot().map { it.singleIdentityAndCert().party } }
-            //System.out.println(seenKeys)
-            //System.out.println(nodeKeys)
-            val seenK1 = seenParties.first()
-            System.out.println("NodeInfos:")
-            for (party1 in nodeParties) {
-                System.out.println(party1.name to party1.owningKey)
+            // Check each node has each other identity in their network map cache.
+            val nodeIdentities = nodes.map { it.nodeInfo.singleIdentity() }
+            for (node in nodes) {
+                assertThat(node.rpc.networkMapSnapshot().map { it.singleIdentity() }).containsAll(nodeIdentities)
             }
-            System.out.println("Map snapshot:")
-            for (party in seenK1) {
-                System.out.println(party.name to party.owningKey)
-            }
-
-            System.out.println(notary.rpc.networkMapSnapshot())
-            System.out.println(alice.rpc.networkMapSnapshot())
-            System.out.println(genevieve.rpc.networkMapSnapshot())
-            val al2 = genevieve.rpc.wellKnownPartyFromX500Name(alice.nodeInfo.singleIdentityAndCert().party.name)!!
 
             // Check we nodes communicate among themselves (and the notary).
             val anonymous = false
             genevieve.rpc.startFlow(::CashIssueAndPaymentFlow, 1000.DOLLARS, OpaqueBytes.of(12),
                     alice.nodeInfo.singleIdentity(),
                     anonymous,
-                    notary.nodeInfo.legalIdentities.first())
+                    notary.nodeInfo.singleIdentity())
                     .returnValue
                     .getOrThrow()
         }
@@ -129,6 +118,7 @@ class NodeRegistrationTest {
                 portAllocation = portAllocation,
                 notarySpecs = emptyList(),
                 compatibilityZone = compatibilityZone,
+                initialiseSerialization = false,
                 // Changing the content of the truststore makes the node fail in a number of ways if started out process.
                 startNodesInProcess = true
         ) {
