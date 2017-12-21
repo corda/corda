@@ -123,7 +123,10 @@ simple JSON-like language. The key features of Yaml are:
 
 * Parameters are separated by commas
 * Each parameter is specified as a ``key: value`` pair
-* Strings do not need to be surrounded by quotes unless they contain a comma or embedded quotes
+
+    * There **MUST** to be a space after the colon, otherwise you'll get a syntax error
+
+* Strings do not need to be surrounded by quotes unless they contain commas, colons or embedded quotes
 * Class names must be fully-qualified (e.g. ``java.lang.String``)
 
 .. note:: If your CorDapp is written in Java, named arguments won't work unless you compiled the node using the
@@ -140,6 +143,8 @@ constructor:
 Then we could create an instance of this class to pass as a parameter as follows:
 
 ``newCampaign: { name: Roger, target: 1000 }``
+
+Where ``newCampaign`` is a parameter of type ``Campaign``.
 
 Mappings from strings to types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
