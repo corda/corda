@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import com.typesafe.config.ConfigFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.PermissionException
 import net.corda.core.flows.FlowLogic
@@ -26,6 +27,18 @@ import java.sql.DriverManager
 import java.sql.Statement
 import java.util.*
 import kotlin.test.assertFailsWith
+
+private class PasswordEncoder(private val format: PasswordEncryption = PasswordEncryption.NONE) {
+
+    private companion object {
+        val hashes = emptyMap<String, String>()
+    }
+
+    operator fun invoke(s: String) = when (format) {
+        PasswordEncryption.NONE -> s
+        PasswordEncryption.SHIRO_1_CRYPT -> hashes[s]!!
+    }
+}
 
 abstract class UserAuthServiceTest : NodeBasedTest() {
 
@@ -95,16 +108,19 @@ abstract class UserAuthServiceTest : NodeBasedTest() {
 
 class UserAuthServiceEmbedded : UserAuthServiceTest() {
 
-    private val rpcUser = User("user", "foo", permissions = setOf(
+    private val rpcUsers = listOf(User("user", "foo", permissions = setOf(
             Permissions.startFlow<DummyFlow>(),
             Permissions.invokeRpc("vaultQueryBy"),
             Permissions.invokeRpc(CordaRPCOps::stateMachinesFeed),
-            Permissions.invokeRpc("vaultQueryByCriteria")))
+            Permissions.invokeRpc("vaultQueryByCriteria"))))
 
     @Before
     fun setup() {
+        val encodePassword = PasswordEncoder(PasswordEncryption.NONE)
+
         val securityConfig = SecurityConfiguration(
-               authService = SecurityConfiguration.AuthService.fromUsers(listOf(rpcUser)))
+               authService = SecurityConfiguration.AuthService.fromUsers(
+                       rpcUsers.map { it.copy (password = encodePassword(it.password))}))
 
         val configOverrides = mapOf("security" to securityConfig.toConfig().root().unwrapped())
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
@@ -114,10 +130,13 @@ class UserAuthServiceEmbedded : UserAuthServiceTest() {
 
 class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
 
+    private val cacheExpireAfterSecs: Long = 1
+    private val encodePassword = PasswordEncoder(format = PasswordEncryption.NONE)
+
     private val db = UsersDB(
             name = "SecurityDataSourceTestDB",
             users = listOf(UserAndRoles(username = "user",
-                    password = "foo",
+                    password = encodePassword("foo"),
                     roles = listOf("default"))),
             roleAndPermissions = listOf(
                     RoleAndPermissions(
@@ -134,23 +153,29 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
 
     @Before
     fun setup() {
-        val securityConfig = SecurityConfiguration(
-                authService = SecurityConfiguration.AuthService(
-                        dataSource = SecurityConfiguration.AuthService.DataSource(
-                                type = AuthDataSourceType.DB,
-                                passwordEncryption = PasswordEncryption.NONE,
-                                connection = Properties().apply {
-                                    setProperty("jdbcUrl", db.jdbcUrl)
-                                    setProperty("username", "")
-                                    setProperty("password", "")
-                                    setProperty("driverClassName", "org.h2.Driver")
-                                }
+        val securityConfig = mapOf(
+                "security" to mapOf(
+                        "authService" to mapOf(
+                                "dataSource" to mapOf(
+                                        "type" to "DB",
+                                        "connection" to mapOf(
+                                                "jdbcUrl" to db.jdbcUrl,
+                                                "username" to "",
+                                                "password" to "",
+                                                "driverClassName" to "org.h2.Driver"
+                                        )
+                                )
+                        ),
+                        "options" to mapOf(
+                                "cache" to mapOf(
+                                        "expireAfterSecs" to cacheExpireAfterSecs,
+                                        "maxEntries" to 50
+                                )
                         )
                 )
         )
 
-        val configOverrides = mapOf("security" to securityConfig.toConfig().root().unwrapped())
-        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
+        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 
@@ -174,9 +199,8 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
     fun `Modify user permissions during RPC session`() {
         db.insert(UserAndRoles(
                 username = "user3",
-                password = "bar",
+                password = encodePassword("bar"),
                 roles = emptyList()))
-
 
         client.start("user3", "bar").use {
             val proxy = it.proxy
@@ -186,6 +210,7 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
                 proxy.stateMachinesFeed()
             }
             db.addRoleToUser("user3", "default")
+            Thread.sleep(1500)
             proxy.stateMachinesFeed()
         }
     }
@@ -194,13 +219,14 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
     fun `Revoke user permissions during RPC session`() {
         db.insert(UserAndRoles(
                 username = "user4",
-                password = "test",
+                password = encodePassword("test"),
                 roles = listOf("default")))
 
         client.start("user4", "test").use {
             val proxy = it.proxy
             proxy.stateMachinesFeed()
             db.deleteUser("user4")
+            Thread.sleep(1500)
             assertFailsWith(
                     PermissionException::class,
                     "This user should not be authorized to call 'nodeInfo'") {

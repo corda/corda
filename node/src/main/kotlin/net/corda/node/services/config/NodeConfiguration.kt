@@ -196,8 +196,16 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         data class Options(val cache: Options.Cache?) {
 
             // Cache parameters
-            data class Cache(val expireAfterSecs: Long, val maxEntries: Long)
-
+            data class Cache(val expireAfterSecs: Long, val maxEntries: Long) {
+                init {
+                    require(expireAfterSecs > 0) {
+                        "Expected positive value for 'cache.expireAfterSecs'"
+                    }
+                    require(maxEntries > 0) {
+                        "Expected positive value for 'cache.maxEntries'"
+                    }
+                }
+            }
         }
 
         // Provider of users credentials and permissions data
