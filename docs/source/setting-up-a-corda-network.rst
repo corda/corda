@@ -67,7 +67,9 @@ The bootstrapper tool can be built with the command:
 
 The resulting jar can be found in ``tools/bootstrapper/build/libs/``.
 
-To use it, run the following command, specifying the root directory which hosts all the node directories as the argument:
+To use it, create a directory containing ``corda.jar`` (see the :doc:`corda-configuration-file` on how to build ``corda.jar``)
+and a list of config files for each node you want to create. The name of the config file will be used to create the name
+of the directory that will contain the node. Then run the following command:
 
 ``java -jar network-bootstrapper.jar <nodes-root-dir>``
 

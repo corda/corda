@@ -48,6 +48,7 @@ class NetworkBootstrapper {
     fun bootstrap(directory: Path) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
+        directory.generateDirectoriesIfNeeded()
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
         println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
@@ -66,6 +67,21 @@ class NetworkBootstrapper {
         } finally {
             _contextSerializationEnv.set(null)
             processes.forEach { if (it.isAlive) it.destroyForcibly() }
+        }
+    }
+
+    private fun Path.generateDirectoriesIfNeeded() {
+        val confFiles = this.list { it.filter { it.toString().endsWith(".conf") }.toList() }
+        if (confFiles.any()) {
+            println("Node config files found in the root directory - generating node directories")
+            val cordaJar = this.list { it.filter { "corda.jar" in it.toString() }.toList().singleOrNull() } ?:
+                    throw IllegalArgumentException("If generating node directories from a list of conf files, make sure corda.jar is available in the root directory")
+            confFiles.forEach {
+                val dirName = it.fileName.toString().removeSuffix(".conf")
+                val nodeDir = (this / dirName).createDirectory()
+                it.moveTo(nodeDir / "node.conf")
+                cordaJar.copyToDirectory(nodeDir)
+            }
         }
     }
 
