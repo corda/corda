@@ -66,13 +66,14 @@ open class MockServices private constructor(
          * Make properties appropriate for creating a DataSource for unit tests.
          *
          * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.  Defaults to a random string.
-         * @param nameExtension Provides additional name extension for the "instance" of in-memory database to provide uniqueness when running integration unit tests against H2.
+         * @param nodeNameExtension Provides additional name extension for the "instance" of in-memory database to provide uniqueness when running unit tests against H2 db.
+         * @param configSupplier returns [Config] with dataSourceProperties entry.
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nameExtension: String? = null,
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nodeNameExtension: String? = null,
                                          configSupplier: (String, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
-            val config = configSupplier(nodeName, nameExtension)
+            val config = configSupplier(nodeName, nodeNameExtension)
             val props = Properties()
             props.setProperty("dataSourceClassName", config.getString("dataSourceProperties.dataSourceClassName"))
             props.setProperty("dataSource.url", config.getString("dataSourceProperties.dataSource.url"))
