@@ -23,7 +23,8 @@ import javax.persistence.AttributeConverter
 class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
-        private val attributeConverters: Collection<AttributeConverter<*, *>>
+        private val attributeConverters: Collection<AttributeConverter<*, *>>,
+        private val jdbcUrl: String
 ) {
     companion object {
         private val logger = contextLogger()
@@ -94,6 +95,10 @@ class HibernateConfiguration(
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
             applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
+            // When connecting to SqlServer (and only then) do we need to tell hibernate to use
+            // nationalised (i.e. Unicode) strings by default
+            val forceUnicodeForSqlServer = jdbcUrl.contains(":sqlserver:", ignoreCase = true);
+            enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
             build()
         }
 

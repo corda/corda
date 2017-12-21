@@ -16,13 +16,13 @@
 
     <changeSet author="tudormalene (generated)" id="create state_participants table">
         <createTable tableName="state_participants">
-            <column name="output_index" type="INT(10)">
+            <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="participants" type="VARCHAR(255)"/>
+            <column name="participants" type="NVARCHAR(255)"/>
         </createTable>
     </changeSet>
 

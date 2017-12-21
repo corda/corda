@@ -24,3 +24,8 @@ IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_
 IF NOT EXISTS (SELECT * FROM sys.sysusers WHERE name='perfnotary') CREATE USER perfnotary FOR LOGIN perfnotary WITH DEFAULT_SCHEMA = perfnotary;
 GRANT ALTER, DELETE, EXECUTE, INSERT, REFERENCES, SELECT, UPDATE, VIEW DEFINITION ON SCHEMA::perfnotary TO perfnotary;
 GRANT CREATE TABLE, CREATE PROCEDURE, CREATE FUNCTION, CREATE VIEW TO perfnotary;
+
+IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'perfnetworkmap') EXEC('CREATE SCHEMA perfnetworkmap');
+IF NOT EXISTS (SELECT * FROM sys.sysusers WHERE name='perfnetworkmap') CREATE USER perfnetworkmap FOR LOGIN perfnetworkmap WITH DEFAULT_SCHEMA = perfnetworkmap;
+GRANT ALTER, DELETE, EXECUTE, INSERT, REFERENCES, SELECT, UPDATE, VIEW DEFINITION ON SCHEMA::perfnetworkmap TO perfnetworkmap;
+GRANT CREATE TABLE, CREATE PROCEDURE, CREATE FUNCTION, CREATE VIEW TO perfnetworkmap;

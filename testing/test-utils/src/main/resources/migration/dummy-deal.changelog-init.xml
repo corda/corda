@@ -9,10 +9,10 @@
             <column name="output_index" type="INT(10)">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="external_id" type="VARCHAR(255)"/>
+            <column name="external_id" type="NVARCHAR(255)"/>
             <column name="uuid" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>

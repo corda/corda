@@ -6,7 +6,7 @@
             <column name="output_index" type="INT(10)">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -20,7 +20,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="output_index" type="INT(10)"/>
-            <column name="transaction_id" type="VARCHAR(64)"/>
+            <column name="transaction_id" type="NVARCHAR(64)"/>
         </createTable>
 
         <addPrimaryKey columnNames="child_id" constraintName="CONSTRAINT_9" tableName="children"/>

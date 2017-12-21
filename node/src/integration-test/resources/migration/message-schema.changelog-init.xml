@@ -9,11 +9,11 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="message_by" type="VARCHAR(255)"/>
-            <column name="message_value" type="VARCHAR(255)"/>
+            <column name="message_by" type="NVARCHAR(255)"/>
+            <column name="message_value" type="NVARCHAR(255)"/>
         </createTable>
 
     </changeSet>

@@ -8,14 +8,14 @@
             <column name="node_info_id" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="party_name" type="VARCHAR(255)">
+            <column name="party_name" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-10">
         <createTable tableName="node_info_hosts">
-            <column name="host" type="VARCHAR(255)">
+            <column name="host" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="port" type="INT">
@@ -26,13 +26,13 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-11">
         <createTable tableName="node_info_party_cert">
-            <column name="party_name" type="VARCHAR(255)">
+            <column name="party_name" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="ismain" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
-            <column name="owning_key_hash" type="VARCHAR(130)"/>
+            <column name="owning_key_hash" type="NVARCHAR(130)"/>
             <column name="party_cert_binary" type="blob"/>
         </createTable>
     </changeSet>
@@ -41,7 +41,7 @@
             <column name="node_info_id" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="node_info_hash" type="VARCHAR(64)"/>
+            <column name="node_info_hash" type="NVARCHAR(64)"/>
             <column name="platform_version" type="INT"/>
             <column name="serial" type="BIGINT"/>
         </createTable>

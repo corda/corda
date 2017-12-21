@@ -9,12 +9,12 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="issuer_name" type="VARCHAR(255)"/>
+            <column name="issuer_name" type="NVARCHAR(255)"/>
             <column name="issuer_ref" type="varbinary(512)"/>
-            <column name="owner_name" type="VARCHAR(255)"/>
+            <column name="owner_name" type="NVARCHAR(255)"/>
             <column name="quantity" type="BIGINT"/>
         </createTable>
     </changeSet>
@@ -23,10 +23,10 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="participants" type="VARCHAR(255)"/>
+            <column name="participants" type="NVARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-24">
@@ -34,10 +34,10 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="external_id" type="VARCHAR(255)"/>
+            <column name="external_id" type="NVARCHAR(255)"/>
             <column name="uuid" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
@@ -48,10 +48,10 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="participants" type="VARCHAR(255)"/>
+            <column name="participants" type="NVARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-26">
@@ -59,14 +59,14 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="consumed_timestamp" type="timestamp"/>
-            <column name="contract_state_class_name" type="VARCHAR(255)"/>
-            <column name="lock_id" type="VARCHAR(255)"/>
+            <column name="contract_state_class_name" type="NVARCHAR(255)"/>
+            <column name="lock_id" type="NVARCHAR(255)"/>
             <column name="lock_timestamp" type="timestamp"/>
-            <column name="notary_name" type="VARCHAR(255)"/>
+            <column name="notary_name" type="NVARCHAR(255)"/>
             <column name="recorded_timestamp" type="timestamp"/>
             <column name="state_status" type="INT"/>
         </createTable>
@@ -76,8 +76,8 @@
             <column name="seq_no" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="note" type="VARCHAR(255)"/>
-            <column name="transaction_id" type="VARCHAR(64)"/>
+            <column name="note" type="NVARCHAR(255)"/>
+            <column name="transaction_id" type="NVARCHAR(64)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-47">

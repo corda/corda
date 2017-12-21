@@ -11,10 +11,10 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-2">
         <createTable tableName="CertificateSigningRequestEntity_modifiedBy">
-            <column name="CertificateSigningRequestEntity_request_id" type="VARCHAR(64)">
+            <column name="CertificateSigningRequestEntity_request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="modified_by" type="VARCHAR(512)"/>
+            <column name="modified_by" type="NVARCHAR(512)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-3">
@@ -22,10 +22,10 @@
             <column name="REV" type="INT(10)">
                 <constraints nullable="false"/>
             </column>
-            <column name="CertificateSigningRequestEntity_request_id" type="VARCHAR(64)">
+            <column name="CertificateSigningRequestEntity_request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="modified_by" type="VARCHAR(512)">
+            <column name="modified_by" type="NVARCHAR(512)">
                 <constraints nullable="false"/>
             </column>
             <column name="revtype" type="TINYINT(3)"/>
@@ -38,24 +38,24 @@
             </column>
             <column name="certificate_path_bytes" type="BLOB"/>
             <column name="certificate_status" type="INT(10)"/>
-            <column name="public_key_hash" type="VARCHAR(64)"/>
-            <column name="certificate_signing_request" type="VARCHAR(64)">
+            <column name="public_key_hash" type="NVARCHAR(64)"/>
+            <column name="certificate_signing_request" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-5">
         <createTable tableName="certificate_signing_request">
-            <column name="request_id" type="VARCHAR(64)">
+            <column name="request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="legal_name" type="VARCHAR(256)">
+            <column name="legal_name" type="NVARCHAR(256)">
                 <constraints nullable="false"/>
             </column>
             <column name="modified_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="remark" type="VARCHAR(256)"/>
+            <column name="remark" type="NVARCHAR(256)"/>
             <column name="request_bytes" type="BLOB">
                 <constraints nullable="false"/>
             </column>
@@ -66,7 +66,7 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-6">
         <createTable tableName="certificate_signing_request_AUD">
-            <column name="request_id" type="VARCHAR(64)">
+            <column name="request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="rev" type="INT(10)">
@@ -74,7 +74,7 @@
             </column>
             <column name="revtype" type="TINYINT(3)"/>
             <column name="modified_at" type="TIMESTAMP"/>
-            <column name="remark" type="VARCHAR(256)"/>
+            <column name="remark" type="NVARCHAR(256)"/>
             <column name="status" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
@@ -94,16 +94,16 @@
                 <constraints nullable="false"/>
             </column>
             <column name="bytes" type="BLOB"/>
-            <column name="hash" type="VARCHAR(64)"/>
+            <column name="hash" type="NVARCHAR(64)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-9">
         <createTable tableName="node_info">
-            <column name="node_info_hash" type="VARCHAR(64)">
+            <column name="node_info_hash" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="signed_node_info_bytes" type="BLOB"/>
-            <column name="certificate_signing_request" type="VARCHAR(64)">
+            <column name="certificate_signing_request" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
         </createTable>

@@ -6,15 +6,15 @@
 
     <changeSet author="tudormalene (generated)" id="1511451595465-5">
         <createTable tableName="node_attachments">
-            <column name="att_id" type="VARCHAR(255)">
+            <column name="att_id" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="content" type="blob"/>
-            <column name="filename" type="VARCHAR(255)"/>
+            <column name="filename" type="NVARCHAR(255)"/>
             <column name="insertion_date" type="timestamp">
                 <constraints nullable="false"/>
             </column>
-            <column name="uploader" type="VARCHAR(255)"/>
+            <column name="uploader" type="NVARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-6">
@@ -22,18 +22,18 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="consuming_input_index" type="INT"/>
-            <column name="consuming_transaction_id" type="VARCHAR(255)"/>
-            <column name="requesting_party_name" type="VARCHAR(255)"/>
+            <column name="consuming_transaction_id" type="NVARCHAR(255)"/>
+            <column name="requesting_party_name" type="NVARCHAR(255)"/>
             <column name="requesting_party_key" type="varbinary(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-7">
         <createTable tableName="node_checkpoints">
-            <column name="checkpoint_id" type="VARCHAR(64)">
+            <column name="checkpoint_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="checkpoint_value" type="blob"/>
@@ -41,15 +41,15 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-8">
         <createTable tableName="node_contract_upgrades">
-            <column name="state_ref" type="VARCHAR(96)">
+            <column name="state_ref" type="NVARCHAR(96)">
                 <constraints nullable="false"/>
             </column>
-            <column name="contract_class_name" type="VARCHAR(255)"/>
+            <column name="contract_class_name" type="NVARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-9">
         <createTable tableName="node_identities">
-            <column name="pk_hash" type="VARCHAR(130)">
+            <column name="pk_hash" type="NVARCHAR(130)">
                 <constraints nullable="false"/>
             </column>
             <column name="identity_value" type="blob"/>
@@ -58,7 +58,7 @@
 
     <changeSet author="tudormalene (generated)" id="1511451595465-13">
         <createTable tableName="node_message_ids">
-            <column name="message_id" type="VARCHAR(64)">
+            <column name="message_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="insertion_time" type="timestamp"/>
@@ -75,10 +75,10 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-15">
         <createTable tableName="node_named_identities">
-            <column name="name" type="VARCHAR(128)">
+            <column name="name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
-            <column name="pk_hash" type="VARCHAR(130)"/>
+            <column name="pk_hash" type="NVARCHAR(130)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-16">
@@ -86,18 +86,18 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="consuming_input_index" type="INT"/>
-            <column name="consuming_transaction_id" type="VARCHAR(255)"/>
-            <column name="requesting_party_name" type="VARCHAR(255)"/>
+            <column name="consuming_transaction_id" type="NVARCHAR(255)"/>
+            <column name="requesting_party_name" type="NVARCHAR(255)"/>
             <column name="requesting_party_key" type="varbinary(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-17">
         <createTable tableName="node_our_key_pairs">
-            <column name="public_key_hash" type="VARCHAR(130)">
+            <column name="public_key_hash" type="NVARCHAR(130)">
                 <constraints nullable="false"/>
             </column>
             <column name="private_key" type="blob"/>
@@ -106,7 +106,7 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-18">
         <createTable tableName="node_raft_committed_states">
-            <column name="id" type="VARCHAR(255)">
+            <column name="id" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="state_index" type="BIGINT"/>
@@ -118,7 +118,7 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="scheduled_at" type="timestamp">
@@ -128,15 +128,15 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-20">
         <createTable tableName="node_transaction_mappings">
-            <column name="tx_id" type="VARCHAR(64)">
+            <column name="tx_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="state_machine_run_id" type="VARCHAR(36)"/>
+            <column name="state_machine_run_id" type="NVARCHAR(36)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-21">
         <createTable tableName="node_transactions">
-            <column name="tx_id" type="VARCHAR(64)">
+            <column name="tx_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="transaction_value" type="blob"/>
@@ -144,11 +144,11 @@
     </changeSet>
     <changeSet author="tudormalene" id="create mutual exclusion">
         <createTable tableName="node_mutual_exclusion">
-            <column name="mutual_exclusion_id" type="CHAR(255)">
+            <column name="mutual_exclusion_id" type="NCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="MACHINE_NAME" type="VARCHAR(255)"/>
-            <column name="PID" type="VARCHAR(255)"/>
+            <column name="MACHINE_NAME" type="NVARCHAR(255)"/>
+            <column name="PID" type="NVARCHAR(255)"/>
             <column name="MUTUAL_EXCLUSION_TIMESTAMP" type="timestamp"/>
         </createTable>
         <addPrimaryKey columnNames="mutual_exclusion_id" constraintName="node_mutual_exclusion_pkey" tableName="node_mutual_exclusion"/>

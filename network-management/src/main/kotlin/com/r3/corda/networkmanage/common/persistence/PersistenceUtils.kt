@@ -42,7 +42,7 @@ fun configureDatabase(dataSourceProperties: Properties,
         SchemaMigration(schemas, dataSource, databaseConfig.schema).runMigration()
     }
 
-    return CordaPersistence(dataSource, databaseConfig, schemas, emptyList())
+    return CordaPersistence(dataSource, databaseConfig, schemas, config.dataSourceProperties.getProperty("url", ""), emptyList())
 }
 
 sealed class NetworkManagementSchemaServices {

@@ -879,5 +879,5 @@ fun configureDatabase(dataSourceProperties: Properties,
         SchemaMigration(schemaService.schemaOptions.keys, dataSource, databaseConfig.schema).runMigration()
     }
 
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, config.dataSourceProperties.getProperty("url", ""), attributeConverters)
 }

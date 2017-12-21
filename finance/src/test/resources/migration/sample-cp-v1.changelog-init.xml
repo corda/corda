@@ -8,17 +8,17 @@
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="transaction_id" type="VARCHAR(64)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="ccy_code" type="VARCHAR(3)"/>
+            <column name="ccy_code" type="NVARCHAR(3)"/>
             <column name="face_value" type="BIGINT"/>
-            <column name="face_value_issuer_key_hash" type="VARCHAR(130)"/>
+            <column name="face_value_issuer_key_hash" type="NVARCHAR(130)"/>
             <column name="face_value_issuer_ref" type="varbinary(512)"/>
-            <column name="issuance_key_hash" type="VARCHAR(130)"/>
+            <column name="issuance_key_hash" type="NVARCHAR(130)"/>
             <column name="issuance_ref" type="varbinary(255)"/>
             <column name="maturity_instant" type="timestamp"/>
-            <column name="owner_key_hash" type="VARCHAR(130)"/>
+            <column name="owner_key_hash" type="NVARCHAR(130)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-29">
