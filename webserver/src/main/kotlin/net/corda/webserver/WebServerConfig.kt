@@ -29,7 +29,7 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config)
     }
     val webAddress: NetworkHostAndPort by config
     val runAs: User // TODO: replace with credentials supplied by a user
-        get() = config.getConfig("security.authService.dataSource.users")
-                .parseAs<List<User>>()
+        get() = config.getConfigList("security.authService.dataSource.users")
                 .first()
+                .parseAs<User>()
 }
