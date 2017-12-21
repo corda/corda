@@ -193,7 +193,8 @@ fun <A> driver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = null
+                    compatibilityZone = null,
+                    onNetworkParametersGeneration = { }
             ),
             coerce = { it },
             dsl = dsl,

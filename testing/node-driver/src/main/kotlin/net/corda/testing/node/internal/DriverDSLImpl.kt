@@ -10,13 +10,12 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.ThreadBox
+import net.corda.core.identity.Party
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.toFuture
@@ -32,6 +31,7 @@ import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.IdentityGenerator.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -46,6 +46,8 @@ import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
@@ -89,7 +91,8 @@ class DriverDSLImpl(
         extraCordappPackagesToScan: List<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
-        val compatibilityZone: CompatibilityZoneParams?
+        val compatibilityZone: CompatibilityZoneParams?,
+        val onNetworkParametersGeneration: (NetworkParameters) -> Unit
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -104,7 +107,8 @@ class DriverDSLImpl(
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
     override val notaryHandles: List<NotaryHandle> get() = _notaries
-    private var networkParameters: NetworkParametersCopier? = null
+    private var networkParametersCopier: NetworkParametersCopier? = null
+    lateinit var networkParameters: NetworkParameters
 
     class State {
         val processes = ArrayList<Process>()
@@ -179,8 +183,8 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
-
-        val registrationFuture = if (compatibilityZone?.rootCert != null) {
+        val isNotary =  name in notarySpecs.map { it.name }
+        val registrationFuture = if (compatibilityZone?.rootCert != null && !isNotary) {
             nodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
         } else {
             doneFuture(Unit)
@@ -279,7 +283,9 @@ class DriverDSLImpl(
             notaryInfos += NotaryInfo(identity, type.validating)
         }
 
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        networkParameters = testNetworkParameters(notaryInfos)
+        onNetworkParametersGeneration(networkParameters)
+        networkParametersCopier = NetworkParametersCopier(networkParameters)
 
         return cordforms.map {
             val startedNode = startCordformNode(it)
@@ -347,8 +353,10 @@ class DriverDSLImpl(
             }
         }
         val notaryInfos = generateNotaryIdentities()
+        networkParameters = testNetworkParameters(notaryInfos)
+        onNetworkParametersGeneration(networkParameters)
         // The network parameters must be serialised before starting any of the nodes
-        if (compatibilityZone == null) networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        networkParametersCopier = NetworkParametersCopier(networkParameters)
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
@@ -504,7 +512,11 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
         nodeInfoFilesCopier?.addConfig(baseDirectory)
-        networkParameters?.install(baseDirectory)
+        if (configuration.myLegalName in networkParameters.notaries.map { it.identity.name } || compatibilityZone == null) {
+            // If a notary is being started, then its identity appears in networkParameters (generated by Driver),
+            // and Driver itself must pass the network parameters to the notary.
+            networkParametersCopier?.install(baseDirectory)
+        }
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)
@@ -817,7 +829,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     notarySpecs = notarySpecs,
-                    compatibilityZone = null
+                    compatibilityZone = null,
+                    onNetworkParametersGeneration = {}
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -855,6 +868,7 @@ fun <A> internalDriver(
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         compatibilityZone: CompatibilityZoneParams? = null,
+        onNetworkParametersGeneration: (NetworkParameters) -> Unit = {},
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -870,7 +884,8 @@ fun <A> internalDriver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = compatibilityZone
+                    compatibilityZone = compatibilityZone,
+                    onNetworkParametersGeneration = onNetworkParametersGeneration
             ),
             coerce = { it },
             dsl = dsl,
