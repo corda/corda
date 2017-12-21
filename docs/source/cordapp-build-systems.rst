@@ -69,8 +69,8 @@ You may also want to add:
 
 Dependencies on other CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You CorDapp may also depend on classes defined in another CorDapp. There are two ways to add another CorDapp as a
-dependency in your CorDapp's ``build.gradle`` file:
+You CorDapp may also depend on classes defined in another CorDapp, such as states, contracts and flows. There are two
+ways to add another CorDapp as a dependency in your CorDapp's ``build.gradle`` file:
 
 * ``cordapp project(":another-cordapp")`` (use this if the other CorDapp is defined in a module in the same project)
 * ``cordapp "net.corda:another-cordapp:1.0"`` (use this otherwise)
