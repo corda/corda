@@ -9,7 +9,7 @@ To build a fat jar containing all the doorman code you can simply invoke:
 
 The built file will appear in:
 ```
-network-management/capsule/build/libs/doorman-<VERSION>.jar
+network-management/capsule/build/libs/doorman-<version>.jar
 ```
 ## HSM signing server
 To build a fat jar containing all the HSM signer code you can simply invoke:
@@ -19,7 +19,7 @@ To build a fat jar containing all the HSM signer code you can simply invoke:
 
 The built file will appear in:
 ```
-network-management/capsule-hsm/build/libs/hsm-<VERSION>.jar
+network-management/capsule-hsm/build/libs/hsm-<version>.jar
 ```
 
 The binaries can also be obtained from artifactory after deployment in TeamCity.
@@ -28,12 +28,13 @@ To run the HSM signing server:
 
 ```
 cd network-management
-java -jar capsule-hsm/build/libs/hsm-3.0-NETWORKMAP-20171204.134345-6.jar --configFile hsm.conf
+java -jar capsule-hsm/build/libs/hsm-<version>.jar --configFile hsm.conf
 ```
 
 For a list of options the HSM signing server takes, run with the `--help` option:
-
-java -jar capsule-hsm/build/libs/hsm-3.0-NETWORKMAP-20171204.134345-6.jar --help
+```
+java -jar capsule-hsm/build/libs/hsm-3.0-<version>.jar --help
+```
 
 #Configuring network management service
 ### Local signing
@@ -143,8 +144,9 @@ networkMapConfig {
    java -jar doorman-<version>.jar --mode CA_KEYGEN
    ```
    
-   A root certificate `pem` file will also be created, this will be distributed to the client via a "out-of-band" process.  
-   Note: We will be distributing a trust store instead of the pem file in future updates.
+   A trust store file containing the root trust certificate will be produced in the location `distribute-nodes / truststore.jks`
+   (relative to `rootStorePath`). `truststore.jks` must be copied to the `certificates` directory of each node before 
+   they attempt to register. The trust store password is `trustpass`.
 
 ### 2. Start Doorman service for notary registration 
    Start the network management server with the doorman service for initial bootstrapping. Network map service should be disabled at this point.  
@@ -154,11 +156,11 @@ networkMapConfig {
    ```
    
 ### 3. Create notary node and register with the doorman
-   After the doorman service is started, copy the `rootcert.pem` file to the notaries' certificates folder and start the `initial-registration` process.
+   After the doorman service is started, start the notary node for the `initial-registration` process.
 
-### 4. Add notary identities to the network parameter
-   The network parameter should contain the name and public key of the newly created notaries.  
-      Example network parameter file:
+### 4. Add notary identities to the network parameters
+   The network parameters should contain the name and public key of the newly created notaries.  
+      Example network parameters file:
       
       notaries : [{
           name: "O=Notary A, L=Port Louis, C=MU, OU=Org Unit, CN=Service Name"
@@ -173,11 +175,11 @@ networkMapConfig {
       maxMessageSize = 100
       maxTransactionSize = 100
       
-   Save the parameters to `parameter.conf`
+   Save the parameters to `network-parameters.conf`
 
 ### 5. Load initial network parameters file for network map service
 A network parameters file is required to start the network map service for the first time. The initial network parameters file can be loaded using the `--update-network-parameter` flag.
 We can now restart the network management server with both doorman and network map service.  
 ```
-java -jar doorman-<version>.jar --update-network-parameter parameter.conf
+java -jar doorman-<version>.jar --update-network-parameter network-parameters.conf
 ```

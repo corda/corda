@@ -34,7 +34,6 @@ data class NetworkManagementServerParameters(// TODO: Move local signing to sign
         val rootKeystorePassword: String?,
         // TODO Should be part of a localSigning sub-config
         val rootPrivateKeyPassword: String?
-
 ) {
     companion object {
         // TODO: Do we really need these defaults?
@@ -79,7 +78,6 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
                 .describedAs("filepath")
         accepts("update-network-parameters", "Update network parameters filepath. Currently only network parameters initialisation is supported.")
                 .withRequiredArg()
-                .describedAs("The new network map")
                 .describedAs("filepath")
         accepts("mode", "Set the mode of this application")
                 .withRequiredArg()

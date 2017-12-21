@@ -39,6 +39,7 @@ fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Un
 
 class ShowHelpException(val parser: OptionParser, val errorMessage: String? = null) : Exception()
 
+// TODO Remove this as we already have InternalUtils.cert
 fun X509CertificateHolder.toX509Certificate(): X509Certificate = X509CertificateFactory().generateCertificate(encoded.inputStream())
 
 fun buildCertPath(vararg certificates: Certificate): CertPath = X509CertificateFactory().delegate.generateCertPath(certificates.asList())

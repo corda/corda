@@ -5,7 +5,6 @@ import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
-import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
@@ -14,6 +13,7 @@ import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
@@ -169,52 +169,58 @@ internal fun readPassword(fmt: String): String {
 }
 
 // Keygen utilities.
-// TODO: Move keygen methods to Utilities.kt
-fun generateRootKeyPair(rootStorePath: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?) {
+fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?) {
     println("Generating Root CA keypair and certificate.")
     // Get password from console if not in config.
     val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
     // Ensure folder exists.
-    rootStorePath.parent.createDirectories()
-    val rootStore = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword)
+    rootStoreFile.parent.createDirectories()
+    val rootStore = loadOrCreateKeyStore(rootStoreFile, rootKeystorePassword)
     val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root Private Key Password: ")
 
     if (rootStore.containsAlias(X509Utilities.CORDA_ROOT_CA)) {
-        val oldKey = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey
+        val oldKey = loadOrCreateKeyStore(rootStoreFile, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey
         println("Key ${X509Utilities.CORDA_ROOT_CA} already exists in keystore, process will now terminate.")
         println(oldKey)
         exitProcess(1)
     }
 
     val selfSignKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val selfSignCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null), selfSignKey)
+    // TODO Make the cert subject configurable
+    val selfSignCert = X509Utilities.createSelfSignedCACertificate(
+            CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null),
+            selfSignKey).cert
     rootStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
-    rootStore.save(rootStorePath, rootKeystorePassword)
+    rootStore.save(rootStoreFile, rootKeystorePassword)
 
-    // TODO: remove this once we create truststore for nodes.
-    X509Utilities.saveCertificateAsPEMFile(selfSignCert.toX509Certificate(), rootStorePath.parent / "rootcert.pem")
+    val nodeTrustStoreFile = (rootStoreFile.parent / "distribute-nodes").createDirectories() / "truststore.jks"
+    // TODO The password for trust store must be a config option
+    val nodeTrustStore = loadOrCreateKeyStore(nodeTrustStoreFile, "trustpass")
+    nodeTrustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, selfSignCert)
+    nodeTrustStore.save(nodeTrustStoreFile, "trustpass")
+    println("Trust store for distribution to nodes created in $nodeTrustStore")
 
-    println("Root CA keypair and certificate stored in ${rootStorePath.toAbsolutePath()}.")
-    println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
+    println("Root CA keypair and certificate stored in ${rootStoreFile.toAbsolutePath()}.")
+    println(loadKeyStore(rootStoreFile, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
 }
 
-fun generateCAKeyPair(keystorePath: Path, rootStorePath: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
-    println("Generating Intermediate CA keypair and certificate using root keystore $rootStorePath.")
+fun generateCAKeyPair(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
+    println("Generating Intermediate CA keypair and certificate using root keystore $rootStoreFile.")
     // Get password from console if not in config.
     val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
     val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root Private Key Password: ")
-    val rootKeyStore = loadKeyStore(rootStorePath, rootKeystorePassword)
+    val rootKeyStore = loadKeyStore(rootStoreFile, rootKeystorePassword)
 
     val rootKeyAndCert = rootKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, rootPrivateKeyPassword)
 
     val keystorePassword = keystorePass ?: readPassword("Keystore Password: ")
     val caPrivateKeyPassword = caPrivateKeyPass ?: readPassword("CA Private Key Password: ")
     // Ensure folder exists.
-    keystorePath.parent.createDirectories()
-    val keyStore = loadOrCreateKeyStore(keystorePath, keystorePassword)
+    keystoreFile.parent.createDirectories()
+    val keyStore = loadOrCreateKeyStore(keystoreFile, keystorePassword)
 
     if (keyStore.containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA)) {
-        val oldKey = loadOrCreateKeyStore(keystorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey
+        val oldKey = loadOrCreateKeyStore(keystoreFile, rootKeystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey
         println("Key ${X509Utilities.CORDA_INTERMEDIATE_CA} already exists in keystore, process will now terminate.")
         println(oldKey)
         exitProcess(1)
@@ -225,9 +231,9 @@ fun generateCAKeyPair(keystorePath: Path, rootStorePath: Path, rootKeystorePass:
             CordaX500Name(commonName = "Corda Intermediate CA", organisation = "R3 Ltd", organisationUnit = "Corda", locality = "London", country = "GB", state = null), intermediateKey.public)
     keyStore.addOrReplaceKey(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateKey.private,
             caPrivateKeyPassword.toCharArray(), arrayOf(intermediateCert, rootKeyAndCert.certificate))
-    keyStore.save(keystorePath, keystorePassword)
-    println("Intermediate CA keypair and certificate stored in $keystorePath.")
-    println(loadKeyStore(keystorePath, keystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey)
+    keyStore.save(keystoreFile, keystorePassword)
+    println("Intermediate CA keypair and certificate stored in $keystoreFile.")
+    println(loadKeyStore(keystoreFile, keystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey)
 }
 
 
