@@ -50,13 +50,13 @@ class BFTNotaryServiceTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
                 "node_6", "node_7", "node_8", "node_9")
     }
-    private val mockNet = MockNetwork(emptyList())
+    private lateinit var mockNet: MockNetwork
     private lateinit var notary: Party
     private lateinit var node: StartedNode<MockNode>
 
     @Before
     fun before() {
-        node = mockNet.createNode()
+        mockNet = MockNetwork(emptyList())
     }
     @After
     fun stopNodes() {

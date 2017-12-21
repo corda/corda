@@ -23,11 +23,9 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.inMemoryH2DataSourceConfig
 import net.corda.testing.node.startFlow
-import org.junit.After
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.*
 import java.math.BigInteger
 import java.util.*
 import kotlin.test.assertEquals
@@ -36,9 +34,8 @@ import kotlin.test.assertFailsWith
 class MySQLNotaryServiceTests : IntegrationTest() {
     companion object {
         val notaryName = CordaX500Name("MySQL Notary Service", "Zurich", "CH")
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas("node_0", DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2")
     }
 
     private lateinit var mockNet: MockNetwork
@@ -124,7 +121,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     }
 
     private fun createNotaryNode(): MockNetwork.MockNode {
-        val dataStoreProperties = makeTestDataSourceProperties().apply {
+        val dataStoreProperties = makeTestDataSourceProperties(configSupplier = ::inMemoryH2DataSourceConfig).apply {
             setProperty("autoCommit", "false")
         }
         return mockNet.createUnstartedNode(

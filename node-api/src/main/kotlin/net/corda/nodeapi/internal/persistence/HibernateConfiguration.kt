@@ -6,12 +6,9 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.Identifier
-import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
