@@ -28,17 +28,15 @@ Setting your dependencies
 
 Choosing your Corda version
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The following two lines of the ``build.gradle`` file define the Corda version used to build your CorDapp:
+``ext.corda_release_version`` and ``ext.corda_gradle_plugins_version`` are used in the ``build.gradle`` to define the
+versions of Corda and the Corda Gradle Plugins that are used to build your CorDapp.
+
+For example, to use version 1.0 of Corda and version 1.0 of the Corda gradle plugins, you'd write:
 
 .. sourcecode:: groovy
 
     ext.corda_release_version = '1.0.0'
     ext.corda_gradle_plugins_version = '1.0.0'
-
-In this case, our CorDapp will use:
-
-* Version 1.0 of Corda
-* Version 1.0 of the Corda gradle plugins
 
 You can find the latest published version of both here: https://bintray.com/r3/corda.
 
@@ -50,25 +48,32 @@ In certain cases, you may also wish to build against the unstable Master branch.
 
 Corda dependencies
 ^^^^^^^^^^^^^^^^^^
-The ``cordformation`` plugin adds:
+The ``cordformation`` plugin adds two new gradle configurations:
 
-* ``cordaCompile`` as a new configuration that ``compile`` extends from
-* ``cordaRuntime`` which ``runtime`` extends from
+* ``cordaCompile``, which extends ``compile``
+* ``cordaRuntime``, which extends ``runtime``
 
-To build against Corda you must add the following to your ``build.gradle`` file;
+To build against Corda, you must add the following to your ``build.gradle`` file:
 
-* The ``net.corda:corda:<version>`` JAR as a ``cordaRuntime`` dependency
-* Each compile dependency (eg ``corda-core``) as a ``cordaCompile`` dependency
+* ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
+* Each Corda compile dependency (eg ``net.corda:corda-core:$corda_release_version``) as a ``cordaCompile`` dependency
 
-To use Corda's test facilities you must add ``net.corda:corda-test-utils:<version>`` as a ``testCompile`` dependency
-(i.e. a default Java/Kotlin test compile task).
+You may also want to add:
+
+* ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile`` dependency, in order to use Corda's test
+  frameworks
+* ``net.corda:corda-webserver:$corda_release_version`` as a ``cordaRuntime`` dependency, in order to use Corda's
+  built-in development webserver
 
 .. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
 
 Dependencies on other CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sometimes, a CorDapp you build will depend on states, contracts or flows defined in another CorDapp. You must include
-the CorDapp your CorDapp depends upon as a ``cordapp`` dependency in your ``build.gradle`` file.
+You CorDapp may also depend on classes defined in another CorDapp, such as states, contracts and flows. There are two
+ways to add another CorDapp as a dependency in your CorDapp's ``build.gradle`` file:
+
+* ``cordapp project(":another-cordapp")`` (use this if the other CorDapp is defined in a module in the same project)
+* ``cordapp "net.corda:another-cordapp:1.0"`` (use this otherwise)
 
 Other dependencies
 ^^^^^^^^^^^^^^^^^^
