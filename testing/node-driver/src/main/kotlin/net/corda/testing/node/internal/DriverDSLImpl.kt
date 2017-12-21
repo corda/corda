@@ -229,7 +229,6 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
 
         configuration.trustStoreFile.parent.createDirectories()
-       // if (configuration.notary != null) configuration.configureDevKeyAndTrustStores(providedName)  // needed for notaries
         loadOrCreateKeyStore(configuration.trustStoreFile, configuration.trustStorePassword).also {
             it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
             it.save(configuration.trustStoreFile, configuration.trustStorePassword)
