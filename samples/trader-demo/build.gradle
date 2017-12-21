@@ -42,12 +42,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = listOfUsers {
-        "demo" {
-            password = "demo"
-            permissions = ["ALL"]
-        }
-    }
+    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
 
     directory "./build/nodes"
     // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.

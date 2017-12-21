@@ -298,7 +298,7 @@ open class Cordform : Baseform() {
     internal class NodeUser(var name: String? = null) {
         var password: String? = null
         var permissions: List<String> = mutableListOf<String>()
-        fun toPropertyMap() = mapOf(
+        fun toPropertyMap(): Map<String, Any?> = mapOf(
                 "username" to name,
                 "password" to password,
                 "permissions" to permissions)
