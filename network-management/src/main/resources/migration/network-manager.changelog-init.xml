@@ -10,19 +10,19 @@
         <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-2">
-        <createTable tableName="certificatesigningrequestentity_modifiedby">
-            <column name="certificatesigningrequestentity_request_id" type="VARCHAR(64)">
+        <createTable tableName="CertificateSigningRequestEntity_modifiedBy">
+            <column name="CertificateSigningRequestEntity_request_id" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="modified_by" type="VARCHAR(512)"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-3">
-        <createTable tableName="certificatesigningrequestentity_modifiedby_aud">
+        <createTable tableName="CertificateSigningRequestEntity_modifiedBy_AUD">
             <column name="REV" type="INT(10)">
                 <constraints nullable="false"/>
             </column>
-            <column name="certificatesigningrequestentity_request_id" type="VARCHAR(64)">
+            <column name="CertificateSigningRequestEntity_request_id" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="modified_by" type="VARCHAR(512)">
@@ -65,7 +65,7 @@
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-6">
-        <createTable tableName="certificate_signing_request_aud">
+        <createTable tableName="certificate_signing_request_AUD">
             <column name="request_id" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
@@ -109,7 +109,7 @@
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-10">
-        <createTable tableName="revinfo">
+        <createTable tableName="REVINFO">
             <column autoIncrement="true" name="rev" type="INT(10)">
                 <constraints primaryKey="true" primaryKeyName="CONSTRAINT_6"/>
             </column>
@@ -123,10 +123,12 @@
         <addPrimaryKey columnNames="id" constraintName="CONSTRAINT_7" tableName="certificate_data"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-13">
-        <addPrimaryKey columnNames="rev, certificatesigningrequestentity_request_id, modified_by" constraintName="CONSTRAINT_B" tableName="certificatesigningrequestentity_modifiedby_aud"/>
+        <addPrimaryKey columnNames="rev, CertificateSigningRequestEntity_request_id, modified_by"
+                       constraintName="CONSTRAINT_B" tableName="CertificateSigningRequestEntity_modifiedBy_AUD"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-14">
-        <addPrimaryKey columnNames="request_id, rev" constraintName="CONSTRAINT_C" tableName="certificate_signing_request_aud"/>
+        <addPrimaryKey columnNames="request_id, rev" constraintName="CONSTRAINT_C"
+                       tableName="certificate_signing_request_AUD"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-15">
         <addPrimaryKey columnNames="node_info_hash" constraintName="CONSTRAINT_C3" tableName="node_info"/>
@@ -147,13 +149,14 @@
         <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_P37OS0TPLQ2ER2TM9JSDTF1CL" tableName="node_info"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-21">
-        <createIndex indexName="FK5G5CAGCRX7SIU8LWTAVIRUNXD_INDEX_C" tableName="certificate_signing_request_aud">
+        <createIndex indexName="FK5G5CAGCRX7SIU8LWTAVIRUNXD_INDEX_C" tableName="certificate_signing_request_AUD">
             <column name="rev"/>
         </createIndex>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-22">
-        <createIndex indexName="FKLFW2KLKDPLYDROVIBVEOMF9PU_INDEX_C" tableName="certificatesigningrequestentity_modifiedby">
-            <column name="certificatesigningrequestentity_request_id"/>
+        <createIndex indexName="FKLFW2KLKDPLYDROVIBVEOMF9PU_INDEX_C"
+                     tableName="CertificateSigningRequestEntity_modifiedBy">
+            <column name="CertificateSigningRequestEntity_request_id"/>
         </createIndex>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-23">
@@ -162,13 +165,23 @@
         </createIndex>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-24">
-        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificate_signing_request_aud" constraintName="FK5G5CAGCRX7SIU8LWTAVIRUNXD" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="rev" referencedTableName="revinfo"/>
+        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificate_signing_request_AUD"
+                                 constraintName="FK5G5CAGCRX7SIU8LWTAVIRUNXD" deferrable="false"
+                                 initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT"
+                                 referencedColumnNames="rev" referencedTableName="REVINFO"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-25">
-        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificatesigningrequestentity_modifiedby_aud" constraintName="FKCNMAJ1J6TO8D5GBY6N1Q3CK9C" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="rev" referencedTableName="revinfo"/>
+        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="CertificateSigningRequestEntity_modifiedBy_AUD"
+                                 constraintName="FKCNMAJ1J6TO8D5GBY6N1Q3CK9C" deferrable="false"
+                                 initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT"
+                                 referencedColumnNames="rev" referencedTableName="REVINFO"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-26">
-        <addForeignKeyConstraint baseColumnNames="certificatesigningrequestentity_request_id" baseTableName="certificatesigningrequestentity_modifiedby" constraintName="FKLFW2KLKDPLYDROVIBVEOMF9PU" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
+        <addForeignKeyConstraint baseColumnNames="CertificateSigningRequestEntity_request_id"
+                                 baseTableName="CertificateSigningRequestEntity_modifiedBy"
+                                 constraintName="FKLFW2KLKDPLYDROVIBVEOMF9PU" deferrable="false"
+                                 initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT"
+                                 referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-27">
         <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="certificate_data" constraintName="FKLQK11Q68B23W062SH0CLNQKLY" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
