@@ -46,7 +46,8 @@ fun run(parameters: Parameters) {
         checkNotNull(dataSourceProperties)
         val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
-        val networkMapStorage = PersistentNetworkMapStorage(database)
+        // TODO Remove the dependency for a local signer to make signing of network parameters work with an HSM
+        val networkMapStorage = PersistentNetworkMapStorage(database, localSigner = null)
         val hsmNetworkMapSigningThread = HsmNetworkMapSigner(
                 networkMapStorage,
                 networkMapCertificateName,

@@ -6,13 +6,10 @@ import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import net.corda.core.crypto.SecureHash
-import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.SerializationEnvironmentRule
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.junit.Rule
 import java.security.cert.CertPath
-import java.time.Instant
 
 abstract class TestBase {
     @Rule
@@ -46,23 +43,6 @@ abstract class TestBase {
                 publicKeyHash = publicKeyHash,
                 certStatus = certStatus,
                 certPath = certPath
-        )
-    }
-
-    // TODO remove this once testNetworkParameters are updated with default parameters
-    protected fun createNetworkParameters(minimumPlatformVersion: Int = 1,
-                                          notaries: List<NotaryInfo> = emptyList(),
-                                          maxMessageSize: Int = 10485760,
-                                          maxTransactionSize: Int = 40000,
-                                          modifiedTime: Instant = Instant.now(),
-                                          epoch: Int = 1): NetworkParameters {
-        return NetworkParameters(
-                minimumPlatformVersion = minimumPlatformVersion,
-                notaries = notaries,
-                maxMessageSize = maxMessageSize,
-                maxTransactionSize = maxTransactionSize,
-                modifiedTime = modifiedTime,
-                epoch = epoch
         )
     }
 }

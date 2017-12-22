@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 
@@ -30,10 +31,10 @@ interface NetworkMapStorage {
     fun saveNetworkMap(signedNetworkMap: SignedNetworkMap)
 
     /**
-     * Retrieve network parameters by their hash.
-     * @return network parameters corresponding to the given hash or null if it does not exist
+     * Return the signed network parameters object which matches the given hash. The hash is that of the underlying
+     * [NetworkParameters] object and not the `SignedData<NetworkParameters>` object that's returned.
      */
-    fun getNetworkParameters(parameterHash: SecureHash): NetworkParameters?
+    fun getSignedNetworkParameters(hash: SecureHash): SignedData<NetworkParameters>?
 
     /**
      * Retrieve network map parameters.

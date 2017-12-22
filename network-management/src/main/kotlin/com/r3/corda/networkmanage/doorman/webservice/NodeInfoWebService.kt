@@ -8,8 +8,6 @@ import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -37,9 +35,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, SignedNetworkMap?> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ ->
-                networkMapStorage.getCurrentNetworkMap()
-            })
+            .build(CacheLoader.from { _ -> networkMapStorage.getCurrentNetworkMap() })
 
     @POST
     @Path("publish")
@@ -54,31 +50,27 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
             // Catch exceptions thrown by signature verification.
             when (e) {
                 is IllegalArgumentException, is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-            // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                 else -> throw e
             }
         }.build()
     }
 
     @GET
-    fun getNetworkMap(): Response {
-        val currentNetworkMap = networkMapCache.get(true)
-        return if (currentNetworkMap != null) {
-            Response.ok(currentNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${Duration.ofMillis(config.cacheTimeout).seconds}")
-        } else {
-            status(Response.Status.NOT_FOUND)
-        }.build()
-    }
+    fun getNetworkMap(): Response = createResponse(networkMapCache.get(true), addCacheTimeout = true)
 
     @GET
     @Path("node-info/{nodeInfoHash}")
     fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
-        val nodeInfo = nodeInfoStorage.getNodeInfo(SecureHash.parse(nodeInfoHash))
-        return if (nodeInfo != null) {
-            ok(nodeInfo.serialize().bytes)
-        } else {
-            status(Response.Status.NOT_FOUND)
-        }.build()
+        val signedNodeInfo = nodeInfoStorage.getNodeInfo(SecureHash.parse(nodeInfoHash))
+        return createResponse(signedNodeInfo)
+    }
+
+    @GET
+    @Path("network-parameter/{netParamsHash}") // TODO Fix path to be /network-parameters
+    fun getNetworkParameters(@PathParam("netParamsHash") netParamsHash: String): Response {
+        val signedNetParams = networkMapStorage.getSignedNetworkParameters(SecureHash.parse(netParamsHash))
+        return createResponse(signedNetParams)
     }
 
     @GET
@@ -86,5 +78,17 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     fun myIp(@Context request: HttpServletRequest): Response {
         // TODO: Verify this returns IP correctly.
         return ok(request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}").build()
+    }
+
+    private fun createResponse(payload: Any?, addCacheTimeout: Boolean = false): Response {
+        return if (payload != null) {
+            val ok = Response.ok(payload.serialize().bytes)
+            if (addCacheTimeout) {
+                ok.header("Cache-Control", "max-age=${Duration.ofMillis(config.cacheTimeout).seconds}")
+            }
+            ok
+        } else {
+            status(Response.Status.NOT_FOUND)
+        }.build()
     }
 }

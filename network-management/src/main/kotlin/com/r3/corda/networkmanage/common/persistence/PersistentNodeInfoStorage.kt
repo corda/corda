@@ -18,10 +18,9 @@ import java.security.cert.CertPath
  */
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
     override fun putNodeInfo(signedNodeInfo: SignedNodeInfo): SecureHash {
+        val nodeInfo = signedNodeInfo.verified()
+        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val nodeInfo = signedNodeInfo.verified()
-            val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
-
             val request = nodeCaCert?.let {
                 singleRequestWhere(CertificateDataEntity::class.java) { builder, path ->
                     val certPublicKeyHashEq = builder.equal(path.get<String>(CertificateDataEntity::publicKeyHash.name), it.publicKey.encoded.sha256().toString())

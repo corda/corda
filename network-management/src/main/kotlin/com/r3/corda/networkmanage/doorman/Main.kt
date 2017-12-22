@@ -49,7 +49,7 @@ class NetworkManagementServer : Closeable {
     }
 
     private fun getNetworkMapService(config: NetworkMapConfig, database: CordaPersistence, signer: LocalSigner?, updateNetworkParameters: NetworkParameters?): NodeInfoWebService {
-        val networkMapStorage = PersistentNetworkMapStorage(database)
+        val networkMapStorage = PersistentNetworkMapStorage(database, signer)
         val nodeInfoStorage = PersistentNodeInfoStorage(database)
 
         updateNetworkParameters?.let {
