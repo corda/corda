@@ -7,7 +7,7 @@ configurations {
 }
 
 dependencies {
-    compile "org.slf4j:slf4j-api:$slf4j_version"
+    compile "org.slf4j:slf4j-nop:$slf4j_version"
 }
 
 task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').compileJava) {

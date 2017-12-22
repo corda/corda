@@ -49,7 +49,7 @@ class NetworkBootstrapper {
     fun bootstrap(directory: Path) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
-        directory.generateDirectoriesIfNeeded()
+        generateDirectoriesIfNeeded(directory)
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
         println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
@@ -71,20 +71,25 @@ class NetworkBootstrapper {
         }
     }
 
-    private fun Path.generateDirectoriesIfNeeded() {
-        val confFiles = this.list { it.filter { it.toString().endsWith(".conf") }.toList() }
-        if (confFiles.any()) {
-            println("Node config files found in the root directory - generating node directories")
-            val cordaJarPath = (this / "corda.jar")
-            Files.copy(Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar"), cordaJarPath)
-            confFiles.forEach {
-                val dirName = it.fileName.toString().removeSuffix(".conf")
-                val nodeDir = (this / dirName).createDirectory()
-                it.moveTo(nodeDir / "node.conf")
-                Files.copy(cordaJarPath, (nodeDir / "corda.jar"))
-            }
-            Files.delete(cordaJarPath)
+    private fun generateDirectoriesIfNeeded(directory: Path) {
+        val confFiles = directory.list { it.filter { it.toString().endsWith(".conf") }.toList() }
+        if (confFiles.isEmpty()) { return }
+        println("Node config files found in the root directory - generating node directories")
+        val cordaJar = extractCordaJarTo(directory)
+        confFiles.forEach {
+            val nodeName = it.fileName.toString().removeSuffix(".conf")
+            println("Generating directory for $nodeName")
+            val nodeDir = (directory / nodeName).createDirectory()
+            it.moveTo(nodeDir / "node.conf")
+            Files.copy(cordaJar, (nodeDir / "corda.jar"))
         }
+        Files.delete(cordaJar)
+    }
+
+    private fun extractCordaJarTo(directory: Path) : Path {
+        val cordaJarPath = (directory / "corda.jar")
+        Files.copy(Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar"), cordaJarPath)
+        return cordaJarPath
     }
 
     private fun startNodeInfoGeneration(nodeDirs: List<Path>): List<Process> {
