@@ -1,3 +1,11 @@
 rootProject.name = 'remote-attestation'
+
+// Phase 1
 include 'attestation-server'
 include 'host'
+
+// Phase 2
+include 'attestation-common'
+include 'attestation-challenger'
+include 'attestation-host'
+include 'ias-proxy'

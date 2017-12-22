@@ -7,12 +7,14 @@ import org.apache.http.config.SocketConfig
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.ssl.SSLContextBuilder
+import org.apache.http.util.EntityUtils
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.net.URI
 import java.security.KeyStore
 import java.security.SecureRandom
+import java.util.*
 import javax.ws.rs.core.UriBuilder
 
 @Ignore("This class exists only to probe IAS, and is not really a test at all.")
@@ -58,6 +60,26 @@ class IASIT {
     }
 
     @Test
+    fun testGID() {
+        createHttpClient().use { httpClient ->
+            val requestURI = UriBuilder.fromUri(iasHost)
+                .path("attestation/sgx/v2/sigrl/{gid}")
+                .build(String.format("%08x", 0xacc))
+            println("URI: $requestURI")
+            val request = HttpGet(requestURI)
+            httpClient.execute(request).use { response ->
+                val statusCode = response.statusLine.statusCode
+                if (statusCode == SC_OK) {
+                    val revocationList = EntityUtils.toByteArray(response.entity).decodeBase64()
+                    println(revocationList.toHexArrayString())
+                } else {
+                    println("NOPE: $statusCode")
+                }
+            }
+        }
+    }
+
+    @Test
     fun huntGID() {
         createHttpClient().use { httpClient ->
             for (i in 1000..1999) {
@@ -75,4 +97,6 @@ class IASIT {
             }
         }
     }
+
+    private fun ByteArray.decodeBase64(): ByteArray = Base64.getDecoder().decode(this)
 }

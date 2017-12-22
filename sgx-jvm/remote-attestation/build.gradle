@@ -6,10 +6,18 @@ buildscript {
     ext.kotlin_version = constants.getProperty("kotlinVersion")
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.resteasy_version = '3.1.4.Final'
+    ext.httpclient_version = "4.5.3"
     ext.jackson_version = '2.9.2'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
     ext.junit_version = '4.12'
+
+    // Port numbers to launch the different components on.
+    ext.hostHttpPort = 8080
+    ext.isvHttpPort = 8084
+
+    ext.testHttpPort = 9080
+    ext.iasTestHttpsPort = 9443
 
     repositories {
         mavenLocal()
@@ -20,6 +28,7 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
+        classpath 'org.akhikhl.gretty:gretty:2.0.0'
     }
 }
 
@@ -38,6 +47,9 @@ allprojects {
     tasks.withType(Test) {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperties['java.io.tmpdir'] = buildDir
+
+        // Set logging directory for all tests.
+        systemProperties["attestation.home"] = "$buildDir/logs"
     }
 
     group 'com.r3.corda.enterprise'

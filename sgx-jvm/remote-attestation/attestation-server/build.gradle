@@ -11,11 +11,6 @@ buildscript {
 
     ext.keyStoreDir = "$buildDir/keystore"
     ext.httpsKeyStoreDir = "$buildDir/https-keystore"
-
-    // Port numbers to launch the different components on.
-    ext.isvHttpPort = 8080
-    ext.isvTestHttpPort = 9080
-    ext.iasTestHttpsPort = 9443
 }
 
 apply plugin: 'kotlin'
@@ -46,7 +41,7 @@ sourceSets {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     compile "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
@@ -57,6 +52,7 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+    compile "org.apache.httpcomponents:httpclient:$httpclient_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
     runtime "org.apache.logging.log4j:log4j-web:$log4j_version"
@@ -66,9 +62,6 @@ dependencies {
 tasks.withType(Test) {
     // Enable "unlimited" encryption.
     systemProperties["java.security.properties"] = "$projectDir/src/integration-test/security.properties"
-
-    // Set logging directory for all tests.
-    systemProperties["attestation.home"] = "$buildDir/logs"
 }
 
 task intelKeyStores(type: Exec) {
@@ -92,7 +85,7 @@ task serviceKeyStore(type: Exec) {
 }
 
 processResources {
-    dependsOn = [ intelKeyStores, serviceKeyStore ]
+    dependsOn.addAll intelKeyStores, serviceKeyStore
     from keyStoreDir
 }
 
@@ -101,7 +94,7 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
     systemProperties["javax.net.ssl.keyStore"] = "$httpsKeyStoreDir/keystore"
     systemProperties["javax.net.ssl.keyStorePassword"] = "attestation"
-    systemProperties["test.isv.httpPort"] = isvTestHttpPort
+    systemProperties["test.isv.httpPort"] = testHttpPort
 }
 
 task httpsKeyStores(type: Exec) {
@@ -119,7 +112,7 @@ project.afterEvaluate {
 }
 
 gretty {
-    httpPort = isvTestHttpPort
+    httpPort = testHttpPort
     contextPath = "/"
     servletContainer = 'tomcat8'
     logDir = "$buildDir/logs"

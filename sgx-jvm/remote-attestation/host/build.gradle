@@ -2,7 +2,6 @@ version = '0.1'
 
 buildscript {
     ext.dokka_version = "0.9.15"
-    ext.httpclient_version = "4.5.2"
 
     ext.nativeBuildDir = "$projectDir/native/build"
     ext.enclaveBuildDir = "$projectDir/../enclave/build"
@@ -89,7 +88,6 @@ task integrationTest(type: Test) {
 tasks.withType(Test) {
     systemProperty "java.library.path", "$nativeBuildDir"
     systemProperty "corda.sgx.enclave.path", "$enclaveBuildDir"
-    systemProperty "attestation.home", "$buildDir/logs"
     jvmArgs "$debugArgs"
 }
 

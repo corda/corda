@@ -13,6 +13,8 @@
 
 extern "C" {
 
+static const uint8_t safe_empty[] = {};
+
 // === Initialization and Finalization =======================================
 
 static inline sgx_status_t create_pse_session(
@@ -42,7 +44,7 @@ static inline sgx_status_t close_pse_session(
 // Initialize the remote attestation process.
 sgx_status_t initializeRemoteAttestation(
     bool use_platform_services,
-    sgx_ec256_public_t *challenger_key,
+    const sgx_ec256_public_t *challenger_key,
     sgx_ra_context_t *context
 ) {
     sgx_status_t status;
@@ -104,9 +106,9 @@ static int consttime_memequal(const void *b1, const void *b2, size_t len) {
 // Verify CMAC from the challenger to protect against spoofed results.
 sgx_status_t verifyCMAC(
     sgx_ra_context_t context,
-    uint8_t *message,
+    const uint8_t *message,
     size_t message_size,
-    uint8_t *cmac,
+    const uint8_t *cmac,
     size_t cmac_size
 ) {
     // Check inputs.
@@ -114,7 +116,7 @@ sgx_status_t verifyCMAC(
         return SGX_ERROR_INVALID_PARAMETER;
     }
 
-    if (UINT32_MAX < message_size || NULL == message) {
+    if (UINT32_MAX < message_size || ((NULL == message) && (message_size > 0))) {
         return SGX_ERROR_INVALID_PARAMETER;
     }
 
@@ -125,8 +127,9 @@ sgx_status_t verifyCMAC(
     // Perform 128-bit CMAC hash over the first four bytes of the status
     // obtained from the challenger.
     uint8_t computed_cmac[SGX_CMAC_MAC_SIZE] = { 0 };
+    const uint8_t* safe_message = (message == NULL) ? safe_empty : message;
     CHECKED(sgx_rijndael128_cmac_msg(
-        &mk_key, message, message_size, &computed_cmac
+        &mk_key, safe_message, message_size, &computed_cmac
     ));
 
     // Compare the computed CMAC-SMK with the provided one.
@@ -142,10 +145,10 @@ sgx_status_t verifyCMAC(
 // Verify attestation response from the challenger.
 sgx_status_t verifyAttestationResponse(
     sgx_ra_context_t context,
-    uint8_t *secret,
+    const uint8_t *secret,
     size_t secret_size,
-    uint8_t *gcm_iv,
-    uint8_t *gcm_mac,
+    const uint8_t *gcm_iv,
+    const uint8_t *gcm_mac,
     size_t gcm_mac_size,
     uint8_t *sealed_secret,
     size_t sealed_secret_size

@@ -2,6 +2,7 @@
 <Configuration status="info">
 
     <Properties>
+        <Property name="attestation.home">.</Property>
         <Property name="log-path">${sys:attestation.home}</Property>
         <Property name="log-name">attestation-server</Property>
         <Property name="archive">${sys:log-path}/archive</Property>

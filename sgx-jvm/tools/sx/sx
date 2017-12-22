@@ -27,6 +27,7 @@ HSM_PROFILE=dev_sim
 
 # Runtime variables
 ISV_PORT=${PORT:-9080}
+HOST_PORT=${HOST_PORT:-8080}
 LINES=${LINES:-50}
 
 # Debug variables
@@ -303,7 +304,7 @@ in_container() {
             mei0_device="--device /dev/mei0"
         fi
     fi
-    ports="-p ${gdb_port}:${gdb_port} -p ${jdwp_port}:${jdwp_port}"
+    ports="-p ${gdb_port}:${gdb_port} -p ${jdwp_port}:${jdwp_port} -p ${HOST_PORT}:${HOST_PORT}"
     local sock="/var/run/aesmd/aesm.socket"
     if [ -e "${sock}" ]; then
         aesm_socket="-v ${sock}:${sock}"

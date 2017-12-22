@@ -22,7 +22,7 @@ enclave {
          */
         public sgx_status_t initializeRemoteAttestation(
             bool usePlatformServices,
-            [in] sgx_ec256_public_t *challengerKey,
+            [in] const sgx_ec256_public_t *challengerKey,
             [out] sgx_ra_context_t *context
         );
 
@@ -52,9 +52,9 @@ enclave {
          */
         public sgx_status_t verifyCMAC(
             sgx_ra_context_t context,
-            [in,size=messageSize] uint8_t *message,
+            [in,size=messageSize] const uint8_t *message,
             size_t messageSize,
-            [in,size=cmacSize] uint8_t *cmac,
+            [in,size=cmacSize] const uint8_t *cmac,
             size_t cmacSize
         );
 
@@ -77,10 +77,10 @@ enclave {
          */
         public sgx_status_t verifyAttestationResponse(
             sgx_ra_context_t context,
-            [in,size=secretSize] uint8_t *secret,
+            [in,size=secretSize] const uint8_t *secret,
             size_t secretSize,
-            [in,count=12] uint8_t *gcmIV,
-            [in,size=gcmMacSize] uint8_t *gcmMac,
+            [in,count=12] const uint8_t *gcmIV,
+            [in,size=gcmMacSize] const uint8_t *gcmMac,
             size_t gcmMacSize,
             [out,size=maxSealedSecretSize] uint8_t *sealedSecret,
             size_t maxSealedSecretSize

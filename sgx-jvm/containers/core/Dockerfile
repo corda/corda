@@ -67,7 +67,7 @@ ADD dependencies/proguard6.0beta1.tar.gz /usr/share/
 
 # Expose ports for remote GDB and Java debugging, and test servers
 
-EXPOSE 2000 5005 8080 9080
+EXPOSE 2000 5005 8080 8084 9080
 
 # Environment
 

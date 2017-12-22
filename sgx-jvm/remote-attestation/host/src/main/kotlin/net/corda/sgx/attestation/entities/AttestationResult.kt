@@ -1,7 +1,6 @@
 package net.corda.sgx.attestation.entities
 
 import net.corda.sgx.sealing.ProvisionedSecret
-import java.time.LocalDateTime
 
 /**
  * The outcome of a remote attestation process.
@@ -9,7 +8,7 @@ import java.time.LocalDateTime
 class AttestationResult(
 
         /**
-         * THe status of the provided quote.
+         * The status of the provided quote.
          */
         val quoteStatus: QuoteStatus,
 

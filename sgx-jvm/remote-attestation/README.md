@@ -1,5 +1,7 @@
 # Remote Attestation
 
+![Flow between Challenger, Host, ISV and IAS](challenger-flow.png "Remote Attestation Flow")
+
 ## Project Organisation
 
   * **Enclave**

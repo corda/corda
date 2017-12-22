@@ -8,12 +8,12 @@ rm -f isv-svc.pfx
 openssl ecparam -name secp256r1 -genkey -noout -out privateKey.pem
 openssl req -new -key privateKey.pem -x509 -out server.crt -days 1000 <<EOF
 .
-
 .
 .
-
+.
+.
 localhost
-
+.
 EOF
 
 openssl pkcs12 -export -out isv-svc.pfx -inkey privateKey.pem -in server.crt -passout pass:${STOREPASS}
