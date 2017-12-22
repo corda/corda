@@ -4,12 +4,15 @@ import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.fork
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
@@ -20,7 +23,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.time.Instant
-import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeoutException
 import kotlin.streams.toList
 
 /**
@@ -54,7 +58,7 @@ class NetworkBootstrapper {
         val processes = startNodeInfoGeneration(nodeDirs)
         initialiseSerialization()
         try {
-            println("Waiting for all nodes to generate their node-info files")
+            println("Waiting for all nodes to generate their node-info files...")
             val nodeInfoFiles = gatherNodeInfoFiles(processes, nodeDirs)
             println("Distributing all node info-files to all nodes")
             distributeNodeInfos(nodeDirs, nodeInfoFiles)
@@ -82,15 +86,22 @@ class NetworkBootstrapper {
     }
 
     private fun gatherNodeInfoFiles(processes: List<Process>, nodeDirs: List<Path>): List<Path> {
-        val timeOutInSeconds = 60L
-        return processes.zip(nodeDirs).map { (process, nodeDir) ->
-            check(process.waitFor(timeOutInSeconds, SECONDS)) {
-                "Node in ${nodeDir.fileName} took longer than ${timeOutInSeconds}s to generate its node-info - see logs in ${nodeDir / LOGS_DIR_NAME}"
+        val executor = Executors.newSingleThreadExecutor()
+
+        val future = executor.fork {
+            processes.zip(nodeDirs).map { (process, nodeDir) ->
+                check(process.waitFor() == 0) {
+                    "Node in ${nodeDir.fileName} exited with ${process.exitValue()} when generating its node-info - see logs in ${nodeDir / LOGS_DIR_NAME}"
+                }
+                nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith("nodeInfo-") }.findFirst().get() }
             }
-            check(process.exitValue() == 0) {
-                "Node in ${nodeDir.fileName} exited with ${process.exitValue()} when generating its node-info - see logs in ${nodeDir / LOGS_DIR_NAME}"
-            }
-            nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith("nodeInfo-") }.findFirst().get() }
+        }
+
+        return try {
+            future.getOrThrow(60.seconds)
+        } catch (e: TimeoutException) {
+            println("...still waiting. If this is taking longer than usual, check the node logs.")
+            future.getOrThrow()
         }
     }
 
