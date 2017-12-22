@@ -16,6 +16,7 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -74,14 +75,15 @@ class NetworkBootstrapper {
         val confFiles = this.list { it.filter { it.toString().endsWith(".conf") }.toList() }
         if (confFiles.any()) {
             println("Node config files found in the root directory - generating node directories")
-            val cordaJar = this.list { it.filter { "corda.jar" in it.toString() }.toList().singleOrNull() } ?:
-                    throw IllegalArgumentException("If generating node directories from a list of conf files, make sure corda.jar is available in the root directory")
+            val cordaJarPath = (this / "corda.jar")
+            Files.copy(Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar"), cordaJarPath)
             confFiles.forEach {
                 val dirName = it.fileName.toString().removeSuffix(".conf")
                 val nodeDir = (this / dirName).createDirectory()
                 it.moveTo(nodeDir / "node.conf")
-                cordaJar.copyToDirectory(nodeDir)
+                Files.copy(cordaJarPath, (nodeDir / "corda.jar"))
             }
+            Files.delete(cordaJarPath)
         }
     }
 
