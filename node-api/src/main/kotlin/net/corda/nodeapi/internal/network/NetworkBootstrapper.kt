@@ -76,11 +76,11 @@ class NetworkBootstrapper {
         if (confFiles.isEmpty()) { return }
         println("Node config files found in the root directory - generating node directories")
         val cordaJar = extractCordaJarTo(directory)
-        confFiles.forEach {
-            val nodeName = it.fileName.toString().removeSuffix(".conf")
+        for(confFile in confFiles) {
+            val nodeName = confFile.fileName.toString().removeSuffix(".conf")
             println("Generating directory for $nodeName")
             val nodeDir = (directory / nodeName).createDirectory()
-            it.moveTo(nodeDir / "node.conf")
+            confFile.moveTo(nodeDir / "node.conf")
             Files.copy(cordaJar, (nodeDir / "corda.jar"))
         }
         Files.delete(cordaJar)
@@ -88,7 +88,7 @@ class NetworkBootstrapper {
 
     private fun extractCordaJarTo(directory: Path) : Path {
         val cordaJarPath = (directory / "corda.jar")
-        Files.copy(Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar"), cordaJarPath)
+        Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
         return cordaJarPath
     }
 
