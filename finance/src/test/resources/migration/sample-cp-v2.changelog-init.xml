@@ -5,7 +5,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
     <changeSet author="tudormalene (generated)" id="1512743551377-4">
         <createTable tableName="cp_states_v2">
-            <column name="output_index" type="INT(10)">
+            <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="transaction_id" type="NVARCHAR(64)">
@@ -14,7 +14,7 @@
             <column name="issuer_name" type="NVARCHAR(255)"/>
             <column name="issuer_ref" type="VARBINARY(512)"/>
             <column name="owner_name" type="NVARCHAR(255)"/>
-            <column name="quantity" type="BIGINT(19)"/>
+            <column name="quantity" type="BIGINT"/>
             <column name="ccy_code" type="NVARCHAR(3)"/>
             <column name="face_value_issuer_key_hash" type="NVARCHAR(130)"/>
             <column name="face_value_issuer_ref" type="VARBINARY(512)"/>

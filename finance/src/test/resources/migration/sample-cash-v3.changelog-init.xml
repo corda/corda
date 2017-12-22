@@ -6,7 +6,7 @@
 
     <changeSet author="tudormalene (generated)" id="1512743551377-2">
         <createTable tableName="cash_states_v3">
-            <column name="output_index" type="INT(10)">
+            <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="transaction_id" type="NVARCHAR(64)">
@@ -16,7 +16,7 @@
             <column name="issuer_name" type="NVARCHAR(255)"/>
             <column name="issuer_ref" type="VARBINARY(512)"/>
             <column name="owner_name" type="NVARCHAR(255)"/>
-            <column name="pennies" type="BIGINT(19)"/>
+            <column name="pennies" type="BIGINT"/>
         </createTable>
 
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_DC"

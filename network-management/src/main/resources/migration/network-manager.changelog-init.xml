@@ -6,6 +6,9 @@
     <changeSet author="tudormalene (generated)" id="1513267683777-1.2" dbms="azure">
         <createSequence sequenceName="hibernate_sequence" minValue="1"/>
     </changeSet>
+    <changeSet author="tudormalene (generated)" id="1513267683777-1.2" dbms="postgres">
+        <createSequence sequenceName="hibernate_sequence" minValue="1"/>
+    </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-1.1" dbms="h2">
         <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
@@ -19,7 +22,7 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-3">
         <createTable tableName="CertificateSigningRequestEntity_modifiedBy_AUD">
-            <column name="REV" type="INT(10)">
+            <column name="REV" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="CertificateSigningRequestEntity_request_id" type="NVARCHAR(64)">
@@ -28,16 +31,16 @@
             <column name="modified_by" type="NVARCHAR(512)">
                 <constraints nullable="false"/>
             </column>
-            <column name="revtype" type="TINYINT(3)"/>
+            <column name="revtype" type="TINYINT"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-4">
         <createTable tableName="certificate_data">
-            <column name="ID" type="BIGINT(19)">
+            <column name="ID" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="certificate_path_bytes" type="BLOB"/>
-            <column name="certificate_status" type="INT(10)"/>
+            <column name="certificate_status" type="INT"/>
             <column name="public_key_hash" type="NVARCHAR(64)"/>
             <column name="certificate_signing_request" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
@@ -69,10 +72,10 @@
             <column name="request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="rev" type="INT(10)">
+            <column name="rev" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="revtype" type="TINYINT(3)"/>
+            <column name="revtype" type="TINYINT"/>
             <column name="modified_at" type="TIMESTAMP"/>
             <column name="remark" type="NVARCHAR(256)"/>
             <column name="status" type="VARCHAR(255)"/>
@@ -80,7 +83,7 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-7">
         <createTable tableName="network_map">
-            <column name="version" type="BIGINT(19)">
+            <column name="version" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="certificate" type="BLOB"/>
@@ -90,7 +93,7 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-8">
         <createTable tableName="network_parameters">
-            <column name="version" type="BIGINT(19)">
+            <column name="version" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="bytes" type="BLOB"/>
@@ -110,10 +113,10 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-10">
         <createTable tableName="REVINFO">
-            <column autoIncrement="true" name="rev" type="INT(10)">
+            <column autoIncrement="true" name="rev" type="INT">
                 <constraints primaryKey="true" primaryKeyName="CONSTRAINT_6"/>
             </column>
-            <column name="revtstmp" type="BIGINT(19)"/>
+            <column name="revtstmp" type="BIGINT"/>
         </createTable>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-11">

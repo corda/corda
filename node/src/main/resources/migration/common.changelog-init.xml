@@ -13,6 +13,9 @@
     <changeSet author="tudormalene (generated)" id="1511451595465-1.1" dbms="h2">
         <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-1.3" dbms="postgresql">
+        <createSequence sequenceName="hibernate_sequence" minValue="1"/>
+    </changeSet>
 
     <changeSet author="tudormalene (generated)" id="create state_participants table">
         <createTable tableName="state_participants">
