@@ -2,7 +2,6 @@ package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -34,6 +33,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.*
+import net.corda.testing.database.dataSourceConfig
+import net.corda.testing.database.toDataSourceProperties
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
 import org.bouncycastle.operator.ContentSigner
@@ -73,13 +74,7 @@ open class MockServices private constructor(
         @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nodeNameExtension: String? = null,
                                          configSupplier: (String, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
-            val config = configSupplier(nodeName, nodeNameExtension)
-            val props = Properties()
-            props.setProperty("dataSourceClassName", config.getString("dataSourceProperties.dataSourceClassName"))
-            props.setProperty("dataSource.url", config.getString("dataSourceProperties.dataSource.url"))
-            props.setProperty("dataSource.user", config.getString("dataSourceProperties.dataSource.user"))
-            props.setProperty("dataSource.password", config.getString("dataSourceProperties.dataSource.password"))
-            return props
+            return configSupplier(nodeName, nodeNameExtension).toDataSourceProperties()
         }
 
         /**
@@ -247,13 +242,17 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
 }
 
+/**
+ * Creates data source configuration for in memory H2 as it would be specified in reference.conf 'datasource' snippet.
+ * @param nodeName Reflects the "instance" of the database username/schema
+ * @param postfix Additional postix added to database "instance" name to add uniqueness when running integration tests.
+ */
 fun inMemoryH2DataSourceConfig(nodeName: String? = null, postfix: String? = null) : Config {
     val nodeName = nodeName ?: SecureHash.randomSHA256().toString()
     val h2InstanceName = if (postfix != null) nodeName + "_" + postfix else nodeName
 
-    return ConfigFactory.parseMap(mapOf(
-            "dataSourceProperties.dataSourceClassName" to "org.h2.jdbcx.JdbcDataSource",
-            "dataSourceProperties.dataSource.url" to "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
-            "dataSourceProperties.dataSource.user" to "sa",
-            "dataSourceProperties.dataSource.password" to ""))
+    return dataSourceConfig("jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
+            "org.h2.jdbcx.JdbcDataSource",
+            "sa",
+            "")
 }
