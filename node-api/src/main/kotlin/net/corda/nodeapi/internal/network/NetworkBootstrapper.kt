@@ -73,10 +73,10 @@ class NetworkBootstrapper {
 
     private fun generateDirectoriesIfNeeded(directory: Path) {
         val confFiles = directory.list { it.filter { it.toString().endsWith(".conf") }.toList() }
-        if (confFiles.isEmpty()) { return }
+        if (confFiles.isEmpty()) return
         println("Node config files found in the root directory - generating node directories")
         val cordaJar = extractCordaJarTo(directory)
-        for(confFile in confFiles) {
+        for (confFile in confFiles) {
             val nodeName = confFile.fileName.toString().removeSuffix(".conf")
             println("Generating directory for $nodeName")
             val nodeDir = (directory / nodeName).createDirectory()
@@ -86,7 +86,7 @@ class NetworkBootstrapper {
         Files.delete(cordaJar)
     }
 
-    private fun extractCordaJarTo(directory: Path) : Path {
+    private fun extractCordaJarTo(directory: Path): Path {
         val cordaJarPath = (directory / "corda.jar")
         Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
         return cordaJarPath
@@ -159,10 +159,10 @@ class NetworkBootstrapper {
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-            // cluster and is shared by all the other members. This is the notary identity.
+        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+        // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
@@ -184,6 +184,7 @@ class NetworkBootstrapper {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
         }
+
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }
