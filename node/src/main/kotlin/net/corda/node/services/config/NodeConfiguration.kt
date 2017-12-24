@@ -229,12 +229,13 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                 AuthDataSourceType.DB -> AuthServiceId("REMOTE_DATABASE")
             }
 
-            fun fromUsers(users: List<User>) = AuthService(
-                    dataSource = DataSource(
-                            type = AuthDataSourceType.INMEMORY,
-                            users = users,
-                            passwordEncryption = PasswordEncryption.NONE),
-                    id = AuthServiceId("NODE_CONFIG"))
+            fun fromUsers(users: List<User>, encryption: PasswordEncryption = PasswordEncryption.NONE) =
+                    AuthService(
+                            dataSource = DataSource(
+                                    type = AuthDataSourceType.INMEMORY,
+                                    users = users,
+                                    passwordEncryption = encryption),
+                            id = AuthServiceId("NODE_CONFIG"))
         }
     }
 }

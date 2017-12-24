@@ -1,7 +1,6 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import com.typesafe.config.ConfigFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.PermissionException
 import net.corda.core.flows.FlowLogic
@@ -14,7 +13,6 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.AuthDataSourceType
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.node.internal.NodeBasedTest
@@ -25,18 +23,21 @@ import org.junit.Before
 import org.junit.Test
 import java.sql.DriverManager
 import java.sql.Statement
-import java.util.*
 import kotlin.test.assertFailsWith
 
 private class PasswordEncoder(private val format: PasswordEncryption = PasswordEncryption.NONE) {
 
-    private companion object {
-        val hashes = emptyMap<String, String>()
-    }
-
     operator fun invoke(s: String) = when (format) {
         PasswordEncryption.NONE -> s
-        PasswordEncryption.SHIRO_1_CRYPT -> hashes[s]!!
+        PasswordEncryption.SHIRO_1_CRYPT -> hardCodedHashes[s]!!
+    }
+
+    private companion object {
+        val hardCodedHashes = mapOf(
+           "foo" to "\$shiro1\$SHA-256$500000\$WSiEVj6q8d02sFcCk1dkoA==\$MBkU/ghdD9ovoDerdzNfkXdP9Bdhmok7tidvVIqGzcA=",
+           "bar" to "\$shiro1\$SHA-256$500000\$Q6dmdY1uVMm0LYAWaOHtCA==\$u7NbFaj9tHf2RTW54jedLPiOiGjJv0RVEPIjVquJuYY=",
+           "test" to "\$shiro1\$SHA-256$500000\$F6CWSFDDxGTlzvREwih8Gw==\$DQhyAPoUw3RdvNYJ1aubCnzEIXm+szGQ3HplaG+euz8="
+        )
     }
 }
 
@@ -116,12 +117,11 @@ class UserAuthServiceEmbedded : UserAuthServiceTest() {
 
     @Before
     fun setup() {
-        val encodePassword = PasswordEncoder(PasswordEncryption.NONE)
-
+        val encodePassword = PasswordEncoder(PasswordEncryption.SHIRO_1_CRYPT)
         val securityConfig = SecurityConfiguration(
                authService = SecurityConfiguration.AuthService.fromUsers(
-                       rpcUsers.map { it.copy (password = encodePassword(it.password))}))
-
+                       users = rpcUsers.map { it.copy (password = encodePassword(it.password))},
+                       encryption = PasswordEncryption.SHIRO_1_CRYPT))
         val configOverrides = mapOf("security" to securityConfig.toConfig().root().unwrapped())
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
@@ -131,8 +131,7 @@ class UserAuthServiceEmbedded : UserAuthServiceTest() {
 class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
 
     private val cacheExpireAfterSecs: Long = 1
-    private val encodePassword = PasswordEncoder(format = PasswordEncryption.NONE)
-
+    private val encodePassword = PasswordEncoder(format = PasswordEncryption.SHIRO_1_CRYPT)
     private val db = UsersDB(
             name = "SecurityDataSourceTestDB",
             users = listOf(UserAndRoles(username = "user",
@@ -158,6 +157,7 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
                         "authService" to mapOf(
                                 "dataSource" to mapOf(
                                         "type" to "DB",
+                                        "passwordEncryption" to "SHIRO_1_CRYPT",
                                         "connection" to mapOf(
                                                 "jdbcUrl" to db.jdbcUrl,
                                                 "username" to "",
@@ -184,12 +184,12 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with incorrect password should fail") {
-            client.start("user2", "bar")
+            client.start("user2", encodePassword("bar"))
         }
 
         db.insert(UserAndRoles(
                 username = "user2",
-                password = "bar",
+                password = encodePassword("bar"),
                 roles = listOf("default")))
 
         client.start("user2", "bar")
