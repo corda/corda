@@ -80,8 +80,10 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_STATE = 64
         const val MAX_LENGTH_ORGANISATION_UNIT = 64
         const val MAX_LENGTH_COMMON_NAME = 64
+
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
         private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries() + unspecifiedCountry)
+
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
             val x500Name = X500Name.getInstance(principal.encoded)
@@ -115,20 +117,12 @@ data class CordaX500Name(val commonName: String?,
     }
 
     @Transient
-    private var x500Cache: X500Name? = null
+    private var _x500Principal: X500Principal? = null
 
-    val x500Principal: X500Principal
-        get() {
-            if (x500Cache == null) {
-                x500Cache = this.x500Name
-            }
-            return X500Principal(x500Cache!!.encoded)
-        }
-
-    override fun toString(): String {
-        if (x500Cache == null) {
-            x500Cache = this.x500Name
-        }
-        return x500Cache.toString()
+    /** Return the [X500Principal] equivalent of this name. */
+    val x500Principal: X500Principal get() {
+        return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
     }
+
+    override fun toString(): String = x500Principal.toString()
 }

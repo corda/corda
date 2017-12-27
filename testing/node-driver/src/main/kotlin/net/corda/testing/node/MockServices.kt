@@ -15,7 +15,9 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
+import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
@@ -26,12 +28,11 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.internal.configureDatabase
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.testing.*
+import net.corda.testing.DEV_ROOT_CA
+import net.corda.testing.TestIdentity
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
 import org.bouncycastle.operator.ContentSigner
@@ -44,7 +45,7 @@ import java.sql.Connection
 import java.time.Clock
 import java.util.*
 
-fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_TRUST_ROOT)
+fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_ROOT_CA.certificate)
 /**
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
@@ -164,7 +165,7 @@ class MockKeyManagementService(val identityService: IdentityServiceInternal,
 
     override val keys: Set<PublicKey> get() = keyStore.keys
 
-    val nextKeys = LinkedList<KeyPair>()
+    private val nextKeys = LinkedList<KeyPair>()
 
     override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
@@ -222,11 +223,10 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 }
 
 fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T): T {
-    class MockAppServiceHubImpl<T : SerializeAsToken>(val serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T) : AppServiceHub, ServiceHub by serviceHub {
-        val serviceInstance: T
+    class MockAppServiceHubImpl<out T : SerializeAsToken>(val serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T) : AppServiceHub, ServiceHub by serviceHub {
+        val serviceInstance: T = serviceConstructor(this)
 
         init {
-            serviceInstance = serviceConstructor(this)
             serviceHub.cordappServices.putInstance(serviceInstance.javaClass, serviceInstance)
         }
 

@@ -192,9 +192,6 @@ The following 3rd party types are supported.
 
     org.apache.activemq.artemis.api.core.SimpleString
 
-    org.bouncycastle.asn1.x500.X500Name
-    org.bouncycastle.cert.X509CertificateHolder
-
 Corda Types
 ```````````
 

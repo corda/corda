@@ -72,7 +72,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
         if (!nodeKeyStore.containsAlias(SELF_SIGNED_PRIVATE_KEY)) {
             val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName, keyPair)
+            val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName.x500Principal, keyPair)
             // Save to the key store.
             nodeKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(),
                     arrayOf(selfSignCert))
@@ -112,8 +112,8 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             throw CertificateRequestException("Received node CA cert has invalid role: $nodeCaCertRole")
         }
 
-            println("Checking root of the  certificate path is what we expect.")
-            X509Utilities.validateCertificateChain (rootCert , * certificates)
+        println("Checking root of the  certificate path is what we expect.")
+        X509Utilities.validateCertificateChain(rootCert, *certificates)
 
         println("Certificate signing request approved, storing private key with the certificate chain.")
         // Save private key and certificate chain to the key store.
@@ -126,12 +126,12 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val sslCert = X509Utilities.createCertificate(
                 CertificateType.TLS,
-                nodeCaCert.toX509CertHolder(),
+                nodeCaCert,
                 keyPair,
-                config.myLegalName,
+                config.myLegalName.x500Principal,
                 sslKeyPair.public)
         val sslKeyStore = loadOrCreateKeyStore(config.sslKeystore, keystorePassword)
-        sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKeyPair.private, privateKeyPassword.toCharArray(), arrayOf(sslCert.cert, *certificates))
+        sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKeyPair.private, privateKeyPassword.toCharArray(), arrayOf(sslCert, *certificates))
         sslKeyStore.save(config.sslKeystore, config.keyStorePassword)
         println("SSL private key and certificate stored in ${config.sslKeystore}.")
 
@@ -165,7 +165,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
-            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.emailAddress, keyPair)
+            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName.x500Principal, config.emailAddress, keyPair)
             val writer = StringWriter()
             JcaPEMWriter(writer).use {
                 it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))
