@@ -10,23 +10,23 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.driver.driver
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Path
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class NodeKeystoreCheckTest {
     @Test
+    fun `starting node in non-dev mode with no key store`() {
+        driver(startNodesInProcess = true) {
+            assertThatThrownBy {
+                startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
+            }.hasMessageContaining("Identity certificate not found")
+        }
+    }
+
+    @Test
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
         driver(startNodesInProcess = true) {
-            // This will fail because there are no keystore configured.
-            assertFailsWith(IllegalArgumentException::class) {
-                startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
-            }.apply {
-                assertTrue(message?.startsWith("Identity certificate not found. ") ?: false)
-            }
-
             // Create keystores
             val keystorePassword = "password"
             val config = object : SSLConfiguration {
@@ -37,9 +37,12 @@ class NodeKeystoreCheckTest {
             config.configureDevKeyAndTrustStores(ALICE_NAME)
 
             // This should pass with correct keystore.
-            val node = startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false,
-                    "keyStorePassword" to keystorePassword,
-                    "trustStorePassword" to keystorePassword)).get()
+            val node = startNode(
+                    providedName = ALICE_NAME,
+                    customOverrides = mapOf("devMode" to false,
+                            "keyStorePassword" to keystorePassword,
+                            "trustStorePassword" to keystorePassword)
+            ).getOrThrow()
             node.stop()
 
             // Fiddle with node keystore.
@@ -53,11 +56,9 @@ class NodeKeystoreCheckTest {
             keystore.setKeyEntry(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, config.keyStorePassword.toCharArray(), arrayOf(badNodeCACert.cert, badRoot.cert))
             keystore.save(config.nodeKeystore, config.keyStorePassword)
 
-            assertFailsWith(IllegalArgumentException::class) {
+            assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)).getOrThrow()
-            }.apply {
-                assertEquals("Client CA certificate must chain to the trusted root.", message)
-            }
+            }.hasMessage("Client CA certificate must chain to the trusted root.")
         }
     }
 }

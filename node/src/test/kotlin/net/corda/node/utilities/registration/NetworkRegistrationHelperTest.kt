@@ -14,12 +14,14 @@ import net.corda.core.internal.createDirectories
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.internal.createDevNodeCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.security.cert.CertPathValidatorException
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 import kotlin.test.assertFalse
@@ -29,16 +31,19 @@ class NetworkRegistrationHelperTest {
     private val fs = Jimfs.newFileSystem(unix())
     private val requestId = SecureHash.randomSHA256().toString()
     private val nodeLegalName = ALICE_NAME
-    private val intermediateCaName = CordaX500Name("CORDA_INTERMEDIATE_CA", "R3 Ltd", "London", "GB")
-    private val rootCaName = CordaX500Name("CORDA_ROOT_CA", "R3 Ltd", "London", "GB")
-    private val nodeCaCert = createCaCert(nodeLegalName)
-    private val intermediateCaCert = createCaCert(intermediateCaName)
-    private val rootCaCert = createCaCert(rootCaName)
 
+    private lateinit var rootCaCert: X509Certificate
+    private lateinit var intermediateCaCert: X509Certificate
+    private lateinit var nodeCaCert: X509Certificate
     private lateinit var config: NodeConfiguration
 
     @Before
     fun init() {
+        val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(nodeLegalName)
+        this.rootCaCert = rootCa.certificate.cert
+        this.intermediateCaCert = intermediateCa.certificate.cert
+        this.nodeCaCert = nodeCa.certificate.cert
+
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
         abstract class AbstractNodeConfiguration : NodeConfiguration
         config = rigorousMock<AbstractNodeConfiguration>().also {
@@ -108,11 +113,13 @@ class NetworkRegistrationHelperTest {
 
     @Test
     fun `wrong root cert in truststore`() {
-        saveTrustStoreWithRootCa(createCaCert(CordaX500Name("Foo", "MU", "GB")))
+        val rootKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name("Foo", "MU", "GB"), rootKeyPair)
+        saveTrustStoreWithRootCa(rootCert.cert)
         val registrationHelper = createRegistrationHelper()
         assertThatThrownBy {
             registrationHelper.buildKeystore()
-        }.isInstanceOf(WrongRootCertException::class.java)
+        }.isInstanceOf(CertPathValidatorException::class.java)
     }
 
     private fun createRegistrationHelper(): NetworkRegistrationHelper {
@@ -123,15 +130,11 @@ class NetworkRegistrationHelperTest {
         return NetworkRegistrationHelper(config, certService)
     }
 
-    private fun saveTrustStoreWithRootCa(rootCa: X509Certificate) {
-        config.trustStoreFile.parent.createDirectories()
+    private fun saveTrustStoreWithRootCa(rootCert: X509Certificate) {
+        config.certificatesDirectory.createDirectories()
         loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-            it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCa)
+            it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
             it.save(config.trustStoreFile, config.trustStorePassword)
         }
-    }
-
-    private fun createCaCert(name: CordaX500Name): X509Certificate {
-        return X509Utilities.createSelfSignedCACertificate(name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)).cert
     }
 }

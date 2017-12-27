@@ -8,7 +8,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.testing.node.internal.demorun.*
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
@@ -62,7 +62,7 @@ class BFTNotaryCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) {
-        IdentityGenerator.generateDistributedNotaryIdentity(
+        DevIdentityGenerator.generateDistributedNotaryIdentity(
                 notaryNames.map { context.baseDirectory(it.toString()) },
                 clusterName,
                 minCorrectReplicas(clusterSize)

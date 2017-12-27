@@ -59,7 +59,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.KeyStoreWrapper
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -726,10 +726,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
             // Node's main identity or if it's a single node notary
-            Pair(IdentityGenerator.NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
+            Pair(DevIdentityGenerator.NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
         } else {
             // The node is part of a distributed notary whose identity must already be generated beforehand.
-            Pair(IdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
+            Pair(DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
         }
         // TODO: Integrate with Key management service?
         val privateKeyAlias = "$id-private-key"
