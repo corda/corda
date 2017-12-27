@@ -153,7 +153,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     // Generate notary identity and save it into node's directory. This identity will be used in network parameters.
     private fun getNotaryIdentity(config: NodeConfigWrapper): Party {
-        return IdentityGenerator.generateNodeIdentity(config.nodeDir, config.nodeConfig.myLegalName)
+        return IdentityGenerator.installKeyStoreWithNodeIdentity(config.nodeDir, config.nodeConfig.myLegalName)
     }
 
     fun reset() {
