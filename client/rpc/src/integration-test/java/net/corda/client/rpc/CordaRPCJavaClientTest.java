@@ -40,8 +40,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @ClassRule
-    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME),
-            IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME));
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),
@@ -63,7 +62,8 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @Before
-    public void setUp() throws ExecutionException, InterruptedException {
+    public void setUp() throws Exception {
+        super.setUp();
         node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
@@ -79,11 +79,11 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @Test
-    public void testCashBalances() throws NoSuchFieldException, ExecutionException, InterruptedException {
+    public void testCashBalances() throws ExecutionException, InterruptedException {
         login(rpcUser.getUsername(), rpcUser.getPassword());
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
-                DOLLARS(123), OpaqueBytes.of("1".getBytes()),
+                DOLLARS(123), OpaqueBytes.of((byte)0),
                 CoreTestUtils.chooseIdentity(node.getInfo()));
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
