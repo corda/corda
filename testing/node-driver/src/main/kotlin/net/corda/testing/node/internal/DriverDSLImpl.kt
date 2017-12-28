@@ -10,10 +10,8 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
@@ -31,7 +29,6 @@ import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.IdentityGenerator
-import net.corda.nodeapi.internal.IdentityGenerator.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -46,7 +43,6 @@ import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.*
@@ -270,7 +266,7 @@ class DriverDSLImpl(
                 clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
             } else {
                 // We have all we need here to generate the identity for single node notaries
-                val identity = IdentityGenerator.generateNodeIdentity(baseDirectory(name), legalName = name)
+                val identity = IdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
                 notaryInfos += NotaryInfo(identity, notaryConfig.validating)
             }
         }
@@ -364,7 +360,7 @@ class DriverDSLImpl(
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
             val identity = if (spec.cluster == null) {
-                IdentityGenerator.generateNodeIdentity(baseDirectory(spec.name), spec.name, compatibilityZone?.rootCert)
+                IdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name, compatibilityZone?.rootCert)
             } else {
                 IdentityGenerator.generateDistributedNotaryIdentity(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },

@@ -94,6 +94,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             caKeyStore.save(config.nodeKeystore, keystorePassword)
             println("Node private key and certificate stored in ${config.nodeKeystore}.")
 
+            // TODO This should actually be using X509Utilities.validateCertificateChain
             // Check that the root of the signed certificate matches the expected certificate in the truststore.
             if (rootCert != certificates.last()) {
                 // Assumes certificate chain always starts with client certificate and end with root certificate.

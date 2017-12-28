@@ -1,66 +1,87 @@
 package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.cert.X509Certificate
 
+/**
+ * Contains utility methods for generating identities for a node.
+ *
+ * WARNING: This is not application for production use and must never called by the node.
+ */
+// TODO Rename to DevIdentityGenerator
 object IdentityGenerator {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    // TODO These don't need to be prefixes but can be the full aliases
+    // TODO Move these constants out of here as the node needs access to them
     const val NODE_IDENTITY_ALIAS_PREFIX = "identity"
     const val DISTRIBUTED_NOTARY_ALIAS_PREFIX = "distributed-notary"
 
-    fun generateNodeIdentity(dir: Path, legalName: CordaX500Name, customRootCert: X509Certificate? = null): Party {
-        return generateToDisk(listOf(dir), legalName, NODE_IDENTITY_ALIAS_PREFIX, threshold = 1, customRootCert = customRootCert)
+    /**
+     * Install a node key store for the given node directory using the given legal name and an optional root cert. If no
+     * root cert is specified then the default one in certificates/cordadevcakeys.jks is used.
+     */
+    fun installKeyStoreWithNodeIdentity(nodeDir: Path, legalName: CordaX500Name, customRootCert: X509Certificate? = null): Party {
+        val nodeSslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = nodeDir
+            override val keyStorePassword: String = "cordacadevpass"
+            override val trustStorePassword get() = throw NotImplementedError("Not expected to be called")
+        }
+
+        // TODO The passwords for the dev key stores are spread everywhere and should be constants in a single location
+        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
+        val intermediateCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+        // TODO If using a custom root cert, then the intermidate cert needs to be generated from it as well, and not taken from the default
+        val rootCert = customRootCert ?: caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
+
+        nodeSslConfig.certificatesDirectory.createDirectories()
+        nodeSslConfig.createDevKeyStores(rootCert.toX509CertHolder(), intermediateCa, legalName)
+
+        val keyStoreWrapper = KeyStoreWrapper(nodeSslConfig.nodeKeystore, nodeSslConfig.keyStorePassword)
+        val identity = keyStoreWrapper.storeLegalIdentity(legalName, "$NODE_IDENTITY_ALIAS_PREFIX-private-key", Crypto.generateKeyPair())
+        return identity.party
     }
 
     fun generateDistributedNotaryIdentity(dirs: List<Path>, notaryName: CordaX500Name, threshold: Int = 1, customRootCert: X509Certificate? = null): Party {
-        return generateToDisk(dirs, notaryName, DISTRIBUTED_NOTARY_ALIAS_PREFIX, threshold, customRootCert)
-    }
+        require(dirs.isNotEmpty())
 
-    /**
-     * Generates signing key pairs and a common distributed service identity for a set of nodes.
-     * The key pairs and the group identity get serialized to disk in the corresponding node directories.
-     * This method should be called *before* any of the nodes are started.
-     *
-     * @param dirs List of node directories to place the generated identity and key pairs in.
-     * @param name The name of the identity.
-     * @param threshold The threshold for the generated group [CompositeKey].
-     * @param customRootCert the certificate to use as the Corda root CA. If not specified the one in
-     *      internal/certificates/cordadevcakeys.jks is used.
-     */
-    private fun generateToDisk(dirs: List<Path>,
-                               name: CordaX500Name,
-                               aliasPrefix: String,
-                               threshold: Int,
-                               customRootCert: X509Certificate?): Party {
-        log.trace { "Generating identity \"$name\" for nodes: ${dirs.joinToString()}" }
+        log.trace { "Generating identity \"$notaryName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
-        val key = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
 
         val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
         val intermediateCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+        // TODO If using a custom root cert, then the intermidate cert needs to be generated from it as well, and not taken from the default
         val rootCert = customRootCert ?: caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
 
-        keyPairs.zip(dirs) { keyPair, dir ->
-            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, name, keyPair.public)
-            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, name, key)
-            val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
-            val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
-            keystore.setCertificateEntry("$aliasPrefix-composite-key", compositeKeyCert.cert)
-            keystore.setKeyEntry("$aliasPrefix-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, intermediateCa.certificate.cert, rootCert))
-            keystore.save(certPath, "cordacadevpass")
+        keyPairs.zip(dirs) { keyPair, nodeDir ->
+            val (serviceKeyCert, compositeKeyCert) = listOf(keyPair.public, compositeKey).map { publicKey ->
+                X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, notaryName, publicKey)
+            }
+            val distServKeyStoreFile = (nodeDir / "certificates").createDirectories() / "distributedService.jks"
+            val keystore = loadOrCreateKeyStore(distServKeyStoreFile, "cordacadevpass")
+            keystore.setCertificateEntry("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert.cert)
+            keystore.setKeyEntry(
+                    "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
+                    keyPair.private,
+                    "cordacadevkeypass".toCharArray(),
+                    arrayOf(serviceKeyCert.cert, intermediateCa.certificate.cert, rootCert))
+            keystore.save(distServKeyStoreFile, "cordacadevpass")
         }
 
-        return Party(name, key)
+        return Party(notaryName, compositeKey)
     }
 }

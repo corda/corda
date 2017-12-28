@@ -235,7 +235,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.mapIndexed { index, (name, validating) ->
-            val identity = IdentityGenerator.generateNodeIdentity(baseDirectory(nextNodeId + index), name)
+            val identity = IdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(nextNodeId + index), name)
             NotaryInfo(identity, validating)
         }
     }

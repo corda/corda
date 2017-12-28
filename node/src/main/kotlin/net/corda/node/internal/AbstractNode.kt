@@ -696,7 +696,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
         val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val trustRoot = trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
-        val clientCa = caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+        val clientCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         val caCertificates = arrayOf(identityCert, clientCa.certificate.cert)
         return PersistentIdentityService(trustRoot, *caCertificates)
     }
@@ -739,10 +739,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     "Unable to find in the key store the identity of the distributed notary ($id) the node is part of")
             // TODO: Remove use of [IdentityGenerator.generateToDisk].
             log.info("$privateKeyAlias not found in key store ${configuration.nodeKeystore}, generating fresh key!")
-            keyStore.signAndSaveNewKeyPair(singleName, privateKeyAlias, generateKeyPair())
+            keyStore.storeLegalIdentity(singleName, privateKeyAlias, generateKeyPair())
         }
 
-        val (x509Cert, keyPair) = keyStore.certificateAndKeyPair(privateKeyAlias)
+        val (x509Cert, keyPair) = keyStore.getCertificateAndKeyPair(privateKeyAlias)
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
         val compositeKeyAlias = "$id-composite-key"

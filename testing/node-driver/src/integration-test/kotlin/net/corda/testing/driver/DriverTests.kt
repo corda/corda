@@ -2,6 +2,7 @@ package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
@@ -42,10 +43,26 @@ class DriverTests {
     @Test
     fun `simple node startup and shutdown`() {
         val handle = driver {
-            val regulator = startNode(providedName = DUMMY_REGULATOR_NAME)
-            nodeMustBeUp(regulator)
+            val node = startNode(providedName = DUMMY_REGULATOR_NAME)
+            nodeMustBeUp(node)
         }
         nodeMustBeDown(handle)
+    }
+
+    @Test
+    fun `starting with default notary`() {
+        driver {
+            // Make sure the default is a single-node notary
+            val notary = defaultNotaryNode.getOrThrow()
+            val notaryIdentities = notary.nodeInfo.legalIdentitiesAndCerts
+            // Make sure the notary node has only one identity
+            assertThat(notaryIdentities).hasSize(1)
+            val identity = notaryIdentities[0]
+            // Make sure this identity is a legal identity, like it is for normal nodes.
+            assertThat(CertRole.extract(identity.certificate)).isEqualTo(CertRole.LEGAL_IDENTITY)
+            // And make sure this identity is published as the notary identity (via the network parameters)
+            assertThat(notary.rpc.notaryIdentities()).containsOnly(identity.party)
+        }
     }
 
     @Test
