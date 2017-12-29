@@ -36,6 +36,7 @@ dependencies {
 
     // For db migration
     compile "org.liquibase:liquibase-core:$liquibase_version"
+    runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
