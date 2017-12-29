@@ -19,10 +19,9 @@ import java.security.cert.X509Certificate
 /**
  * Contains utility methods for generating identities for a node.
  *
- * WARNING: This is not application for production use and must never called by the node.
+ * WARNING: This is not application for production use.
  */
-// TODO Rename to DevIdentityGenerator
-object IdentityGenerator {
+object DevIdentityGenerator {
     private val log = LoggerFactory.getLogger(javaClass)
 
     // TODO These don't need to be prefixes but can be the full aliases

@@ -15,14 +15,7 @@ import org.bouncycastle.cert.X509CertificateHolder
  * the given legal name), and the SSL key store will store the TLS cert which is a sub-cert of the node CA.
  */
 fun SSLConfiguration.createDevKeyStores(rootCert: X509CertificateHolder, intermediateCa: CertificateAndKeyPair, legalName: CordaX500Name) {
-    val nodeCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
-    val nodeCaCert = X509Utilities.createCertificate(CertificateType.NODE_CA,
-            intermediateCa.certificate,
-            intermediateCa.keyPair,
-            legalName,
-            nodeCaKeyPair.public,
-            nameConstraints = nameConstraints)
+    val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
 
     loadOrCreateKeyStore(nodeKeystore, keyStorePassword).apply {
         addOrReplaceKey(
@@ -44,4 +37,21 @@ fun SSLConfiguration.createDevKeyStores(rootCert: X509CertificateHolder, interme
                 arrayOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert))
         save(sslKeystore, keyStorePassword)
     }
+}
+
+/**
+ * Create a dev node CA cert, as a sub-cert of the given [intermediateCa], and matching key pair using the given
+ * [CordaX500Name] as the cert subject.
+ */
+fun createDevNodeCa(intermediateCa: CertificateAndKeyPair, legalName: CordaX500Name): CertificateAndKeyPair {
+    val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
+    val cert = X509Utilities.createCertificate(
+            CertificateType.NODE_CA,
+            intermediateCa.certificate,
+            intermediateCa.keyPair,
+            legalName,
+            keyPair.public,
+            nameConstraints = nameConstraints)
+    return CertificateAndKeyPair(cert, keyPair)
 }

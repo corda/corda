@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.TestIdentity
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
@@ -169,10 +170,10 @@ class X509UtilitiesTest {
             override val trustStorePassword = "trustpass"
         }
 
-        val (rootCert, intermediateCa) = createRootCertAndIntermediateCa()
+        val (rootCert, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(rootCert, intermediateCa, MEGA_CORP.name)
+        sslConfig.createDevKeyStores(rootCert.certificate, intermediateCa, MEGA_CORP.name)
 
         // Load back server certificate
         val serverKeyStore = loadKeyStore(sslConfig.nodeKeystore, sslConfig.keyStorePassword)
@@ -205,11 +206,11 @@ class X509UtilitiesTest {
             override val trustStorePassword = "trustpass"
         }
 
-        val (rootCert, intermediateCa) = createRootCertAndIntermediateCa()
+        val (rootCert, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(rootCert, intermediateCa, MEGA_CORP.name)
-        sslConfig.createTrustStore(rootCert.cert)
+        sslConfig.createDevKeyStores(rootCert.certificate, intermediateCa, MEGA_CORP.name)
+        sslConfig.createTrustStore(rootCert.certificate.cert)
 
         val keyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)
         val trustStore = loadKeyStore(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
@@ -292,22 +293,6 @@ class X509UtilitiesTest {
     }
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
-
-    private fun createRootCertAndIntermediateCa(): Pair<X509CertificateHolder, CertificateAndKeyPair> {
-        val rootKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val baseName = CordaX500Name(organisation = "R3 Ltd", locality = "London", country = "GB")
-        val rootCert = X509Utilities.createSelfSignedCACertificate(baseName.copy(commonName = "Corda Root CA"), rootKeyPair)
-
-        val intermediateCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCaCert = X509Utilities.createCertificate(
-                CertificateType.INTERMEDIATE_CA,
-                rootCert,
-                rootKeyPair,
-                baseName.copy(commonName = "Corda Intermediate CA"),
-                intermediateCaKeyPair.public)
-
-        return Pair(rootCert, CertificateAndKeyPair(intermediateCaCert, intermediateCaKeyPair))
-    }
 
     private fun SSLConfiguration.createTrustStore(rootCert: X509Certificate) {
         val trustStore = loadOrCreateKeyStore(trustStoreFile, trustStorePassword)

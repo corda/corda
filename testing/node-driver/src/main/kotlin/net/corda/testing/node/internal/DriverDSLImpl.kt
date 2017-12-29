@@ -10,10 +10,12 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.toFuture
@@ -28,7 +30,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -37,13 +39,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
@@ -66,7 +68,7 @@ import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
@@ -266,13 +268,13 @@ class DriverDSLImpl(
                 clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
             } else {
                 // We have all we need here to generate the identity for single node notaries
-                val identity = IdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
+                val identity = DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
                 notaryInfos += NotaryInfo(identity, notaryConfig.validating)
             }
         }
 
         clusterNodes.asMap().forEach { type, nodeNames ->
-            val identity = IdentityGenerator.generateDistributedNotaryIdentity(
+            val identity = DevIdentityGenerator.generateDistributedNotaryIdentity(
                     dirs = nodeNames.map { baseDirectory(it) },
                     notaryName = type.clusterName
             )
@@ -360,9 +362,9 @@ class DriverDSLImpl(
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
             val identity = if (spec.cluster == null) {
-                IdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name, compatibilityZone?.rootCert)
+                DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name, compatibilityZone?.rootCert)
             } else {
-                IdentityGenerator.generateDistributedNotaryIdentity(
+                DevIdentityGenerator.generateDistributedNotaryIdentity(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
                         notaryName = spec.name,
                         customRootCert = compatibilityZone?.rootCert
@@ -890,8 +892,7 @@ fun <A> internalDriver(
 }
 
 fun getTimestampAsDirectoryName(): String {
-    // Add a random number in case 2 tests are started in the same instant.
-    return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now()) + random63BitValue()
+    return DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC).format(Instant.now())
 }
 
 fun writeConfig(path: Path, filename: String, config: Config) {
