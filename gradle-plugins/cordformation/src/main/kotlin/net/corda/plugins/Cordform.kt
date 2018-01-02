@@ -168,7 +168,7 @@ open class Cordform : DefaultTask() {
             cd.nodeConfigurers.forEach {
                 val node = node { }
                 it.accept(node)
-                node.cordapps.addAll(cordapps)
+                node.additionalCordapps.addAll(cordapps)
             }
         }
         nodes.forEach {

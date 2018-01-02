@@ -202,11 +202,11 @@ class Node(private val project: Project) : CordformNode() {
      * Installs other cordapps to this node's cordapps directory.
      */
     internal fun installCordapps() {
-        cordapps.addAll(getCordappList())
+        additionalCordapps.addAll(getCordappList())
         val cordappsDir = File(nodeDir, "cordapps")
         project.copy {
             it.apply {
-                from(cordapps)
+                from(additionalCordapps)
                 into(cordappsDir)
             }
         }
