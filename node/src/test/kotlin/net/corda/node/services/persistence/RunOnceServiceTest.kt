@@ -14,7 +14,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.contrib.java.lang.system.ExpectedSystemExit
-import java.util.*
+import java.time.LocalDateTime
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import javax.persistence.Query
@@ -64,7 +64,9 @@ class RunOnceServiceTest {
     fun `row updated when change of master node`() {
         runOnceServiceMachine1.start()
 
-        var firstTimestamp: Date? = null
+        var secondTimestamp = LocalDateTime.now()
+        var firstTimestamp = LocalDateTime.now()
+
         database.transaction {
             val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
             val result = machine1RowCheck(query)
@@ -76,14 +78,13 @@ class RunOnceServiceTest {
 
         runOnceServiceMachine2.start()
 
-        var secondTimestamp: Date? = null
         database.transaction {
             val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
             val result = machine2RowCheck(query)
             secondTimestamp = result.timestamp
         }
 
-        assertTrue(secondTimestamp!!.toInstant().isAfter(firstTimestamp!!.toInstant()))
+        assertTrue(secondTimestamp.isAfter(firstTimestamp))
     }
 
     @Test
@@ -105,7 +106,9 @@ class RunOnceServiceTest {
     fun `row updated when last run was same machine`() {
         runOnceServiceMachine1.start()
 
-        var firstTimestamp: Date? = null
+        var secondTimestamp = LocalDateTime.now()
+        var firstTimestamp = LocalDateTime.now()
+
         database.transaction {
             val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
             val result = machine1RowCheck(query)
@@ -117,14 +120,13 @@ class RunOnceServiceTest {
 
         runOnceServiceMachine1.start()
 
-        var secondTimestamp: Date? = null
         database.transaction {
             val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
             val result = machine1RowCheck(query)
             secondTimestamp = result.timestamp
         }
 
-        assertTrue(secondTimestamp!!.toInstant().isAfter(firstTimestamp!!.toInstant()))
+        assertTrue(secondTimestamp.isAfter(firstTimestamp))
     }
 
     @Test
@@ -132,7 +134,9 @@ class RunOnceServiceTest {
         whenever(mockUpdateExecutor.scheduleAtFixedRate(any(), any(), any(), any())).thenAnswer { invocation ->
             val runnable = invocation.arguments[0] as Runnable
 
-            var firstTimestamp: Date? = null
+            var secondTimestamp = LocalDateTime.now()
+            var firstTimestamp = LocalDateTime.now()
+
             database.transaction {
                 val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
                 val result = machine1RowCheck(query)
@@ -141,14 +145,13 @@ class RunOnceServiceTest {
 
             runnable.run()
 
-            var secondTimestamp: Date? = null
             database.transaction {
                 val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
                 val result = machine1RowCheck(query)
                 secondTimestamp = result.timestamp
             }
 
-            assertTrue(secondTimestamp!!.toInstant().isAfter(firstTimestamp!!.toInstant()))
+            assertTrue(secondTimestamp.isAfter(firstTimestamp))
 
             mock<ScheduledFuture<*>>()
         }
@@ -228,7 +231,7 @@ class RunOnceServiceTest {
         assertEquals('X', result.id)
         assertEquals("machine1", result.machineName)
         assertEquals("123", result.pid)
-        assertTrue(result.timestamp is Date)
+        assertTrue(result.timestamp is LocalDateTime)
         return result
     }
 
@@ -238,7 +241,7 @@ class RunOnceServiceTest {
         assertEquals('X', result.id)
         assertEquals("machine2", result.machineName)
         assertEquals("789", result.pid)
-        assertTrue(result.timestamp is Date)
+        assertTrue(result.timestamp is LocalDateTime)
         return result
     }
 }
