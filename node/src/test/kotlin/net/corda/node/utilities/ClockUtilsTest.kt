@@ -8,6 +8,8 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.minutes
+import net.corda.node.internal.CordaClock
+import net.corda.node.internal.SimpleClock
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.testing.node.TestClock
 import org.junit.After
@@ -25,13 +27,13 @@ import kotlin.test.fail
 class ClockUtilsTest {
 
     lateinit var realClock: Clock
-    lateinit var stoppedClock: Clock
+    lateinit var stoppedClock: CordaClock
     lateinit var executor: ExecutorService
 
     @Before
     fun setup() {
         realClock = Clock.systemUTC()
-        stoppedClock = Clock.fixed(realClock.instant(), realClock.zone)
+        stoppedClock = SimpleClock(Clock.fixed(realClock.instant(), realClock.zone))
         executor = Executors.newSingleThreadExecutor()
     }
 
