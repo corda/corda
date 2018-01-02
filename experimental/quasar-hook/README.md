@@ -26,7 +26,7 @@ additional classes are used when the jar is invoked directly. To do this we'll u
 ./gradlew experimental:quasar-hook:jar
 ./gradlew samples:irs-demo:deployNodes
 cd samples/irs-demo/build/nodes/NotaryService
-java -javaagent:../../../../../experimental/quasar-hook/build/libs/quasar-hook.jar=expand=com,de,org,co,io;truncate=net.corda;alwaysExcluded=com.opengamma,io.atomix -jar corda.jar
+java -javaagent:../../../../../experimental/quasar-hook/build/libs/quasar-hook.jar=expand=com,de,org,co,io;truncate=net.corda;alwaysExcluded=com.opengamma,io.atomix,org.jolokia -jar corda.jar
 ```
 
 Once the node is started just exit the node.

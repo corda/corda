@@ -1,7 +1,13 @@
 package net.corda.testing.internal
 
 import com.nhaarman.mockito_kotlin.doAnswer
+import net.corda.core.crypto.Crypto
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.createDevNodeCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.mockito.Mockito
 import org.mockito.internal.stubbing.answers.ThrowsException
@@ -42,6 +48,47 @@ fun <T> rigorousMock(clazz: Class<T>): T = Mockito.mock(clazz) {
     } else {
         it.callRealMethod()
     }
+}
+
+private val defaultRootCaName = CordaX500Name("Corda Root CA", "R3 Ltd", "London", "GB")
+private val defaultIntermediateCaName = CordaX500Name("Corda Intermediate CA", "R3 Ltd", "London", "GB")
+
+/**
+ * Returns a pair of [CertificateAndKeyPair]s, the first being the root CA and the second the intermediate CA.
+ * @param rootCaName The subject name for the root CA cert.
+ * @param intermediateCaName The subject name for the intermediate CA cert.
+ */
+fun createDevIntermediateCaCertPath(
+        rootCaName: CordaX500Name = defaultRootCaName,
+        intermediateCaName: CordaX500Name = defaultIntermediateCaName
+): Pair<CertificateAndKeyPair, CertificateAndKeyPair> {
+    val rootKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val rootCert = X509Utilities.createSelfSignedCACertificate(rootCaName, rootKeyPair)
+
+    val intermediateCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val intermediateCaCert = X509Utilities.createCertificate(
+            CertificateType.INTERMEDIATE_CA,
+            rootCert,
+            rootKeyPair,
+            intermediateCaName,
+            intermediateCaKeyPair.public)
+
+    return Pair(CertificateAndKeyPair(rootCert, rootKeyPair), CertificateAndKeyPair(intermediateCaCert, intermediateCaKeyPair))
+}
+
+/**
+ * Returns a triple of [CertificateAndKeyPair]s, the first being the root CA, the second the intermediate CA and the third
+ * the node CA.
+ * @param legalName The subject name for the node CA cert.
+ */
+fun createDevNodeCaCertPath(
+        legalName: CordaX500Name,
+        rootCaName: CordaX500Name = defaultRootCaName,
+        intermediateCaName: CordaX500Name = defaultIntermediateCaName
+): Triple<CertificateAndKeyPair, CertificateAndKeyPair, CertificateAndKeyPair> {
+    val (rootCa, intermediateCa) = createDevIntermediateCaCertPath(rootCaName, intermediateCaName)
+    val nodeCa = createDevNodeCa(intermediateCa, legalName)
+    return Triple(rootCa, intermediateCa, nodeCa)
 }
 
 /** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */

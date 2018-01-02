@@ -10,7 +10,6 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.*
@@ -19,7 +18,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.NotaryService
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -30,12 +28,9 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.services.transactions.RaftNonValidatingNotaryService
-import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -44,6 +39,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
@@ -72,7 +68,7 @@ import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
@@ -93,7 +89,8 @@ class DriverDSLImpl(
         extraCordappPackagesToScan: List<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
-        val compatibilityZone: CompatibilityZoneParams?
+        val compatibilityZone: CompatibilityZoneParams?,
+        val onNetworkParametersGeneration: (NetworkParameters) -> Unit
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -108,7 +105,8 @@ class DriverDSLImpl(
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
     override val notaryHandles: List<NotaryHandle> get() = _notaries
-    private var networkParameters: NetworkParametersCopier? = null
+    private var networkParametersCopier: NetworkParametersCopier? = null
+    lateinit var networkParameters: NetworkParameters
 
     class State {
         val processes = ArrayList<Process>()
@@ -183,8 +181,8 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
-
-        val registrationFuture = if (compatibilityZone?.rootCert != null) {
+        val isNotary =  name in notarySpecs.map { it.name }
+        val registrationFuture = if (compatibilityZone?.rootCert != null && !isNotary) {
             nodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
         } else {
             doneFuture(Unit)
@@ -245,9 +243,9 @@ class DriverDSLImpl(
     }
 
     private enum class ClusterType(val validating: Boolean, val clusterName: CordaX500Name) {
-        VALIDATING_RAFT(true, CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")),
-        NON_VALIDATING_RAFT(false, CordaX500Name(RaftNonValidatingNotaryService.id, "Raft", "Zurich", "CH")),
-        NON_VALIDATING_BFT(false, CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH"))
+        VALIDATING_RAFT(true, CordaX500Name("Raft", "Zurich", "CH")),
+        NON_VALIDATING_RAFT(false, CordaX500Name("Raft", "Zurich", "CH")),
+        NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
     }
 
     internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
@@ -270,29 +268,22 @@ class DriverDSLImpl(
                 clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
             } else {
                 // We have all we need here to generate the identity for single node notaries
-                val identity = ServiceIdentityGenerator.generateToDisk(
-                        dirs = listOf(baseDirectory(name)),
-                        serviceName = name,
-                        serviceId = "identity"
-                )
+                val identity = DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
                 notaryInfos += NotaryInfo(identity, notaryConfig.validating)
             }
         }
 
         clusterNodes.asMap().forEach { type, nodeNames ->
-            val identity = ServiceIdentityGenerator.generateToDisk(
+            val identity = DevIdentityGenerator.generateDistributedNotaryIdentity(
                     dirs = nodeNames.map { baseDirectory(it) },
-                    serviceName = type.clusterName,
-                    serviceId = NotaryService.constructId(
-                            validating = type.validating,
-                            raft = type in setOf(VALIDATING_RAFT, NON_VALIDATING_RAFT),
-                            bft = type == ClusterType.NON_VALIDATING_BFT
-                    )
+                    notaryName = type.clusterName
             )
             notaryInfos += NotaryInfo(identity, type.validating)
         }
 
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        networkParameters = testNetworkParameters(notaryInfos)
+        onNetworkParametersGeneration(networkParameters)
+        networkParametersCopier = NetworkParametersCopier(networkParameters)
 
         return cordforms.map {
             val startedNode = startCordformNode(it)
@@ -360,8 +351,10 @@ class DriverDSLImpl(
             }
         }
         val notaryInfos = generateNotaryIdentities()
+        networkParameters = testNetworkParameters(notaryInfos)
+        onNetworkParametersGeneration(networkParameters)
         // The network parameters must be serialised before starting any of the nodes
-        if (compatibilityZone == null) networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        networkParametersCopier = NetworkParametersCopier(networkParameters)
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
@@ -369,20 +362,11 @@ class DriverDSLImpl(
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
             val identity = if (spec.cluster == null) {
-                ServiceIdentityGenerator.generateToDisk(
-                        dirs = listOf(baseDirectory(spec.name)),
-                        serviceName = spec.name,
-                        serviceId = "identity",
-                        customRootCert = compatibilityZone?.rootCert
-                )
+                DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name, compatibilityZone?.rootCert)
             } else {
-                ServiceIdentityGenerator.generateToDisk(
+                DevIdentityGenerator.generateDistributedNotaryIdentity(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
-                        serviceName = spec.name,
-                        serviceId = NotaryService.constructId(
-                                validating = spec.validating,
-                                raft = spec.cluster is ClusterSpec.Raft
-                        ),
+                        notaryName = spec.name,
                         customRootCert = compatibilityZone?.rootCert
                 )
             }
@@ -526,7 +510,11 @@ class DriverDSLImpl(
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
         nodeInfoFilesCopier?.addConfig(baseDirectory)
-        networkParameters?.install(baseDirectory)
+        if (configuration.myLegalName in networkParameters.notaries.map { it.identity.name } || compatibilityZone == null) {
+            // If a notary is being started, then its identity appears in networkParameters (generated by Driver),
+            // and Driver itself must pass the network parameters to the notary.
+            networkParametersCopier?.install(baseDirectory)
+        }
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)
@@ -669,7 +657,7 @@ class DriverDSLImpl(
                     "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
-                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
+                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
             val jolokiaAgent = monitorPort?.let { "-javaagent:$jolokiaJarPath=port=$monitorPort,host=localhost" }
@@ -839,7 +827,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     notarySpecs = notarySpecs,
-                    compatibilityZone = null
+                    compatibilityZone = null,
+                    onNetworkParametersGeneration = {}
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -877,6 +866,7 @@ fun <A> internalDriver(
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         compatibilityZone: CompatibilityZoneParams? = null,
+        onNetworkParametersGeneration: (NetworkParameters) -> Unit = {},
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -892,7 +882,8 @@ fun <A> internalDriver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = compatibilityZone
+                    compatibilityZone = compatibilityZone,
+                    onNetworkParametersGeneration = onNetworkParametersGeneration
             ),
             coerce = { it },
             dsl = dsl,
@@ -901,8 +892,7 @@ fun <A> internalDriver(
 }
 
 fun getTimestampAsDirectoryName(): String {
-    // Add a random number in case 2 tests are started in the same instant.
-    return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now()) + random63BitValue()
+    return DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC).format(Instant.now())
 }
 
 fun writeConfig(path: Path, filename: String, config: Config) {

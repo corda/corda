@@ -1,22 +1,22 @@
 package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.SignedNetworkMap
-import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.ROOT_CA
-import org.bouncycastle.asn1.x500.X500Name
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -37,25 +37,35 @@ import javax.ws.rs.core.Response.ok
 class NetworkMapServer(cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
                        root_ca: CertificateAndKeyPair = ROOT_CA, // Default to ROOT_CA for testing.
+                       private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
-        val stubNetworkParameter = NetworkParameters(1, emptyList(), 10485760, 40000, Instant.now(), 10)
-        private val serializedParameters = stubNetworkParameter.serialize()
+        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, 40000, Instant.now(), 10)
 
         private fun networkMapKeyAndCert(rootCAKeyAndCert: CertificateAndKeyPair): CertificateAndKeyPair {
             val networkMapKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val networkMapCert = X509Utilities.createCertificate(
-                    CertificateType.INTERMEDIATE_CA,
+                    CertificateType.NETWORK_MAP,
                     rootCAKeyAndCert.certificate,
                     rootCAKeyAndCert.keyPair,
-                    X500Name("CN=Corda Network Map,L=London"),
+                    CordaX500Name("Corda Network Map", "R3 Ltd", "London","GB"),
                     networkMapKey.public).cert
+            // Check that the certificate validates. Nodes will perform this check upon receiving a network map,
+            // it's better to fail here than there.
+            X509Utilities.validateCertificateChain(rootCAKeyAndCert.certificate.cert, networkMapCert)
             return CertificateAndKeyPair(networkMapCert.toX509CertHolder(), networkMapKey)
         }
     }
 
     private val server: Server
+    var networkParameters: NetworkParameters = stubNetworkParameters
+      set(networkParameters) {
+          check(field == stubNetworkParameters) { "Network parameters can be set only once" }
+          field = networkParameters
+      }
+    private val serializedParameters get() = networkParameters.serialize()
     private val service = InMemoryNetworkMapService(cacheTimeout, networkMapKeyAndCert(root_ca))
+
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
@@ -95,13 +105,13 @@ class NetworkMapServer(cacheTimeout: Duration,
     }
 
     @Path("network-map")
-    class InMemoryNetworkMapService(private val cacheTimeout: Duration, private val networkMapKeyAndCert: CertificateAndKeyPair) {
+    inner class InMemoryNetworkMapService(private val cacheTimeout: Duration,
+                                          private val networkMapKeyAndCert: CertificateAndKeyPair) {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
-        private val parametersHash = serializedParameters.hash
-        private val signedParameters = SignedData(
+        private val parametersHash by lazy { serializedParameters.hash }
+        private val signedParameters by lazy { SignedData(
                 serializedParameters,
-                DigitalSignature.WithKey(networkMapKeyAndCert.keyPair.public, Crypto.doSign(networkMapKeyAndCert.keyPair.private, serializedParameters.bytes))
-        )
+                DigitalSignature.WithKey(networkMapKeyAndCert.keyPair.public, Crypto.doSign(networkMapKeyAndCert.keyPair.private, serializedParameters.bytes))) }
 
         @POST
         @Path("publish")
@@ -151,7 +161,7 @@ class NetworkMapServer(cacheTimeout: Duration,
         @GET
         @Path("my-hostname")
         fun getHostName(): Response {
-            return Response.ok("test.host.name").build()
+            return Response.ok(myHostNameValue).build()
         }
     }
 }

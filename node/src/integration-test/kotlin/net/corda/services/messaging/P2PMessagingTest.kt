@@ -15,7 +15,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
-import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSL
@@ -32,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")
     }
 
     @Test

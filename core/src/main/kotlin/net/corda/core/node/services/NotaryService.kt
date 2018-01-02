@@ -15,7 +15,9 @@ import java.security.PublicKey
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
+        @Deprecated("No longer used")
         const val ID_PREFIX = "corda.notary."
+        @Deprecated("No longer used")
         fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false, custom: Boolean = false): String {
             require(Booleans.countTrue(raft, bft, custom) <= 1) { "At most one of raft, bft or custom may be true" }
             return StringBuffer(ID_PREFIX).apply {
