@@ -23,7 +23,7 @@ abstract class CordaClock : Clock(), SerializeAsToken {
     @Deprecated("Do not use this. Instead seek to use ZonedDateTime methods.", level = DeprecationLevel.ERROR)
     override fun withZone(zone: ZoneId) = throw UnsupportedOperationException("Tokenized clock does not support withZone()")
 
-    /** This is an observer on the mutation count of this [Clock], which reflects the occurence of mutations. */
+    /** This is an observer on the mutation count of this [Clock], which reflects the occurrence of mutations. */
     abstract val mutations: Observable<Long>
 }
 
