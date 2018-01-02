@@ -36,6 +36,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     private val log = loggerFor<RunOnceService>()
     private val running = AtomicBoolean(false)
+    private val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
     init {
         if (waitInterval <= updateInterval) {
@@ -129,7 +130,6 @@ class RunOnceService(private val database: CordaPersistence, private val machine
     }
 
     private fun updateTimestamp(session: Session, mutualExclusion: MutualExclusion): Boolean {
-        val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
         val minWaitTime = simpleDateFormat.format(Date(mutualExclusion.timestamp!!.time + waitInterval))
         val query = session.createNativeQuery("UPDATE $TABLE SET $MACHINE_NAME = :machineName, $TIMESTAMP = CURRENT_TIMESTAMP, $PID = :pid " +
                 "WHERE $ID = 'X' AND " +
