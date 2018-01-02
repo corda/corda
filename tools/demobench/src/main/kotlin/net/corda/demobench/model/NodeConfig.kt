@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.*
 
 /**
  * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
@@ -25,7 +26,10 @@ data class NodeConfig(
         val h2port: Int,
         val rpcUsers: List<User> = listOf(defaultUser),
         /** This is an extra config used by the Cash app. */
-        val issuableCurrencies: List<String> = emptyList()
+        val issuableCurrencies: List<String> = emptyList(),
+        /** Pass-through for generating node.conf with external DB */
+        val dataSourceProperties: Properties? = null,
+        val database: Properties? = null
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
