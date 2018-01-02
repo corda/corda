@@ -3,10 +3,15 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -16,11 +21,16 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.IntegrationTest
 import net.corda.testing.IntegrationTestSchemas
+import net.corda.testing.ROOT_CA
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
+import net.corda.testing.singleIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -31,6 +41,7 @@ import java.io.InputStream
 import java.net.URL
 import java.security.KeyPair
 import java.security.cert.CertPath
+import java.security.cert.CertPathValidatorException
 import java.security.cert.Certificate
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -42,20 +53,25 @@ class NodeRegistrationTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas("Alice")
+
+        private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
+        private val aliceName = CordaX500Name("Alice", "London", "GB")
+        private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
     }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+
     private val portAllocation = PortAllocation.Incremental(13000)
-    private val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
-    private val registrationHandler = RegistrationHandler(rootCertAndKeyPair)
+    private val registrationHandler = RegistrationHandler(ROOT_CA)
 
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort
 
     @Before
     fun startServer() {
-        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), rootCertAndKeyPair, registrationHandler)
+        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), ROOT_CA, "localhost", registrationHandler)
         serverHostAndPort = server.start()
     }
 
@@ -64,49 +80,64 @@ class NodeRegistrationTest : IntegrationTest() {
         server.close()
     }
 
-    // TODO Ideally this test should be checking that two nodes that register are able to transact with each other. However
-    // starting a second node hangs so that needs to be fixed.
     @Test
     fun `node registration correct root cert`() {
-        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = rootCertAndKeyPair.certificate.cert)
+        val compatibilityZone = CompatibilityZoneParams(
+                URL("http://$serverHostAndPort"),
+                publishNotaries = { server.networkParameters = testNetworkParameters(it) },
+                rootCert = ROOT_CA.certificate.cert)
         internalDriver(
                 portAllocation = portAllocation,
-                notarySpecs = emptyList(),
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false
+                initialiseSerialization = false,
+                notarySpecs = listOf(NotarySpec(notaryName)),
+                extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
-            startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
-            assertThat(registrationHandler.idsPolled).contains("Alice")
+            val nodes = listOf(
+                    startNode(providedName = aliceName),
+                    startNode(providedName = genevieveName),
+                    defaultNotaryNode
+            ).transpose().getOrThrow()
+            val (alice, genevieve) = nodes
+
+            assertThat(registrationHandler.idsPolled).containsOnly(
+                    aliceName.organisation,
+                    genevieveName.organisation,
+                    notaryName.organisation)
+
+            // Check the nodes can communicate among themselves (and the notary).
+            val anonymous = false
+            genevieve.rpc.startFlow(
+                    ::CashIssueAndPaymentFlow,
+                    1000.DOLLARS,
+                    OpaqueBytes.of(12),
+                    alice.nodeInfo.singleIdentity(),
+                    anonymous,
+                    defaultNotaryIdentity
+            ).returnValue.getOrThrow()
         }
     }
 
     @Test
     fun `node registration wrong root cert`() {
-        val someCert = createSelfKeyAndSelfSignedCertificate().certificate.cert
-        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = someCert)
+        val someRootCert = X509Utilities.createSelfSignedCACertificate(
+                CordaX500Name("Integration Test Corda Node Root CA", "R3 Ltd", "London", "GB"),
+                Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val compatibilityZone = CompatibilityZoneParams(
+                URL("http://$serverHostAndPort"),
+                publishNotaries = { server.networkParameters = testNetworkParameters(it) },
+                rootCert = someRootCert.cert)
         internalDriver(
                 portAllocation = portAllocation,
-                notarySpecs = emptyList(),
                 compatibilityZone = compatibilityZone,
-                // Changing the content of the truststore makes the node fail in a number of ways if started out process.
-                startNodesInProcess = true
+                initialiseSerialization = false,
+                notarySpecs = listOf(NotarySpec(notaryName)),
+                startNodesInProcess = true  // We need to run the nodes in the same process so that we can capture the correct exception
         ) {
             assertThatThrownBy {
-                startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
-            }.isInstanceOf(WrongRootCertException::class.java)
+                defaultNotaryNode.getOrThrow()
+            }.isInstanceOf(CertPathValidatorException::class.java)
         }
-    }
-
-    private fun createSelfKeyAndSelfSignedCertificate(): CertificateAndKeyPair {
-        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(
-                CordaX500Name(
-                        commonName = "Integration Test Corda Node Root CA",
-                        organisation = "R3 Ltd",
-                        locality = "London",
-                        country = "GB"),
-                rootCAKey)
-        return CertificateAndKeyPair(rootCACert, rootCAKey)
     }
 }
 
@@ -124,6 +155,7 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
                 certificationRequest,
                 rootCertAndKeyPair.keyPair,
                 arrayOf(rootCertAndKeyPair.certificate.cert))
+        require(!name.organisation.contains("\\s".toRegex())) { "Whitespace in the organisation name not supported" }
         certPaths[name.organisation] = certPath
         return Response.ok(name.organisation).build()
     }
@@ -154,13 +186,14 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
                                               caCertPath: Array<Certificate>): Pair<CertPath, CordaX500Name> {
         val request = JcaPKCS10CertificationRequest(certificationRequest)
         val name = CordaX500Name.parse(request.subject.toString())
-        val x509CertificateHolder = X509Utilities.createCertificate(CertificateType.NODE_CA,
+        val nodeCaCert = X509Utilities.createCertificate(
+                CertificateType.NODE_CA,
                 caCertPath.first().toX509CertHolder(),
                 caKeyPair,
                 name,
                 request.publicKey,
                 nameConstraints = null)
-        val certPath = X509CertificateFactory().generateCertPath(x509CertificateHolder.cert, *caCertPath)
+        val certPath = X509CertificateFactory().generateCertPath(nodeCaCert.cert, *caCertPath)
         return Pair(certPath, name)
     }
 }

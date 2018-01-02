@@ -67,9 +67,20 @@ The bootstrapper tool can be built with the command:
 
 The resulting jar can be found in ``tools/bootstrapper/build/libs/``.
 
-To use it, run the following command, specifying the root directory which hosts all the node directories as the argument:
+To use it, create a directory containing a ``node.conf`` file for each node you want to create. Then run the following command:
 
 ``java -jar network-bootstrapper.jar <nodes-root-dir>``
+
+For example running the command on a directory containing these files :
+
+.. sourcecode:: none
+
+    .
+    ├── notary.conf             // The notary's node.conf file
+    ├── partya.conf             // Party A's node.conf file
+    └── partyb.conf             // Party B's node.conf file
+
+Would generate directories containing three nodes: notary, partya and partyb.
 
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~

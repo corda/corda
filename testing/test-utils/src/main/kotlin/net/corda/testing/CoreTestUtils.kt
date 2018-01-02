@@ -5,27 +5,24 @@ package net.corda.testing
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.internal.unspecifiedCountry
-import net.corda.core.internal.x500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import org.bouncycastle.asn1.x509.GeneralName
-import org.bouncycastle.asn1.x509.GeneralSubtree
-import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
-import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.concurrent.atomic.AtomicInteger
@@ -78,29 +75,11 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
     return (0 until numberToAlloc).map { NetworkHostAndPort(hostName, freePort + it) }
 }
 
-fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration = object : SSLConfiguration {
-    override val certificatesDirectory = Files.createTempDirectory("certs")
-    override val keyStorePassword: String get() = "cordacadevpass"
-    override val trustStorePassword: String get() = "trustpass"
-
-    init {
-        configureDevKeyAndTrustStores(legalName)
-    }
-}
-
 fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
     val trustRoot: X509CertificateHolder = DEV_TRUST_ROOT
     val intermediate: CertificateAndKeyPair = DEV_CA
 
-
-    val nodeCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val nodeCaCert = X509Utilities.createCertificate(
-            CertificateType.NODE_CA,
-            intermediate.certificate,
-            intermediate.keyPair,
-            party.name,
-            nodeCaKeyPair.public,
-            nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, party.name.x500Name))), arrayOf()))
+    val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediate, party.name)
 
     val identityCert = X509Utilities.createCertificate(
             CertificateType.LEGAL_IDENTITY,

@@ -6,7 +6,10 @@ configurations {
     runtimeArtifacts
 }
 
-// TODO Fix SLF4J warnings that occur when running the bootstrapper
+dependencies {
+    compile "org.slf4j:slf4j-nop:$slf4j_version"
+}
+
 task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').compileJava) {
     applicationClass 'net.corda.nodeapi.internal.network.NetworkBootstrapper'
     archiveName "network-bootstrapper.jar"
@@ -15,6 +18,9 @@ task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').comp
         systemProperties['visualvm.display.name'] = 'Network Bootstrapper'
         minJavaVersion = '1.8.0'
         jvmArgs = ['-XX:+UseG1GC']
+    }
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
     }
     applicationSource = files(
             project(':node-api').configurations.runtime,

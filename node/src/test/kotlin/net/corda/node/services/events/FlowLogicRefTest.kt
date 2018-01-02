@@ -34,47 +34,48 @@ class FlowLogicRefTest {
         override fun call() = Unit
     }
 
+    private val flowLogicRefFactory = FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl::class.java.classLoader)
     @Test
     fun `create kotlin no arg`() {
-        FlowLogicRefFactoryImpl.createForRPC(KotlinNoArgFlowLogic::class.java)
+        flowLogicRefFactory.createForRPC(KotlinNoArgFlowLogic::class.java)
     }
 
     @Test
     fun `create kotlin`() {
         val args = mapOf(Pair("A", ParamType1(1)), Pair("b", ParamType2("Hello Jack")))
-        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
+        flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
     fun `create primary`() {
-        FlowLogicRefFactoryImpl.createForRPC(KotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
+        flowLogicRefFactory.createForRPC(KotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
     }
 
     @Test
     fun `create kotlin void`() {
-        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, emptyMap())
+        flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, emptyMap())
     }
 
     @Test
     fun `create kotlin non primary`() {
         val args = mapOf(Pair("C", ParamType2("Hello Jack")))
-        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
+        flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
     fun `create java primitive no registration required`() {
         val args = mapOf(Pair("primitive", "A string"))
-        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
+        flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
     fun `create kotlin primitive no registration required`() {
         val args = mapOf(Pair("kotlinType", 3))
-        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
+        flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test(expected = IllegalFlowLogicException::class)
     fun `create for non-schedulable flow logic`() {
-        FlowLogicRefFactoryImpl.create(NonSchedulableFlow::class.java)
+        flowLogicRefFactory.create(NonSchedulableFlow::class.java)
     }
 }

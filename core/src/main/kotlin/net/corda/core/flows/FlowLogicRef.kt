@@ -11,6 +11,8 @@ import net.corda.core.serialization.CordaSerializable
 @DoNotImplement
 interface FlowLogicRefFactory {
     fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
+    fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
+    fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*>
 }
 
 @CordaSerializable

@@ -4,12 +4,8 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.CertRole
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
-import net.corda.core.internal.reader
-import net.corda.core.internal.writer
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.*
@@ -43,6 +39,7 @@ object X509Utilities {
     val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.EDDSA_ED25519_SHA512
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
+    // TODO This class is more of a general purpose utility class and as such these constants belong elsewhere
     // Aliases for private keys and certificates.
     const val CORDA_ROOT_CA = "cordarootca"
     const val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
