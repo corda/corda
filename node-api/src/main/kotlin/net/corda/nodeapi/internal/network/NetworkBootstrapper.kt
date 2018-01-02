@@ -92,7 +92,10 @@ class NetworkBootstrapper {
 
     private fun extractCordaJarTo(directory: Path): Path {
         val cordaJarPath = (directory / "corda.jar")
-        Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
+        if (!cordaJarPath.exists()) {
+            println("No corda jar found in root directory. Extracting from jar")
+            Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
+        }
         return cordaJarPath
     }
 
