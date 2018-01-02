@@ -28,11 +28,12 @@ class EnterpriseNode(configuration: NodeConfiguration,
             AnsiConsole.systemInstall()
 
             val logo = """
-R    ____ _____ B   ______               __
-R   / __ \__  / B  / ____/     _________/ /___ _
-R  / /_/ //_ <  B / /     __  / ___/ __  / __ `/
-R / _, _/__/ /  B/ /___  /_/ / /  / /_/ / /_/ /
-R/_/ |_/____/   B\____/     /_/   \__,_/\__,_/
+D                 B   ______               __
+D   ____ _____    B  / ____/     _________/ /___ _
+D  / ___/__  /    B / /     __  / ___/ __  / __ `/
+D / /    /_ <R __  B/ /___  /_/ / /  / /_/ / /_/ /
+D/_/   ___/ /R/_/  B\____/     /_/   \__,_/\__,_/
+D     /____/
 D""".trimStart()
 
             // Now replace the R, B and W letters with their colour code escapes to make the banner prettier.
