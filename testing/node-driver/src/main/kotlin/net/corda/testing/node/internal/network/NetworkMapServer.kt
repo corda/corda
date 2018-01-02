@@ -36,7 +36,7 @@ import javax.ws.rs.core.Response.ok
 
 class NetworkMapServer(cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
-                       root_ca: CertificateAndKeyPair = ROOT_CA, // Default to ROOT_CA for testing.
+                       rootCa: CertificateAndKeyPair = ROOT_CA, // Default to ROOT_CA for testing.
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
@@ -64,7 +64,7 @@ class NetworkMapServer(cacheTimeout: Duration,
           field = networkParameters
       }
     private val serializedParameters get() = networkParameters.serialize()
-    private val service = InMemoryNetworkMapService(cacheTimeout, networkMapKeyAndCert(root_ca))
+    private val service = InMemoryNetworkMapService(cacheTimeout, networkMapKeyAndCert(rootCa))
 
 
     init {

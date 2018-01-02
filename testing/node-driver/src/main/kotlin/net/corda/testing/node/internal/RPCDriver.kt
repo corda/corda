@@ -121,8 +121,7 @@ fun <A> rpcDriver(
                             extraCordappPackagesToScan = extraCordappPackagesToScan,
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
-                            compatibilityZone = null,
-                            onNetworkParametersGeneration = {}
+                            compatibilityZone = null
                     ), externalTrace
             ),
             coerce = { it },

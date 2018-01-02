@@ -170,10 +170,10 @@ class X509UtilitiesTest {
             override val trustStorePassword = "trustpass"
         }
 
-        val (rootCert, intermediateCa) = createDevIntermediateCaCertPath()
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(rootCert.certificate, intermediateCa, MEGA_CORP.name)
+        sslConfig.createDevKeyStores(rootCa.certificate, intermediateCa, MEGA_CORP.name)
 
         // Load back server certificate
         val serverKeyStore = loadKeyStore(sslConfig.nodeKeystore, sslConfig.keyStorePassword)
@@ -206,11 +206,11 @@ class X509UtilitiesTest {
             override val trustStorePassword = "trustpass"
         }
 
-        val (rootCert, intermediateCa) = createDevIntermediateCaCertPath()
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(rootCert.certificate, intermediateCa, MEGA_CORP.name)
-        sslConfig.createTrustStore(rootCert.certificate.cert)
+        sslConfig.createDevKeyStores(rootCa.certificate, intermediateCa, MEGA_CORP.name)
+        sslConfig.createTrustStore(rootCa.certificate.cert)
 
         val keyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)
         val trustStore = loadKeyStore(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
