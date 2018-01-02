@@ -5,7 +5,10 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.cert
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.DEV_TRUST_ROOT
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.network.NetworkMapServer
@@ -30,7 +33,7 @@ class NetworkMapClientTest {
 
     @Before
     fun setUp() {
-        server = NetworkMapServer(cacheTimeout, PortAllocation.Incremental(10000).nextHostAndPort(), root_ca = ROOT_CA)
+        server = NetworkMapServer(cacheTimeout, PortAllocation.Incremental(10000).nextHostAndPort())
         val hostAndPort = server.start()
         networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_TRUST_ROOT.cert)
     }

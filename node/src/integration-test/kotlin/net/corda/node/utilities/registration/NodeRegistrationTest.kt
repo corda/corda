@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.ROOT_CA
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
@@ -31,10 +32,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
@@ -49,6 +47,12 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 class NodeRegistrationTest {
+    companion object {
+        private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
+        private val aliceName = CordaX500Name("Alice", "London", "GB")
+        private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -72,37 +76,30 @@ class NodeRegistrationTest {
 
     @Test
     fun `node registration correct root cert`() {
-        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = ROOT_CA.certificate.cert)
+        val compatibilityZone = CompatibilityZoneParams(
+                URL("http://$serverHostAndPort"),
+                publishNotaries = { server.networkParameters = testNetworkParameters(it) },
+                rootCert = ROOT_CA.certificate.cert)
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
-                notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"), validating = false)),
-                extraCordappPackagesToScan = listOf("net.corda.finance"),
-                onNetworkParametersGeneration = { server.networkParameters = it }
+                notarySpecs = listOf(NotarySpec(notaryName)),
+                extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
-            val aliceName = "Alice"
-            val genevieveName = "Genevieve"
-
             val nodes = listOf(
-                    startNode(providedName = CordaX500Name(aliceName, "London", "GB")),
-                    startNode(providedName = CordaX500Name(genevieveName, "London", "GB")),
+                    startNode(providedName = aliceName),
+                    startNode(providedName = genevieveName),
                     defaultNotaryNode
             ).transpose().getOrThrow()
             val (alice, genevieve) = nodes
 
-            assertThat(registrationHandler.idsPolled).contains(aliceName, genevieveName)
-            // Notary identities are generated beforehand hence notary nodes don't go through registration.
-            // This test isn't specifically testing this, or relying on this behavior, though if this check fail,
-            // this will probably lead to the rest of the test to fail.
-            assertThat(registrationHandler.idsPolled).doesNotContain("NotaryService")
+            assertThat(registrationHandler.idsPolled).containsOnly(
+                    aliceName.organisation,
+                    genevieveName.organisation,
+                    notaryName.organisation)
 
-            // Check each node has each other identity in their network map cache.
-            for (node in nodes) {
-                assertThat(node.rpc.networkMapSnapshot()).containsOnlyElementsOf(nodes.map { it.nodeInfo })
-            }
-
-            // Check we nodes communicate among themselves (and the notary).
+            // Check the nodes can communicate among themselves (and the notary).
             val anonymous = false
             genevieve.rpc.startFlow(
                     ::CashIssueAndPaymentFlow,
@@ -120,20 +117,22 @@ class NodeRegistrationTest {
         val someRootCert = X509Utilities.createSelfSignedCACertificate(
                 CordaX500Name("Integration Test Corda Node Root CA", "R3 Ltd", "London", "GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        val compatibilityZone = CompatibilityZoneParams(URL("http://$serverHostAndPort"), rootCert = someRootCert.cert)
+        val compatibilityZone = CompatibilityZoneParams(
+                URL("http://$serverHostAndPort"),
+                publishNotaries = { server.networkParameters = testNetworkParameters(it) },
+                rootCert = someRootCert.cert)
         internalDriver(
                 portAllocation = portAllocation,
-                notarySpecs = emptyList(),
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
+                notarySpecs = listOf(NotarySpec(notaryName)),
                 startNodesInProcess = true  // We need to run the nodes in the same process so that we can capture the correct exception
         ) {
             assertThatThrownBy {
-                startNode(providedName = CordaX500Name("Alice", "London", "GB")).getOrThrow()
+                defaultNotaryNode.getOrThrow()
             }.isInstanceOf(CertPathValidatorException::class.java)
         }
     }
-
 }
 
 @Path("certificate")
@@ -150,6 +149,7 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
                 certificationRequest,
                 rootCertAndKeyPair.keyPair,
                 arrayOf(rootCertAndKeyPair.certificate.cert))
+        require(!name.organisation.contains("\\s".toRegex())) { "Whitespace in the organisation name not supported" }
         certPaths[name.organisation] = certPath
         return Response.ok(name.organisation).build()
     }

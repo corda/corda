@@ -1,6 +1,11 @@
 package net.corda.node.services.network
 
+import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.internal.list
 import net.corda.core.internal.readAll
 import net.corda.core.node.NodeInfo
@@ -10,9 +15,9 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.ALICE_NAME
-import net.corda.testing.ROOT_CA
 import net.corda.testing.BOB_NAME
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.CompatibilityZoneParams
@@ -24,12 +29,15 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
+import java.time.Instant
+import kotlin.streams.toList
 import kotlin.test.assertEquals
 
 class NetworkMapTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+
     private val cacheTimeout = 1.seconds
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -40,7 +48,9 @@ class NetworkMapTest {
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
-        compatibilityZone = CompatibilityZoneParams(URL("http://$address"))
+        compatibilityZone = CompatibilityZoneParams(URL("http://$address"), publishNotaries = {
+            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+        })
     }
 
     @After
@@ -50,27 +60,35 @@ class NetworkMapTest {
 
     @Test
     fun `node correctly downloads and saves network parameters file on startup`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
-                initialiseSerialization = false, notarySpecs = emptyList()) {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false,
+                notarySpecs = emptyList()
+        ) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val networkParameters = alice.configuration.baseDirectory
-                    .list { paths -> paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().get() }
+            val networkParameters = (alice.configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
                     .readAll()
                     .deserialize<SignedData<NetworkParameters>>()
                     .verified()
+            // We use a random modified time above to make the network parameters unqiue so that we're sure they came
+            // from the server
             assertEquals(networkMapServer.networkParameters, networkParameters)
         }
     }
 
     @Test
     fun `nodes can see each other using the http network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
-                initialiseSerialization = false, onNetworkParametersGeneration = { networkMapServer.networkParameters = it }) {
-            val alice = startNode(providedName = ALICE_NAME)
-            val bob = startNode(providedName = BOB_NAME)
-            val notaryNode = defaultNotaryNode.get()
-            val aliceNode = alice.get()
-            val bobNode = bob.get()
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false
+        ) {
+            val (aliceNode, bobNode, notaryNode) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(providedName = BOB_NAME),
+                    defaultNotaryNode
+            ).transpose().getOrThrow()
 
             notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
             aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
@@ -80,16 +98,20 @@ class NetworkMapTest {
 
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
-                initialiseSerialization = false, onNetworkParametersGeneration = { networkMapServer.networkParameters = it }) {
-            val alice = startNode(providedName = ALICE_NAME)
-            val notaryNode = defaultNotaryNode.get()
-            val aliceNode = alice.get()
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false
+        ) {
+            val (aliceNode, notaryNode) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    defaultNotaryNode
+            ).transpose().getOrThrow()
 
             notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
             aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
-            val bob = startNode(providedName = BOB_NAME)
-            val bobNode = bob.get()
+
+            val bobNode = startNode(providedName = BOB_NAME).getOrThrow()
 
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
@@ -102,13 +124,16 @@ class NetworkMapTest {
 
     @Test
     fun `nodes process network map remove updates correctly`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone,
-                initialiseSerialization = false, onNetworkParametersGeneration = { networkMapServer.networkParameters = it }) {
-            val alice = startNode(providedName = ALICE_NAME)
-            val bob = startNode(providedName = BOB_NAME)
-            val notaryNode = defaultNotaryNode.get()
-            val aliceNode = alice.get()
-            val bobNode = bob.get()
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false
+        ) {
+            val (aliceNode, bobNode, notaryNode) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(providedName = BOB_NAME),
+                    defaultNotaryNode
+            ).transpose().getOrThrow()
 
             notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
             aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
@@ -124,5 +149,12 @@ class NetworkMapTest {
         }
     }
 
-    private fun NodeHandle.onlySees(vararg nodes: NodeInfo) = assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
+    private fun NodeHandle.onlySees(vararg nodes: NodeInfo) {
+        // Make sure the nodes aren't getting the node infos from their additional directories
+        val nodeInfosDir = configuration.baseDirectory / CordformNode.NODE_INFO_DIRECTORY
+        if (nodeInfosDir.exists()) {
+            assertThat(nodeInfosDir.list { it.toList() }).isEmpty()
+        }
+        assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
+    }
 }
