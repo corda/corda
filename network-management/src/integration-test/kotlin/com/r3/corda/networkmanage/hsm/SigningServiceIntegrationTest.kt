@@ -3,14 +3,12 @@ package com.r3.corda.networkmanage.hsm
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.DoormanConfig
 import com.r3.corda.networkmanage.doorman.NetworkManagementServer
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
-import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
@@ -21,12 +19,14 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.CHARLIE_NAME
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -34,7 +34,6 @@ import org.h2.tools.Server
 import org.junit.*
 import org.junit.rules.TemporaryFolder
 import java.net.URL
-import java.security.KeyPair
 import java.util.*
 import javax.persistence.PersistenceException
 import kotlin.concurrent.scheduleAtFixedRate
@@ -56,15 +55,15 @@ class SigningServiceIntegrationTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var timer: Timer
-    private lateinit var rootCAKey: KeyPair
-    private lateinit var rootCACert: X509CertificateHolder
+    private lateinit var rootCaCert: X509CertificateHolder
+    private lateinit var intermediateCa: CertificateAndKeyPair
 
     @Before
     fun setUp() {
         timer = Timer()
-        rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA",
-                organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+        rootCaCert = rootCa.certificate
+        this.intermediateCa = intermediateCa
     }
 
     @After
@@ -73,22 +72,17 @@ class SigningServiceIntegrationTest {
     }
 
     private fun givenSignerSigningAllRequests(storage: SignedCertificateRequestStorage): HsmCsrSigner {
-        // Create all certificates
-        val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey,
-                CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA", locality = "London", country = "GB",
-                        organisation = "R3 Ltd"), intermediateCAKey.public)
         // Mock signing logic but keep certificate persistence
         return mock {
             on { sign(any()) }.then {
-                val toSign: List<ApprovedCertificateRequestData> = uncheckedCast(it.arguments[0])
-                toSign.forEach {
-                    JcaPKCS10CertificationRequest(it.request).run {
-                        val certificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-                        it.certPath = buildCertPath(certificate, rootCACert.toX509Certificate())
+                val approvedRequests: List<ApprovedCertificateRequestData> = uncheckedCast(it.arguments[0])
+                for (approvedRequest in approvedRequests) {
+                    JcaPKCS10CertificationRequest(approvedRequest.request).run {
+                        val nodeCa = createDevNodeCa(intermediateCa, CordaX500Name.parse(subject.toString()))
+                        approvedRequest.certPath = buildCertPath(nodeCa.certificate.cert, intermediateCa.certificate.cert, rootCaCert.cert)
                     }
                 }
-                storage.store(toSign, listOf("TEST"))
+                storage.store(approvedRequests, listOf("TEST"))
             }
         }
     }
@@ -128,9 +122,9 @@ class SigningServiceIntegrationTest {
                     // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
                 }
             }
-            config.trustStoreFile.parent.createDirectories()
+            config.certificatesDirectory.createDirectories()
             loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-                it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
+                it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert.cert)
                 it.save(config.trustStoreFile, config.trustStorePassword)
             }
             NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
@@ -172,9 +166,9 @@ class SigningServiceIntegrationTest {
                         }).whenever(it).myLegalName
                         doReturn(URL("http://$HOST:${server.hostAndPort.port}")).whenever(it).compatibilityZoneURL
                     }
-                    config.trustStoreFile.parent.createDirectories()
+                    config.certificatesDirectory.createDirectories()
                     loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-                        it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
+                        it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert.cert)
                         it.save(config.trustStoreFile, config.trustStorePassword)
                     }
                     NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
@@ -183,7 +177,7 @@ class SigningServiceIntegrationTest {
         }
     }
 
-    fun createConfig(): NodeConfiguration {
+    private fun createConfig(): NodeConfiguration {
         return rigorousMock<NodeConfiguration>().also {
             doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
             doReturn(it.baseDirectory / "certificates").whenever(it).certificatesDirectory
@@ -195,15 +189,15 @@ class SigningServiceIntegrationTest {
             doReturn("iTest@R3.com").whenever(it).emailAddress
         }
     }
-}
 
-private fun makeTestDataSourceProperties(): Properties {
-    val props = Properties()
-    props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-    props.setProperty("dataSource.url", "jdbc:h2:mem:${SigningServiceIntegrationTest.DB_NAME};DB_CLOSE_DELAY=-1")
-    props.setProperty("dataSource.user", "sa")
-    props.setProperty("dataSource.password", "")
-    return props
+    private fun makeTestDataSourceProperties(): Properties {
+        val props = Properties()
+        props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+        props.setProperty("dataSource.url", "jdbc:h2:mem:${SigningServiceIntegrationTest.DB_NAME};DB_CLOSE_DELAY=-1")
+        props.setProperty("dataSource.user", "sa")
+        props.setProperty("dataSource.password", "")
+        return props
+    }
 }
 
 internal fun makeNotInitialisingTestDatabaseProperties() = DatabaseConfig(runMigration = false)
