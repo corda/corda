@@ -22,7 +22,6 @@ import java.util.jar.JarInputStream
 @Suppress("unused")
 open class Cordform : DefaultTask() {
     private companion object {
-        @JvmStatic
         val nodeJarName = "corda.jar"
         private val defaultDirectory: Path = Paths.get("build", "nodes")
     }
