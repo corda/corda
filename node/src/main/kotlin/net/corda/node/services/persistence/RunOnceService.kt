@@ -6,8 +6,9 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.hibernate.Session
+import java.text.SimpleDateFormat
 import java.time.Duration
-import java.util.*
+import java.util.Date
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -35,6 +36,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     private val log = loggerFor<RunOnceService>()
     private val running = AtomicBoolean(false)
+    private val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
     init {
         if (waitInterval <= updateInterval) {
@@ -128,25 +130,26 @@ class RunOnceService(private val database: CordaPersistence, private val machine
     }
 
     private fun updateTimestamp(session: Session, mutualExclusion: MutualExclusion): Boolean {
-        val query = session.createNativeQuery("UPDATE $TABLE SET $MACHINE_NAME=:machineName, $TIMESTAMP=CURRENT_TIMESTAMP, $PID=:pid " +
-                "WHERE $ID='X' AND " +
+        val minWaitTime = simpleDateFormat.format(Date(mutualExclusion.timestamp!!.time + waitInterval))
+        val query = session.createNativeQuery("UPDATE $TABLE SET $MACHINE_NAME = :machineName, $TIMESTAMP = CURRENT_TIMESTAMP, $PID = :pid " +
+                "WHERE $ID = 'X' AND " +
 
                 // we are master node
-                "($MACHINE_NAME=:machineName) OR " +
+                "($MACHINE_NAME = :machineName OR " +
 
                 // change master node
-                "($MACHINE_NAME!=:machineName AND " +
+                "($MACHINE_NAME != :machineName AND " +
                 // no one else has updated timestamp whilst we attempted this update
-                "$TIMESTAMP=:mutualExclusionTimestamp AND " +
+                "$TIMESTAMP = CAST(:mutualExclusionTimestamp AS DATETIME) AND " +
                 // old timestamp
-                "CURRENT_TIMESTAMP>:waitTime)", MutualExclusion::class.java)
+                "CURRENT_TIMESTAMP > CAST(:waitTime AS DATETIME)))", MutualExclusion::class.java)
 
         query.unwrap(org.hibernate.SQLQuery::class.java).addSynchronizedEntityClass(MutualExclusion::class.java)
 
         query.setParameter("pid", pid)
         query.setParameter("machineName", machineName)
         query.setParameter("mutualExclusionTimestamp", mutualExclusion.timestamp)
-        query.setParameter("waitTime", Date(mutualExclusion.timestamp!!.time + waitInterval))
+        query.setParameter("waitTime", minWaitTime)
         val returnValue = query.executeUpdate()
 
         if (returnValue != 1) {
