@@ -42,9 +42,9 @@ open class SerializerFactory(
         cl: ClassLoader,
         private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
-    val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
+    private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
-    val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
+    private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
 
     open val classCarpenter = ClassCarpenter(cl, whitelist)
 
@@ -54,6 +54,10 @@ open class SerializerFactory(
     private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>,
                                        schemas: SerializationSchemas)
             = evolutionSerializerGetter.getEvolutionSerializer(this, typeNotation, newSerializer, schemas)
+
+    fun getSerializersByDescriptor() = serializersByDescriptor
+
+    fun getTransformsCache() = transformsCache
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -332,7 +336,7 @@ open class SerializerFactory(
 
         private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
-        fun nameForType(type: Type): String =  when (type) {
+        fun nameForType(type: Type): String = when (type) {
             is Class<*> -> {
                 primitiveTypeName(type) ?: if (type.isArray) {
                     "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"

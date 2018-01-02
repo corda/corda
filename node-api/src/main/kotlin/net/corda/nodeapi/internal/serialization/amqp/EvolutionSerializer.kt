@@ -153,7 +153,7 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> =
-            factory.serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
                 when (typeNotation) {
                     is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                     is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
@@ -161,21 +161,3 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
             }
 }
 
-/**
- * An implementation of [EvolutionSerializerGetterBase] that disables all evolution within a
- * [SerializerFactory]. This is most useful in testing where it is known that evolution should not be
- * occurring and where bugs may be hidden by transparent invocation of an [EvolutionSerializer]. This
- * prevents that by simply throwing an exception whenever such a serializer is requested.
- */
-class EvolutionSerializerGetterTesting : EvolutionSerializerGetterBase() {
-    override fun getEvolutionSerializer(factory: SerializerFactory,
-                                        typeNotation: TypeNotation,
-                                        newSerializer: AMQPSerializer<Any>,
-                                        schemas: SerializationSchemas): AMQPSerializer<Any> {
-        throw NotSerializableException("No evolution should be occurring\n" +
-                "    ${typeNotation.name}\n" +
-                "        ${typeNotation.descriptor.name}\n" +
-                "    ${newSerializer.type.typeName}\n" +
-                "        ${newSerializer.typeDescriptor}\n\n${schemas.schema}")
-    }
-}

@@ -109,7 +109,12 @@ public class SetterConstructorTests {
     // despite having no constructor we should still be able to serialise an instance of C
     @Test
     public void serialiseC() throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
+
         SerializationOutput ser = new SerializationOutput(factory1);
 
         C c1 = new C();
@@ -178,7 +183,11 @@ public class SetterConstructorTests {
 
     @Test
     public void deserialiseC() throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
 
         C cPre1 = new C();
 
@@ -241,7 +250,11 @@ public class SetterConstructorTests {
 
     @Test
     public void serialiseOuterAndInner() throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
 
         Inner1 i1 = new Inner1("Hello");
         Inner2 i2 = new Inner2();
@@ -263,7 +276,11 @@ public class SetterConstructorTests {
 
     @Test
     public void typeMistmatch() throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
 
         TypeMismatch tm = new TypeMismatch();
         tm.setA(10);
@@ -279,7 +296,11 @@ public class SetterConstructorTests {
 
     @Test
     public void typeMistmatch2() throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
 
         TypeMismatch2 tm = new TypeMismatch2();
         tm.setA("10");
