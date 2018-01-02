@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
-import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -126,7 +125,7 @@ open class NodeStartup(val args: Array<String>) {
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
-            node.generateNodeInfo()
+            node.generateAndSaveNodeInfo()
             return
         }
         val startedNode = node.start()

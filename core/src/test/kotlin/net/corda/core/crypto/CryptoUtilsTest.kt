@@ -27,8 +27,8 @@ import kotlin.test.*
  */
 class CryptoUtilsTest {
 
-    val testString = "Hello World"
-    val testBytes = testString.toByteArray()
+    private val testString = "Hello World"
+    private val testBytes = testString.toByteArray()
 
     // key generation test
     @Test

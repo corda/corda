@@ -4,6 +4,8 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -12,6 +14,7 @@ import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.mockito.Mockito
 import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
+import java.nio.file.Files
 import java.util.*
 
 @Suppress("unused")
@@ -47,6 +50,18 @@ fun <T> rigorousMock(clazz: Class<T>): T = Mockito.mock(clazz) {
         ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it. Args: ${Arrays.toString(it.arguments)}")).answer(it)
     } else {
         it.callRealMethod()
+    }
+}
+
+fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
+    return object : SSLConfiguration {
+        override val certificatesDirectory = Files.createTempDirectory("certs")
+        override val keyStorePassword: String get() = "cordacadevpass"
+        override val trustStorePassword: String get() = "trustpass"
+
+        init {
+            configureDevKeyAndTrustStores(legalName)
+        }
     }
 }
 

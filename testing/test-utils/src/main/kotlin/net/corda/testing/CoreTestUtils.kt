@@ -16,8 +16,6 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -25,7 +23,6 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
-import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.concurrent.atomic.AtomicInteger
@@ -76,16 +73,6 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
     return (0 until numberToAlloc).map { NetworkHostAndPort(hostName, freePort + it) }
-}
-
-fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration = object : SSLConfiguration {
-    override val certificatesDirectory = Files.createTempDirectory("certs")
-    override val keyStorePassword: String get() = "cordacadevpass"
-    override val trustStorePassword: String get() = "trustpass"
-
-    init {
-        configureDevKeyAndTrustStores(legalName)
-    }
 }
 
 fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {

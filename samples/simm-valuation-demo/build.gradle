@@ -69,6 +69,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         notary = [validating : true]
         p2pPort 10002
         cordapps = ["$project.group:finance:$corda_release_version"]
+        extraConfig = [
+            jvmArgs : [ "-Xmx1g"]
+        ]
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -77,6 +80,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcPort 10006
         cordapps = ["$project.group:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
+        extraConfig = [
+                jvmArgs : [ "-Xmx1g"]
+        ]
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -85,6 +91,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcPort 10009
         cordapps = ["$project.group:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
+        extraConfig = [
+                jvmArgs : [ "-Xmx1g"]
+        ]
     }
     node {
         name "O=Bank C,L=Tokyo,C=JP"
@@ -93,6 +102,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcPort 10012
         cordapps = ["$project.group:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
+        extraConfig = [
+                jvmArgs : [ "-Xmx1g"]
+        ]
     }
 }
 

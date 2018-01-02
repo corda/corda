@@ -180,13 +180,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return SignedNodeInfo(serialised, listOf(signature))
     }
 
-    open fun generateNodeInfo() {
+    open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         initCertificate()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
-        initialiseDatabasePersistence(schemaService,  makeIdentityService(identity.certificate)) { database ->
+        return initialiseDatabasePersistence(schemaService,  makeIdentityService(identity.certificate)) { database ->
             // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like
             // a code smell.
             val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
@@ -196,6 +196,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 privateKey.sign(serialised.bytes)
             }
             NodeInfoWatcher.saveToFile(configuration.baseDirectory, signedNodeInfo)
+            info
         }
     }
 
