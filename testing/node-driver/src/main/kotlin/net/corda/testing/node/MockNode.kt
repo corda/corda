@@ -28,6 +28,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
@@ -40,6 +41,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -294,7 +296,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, networkParameters: NetworkParameters): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -313,11 +315,12 @@ open class MockNetwork(private val cordappPackages: List<String>,
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
-        override fun startShell(rpcOps: CordaRPCOps) {
+        override fun makeRPCSecurityManager(): RPCSecurityManager = rigorousMock() // Not used, we just need something that isn't null.
+        override fun startShell(rpcOps: CordaRPCOps, securityManager: RPCSecurityManager) {
             //No mock shell
         }
 
-        override fun startMessagingService(rpcOps: RPCOps) {
+        override fun startMessagingService(rpcOps: RPCOps, securityManager: RPCSecurityManager) {
             // Nothing to do
         }
 

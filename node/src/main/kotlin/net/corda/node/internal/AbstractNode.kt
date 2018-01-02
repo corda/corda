@@ -129,8 +129,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
-
-    protected lateinit var networkParameters: NetworkParameters
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
 
@@ -144,9 +142,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     private val _nodeReadyFuture = openFuture<Unit>()
     protected var networkMapClient: NetworkMapClient? = null
-
-    lateinit var securityManager: RPCSecurityManager get
-
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit> get() = _nodeReadyFuture
@@ -207,14 +202,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        retrieveNetworkParameters()
+        val networkParameters = retrieveNetworkParameters()
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database)
-            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
+            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache, networkParameters)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowStarter = FlowStarterImpl(serverThread, smm)
@@ -235,14 +230,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
             makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService)
             val rpcOps = makeRPCOps(flowStarter, database, smm)
-            startMessagingService(rpcOps)
+            val securityManager = makeRPCSecurityManager()
+            startMessagingService(rpcOps, securityManager)
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)
             tokenizableServices = nodeServices + cordaServices + schedulerService
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
-            startShell(rpcOps)
+            startShell(rpcOps, securityManager)
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
@@ -272,13 +268,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
+    protected abstract fun makeRPCSecurityManager(): RPCSecurityManager
     /**
      * Should be [rx.schedulers.Schedulers.io] for production,
      * or [rx.internal.schedulers.CachedThreadScheduler] (with shutdown registered with [runOnStop]) for shared-JVM testing.
      */
     protected abstract fun getRxIoScheduler(): Scheduler
 
-    open fun startShell(rpcOps: CordaRPCOps) {
+    open fun startShell(rpcOps: CordaRPCOps, securityManager: RPCSecurityManager) {
         InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
     }
 
@@ -532,7 +529,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage,  database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
+    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage,  database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal, networkParameters: NetworkParameters): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
@@ -548,7 +545,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 database,
                 info,
                 networkMapCache)
-        network = makeMessagingService(database, info)
+        network = makeMessagingService(database, info, networkParameters)
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
@@ -642,12 +639,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
-    private fun retrieveNetworkParameters() {
+    private fun retrieveNetworkParameters(): NetworkParameters {
         val networkParamsFile = configuration.baseDirectory.list { paths ->
             paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().orElse(null)
         }
-
-        networkParameters = if (networkParamsFile != null) {
+        val networkParameters = if (networkParamsFile != null) {
             networkParamsFile.readAll().deserialize<SignedData<NetworkParameters>>().verified()
         } else {
             log.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
@@ -667,6 +663,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
+        return networkParameters
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
@@ -718,9 +715,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         _started = null
     }
 
-    protected abstract fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService
-    protected abstract fun startMessagingService(rpcOps: RPCOps)
-
+    protected abstract fun makeMessagingService(database: CordaPersistence, info: NodeInfo, networkParameters: NetworkParameters): MessagingService
+    protected abstract fun startMessagingService(rpcOps: RPCOps, securityManager: RPCSecurityManager)
     private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
 
