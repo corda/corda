@@ -168,9 +168,9 @@ give us:
 Removing Properties
 -------------------
 
-Property removal is effectively a mirror of adding properties (both nullable and non nullable) given it is required to facilitate
-the addition of properties. When this state is detected by the serialization framework, properties that don't have matching
-parameters in the main constructor are simply omitted from objected construction:
+Property removal is effectively a mirror of adding properties (both nullable and non nullable) given that this functionality
+is required to facilitate the addition of properties. When this state is detected by the serialization framework, properties
+that don't have matching parameters in the main constructor are simply omitted from object construction.
 
 .. container:: codeset
 
@@ -204,7 +204,7 @@ For an illustrative example consider a simple class:
 
 When we serialize ``e`` its properties will be encoded in order of its primary constructors parameters, so:
 
-``999hello``
+``999,hello``
 
 Were those parameters to be reordered post serialisation then deserializing, without evolution, would fail with a basic
 type error as we'd attempt to create the new value of ``Example5`` with the values provided in the wrong order:
