@@ -7,25 +7,32 @@
 Shell
 =====
 
-The Corda shell is an embedded command line that allows an administrator to control and monitor the node.
-Some of its features include:
+.. contents::
 
-* Invoking any of the RPCs the node exposes to applications.
-* Starting flows.
-* View a dashboard of threads, heap usage, VM properties.
-* Uploading and downloading zips from the attachment store.
-* Issue SQL queries to the underlying database.
-* View JMX metrics and monitoring exports.
-* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data.
+The Corda shell is an embedded command line that allows an administrator to control and monitor a node. It is based on
+the `CRaSH`_ shell and supports many of the same features. These features include:
 
-It is based on the popular `CRaSH`_ shell used in various other projects and supports many of the same features.
+* Invoking any of the node's RPC methods
+* Viewing a dashboard of threads, heap usage, VM properties
+* Uploading and downloading attachments
+* Issuing SQL queries to the underlying database
+* Viewing JMX metrics and monitoring exports
+* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
 
-Local terminal shell runs only in development mode. It may be disabled by passing the ``--no-local-shell`` flag to the node.
+The shell via the local terminal
+--------------------------------
 
-SSH server
-----------
+In development mode, the shell will display in the node's terminal window. It may be disabled by passing the
+``--no-local-shell`` flag when running the node.
 
-Shell can also be accessible via SSH. By default SSH server is *disabled*. To enable it port must be configured - in ``node.conf`` file
+The shell via SSH
+-----------------
+The shell is also accessible via SSH.
+
+Enabling SSH access
+*******************
+
+By default, the SSH server is *disabled*. To enable it, a port must be configured in the node's ``node.conf`` file:
 
 .. code:: bash
 
@@ -33,80 +40,159 @@ Shell can also be accessible via SSH. By default SSH server is *disabled*. To en
         port = 2222
     }
 
-Authentication and authorization
---------------------------------
-SSH requires users to login first - using the same users as RPC system. In fact, the shell serves as a proxy to RPC and communicates
-with the node using RPC calls. This also means that RPC permissions are enforced. No permissions are required to allow the connection
-and log in.
-Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed`` while starting flows requires
-``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows`` in addition to a permission for a particular flow.
+Authentication
+**************
+Users log in to shell via SSH using the same credentials as for RPC. This is because the shell actually communicates
+with the node using RPC calls. No RPC permissions are required to allow the connection and log in.
 
-Host key
---------
+The host key is loaded from the ``<node root directory>/sshkey/hostkey.pem`` file. If this file does not exist, it is
+generated automatically. In development mode, the seed may be specified to give the same results on the same computer
+in order to avoid host-checking errors.
 
-The host key is loaded from ``sshkey/hostkey.pem`` file. If the file does not exist, it will be generated randomly, however
-in the development mode seed may be tuned to give the same results on the same computer - in order to avoid host checking
-errors.
+Connecting to the shell
+***********************
 
-Connecting
-----------
+Linux and MacOS
+^^^^^^^^^^^^^^^
 
-Linux and MacOS computers usually come with SSH client preinstalled. On Windows it usually requires extra download.
-Usual connection syntax is ``ssh user@host -p 2222`` - where ``user`` is a RPC username, and ``-p`` specifies a port parameters -
-it's the same as setup in ``node.conf`` file. ``host`` should point to a node hostname, usually ``localhost`` if connecting and
-running node on the same computer. Password will be asked after establishing connection.
+Run the following command from the terminal:
 
-:note: While developing, checking multiple samples or simply restarting a node frequently host key may be regenerated. SSH usually
-    saved once trusted hosts and will refuse to connect in case of a change. Then check may be disabled with extra options
-    ``ssh -o StrictHostKeyChecking=no user@host -p2222``. This option should never be used in production environment!
+.. code:: bash
 
-Getting help
-------------
+    ssh -p [portNumber] [host] -l [user]
 
-You can run ``help`` to list the available commands.
+Where:
 
-The shell has a ``man`` command that can be used to get interactive help on many commands. You can also use the
-``--help`` or ``-h`` flags to a command to get info about what switches it supports.
+* ``[portNumber]`` is the port number specified in the ``node.conf`` file
+* ``[host]`` is the node's host (e.g. ``localhost`` if running the node locally)
+* ``[user]`` is the RPC username
 
-Commands may have subcommands, in the same style as ``git``. In that case running the command by itself will
-list the supported subcommands.
+The RPC password will be requested after a connection is established.
 
-Starting flows and performing remote method calls
--------------------------------------------------
+:note: In development mode, restarting a node frequently may cause the host key to be regenerated. SSH usually saves
+    trusted hosts and will refuse to connect in case of a change. This check can be disabled using the
+    ``-o StrictHostKeyChecking=no`` flag. This option should never be used in production environment!
 
-**Flows** are the way the ledger is changed. If you aren't familiar with them, please review ":doc:`flow-state-machines`"
-first. The ``flow list`` command can be used to list the flows understood by the node, ``flow watch`` shows all the flows
-currently running on the node with the result (or error) information in a user friendly way, ``flow start`` can be
-used to start flows. The ``flow start`` command takes the class name of a flow, or *any unambiguous substring* and
-then the data to be passed to the flow constructor. The unambiguous substring feature is helpful for reducing
-the needed typing. If the match is ambiguous the possible matches will be printed out. If a flow has multiple
-constructors then the names and types of the arguments will be used to try and determine which to use automatically.
-If the match against available constructors is unclear, the reasons each available constructor failed to match
-will be printed out. In the case of an ambiguous match, the first applicable will be used.
+Windows
+^^^^^^^
 
-**RPCs** (remote procedure calls) are commands that can be sent to the node to query it, control it and manage it.
-RPCs don't typically do anything that changes the global ledger, but they may change node-specific data in the
-database. Each RPC is one method on the ``CordaRPCOps`` interface, and may return a stream of events that will
-be shown on screen until you press Ctrl-C. You perform an RPC by using ``run`` followed by the name.
+Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
-.. raw:: html
+Permissions
+***********
 
-   <center><b><a href="api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html">Documentation of available RPCs</a></b><p></center>
+When accessing the shell via SSH, some additional RPC permissions are required:
 
-Whichever form of change is used, there is a need to provide *parameters* to either the RPC or the flow
-constructor. Because parameters can be any arbitrary Java object graph, we need a convenient syntax to express
-this sort of data. The shell uses a syntax called `Yaml`_ to do this.
+* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
+* Starting flows requires ``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows``, as well as a
+  permission for the flow being started
 
-Data syntax
------------
+Interacting with the node via the shell
+---------------------------------------
 
-Yaml (yet another markup language) is a simple JSON-like way to describe object graphs. It has several features
-that make it helpful for our use case, like a lightweight syntax and support for "bare words" which mean you can
-often skip the quotes around strings. Here is an example of how this syntax is used:
+The shell interacts with the node by issuing RPCs (remote procedure calls). You make an RPC from the shell by typing
+``run`` followed by the name of the desired RPC method. For example, you'd see a list of the registered flows on your
+node by running:
+
+``run registeredFlows``
+
+Some RPCs return a stream of events that will be shown on screen until you press Ctrl-C.
+
+You can find a list of the available RPC methods
+`here <https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html>`_.
+
+Flow commands
+*************
+
+The shell also has special commands for working with flows:
+
+* ``flow list`` lists the flows available on the node
+* ``flow watch`` shows all the flows currently running on the node with result (or error) information
+* ``flow start`` starts a flow. The ``flow start`` command takes the name of a flow class, or
+  *any unambiguous substring* thereof, as well as the data to be passed to the flow constructor. If there are several
+  matches for a given substring, the possible matches will be printed out. If a flow has multiple constructors then the
+  names and types of the arguments will be used to try and automatically determine which one to use. If the match
+  against available constructors is unclear, the reasons each available constructor failed to match will be printed
+  out. In the case of an ambiguous match, the first applicable constructor will be used
+
+Parameter syntax
+****************
+
+Parameters are passed to RPC or flow commands using a syntax called `Yaml`_ (yet another markup language), a
+simple JSON-like language. The key features of Yaml are:
+
+* Parameters are separated by commas
+* Each parameter is specified as a ``key: value`` pair
+
+    * There **MUST** to be a space after the colon, otherwise you'll get a syntax error
+
+* Strings do not need to be surrounded by quotes unless they contain commas, colons or embedded quotes
+* Class names must be fully-qualified (e.g. ``java.lang.String``)
+
+.. note:: If your CorDapp is written in Java, named arguments won't work unless you compiled the node using the
+   ``-parameters`` argument to javac. See :doc:`generating-a-node` for how to specify it via Gradle.
+
+Creating an instance of a class
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Class instances are created using curly-bracket syntax. For example, if we have a ``Campaign`` class with the following
+constructor:
+
+``data class Campaign(val name: String, val target: Int)``
+
+Then we could create an instance of this class to pass as a parameter as follows:
+
+``newCampaign: { name: Roger, target: 1000 }``
+
+Where ``newCampaign`` is a parameter of type ``Campaign``.
+
+Mappings from strings to types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Several parameter types can automatically be mapped from strings. See the `defined parsers`_ for more information. We
+cover the most common types here.
+
+Amount
+~~~~~~
+A parameter of type ``Amount<Currency>`` can be written as either:
+
+* A dollar ($), pound (£) or euro (€) symbol followed by the amount as a decimal
+* The amount as a decimal followed by the ISO currency code (e.g. "100.12 CHF")
+
+OpaqueBytes
+~~~~~~~~~~~
+A parameter of type ``OpaqueBytes`` can be provided as a string, which will be automatically converted to
+``OpaqueBytes``.
+
+Party
+~~~~~
+A parameter of type ``Party`` can be written in several ways:
+
+* By using the node's full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
+* By specifying the organisation name only: ``"Monogram Bank"``
+* By specifying any other non-ambiguous part of the name: ``"Sao Paulo"`` (if only one network node is located in Sao
+  Paulo)
+
+Instant
+~~~~~~~
+A parameter of type ``Instant`` can be written as follows: ``"2017-12-22T00:00:00Z"``.
+
+Examples
+^^^^^^^^
+
+Starting a flow
+~~~~~~~~~~~~~~~
+
+We would start the ``CashIssue`` flow as follows:
 
 ``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "O=Bank A,L=London,C=GB", notary: "O=Notary Service,OU=corda,L=London,C=GB"``
 
-This invokes a constructor of a flow with the following prototype in the code:
+This breaks down as follows:
+
+* ``flow start`` is a shell command for starting a flow
+* ``CashIssue`` is the flow we want to start
+* Each ``name: value`` pair after that is a flow constructor argument
+
+This command invokes the following ``CashIssue`` constructor:
 
 .. container:: codeset
 
@@ -117,50 +203,44 @@ This invokes a constructor of a flow with the following prototype in the code:
                           val recipient: Party,
                           val notary: Party) : AbstractCashFlow(progressTracker)
 
-Here, everything after ``CashIssue`` is specifying the arguments to the constructor of a flow. In Yaml, an object
-is specified as a set of ``key: value`` pairs and in our form, we separate them by commas. There are a few things
-to note about this syntax:
+Querying the vault
+~~~~~~~~~~~~~~~~~~
 
-* When a parameter is of type ``Amount<Currency>`` you can write it as either one of the dollar symbol ($),
-  pound (£), euro (€) followed by the amount as a decimal, or as the value followed by the ISO currency code
-  e.g. "100.12 CHF"
-* ``OpaqueBytes`` is filled with the contents of whatever is provided as a string.
-* ``Party`` objects are looked up by name.
-* Strings do not need to be surrounded by quotes unless they contain a comma or embedded quotes. This makes it
-  a lot more convenient to type such strings.
+We would query the vault for ``IOUState`` states as follows:
 
-Other types also have sensible mappings from strings. See `the defined parsers`_ for more information.
+``run vaultQuery contractStateType: com.template.IOUState``
 
-Nested objects can be created using curly braces, as in ``{ a: 1, b: 2}``. This is helpful when no particular
-parser is defined for the type you need, for instance, if an API requires a ``Pair<String, Int>``
-which could be represented as ``{ first: foo, second: 123 }``.
+This breaks down as follows:
 
-.. note:: If your CorDapp is written in Java,
-   named arguments won't work unless you compiled using the ``-parameters`` argument to javac.
-   See :doc:`generating-a-node` for how to specify it via Gradle.
-
-The same syntax is also used to specify the parameters for RPCs, accessed via the ``run`` command, like this:
-
-``run registeredFlows``
+* ``run`` is a shell command for making an RPC call
+* ``vaultQuery`` is the RPC call we want to make
+* ``contractStateType: com.template.IOUState`` is the fully-qualified name of the state type we are querying for
 
 Attachments
------------
+***********
 
-The shell can be used to upload and download attachments from the node interactively. To learn more, see
-the tutorial ":doc:`tutorial-attachments`".
+The shell can be used to upload and download attachments from the node. To learn more, see the tutorial
+":doc:`tutorial-attachments`".
+
+Getting help
+************
+
+You can type ``help`` in the shell to list the available commands, and ``man`` to get interactive help on many
+commands. You can also pass the ``--help`` or ``-h`` flags to a command to get info about what switches it supports.
+
+Commands may have subcommands, in the same style as ``git``. In that case, running the command by itself will
+list the supported subcommands.
 
 Extending the shell
 -------------------
 
-The shell can be extended using commands written in either Java or `Groovy`_ (Groovy is a scripting language that
-is Java compatible). Such commands have full access to the node internal APIs and thus can be used to achieve
-almost anything.
+The shell can be extended using commands written in either Java or `Groovy`_ (a Java-compatible scripting language).
+These commands have full access to the node's internal APIs and thus can be used to achieve almost anything.
 
-A full tutorial on how to write such commands is out of scope for this documentation, to learn more please
-refer to the `CRaSH`_ documentation. New commands can be placed in the ``shell-commands`` subdirectory in the
-node directory. Edits to existing commands will be used automatically, but at this time commands added after the
-node has started won't be automatically detected. Commands should be named in all lower case with either a
-``.java`` or ``.groovy`` extension.
+A full tutorial on how to write such commands is out of scope for this documentation. To learn more, please refer to
+the `CRaSH`_ documentation. New commands are placed in the ``shell-commands`` subdirectory in the node directory. Edits
+to existing commands will be used automatically, but currently commands added after the node has started won't be
+automatically detected. Commands must have names all in lower-case with either a ``.java`` or ``.groovy`` extension.
 
 .. warning:: Commands written in Groovy ignore Java security checks, so have unrestricted access to node and JVM
    internals regardless of any sandboxing that may be in place. Don't allow untrusted users to edit files in the
@@ -171,14 +251,13 @@ Limitations
 
 The shell will be enhanced over time. The currently known limitations include:
 
-* SSH access is currently not available.
-* There is no command completion for flows or RPCs.
-* Command history is not preserved across restarts.
-* The ``jdbc`` command requires you to explicitly log into the database first.
-* Commands placed in the ``shell-commands`` directory are only noticed after the node is restarted.
-* The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using.
+* There is no command completion for flows or RPCs
+* Command history is not preserved across restarts
+* The ``jdbc`` command requires you to explicitly log into the database first
+* Commands placed in the ``shell-commands`` directory are only noticed after the node is restarted
+* The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using
 
 .. _Yaml: http://www.yaml.org/spec/1.2/spec.html
-.. _the defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
+.. _defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
 .. _Groovy: http://groovy-lang.org/
 .. _CRaSH: http://www.crashub.org/

@@ -22,10 +22,15 @@ abstract class CordaClock : Clock(), SerializeAsToken {
     override fun getZone(): ZoneId = delegateClock.zone
     @Deprecated("Do not use this. Instead seek to use ZonedDateTime methods.", level = DeprecationLevel.ERROR)
     override fun withZone(zone: ZoneId) = throw UnsupportedOperationException("Tokenized clock does not support withZone()")
+
+    /** This is an observer on the mutation count of this [Clock], which reflects the occurrence of mutations. */
+    abstract val mutations: Observable<Long>
 }
 
 @ThreadSafe
-class SimpleClock(override val delegateClock: Clock) : CordaClock()
+class SimpleClock(override val delegateClock: Clock) : CordaClock() {
+    override val mutations: Observable<Long> = Observable.never()
+}
 
 /**
  * An abstract class with helper methods for a type of Clock that might have it's concept of "now" adjusted externally.
@@ -38,8 +43,7 @@ abstract class MutableClock(private var _delegateClock: Clock) : CordaClock() {
             _delegateClock = clock
         }
     private val _version = AtomicLong(0L)
-    /** This is an observer on the mutation count of this [Clock], which reflects the occurence of mutations. */
-    val mutations: Observable<Long> by lazy {
+    override val mutations: Observable<Long> by lazy {
         Observable.create { subscriber: Subscriber<in Long> ->
             if (!subscriber.isUnsubscribed) {
                 mutationObservers.add(subscriber)

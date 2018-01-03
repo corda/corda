@@ -13,7 +13,7 @@ import net.corda.demobench.pty.R3Pty
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
@@ -153,7 +153,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     // Generate notary identity and save it into node's directory. This identity will be used in network parameters.
     private fun getNotaryIdentity(config: NodeConfigWrapper): Party {
-        return IdentityGenerator.generateNodeIdentity(config.nodeDir, config.nodeConfig.myLegalName)
+        return DevIdentityGenerator.installKeyStoreWithNodeIdentity(config.nodeDir, config.nodeConfig.myLegalName)
     }
 
     fun reset() {
