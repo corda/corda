@@ -169,10 +169,13 @@ open class Cordform : DefaultTask() {
                 val node = node { }
                 it.accept(node)
                 node.additionalCordapps.addAll(cordapps)
+                node.rootDir(directory)
             }
-        }
-        nodes.forEach {
-            it.rootDir(directory)
+            cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
+        } else {
+            nodes.forEach {
+                it.rootDir(directory)
+            }
         }
     }
 
