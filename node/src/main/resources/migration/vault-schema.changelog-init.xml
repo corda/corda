@@ -125,14 +125,14 @@
     <changeSet author="tudormalene (generated)" id="1511451595465-64">
         <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
                                  baseTableName="vault_fungible_states_parts"
-                                 constraintName="fkchmfeq1ldqnoq9idv9ogxauqm" deferrable="false"
+                                 constraintName="FK__vault_fungible_states_parts__vault_fungible_states" deferrable="false"
                                  initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="output_index,transaction_id"
                                  referencedTableName="vault_fungible_states"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-65">
         <addForeignKeyConstraint baseColumnNames="output_index,transaction_id" baseTableName="vault_linear_states_parts"
-                                 constraintName="fkhafsv733d0bo9j1tg352koq3y" deferrable="false"
+                                 constraintName="FK__vault_linear_states_parts__vault_linear_states" deferrable="false"
                                  initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="output_index,transaction_id"
                                  referencedTableName="vault_linear_states"/>

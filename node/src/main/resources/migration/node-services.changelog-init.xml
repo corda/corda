@@ -206,7 +206,7 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-61">
         <addForeignKeyConstraint baseColumnNames="party_name" baseTableName="node_link_nodeinfo_party"
-                                 constraintName="fk1ua3h6nwwfji0mn23c5d1xx8e" deferrable="false"
+                                 constraintName="FK__node_link_nodeinfo_party__node_info_party_cert" deferrable="false"
                                  initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
     </changeSet>

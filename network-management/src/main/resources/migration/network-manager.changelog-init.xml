@@ -169,27 +169,27 @@
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-24">
         <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificate_signing_request_AUD"
-                                 constraintName="FK5G5CAGCRX7SIU8LWTAVIRUNXD" deferrable="false"
+                                 constraintName="FK__certificate_signing_request_AUD__REVINFO" deferrable="false"
                                  initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT"
                                  referencedColumnNames="rev" referencedTableName="REVINFO"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-25">
         <addForeignKeyConstraint baseColumnNames="rev" baseTableName="CertificateSigningRequestEntity_modifiedBy_AUD"
-                                 constraintName="FKCNMAJ1J6TO8D5GBY6N1Q3CK9C" deferrable="false"
+                                 constraintName="FK__CertificateSigningRequestEntity_modifiedBy_AUD__REVINFO" deferrable="false"
                                  initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT"
                                  referencedColumnNames="rev" referencedTableName="REVINFO"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-26">
         <addForeignKeyConstraint baseColumnNames="CertificateSigningRequestEntity_request_id"
                                  baseTableName="CertificateSigningRequestEntity_modifiedBy"
-                                 constraintName="FKLFW2KLKDPLYDROVIBVEOMF9PU" deferrable="false"
+                                 constraintName="FK__CertificateSigningRequestEntity_modifiedBy__certificate_signing_request" deferrable="false"
                                  initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT"
                                  referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-27">
-        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="certificate_data" constraintName="FKLQK11Q68B23W062SH0CLNQKLY" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
+        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="certificate_data" constraintName="FK__certificate_data__certificate_signing_request" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1513267683777-28">
-        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="node_info" constraintName="FKOLO0DB56L1GS6AAY86TBNIXRH" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
+        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="node_info" constraintName="FK__node_info__certificate_signing_request" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
     </changeSet>
 </databaseChangeLog>

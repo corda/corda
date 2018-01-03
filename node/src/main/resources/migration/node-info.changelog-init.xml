@@ -59,13 +59,13 @@
 
     <changeSet author="tudormalene (generated)" id="1511451595465-62">
         <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="node_link_nodeinfo_party"
-                                 constraintName="fk544l9wsec35ph7hxrtwfd2lws" deferrable="false"
+                                 constraintName="FK__node_link_nodeinfo_party__node_infos" deferrable="false"
                                  initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
     </changeSet>
     <changeSet author="tudormalene (generated)" id="1511451595465-63">
         <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="node_info_hosts"
-                                 constraintName="fk5ie46htdrkftmwe6rpwrnp0mp" deferrable="false"
+                                 constraintName="FK__node_info_hosts__node_infos" deferrable="false"
                                  initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
                                  referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
     </changeSet>
