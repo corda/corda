@@ -14,11 +14,11 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
-import net.corda.testing.DUMMY_NOTARY_NAME
-import net.corda.testing.node.NotarySpec
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
@@ -193,8 +193,7 @@ fun <A> driver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = null,
-                    onNetworkParametersGeneration = { }
+                    compatibilityZone = null
             ),
             coerce = { it },
             dsl = dsl,

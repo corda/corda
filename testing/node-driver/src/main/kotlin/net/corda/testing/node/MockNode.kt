@@ -38,7 +38,7 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.IdentityGenerator
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
@@ -235,7 +235,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.mapIndexed { index, (name, validating) ->
-            val identity = IdentityGenerator.generateNodeIdentity(baseDirectory(nextNodeId + index), name)
+            val identity = DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(nextNodeId + index), name)
             NotaryInfo(identity, validating)
         }
     }

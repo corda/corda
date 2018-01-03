@@ -2,7 +2,6 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -20,7 +19,9 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.*
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
@@ -33,6 +34,7 @@ import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,7 +69,7 @@ open class Node(configuration: NodeConfiguration,
             exitProcess(1)
         }
 
-        private fun createClock(configuration: NodeConfiguration): Clock {
+        private fun createClock(configuration: NodeConfiguration): CordaClock {
             return (if (configuration.useTestClock) ::DemoClock else ::SimpleClock)(Clock.systemUTC())
         }
 
@@ -265,15 +267,13 @@ open class Node(configuration: NodeConfiguration,
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
-    override fun generateNodeInfo() {
+    override fun generateAndSaveNodeInfo(): NodeInfo {
         initialiseSerialization()
-        super.generateNodeInfo()
+        return super.generateAndSaveNodeInfo()
     }
 
     override fun start(): StartedNode<Node> {
-        if (initialiseSerialization) {
-            initialiseSerialization()
-        }
+        initialiseSerialization()
         val started: StartedNode<Node> = uncheckedCast(super.start())
         nodeReadyFuture.thenMatch({
             serverThread.execute {
@@ -306,8 +306,10 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
-    override fun getRxIoScheduler() = Schedulers.io()!!
+    override fun getRxIoScheduler(): Scheduler = Schedulers.io()
+
     private fun initialiseSerialization() {
+        if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {

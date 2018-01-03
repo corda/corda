@@ -1,41 +1,26 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.internal.read
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.PublicKey
-import java.security.cert.CertPath
 import java.security.cert.Certificate
 
 class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
     private val keyStore = storePath.read { loadKeyStore(it, storePassword) }
 
-    private fun createCertificate(serviceName: CordaX500Name, pubKey: PublicKey): CertPath {
-        val clientCertPath = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+    // TODO This method seems misplaced in this class.
+    fun storeLegalIdentity(legalName: CordaX500Name, alias: String, keyPair: KeyPair): PartyAndCertificate {
+        val nodeCaCertChain = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+        val nodeCa = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+        val identityCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, nodeCa.certificate, nodeCa.keyPair, legalName, keyPair.public)
+        val identityCertPath = X509CertificateFactory().generateCertPath(identityCert.cert, *nodeCaCertChain)
         // Assume key password = store password.
-        val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
-        // Create new keys and store in keystore.
-        val cert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, pubKey)
-        val certPath = X509CertificateFactory().generateCertPath(cert.cert, *clientCertPath)
-        require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
-        // TODO: X509Utilities.validateCertificateChain()
-        return certPath
-    }
-
-    fun signAndSaveNewKeyPair(serviceName: CordaX500Name, privateKeyAlias: String, keyPair: KeyPair) {
-        val certPath = createCertificate(serviceName, keyPair.public)
-        // Assume key password = store password.
-        keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), certPath.certificates.toTypedArray())
+        keyStore.addOrReplaceKey(alias, keyPair.private, storePassword.toCharArray(), identityCertPath.certificates.toTypedArray())
         keyStore.save(storePath, storePassword)
-    }
-
-    fun savePublicKey(serviceName: CordaX500Name, pubKeyAlias: String, pubKey: PublicKey) {
-        val certPath = createCertificate(serviceName, pubKey)
-        // Assume key password = store password.
-        keyStore.addOrReplaceCertificate(pubKeyAlias, certPath.certificates.first())
-        keyStore.save(storePath, storePassword)
+        return PartyAndCertificate(identityCertPath)
     }
 
     // Delegate methods to keystore. Sadly keystore doesn't have an interface.
@@ -47,5 +32,5 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
 
     fun getCertificate(alias: String): Certificate = keyStore.getCertificate(alias)
 
-    fun certificateAndKeyPair(alias: String): CertificateAndKeyPair = keyStore.getCertificateAndKeyPair(alias, storePassword)
+    fun getCertificateAndKeyPair(alias: String): CertificateAndKeyPair = keyStore.getCertificateAndKeyPair(alias, storePassword)
 }
