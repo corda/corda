@@ -10,7 +10,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.*
+import java.util.Properties
 
 /**
  * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
