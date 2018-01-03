@@ -83,6 +83,7 @@ class Node(private val project: Project) : CordformNode() {
         val dirName = organizationName ?: name
         this.rootDir = rootDir.toFile()
         nodeDir = File(this.rootDir, dirName)
+        Files.createDirectories(nodeDir.toPath())
     }
 
     private fun configureProperties() {
@@ -153,9 +154,9 @@ class Node(private val project: Project) : CordformNode() {
                 .setFormatted(true)
                 .setJson(false)
         val configFileText = config.root().render(options).split("\n").toList()
-
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
         val tmpDir = File(project.buildDir, "tmp")
+        Files.createDirectories(tmpDir.toPath())
         var fileName = "${nodeDir.getName()}.conf"
         val tmpConfFile = File(tmpDir, fileName)
         Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
@@ -169,7 +170,6 @@ class Node(private val project: Project) : CordformNode() {
         configureProperties()
         val tmpConfFile = createTempConfigFile()
         appendOptionalConfig(tmpConfFile)
-
         project.copy {
             it.apply {
                 from(tmpConfFile)
