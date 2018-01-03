@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import com.typesafe.config.Config
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -32,6 +33,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.*
+import net.corda.testing.database.dataSourceConfig
+import net.corda.testing.database.toDataSourceProperties
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
 import org.bouncycastle.operator.ContentSigner
@@ -63,17 +66,15 @@ open class MockServices private constructor(
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
          *
-         * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.  Defaults to a random string.
+         * @param nodeNameExtension Provides additional name extension for the "instance" of in-memory database to provide uniqueness when running unit tests against H2 db.
+         * @param configSupplier returns [Config] with dataSourceProperties entry.
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-            val props = Properties()
-            props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-            props.setProperty("dataSource.user", "sa")
-            props.setProperty("dataSource.password", "")
-            return props
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nodeNameExtension: String? = null,
+                                         configSupplier: (String, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
+            return configSupplier(nodeName, nodeNameExtension).toDataSourceProperties()
         }
 
         /**
@@ -89,7 +90,7 @@ open class MockServices private constructor(
                                             initialIdentity: TestIdentity,
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
-            val dataSourceProps = makeTestDataSourceProperties()
+            val dataSourceProps = makeTestDataSourceProperties(initialIdentity.name.organisation)
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
@@ -239,4 +240,19 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
         }
     }
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
+}
+
+/**
+ * Creates data source configuration for in memory H2 as it would be specified in reference.conf 'datasource' snippet.
+ * @param nodeName Reflects the "instance" of the database username/schema
+ * @param postfix Additional postix added to database "instance" name to add uniqueness when running integration tests.
+ */
+fun inMemoryH2DataSourceConfig(nodeName: String? = null, postfix: String? = null) : Config {
+    val nodeName = nodeName ?: SecureHash.randomSHA256().toString()
+    val h2InstanceName = if (postfix != null) nodeName + "_" + postfix else nodeName
+
+    return dataSourceConfig("jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
+            "org.h2.jdbcx.JdbcDataSource",
+            "sa",
+            "")
 }
