@@ -7,30 +7,36 @@ import kotlin.test.assertNull
 
 class CordaX500NameTest {
     @Test
-    fun `parse service name with organisational unit`() {
+    fun `service name with organisational unit`() {
         val name = CordaX500Name.parse("O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name")
         assertEquals("Service Name", name.commonName)
         assertEquals("Org Unit", name.organisationUnit)
         assertEquals("Bank A", name.organisation)
         assertEquals("New York", name.locality)
+        assertEquals(CordaX500Name.parse(name.toString()), name)
+        assertEquals(CordaX500Name.build(name.x500Principal), name)
     }
 
     @Test
-    fun `parse service name`() {
+    fun `service name`() {
         val name = CordaX500Name.parse("O=Bank A, L=New York, C=US, CN=Service Name")
         assertEquals("Service Name", name.commonName)
         assertNull(name.organisationUnit)
         assertEquals("Bank A", name.organisation)
         assertEquals("New York", name.locality)
+        assertEquals(CordaX500Name.parse(name.toString()), name)
+        assertEquals(CordaX500Name.build(name.x500Principal), name)
     }
 
     @Test
-    fun `parse legal entity name`() {
+    fun `legal entity name`() {
         val name = CordaX500Name.parse("O=Bank A, L=New York, C=US")
         assertNull(name.commonName)
         assertNull(name.organisationUnit)
         assertEquals("Bank A", name.organisation)
         assertEquals("New York", name.locality)
+        assertEquals(CordaX500Name.parse(name.toString()), name)
+        assertEquals(CordaX500Name.build(name.x500Principal), name)
     }
 
     @Test

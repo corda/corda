@@ -698,7 +698,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val trustRoot = trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
         val clientCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
-        val caCertificates = arrayOf(identityCert, clientCa.certificate.cert)
+        val caCertificates = arrayOf(identityCert, clientCa.certificate)
         return PersistentIdentityService(trustRoot, *caCertificates)
     }
 
@@ -756,7 +756,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             listOf(certificate) + keyStore.getCertificateChain(privateKeyAlias).drop(1)
         } else {
             keyStore.getCertificateChain(privateKeyAlias).let {
-                check(it[0].toX509CertHolder() == x509Cert) { "Certificates from key store do not line up!" }
+                check(it[0] == x509Cert) { "Certificates from key store do not line up!" }
                 it.asList()
             }
         }

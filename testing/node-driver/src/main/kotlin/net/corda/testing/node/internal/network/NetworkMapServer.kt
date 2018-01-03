@@ -2,8 +2,6 @@ package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -16,7 +14,7 @@ import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.SignedNetworkMap
-import net.corda.testing.ROOT_CA
+import net.corda.testing.DEV_ROOT_CA
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -29,6 +27,7 @@ import java.io.InputStream
 import java.net.InetSocketAddress
 import java.time.Duration
 import java.time.Instant
+import javax.security.auth.x500.X500Principal
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -36,7 +35,7 @@ import javax.ws.rs.core.Response.ok
 
 class NetworkMapServer(cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
-                       rootCa: CertificateAndKeyPair = ROOT_CA, // Default to ROOT_CA for testing.
+                       rootCa: CertificateAndKeyPair = DEV_ROOT_CA,
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
@@ -48,12 +47,12 @@ class NetworkMapServer(cacheTimeout: Duration,
                     CertificateType.NETWORK_MAP,
                     rootCAKeyAndCert.certificate,
                     rootCAKeyAndCert.keyPair,
-                    CordaX500Name("Corda Network Map", "R3 Ltd", "London","GB"),
-                    networkMapKey.public).cert
+                    X500Principal("CN=Corda Network Map,O=R3 Ltd,L=London,C=GB"),
+                    networkMapKey.public)
             // Check that the certificate validates. Nodes will perform this check upon receiving a network map,
             // it's better to fail here than there.
-            X509Utilities.validateCertificateChain(rootCAKeyAndCert.certificate.cert, networkMapCert)
-            return CertificateAndKeyPair(networkMapCert.toX509CertHolder(), networkMapKey)
+            X509Utilities.validateCertificateChain(rootCAKeyAndCert.certificate, networkMapCert)
+            return CertificateAndKeyPair(networkMapCert, networkMapKey)
         }
     }
 
@@ -130,7 +129,7 @@ class NetworkMapServer(cacheTimeout: Duration,
             val networkMap = NetworkMap(nodeInfoMap.keys.toList(), parametersHash)
             val serializedNetworkMap = networkMap.serialize()
             val signature = Crypto.doSign(networkMapKeyAndCert.keyPair.private, serializedNetworkMap.bytes)
-            val signedNetworkMap = SignedNetworkMap(networkMap.serialize(), DigitalSignatureWithCert(networkMapKeyAndCert.certificate.cert, signature))
+            val signedNetworkMap = SignedNetworkMap(networkMap.serialize(), DigitalSignatureWithCert(networkMapKeyAndCert.certificate, signature))
             return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${cacheTimeout.seconds}").build()
         }
 

@@ -9,7 +9,6 @@ import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import io.netty.util.ReferenceCountUtil
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.debug
 import net.corda.node.internal.protonwrapper.engine.EventProcessor
 import net.corda.node.internal.protonwrapper.messages.ReceivedMessage
@@ -19,9 +18,9 @@ import org.apache.qpid.proton.engine.ProtonJTransport
 import org.apache.qpid.proton.engine.Transport
 import org.apache.qpid.proton.engine.impl.ProtocolTracer
 import org.apache.qpid.proton.framing.TransportFrame
-import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.security.cert.X509Certificate
 
 /**
  *  An instance of AMQPChannelHandler sits inside the netty pipeline and controls the socket level lifecycle.
@@ -38,20 +37,20 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
     private val log = LoggerFactory.getLogger(allowedRemoteLegalNames?.firstOrNull()?.toString() ?: "AMQPChannelHandler")
     private lateinit var remoteAddress: InetSocketAddress
-    private lateinit var localCert: X509CertificateHolder
-    private lateinit var remoteCert: X509CertificateHolder
+    private lateinit var localCert: X509Certificate
+    private lateinit var remoteCert: X509Certificate
     private var eventProcessor: EventProcessor? = null
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         remoteAddress = ch.remoteAddress() as InetSocketAddress
         val localAddress = ch.localAddress() as InetSocketAddress
-        log.info("New client connection ${ch.id()} from ${remoteAddress} to ${localAddress}")
+        log.info("New client connection ${ch.id()} from $remoteAddress to $localAddress")
     }
 
     private fun createAMQPEngine(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
-        eventProcessor = EventProcessor(ch, serverMode, localCert.subject.toString(), remoteCert.subject.toString(), userName, password)
+        eventProcessor = EventProcessor(ch, serverMode, localCert.subjectX500Principal.toString(), remoteCert.subjectX500Principal.toString(), userName, password)
         val connection = eventProcessor!!.connection
         val transport = connection.transport as ProtonJTransport
         if (trace) {
@@ -71,7 +70,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
-        log.info("Closed client connection ${ch.id()} from ${remoteAddress} to ${ch.localAddress()}")
+        log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
         onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, null, false)))
         eventProcessor?.close()
         ctx.fireChannelInactive()
@@ -81,12 +80,12 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         if (evt is SslHandshakeCompletionEvent) {
             if (evt.isSuccess) {
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
-                localCert = sslHandler.engine().session.localCertificates.first().toX509CertHolder()
-                remoteCert = sslHandler.engine().session.peerCertificates.first().toX509CertHolder()
+                localCert = sslHandler.engine().session.localCertificates[0] as X509Certificate
+                remoteCert = sslHandler.engine().session.peerCertificates[0] as X509Certificate
                 try {
-                    val remoteX500Name = CordaX500Name.parse(remoteCert.subject.toString())
+                    val remoteX500Name = CordaX500Name.build(remoteCert.subjectX500Principal)
                     require(allowedRemoteLegalNames == null || remoteX500Name in allowedRemoteLegalNames)
-                    log.info("handshake completed subject: ${remoteX500Name}")
+                    log.info("handshake completed subject: $remoteX500Name")
                 } catch (ex: IllegalArgumentException) {
                     log.error("Invalid certificate subject", ex)
                     ctx.close()
@@ -124,7 +123,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                         require(inetAddress == remoteAddress) {
                             "Message for incorrect endpoint"
                         }
-                        require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.parse(remoteCert.subject.toString())) {
+                        require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert.subjectX500Principal)) {
                             "Message for incorrect legal identity"
                         }
                         log.debug { "channel write ${msg.applicationProperties["_AMQ_DUPL_ID"]}" }
