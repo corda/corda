@@ -2,17 +2,10 @@ package com.r3.corda.networkmanage.hsm.configuration
 
 import com.r3.corda.networkmanage.common.utils.toConfigWithOptions
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_AUTH_MODE
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_DEVICE
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_KEY_GEN_AUTH_THRESHOLD
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_KEY_SPECIFIER
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_ROOT_CERTIFICATE_NAME
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_SIGN_AUTH_THRESHOLD
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_SIGN_INTERVAL
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
+import net.corda.core.internal.isRegularFile
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -69,21 +62,6 @@ fun parseParameters(vararg args: String): Parameters {
     val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
         accepts("configFile", "Overriding configuration file.").withRequiredArg().defaultsTo("node.conf").describedAs("filepath")
-        accepts("device", "CryptoServer device address").withRequiredArg().defaultsTo(DEFAULT_DEVICE)
-        accepts("keyGroup", "CryptoServer key group").withRequiredArg()
-        accepts("keySpecifier", "CryptoServer key specifier").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_SPECIFIER)
-        accepts("rootPrivateKeyPassword", "Password for the root certificate private key").withRequiredArg().describedAs("password")
-        accepts("csrPrivateKeyPassword", "Password for the CSR signing certificate private key").withRequiredArg().describedAs("password")
-        accepts("keyGenAuthThreshold", "Authentication strength threshold for the HSM key generation").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_GEN_AUTH_THRESHOLD)
-        accepts("signAuthThreshold", "Authentication strength threshold for the HSM CSR signing").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_SIGN_AUTH_THRESHOLD)
-        accepts("authMode", "Authentication mode. Allowed values: ${AuthMode.values().map(AuthMode::name)})").withRequiredArg().defaultsTo(DEFAULT_AUTH_MODE.name)
-        accepts("authKeyFilePath", "Key file path when authentication is based on a key file (i.e. authMode=${AuthMode.KEY_FILE.name})").withRequiredArg().describedAs("filepath")
-        accepts("authKeyFilePassword", "Key file password when authentication is based on a key file (i.e. authMode=${AuthMode.KEY_FILE.name})").withRequiredArg()
-        accepts("autoUsername", "Username to be used for certificate signing (if not specified it will be prompted for input)").withRequiredArg()
-        accepts("csrCertificateName", "Name of the certificate to be used by this CA to sign CSR").withRequiredArg().defaultsTo(DEFAULT_CSR_CERTIFICATE_NAME)
-        accepts("rootCertificateName", "Name of the root certificate to be used by this CA").withRequiredArg().defaultsTo(DEFAULT_ROOT_CERTIFICATE_NAME)
-        accepts("validDays", "Validity duration in days").withRequiredArg().ofType(Int::class.java)
-        accepts("signInterval", "Time interval (in seconds) in which network map is signed").withRequiredArg().ofType(Long::class.java).defaultsTo(DEFAULT_SIGN_INTERVAL)
     }
 
     val configFile = if (argConfig.hasPath("configFile")) {
@@ -91,6 +69,7 @@ fun parseParameters(vararg args: String): Parameters {
     } else {
         Paths.get(argConfig.getString("basedir")) / "signing_service.conf"
     }
+    require(configFile.isRegularFile()) { "Config file $configFile does not exist" }
 
     val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
     return config.parseAs()

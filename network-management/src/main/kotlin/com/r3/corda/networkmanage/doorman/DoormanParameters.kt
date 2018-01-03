@@ -89,7 +89,7 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
     } else {
         Paths.get(".") / "network-management.conf"
     }
-    check(configFile.isRegularFile()) { "Config file $configFile does not exist" }
+    require(configFile.isRegularFile()) { "Config file $configFile does not exist" }
 
     return argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
             .resolve()

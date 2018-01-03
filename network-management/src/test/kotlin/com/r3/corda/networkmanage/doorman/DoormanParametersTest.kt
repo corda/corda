@@ -25,7 +25,7 @@ class DoormanParametersTest {
 
     @Test
     fun `should fail when config file is missing`() {
-        val message = assertFailsWith<IllegalStateException> {
+        val message = assertFailsWith<IllegalArgumentException> {
             parseParameters("--config-file", "not-existing-file")
         }.message
         assertThat(message).contains("Config file ")

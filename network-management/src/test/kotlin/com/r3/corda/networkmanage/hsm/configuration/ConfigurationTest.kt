@@ -3,6 +3,7 @@ package com.r3.corda.networkmanage.hsm.configuration
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.typesafe.config.ConfigException
+import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
@@ -13,18 +14,10 @@ class ConfigurationTest : TestBase() {
     private val invalidConfigPath = File(javaClass.getResource("/hsm_fail.conf").toURI()).absolutePath
 
     @Test
-    fun `authMode is parsed correctly`() {
-        val paramsWithPassword = parseParameters("--configFile", validConfigPath, "--authMode", AuthMode.CARD_READER.name)
-        assertEquals(AuthMode.CARD_READER, paramsWithPassword.authMode)
-        val paramsWithCardReader = parseParameters("--configFile", validConfigPath, "--authMode", AuthMode.PASSWORD.name)
-        assertEquals(AuthMode.PASSWORD, paramsWithCardReader.authMode)
-    }
-
-    @Test
-    fun `validDays duration is parsed correctly`() {
-        val expectedDuration = 360
-        val paramsWithPassword = parseParameters("--configFile", validConfigPath, "--validDays", expectedDuration.toString())
-        assertEquals(expectedDuration, paramsWithPassword.validDays)
+    fun `config file is parsed correctly`() {
+        val paramsWithPassword = parseParameters("--configFile", validConfigPath)
+        assertEquals(AuthMode.PASSWORD, paramsWithPassword.authMode)
+        assertEquals("3001@192.168.0.1", paramsWithPassword.device)
     }
 
     @Test
@@ -33,5 +26,13 @@ class ConfigurationTest : TestBase() {
         assertFailsWith<ConfigException.Missing> {
             parseParameters("--configFile", invalidConfigPath)
         }
+    }
+
+    @Test
+    fun `should fail when config file is missing`() {
+        val message = assertFailsWith<IllegalArgumentException> {
+            com.r3.corda.networkmanage.doorman.parseParameters("--config-file", "not-existing-file")
+        }.message
+        Assertions.assertThat(message).contains("Config file ")
     }
 }
