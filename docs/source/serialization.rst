@@ -74,10 +74,10 @@ The AMQP framework is currently used for:
 
 Finally, for the checkpointing of flows Corda will continue to use the existing ``Kryo`` scheme.
 
-This separation of serialization schemes into differenet contexts allows us to use the most suitable framework for that context rather than
+This separation of serialization schemes into different contexts allows us to use the most suitable framework for that context rather than
 attempting to force a one size fits all approach. Where ``Kryo`` is more suited to the serialization of a programs stack frames, being more flexible
-than our AMQP framework in what it can construct and serialize, that flexability makes it exceptionally difficult to make secure. Conversly
-our AMQP framework allwos us to concentrate on a robust a secure framework that can be reasoned about thus made safer with far fewer unforseen
+than our AMQP framework in what it can construct and serialize, that flexibility makes it exceptionally difficult to make secure. Conversly
+our AMQP framework allows us to concentrate on a robust a secure framework that can be reasoned about thus made safer with far fewer unforeseen
 security holes.
 
 .. note:: Selection of serialization context should, for the most part, be opaque to CorDapp developers, the Corda framework selecting
