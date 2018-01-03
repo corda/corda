@@ -37,6 +37,7 @@ import org.bouncycastle.math.ec.WNafUtil
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
+import sun.security.ec.ECPublicKeyImpl
 import java.math.BigInteger
 import java.security.*
 import java.security.spec.InvalidKeySpecException
@@ -185,6 +186,10 @@ object Crypto {
             COMPOSITE_KEY
     ).associateBy { it.schemeCodeName }
 
+    // Map of supported digital signature schemes associated by [SignatureScheme.schemeNumberID].
+    // SchemeNumberID is the scheme identifier attached to [SignatureMetadata].
+    private val signatureSchemeNumberIDMap: Map<Int, SignatureScheme> = supportedSignatureSchemes().associateBy { it.schemeNumberID }
+
     /**
      * Map of X.509 algorithm identifiers to signature schemes Corda recognises. See RFC 2459 for the format of
      * algorithm identifiers.
@@ -194,9 +199,11 @@ object Crypto {
             + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 
+    /** List of supported [SignatureScheme]s. */
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
+    /** Return the corresponding supported [Provider] object. */
     @JvmStatic
     fun findProvider(name: String): Provider {
         return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
@@ -213,6 +220,7 @@ object Crypto {
         }
     }
 
+    /** Find supported [SignatureScheme] based on the [AlgorithmIdentifier] input. */
     @JvmStatic
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
         return algorithmMap[normaliseAlgorithmIdentifier(algorithm)]
@@ -259,6 +267,12 @@ object Crypto {
     fun findSignatureScheme(key: PrivateKey): SignatureScheme {
         val keyInfo = PrivateKeyInfo.getInstance(key.encoded)
         return findSignatureScheme(keyInfo.privateKeyAlgorithm)
+    }
+
+    @JvmStatic
+    private fun findSignatureScheme(schemeNumberID: Int): SignatureScheme {
+        return signatureSchemeNumberIDMap[schemeNumberID]
+                ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeNumberID")
     }
 
     /**
@@ -437,7 +451,7 @@ object Crypto {
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
         val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
-        val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
+        val sigMetaData: SignatureScheme = findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
         require(sigKey == sigMetaData) {
             "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
         }
@@ -513,13 +527,15 @@ object Crypto {
         if (verificationResult) {
             return true
         } else {
-            throw SignatureException("Signature Verification failed!")
+            throw SignatureException("Signature verification failed for [scheme: ${signatureScheme.algorithmName}, keyShort: ${publicKey.toStringShort()}, signatureHash: ${signatureData.sha256()}, clearDataHash: ${clearData.sha256()}]")
         }
     }
 
     /**
      * Utility to simplify the act of verifying a [TransactionSignature].
      * It returns true if it succeeds, but it always throws an exception if verification fails.
+     * The [SignatureScheme.schemeNumberID] advertised in [TransactionSignature.signatureMetadata] is used
+     * rather than [findSignatureScheme] to identify the corresponding signature scheme.
      * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @return true if verification passes or throw exception if verification fails.
@@ -532,8 +548,10 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
+        require(transactionSignature.signatureMetadata.schemeNumberID in signatureSchemeNumberIDMap) { "Signature scheme with numberID: ${transactionSignature.signatureMetadata.schemeNumberID} is not supported"}
         val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+        val scheme: SignatureScheme = signatureSchemeNumberIDMap[transactionSignature.signatureMetadata.schemeNumberID]!!
+        return Crypto.doVerify(scheme, transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
     /**
@@ -592,7 +610,8 @@ object Crypto {
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
-     * @throws IllegalArgumentException if the requested signature scheme is not supported.
+     * @throws IllegalArgumentException if the requested signature scheme is not supported or
+     * the public key cannot be validated.
      */
     @JvmStatic
     @Throws(SignatureException::class)
@@ -600,6 +619,8 @@ object Crypto {
         require(isSupportedSignatureScheme(signatureScheme)) {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
+        // Required for signatureSchemes that can support multiple key types/sizes, such as ECDSA (R1 and K1 curves).
+        require (validatePublicKey(signatureScheme, publicKey)) { "Public key: ${publicKey.toStringShort()} is not valid" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         signature.initVerify(publicKey)
         signature.update(clearData)
@@ -911,6 +932,7 @@ object Crypto {
         return when (key) {
             is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
             is BCRSAPublicKey, is BCSphincs256PublicKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+            is ECPublicKeyImpl -> publicKeyOnCurve(signatureScheme, decodePublicKey(key.encoded)) // If Java's default EC implementation, convert to BC.
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
     }
