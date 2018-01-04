@@ -10,7 +10,17 @@ import net.corda.core.serialization.CordaSerializable
  */
 @DoNotImplement
 interface FlowLogicRefFactory {
+    /**
+     * Construct a FlowLogicRef. This is intended for cases where the calling code has the relevant class already
+     * and can provide it directly.
+     */
+    @Deprecated("This should be avoided, and the version which takes a class name used instead to avoid requiring the class on the classpath to deserialize calling code")
     fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
+    /**
+     * Construct a FlowLogicRef. This is intended for cases where the calling code does not want to require the flow
+     * class on the classpath for all cases where the calling code is loaded.
+     */
+    fun create(flowClassName: String, vararg args: Any?): FlowLogicRef
     fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
     fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*>
 }

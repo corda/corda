@@ -141,7 +141,7 @@ class ExplorerSimulation(private val options: OptionSet) {
                         it.startFlow(::CashIssueAndPaymentFlow, request).log(i, "${request.amount.token}Issuer")
                     }
                     is ExitRequest -> issuers[request.amount.token]?.let {
-                        println("${Instant.now()} [$i] EXITING ${request.amount} with ref ${request.issueRef}")
+                        println("${Instant.now()} [$i] EXITING ${request.amount} with ref ${request.issuerRef}")
                         it.startFlow(::CashExitFlow, request).log(i, "${request.amount.token}Exit")
                     }
                     else -> throw IllegalArgumentException("Unsupported command: $request")
