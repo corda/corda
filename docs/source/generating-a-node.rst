@@ -34,38 +34,8 @@ set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
 * Organizational-unit (OU)
 * Common name (CN) (only used for service identities)
 
-The name must also obey the following constraints:
-
-* The organisation, locality and country attributes are present
-
-    * The state, organisational-unit and common name attributes are optional
-
-* The fields of the name have the following maximum character lengths:
-
-    * Common name: 64
-    * Organisation: 128
-    * Organisation unit: 64
-    * Locality: 64
-    * State: 64
-
-* The country attribute is a valid ISO 3166-1 two letter code in upper-case
-
-* All attributes must obey the following constraints:
-
-    * Upper-case first letter
-    * Has at least two letters
-    * No leading or trailing whitespace
-    * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
-    * Is in NFKC normalization form
-    * Does not contain the null character
-    * Only the latin, common and inherited unicode scripts are supported
-
-* The organisation field of the name also obeys the following constraints:
-
-    * No double-spacing
-
-        * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
-          character confusability attacks
+Full detailed specification of the allowed name attributes are described in :doc:`Network Permissioning - Distinguished
+Names <permissioning-node-name>`.
 
 The Cordform task
 -----------------
