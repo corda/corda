@@ -21,7 +21,6 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.chooseIdentity
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
