@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -76,7 +77,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             obj: List<*>,
             schemas: SerializationSchemas,
             input: DeserializationInput) : Any = ifThrowsAppend({ clazz.typeName }){
-        logger.trace ("Calling construction based construction for ${clazz.typeName}")
+        logger.trace { "Calling construction based construction for ${clazz.typeName}" }
 
         return construct(obj.zip(propertySerializers.getters).map { it.second.readProperty(it.first, schemas, input) })
     }
@@ -85,7 +86,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             obj: List<*>,
             schemas: SerializationSchemas,
             input: DeserializationInput) : Any = ifThrowsAppend({ clazz.typeName }){
-        logger.trace ("Calling setter based construction for ${clazz.typeName}")
+        logger.trace { "Calling setter based construction for ${clazz.typeName}" }
 
         val instance : Any = javaConstructor?.newInstance() ?: throw NotSerializableException (
                 "Failed to instantiate instance of object $clazz")
@@ -112,7 +113,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     private fun generateProvides(): List<String> = interfaces.map { nameForType(it) }
 
     fun construct(properties: List<Any?>): Any {
-        logger.debug { "Calling constructor: '$javaConstructor' with properties '$properties'" }
+        logger.trace { "Calling constructor: '$javaConstructor' with properties '$properties'" }
 
         return javaConstructor?.newInstance(*properties.toTypedArray()) ?:
                 throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
