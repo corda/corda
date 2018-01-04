@@ -3,6 +3,7 @@
 package net.corda.testing.driver
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -30,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHandles: CordaFuture<List<NodeHandle>>)
 
+@DoNotImplement
 sealed class NodeHandle {
     abstract val nodeInfo: NodeInfo
     /**
@@ -90,6 +92,7 @@ data class WebserverHandle(
         val process: Process
 )
 
+@DoNotImplement
 sealed class PortAllocation {
     abstract fun nextPort(): Int
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
