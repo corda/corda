@@ -24,6 +24,7 @@ import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.util.*
@@ -99,6 +100,7 @@ class NotaryServiceTests {
         assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
+    @Ignore("Only applies to deterministic signature schemes (e.g. EdDSA) and when deterministic metadata is attached (no timestamps or nonces)")
     @Test
     fun `should sign identical transaction multiple times (signing is idempotent)`() {
         val stx = run {

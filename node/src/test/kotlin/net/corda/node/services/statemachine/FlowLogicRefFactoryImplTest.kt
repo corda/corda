@@ -1,17 +1,20 @@
-package net.corda.node.services.events
+package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.IllegalFlowLogicException
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.core.flows.SchedulableFlow
 import org.junit.Test
 import java.time.Duration
+import kotlin.reflect.jvm.jvmName
+import kotlin.test.assertEquals
 
-class FlowLogicRefTest {
+class FlowLogicRefFactoryImplTest {
 
     data class ParamType1(val value: Int)
     data class ParamType2(val value: String)
 
     @Suppress("UNUSED_PARAMETER", "unused") // Things are used via reflection.
+    @SchedulableFlow
     class KotlinFlowLogic(A: ParamType1, b: ParamType2) : FlowLogic<Unit>() {
         constructor() : this(ParamType1(1), ParamType2("2"))
 
@@ -26,6 +29,7 @@ class FlowLogicRefTest {
         override fun call() = Unit
     }
 
+    @SchedulableFlow
     class KotlinNoArgFlowLogic : FlowLogic<Unit>() {
         override fun call() = Unit
     }
@@ -37,18 +41,18 @@ class FlowLogicRefTest {
     private val flowLogicRefFactory = FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl::class.java.classLoader)
     @Test
     fun `create kotlin no arg`() {
-        flowLogicRefFactory.createForRPC(KotlinNoArgFlowLogic::class.java)
+        flowLogicRefFactory.create(KotlinNoArgFlowLogic::class.jvmName)
     }
 
     @Test
-    fun `create kotlin`() {
+    fun `should create kotlin types`() {
         val args = mapOf(Pair("A", ParamType1(1)), Pair("b", ParamType2("Hello Jack")))
         flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
     fun `create primary`() {
-        flowLogicRefFactory.createForRPC(KotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
+        flowLogicRefFactory.create(KotlinFlowLogic::class.jvmName, ParamType1(1), ParamType2("Hello Jack"))
     }
 
     @Test
@@ -76,6 +80,6 @@ class FlowLogicRefTest {
 
     @Test(expected = IllegalFlowLogicException::class)
     fun `create for non-schedulable flow logic`() {
-        flowLogicRefFactory.create(NonSchedulableFlow::class.java)
+        flowLogicRefFactory.create(NonSchedulableFlow::class.jvmName)
     }
 }

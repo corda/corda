@@ -10,7 +10,7 @@ class ErrorMessagesTests {
     }
 
     private fun errMsg(property:String, testname: String) =
-            "Property '$property' or it's getter is non public, this renders class 'class $testname\$C' unserializable -> class $testname\$C"
+            "Property '$property' or its getter is non public, this renders class 'class $testname\$C' unserializable -> class $testname\$C"
 
     @Test
     fun privateProperty() {
