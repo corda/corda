@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
-import net.corda.vega.flows.SimmRevaluation
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
@@ -32,7 +31,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
     val valuer: AbstractParty get() = participants[0]
 
     override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity {
-        val flow = flowLogicRefFactory.create(SimmRevaluation.Initiator::class.java, thisStateRef, LocalDate.now())
+        val flow = flowLogicRefFactory.create("net.corda.vega.flows.SimmRevaluation\$Initiator", thisStateRef, LocalDate.now())
         return ScheduledActivity(flow, LocalDate.now().plus(1, ChronoUnit.DAYS).atStartOfDay().toInstant(ZoneOffset.UTC))
     }
 
