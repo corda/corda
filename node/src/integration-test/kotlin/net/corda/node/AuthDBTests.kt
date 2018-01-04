@@ -153,7 +153,7 @@ class AuthDBTests : NodeBasedTest() {
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with incorrect password should fail") {
-            client.start("user2", encodePassword("bar"))
+            client.start("user2", "bar")
         }
 
         db.insert(UserAndRoles(
