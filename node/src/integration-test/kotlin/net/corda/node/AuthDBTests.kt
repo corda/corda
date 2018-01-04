@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
@@ -11,13 +11,12 @@ import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityConfiguration
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -25,117 +24,20 @@ import java.sql.DriverManager
 import java.sql.Statement
 import kotlin.test.assertFailsWith
 
-private class PasswordEncoder(private val format: PasswordEncryption = PasswordEncryption.NONE) {
-
-    operator fun invoke(s: String) = when (format) {
-        PasswordEncryption.NONE -> s
-        PasswordEncryption.SHIRO_1_CRYPT -> hardCodedHashes[s]!!
-    }
-
-    private companion object {
-        val hardCodedHashes = mapOf(
-           "foo" to "\$shiro1\$SHA-256$500000\$WSiEVj6q8d02sFcCk1dkoA==\$MBkU/ghdD9ovoDerdzNfkXdP9Bdhmok7tidvVIqGzcA=",
-           "bar" to "\$shiro1\$SHA-256$500000\$Q6dmdY1uVMm0LYAWaOHtCA==\$u7NbFaj9tHf2RTW54jedLPiOiGjJv0RVEPIjVquJuYY=",
-           "test" to "\$shiro1\$SHA-256$500000\$F6CWSFDDxGTlzvREwih8Gw==\$DQhyAPoUw3RdvNYJ1aubCnzEIXm+szGQ3HplaG+euz8="
-        )
-    }
-}
-
-abstract class UserAuthServiceTest : NodeBasedTest() {
+/*
+ * Starts Node's instance configured to load clients credentials and permissions from an external DB, then
+ * check authentication/authorization of RPC connections.
+ */
+class AuthDBTests : NodeBasedTest() {
 
     protected lateinit var node: StartedNode<Node>
     protected lateinit var client: CordaRPCClient
-
-    @Test
-    fun `login with correct credentials`() {
-        client.start("user", "foo")
-    }
-
-    @Test
-    fun `login with wrong credentials`() {
-        client.start("user", "foo")
-        assertFailsWith(
-                ActiveMQSecurityException::class,
-                "Login with incorrect password should fail") {
-            client.start("user", "bar")
-        }
-        assertFailsWith(
-                ActiveMQSecurityException::class,
-                "Login with unknown username should fail") {
-            client.start("X", "foo")
-        }
-    }
-
-    @Test
-    fun `check flow permissions are respected`() {
-        client.start("user", "foo").use {
-            val proxy = it.proxy
-            proxy.startFlowDynamic(DummyFlow::class.java)
-            proxy.startTrackedFlowDynamic(DummyFlow::class.java)
-            proxy.startFlow(::DummyFlow)
-            assertFailsWith(
-                    PermissionException::class,
-                    "This user should not be authorized to start flow `CashIssueFlow`") {
-                proxy.startFlowDynamic(CashIssueFlow::class.java)
-            }
-            assertFailsWith(
-                    PermissionException::class,
-                    "This user should not be authorized to start flow `CashIssueFlow`") {
-                proxy.startTrackedFlowDynamic(CashIssueFlow::class.java)
-            }
-        }
-    }
-
-    @Test
-    fun `check permissions on RPC calls are respected`() {
-        client.start("user", "foo").use {
-            val proxy = it.proxy
-            proxy.stateMachinesFeed()
-            assertFailsWith(
-                    PermissionException::class,
-                    "This user should not be authorized to call 'nodeInfo'") {
-                proxy.nodeInfo()
-            }
-        }
-    }
-
-    @StartableByRPC
-    @InitiatingFlow
-    class DummyFlow : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() = Unit
-    }
-}
-
-class UserAuthServiceEmbedded : UserAuthServiceTest() {
-
-    private val rpcUsers = listOf(User("user", "foo", permissions = setOf(
-            Permissions.startFlow<DummyFlow>(),
-            Permissions.invokeRpc("vaultQueryBy"),
-            Permissions.invokeRpc(CordaRPCOps::stateMachinesFeed),
-            Permissions.invokeRpc("vaultQueryByCriteria"))))
-
-    @Before
-    fun setup() {
-        val encodePassword = PasswordEncoder(PasswordEncryption.SHIRO_1_CRYPT)
-        val securityConfig = SecurityConfiguration(
-               authService = SecurityConfiguration.AuthService.fromUsers(
-                       users = rpcUsers.map { it.copy (password = encodePassword(it.password))},
-                       encryption = PasswordEncryption.SHIRO_1_CRYPT))
-        val configOverrides = mapOf("security" to securityConfig.toConfig().root().unwrapped())
-        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
-    }
-}
-
-class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
-
     private val cacheExpireAfterSecs: Long = 1
-    private val encodePassword = PasswordEncoder(format = PasswordEncryption.SHIRO_1_CRYPT)
+    private val passwordEncryption = PasswordEncryption.SHIRO_1_CRYPT
     private val db = UsersDB(
             name = "SecurityDataSourceTestDB",
             users = listOf(UserAndRoles(username = "user",
-                    password = encodePassword("foo"),
+                    password = encodePassword("foo", passwordEncryption),
                     roles = listOf("default"))),
             roleAndPermissions = listOf(
                     RoleAndPermissions(
@@ -180,7 +82,60 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
     }
 
     @Test
-    fun `Add new users on-the-fly`() {
+    fun `login with correct credentials`() {
+        client.start("user", "foo")
+    }
+
+    @Test
+    fun `login with wrong credentials`() {
+        client.start("user", "foo")
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user", "bar")
+        }
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with unknown username should fail") {
+            client.start("X", "foo")
+        }
+    }
+
+    @Test
+    fun `check flow permissions are respected`() {
+        client.start("user", "foo").use {
+            val proxy = it.proxy
+            proxy.startFlowDynamic(DummyFlow::class.java)
+            proxy.startTrackedFlowDynamic(DummyFlow::class.java)
+            proxy.startFlow(AuthDBTests::DummyFlow)
+            assertFailsWith(
+                    PermissionException::class,
+                    "This user should not be authorized to start flow `CashIssueFlow`") {
+                proxy.startFlowDynamic(CashIssueFlow::class.java)
+            }
+            assertFailsWith(
+                    PermissionException::class,
+                    "This user should not be authorized to start flow `CashIssueFlow`") {
+                proxy.startTrackedFlowDynamic(CashIssueFlow::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `check permissions on RPC calls are respected`() {
+        client.start("user", "foo").use {
+            val proxy = it.proxy
+            proxy.stateMachinesFeed()
+            assertFailsWith(
+                    PermissionException::class,
+                    "This user should not be authorized to call 'nodeInfo'") {
+                proxy.nodeInfo()
+            }
+        }
+    }
+
+    @Test
+    fun `Add new users dynamically`() {
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with incorrect password should fail") {
@@ -235,15 +190,27 @@ class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
         }
     }
 
+    @StartableByRPC
+    @InitiatingFlow
+    class DummyFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = Unit
+    }
+
     @After
     fun tearDown() {
         db.close()
     }
+
+    private fun encodePassword(s: String) = encodePassword(s, passwordEncryption)
 }
 
 private data class UserAndRoles(val username: String, val password: String, val roles: List<String>)
 private data class RoleAndPermissions(val role: String, val permissions: List<String>)
 
+/*
+ * Manage in-memory DB mocking a users database with the schema expected by Node's security manager
+ */
 private class UsersDB : AutoCloseable {
 
     val jdbcUrl: String
@@ -277,12 +244,6 @@ private class UsersDB : AutoCloseable {
     fun addRoleToUser(username: String, role: String) {
         session {
             it.execute("INSERT INTO user_roles VALUES ('$username', '$role')")
-        }
-    }
-
-    fun deleteRole(role: String) {
-        session {
-            it.execute("DELETE FROM role_permissions WHERE role_name = '$role'")
         }
     }
 
@@ -327,3 +288,21 @@ private class UsersDB : AutoCloseable {
         }
     }
 }
+
+/*
+ * Sample of hardcoded hashes to watch for format backward compatibility
+ */
+private val hashedPasswords = mapOf(
+        PasswordEncryption.SHIRO_1_CRYPT to mapOf(
+                "foo" to "\$shiro1\$SHA-256$500000\$WSiEVj6q8d02sFcCk1dkoA==\$MBkU/ghdD9ovoDerdzNfkXdP9Bdhmok7tidvVIqGzcA=",
+                "bar" to "\$shiro1\$SHA-256$500000\$Q6dmdY1uVMm0LYAWaOHtCA==\$u7NbFaj9tHf2RTW54jedLPiOiGjJv0RVEPIjVquJuYY=",
+                "test" to "\$shiro1\$SHA-256$500000\$F6CWSFDDxGTlzvREwih8Gw==\$DQhyAPoUw3RdvNYJ1aubCnzEIXm+szGQ3HplaG+euz8="))
+
+/*
+ * A functional object for producing password encoded according to the given scheme.
+ */
+private fun encodePassword(s: String, format: PasswordEncryption) = when (format) {
+        PasswordEncryption.NONE -> s
+        PasswordEncryption.SHIRO_1_CRYPT -> hashedPasswords[format]!![s] ?:
+            DefaultPasswordService().encryptPassword(s.toCharArray())
+    }

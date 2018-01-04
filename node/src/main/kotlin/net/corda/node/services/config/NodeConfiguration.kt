@@ -200,7 +200,7 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
             // Cache parameters
             data class Cache(val expireAfterSecs: Long, val maxEntries: Long) {
                 init {
-                    require(expireAfterSecs > 0) {
+                    require(expireAfterSecs >= 0) {
                         "Expected positive value for 'cache.expireAfterSecs'"
                     }
                     require(maxEntries > 0) {
