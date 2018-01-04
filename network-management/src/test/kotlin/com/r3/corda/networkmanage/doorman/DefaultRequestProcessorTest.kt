@@ -10,24 +10,23 @@ import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
-import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.junit.Test
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 
 class DefaultRequestProcessorTest : TestBase() {
     @Test
     fun `get response`() {
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val cert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(locality = "London", organisation = "Test", country = "GB"), keyPair)
+        val cert = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Test,L=London,C=GB"), keyPair)
 
         val requestStorage: CertificationRequestStorage = mock {
             on { getRequest("New") }.thenReturn(certificateSigningRequest())
-            on { getRequest("Signed") }.thenReturn(certificateSigningRequest(status = RequestStatus.SIGNED, certData = certificateData("", CertificateStatus.VALID, buildCertPath(cert.toX509Certificate()))))
+            on { getRequest("Signed") }.thenReturn(certificateSigningRequest(status = RequestStatus.SIGNED, certData = certificateData("", CertificateStatus.VALID, buildCertPath(cert))))
             on { getRequest("Rejected") }.thenReturn(certificateSigningRequest(status = RequestStatus.REJECTED, remark = "Random reason"))
         }
         val signer: LocalSigner = mock()
@@ -35,15 +34,15 @@ class DefaultRequestProcessorTest : TestBase() {
 
         assertEquals(CertificateResponse.NotReady, requestProcessor.getResponse("random"))
         assertEquals(CertificateResponse.NotReady, requestProcessor.getResponse("New"))
-        assertEquals(CertificateResponse.Ready(buildCertPath(cert.toX509Certificate())), requestProcessor.getResponse("Signed"))
+        assertEquals(CertificateResponse.Ready(buildCertPath(cert)), requestProcessor.getResponse("Signed"))
         assertEquals(CertificateResponse.Unauthorised("Random reason"), requestProcessor.getResponse("Rejected"))
     }
 
     @Test
     fun `process request`() {
-        val request1 = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Test1", country = "GB"), "my@email.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        val request2 = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Test2", country = "GB"), "my@email.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        val request3 = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Test3", country = "GB"), "my@email.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val (request1, request2, request3) = (1..3).map {
+            X509Utilities.createCertificateSigningRequest(X500Principal("O=Test1,L=London,C=GB"), "my@email.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        }
 
         val requestStorage: CertificationRequestStorage = mock {
             on { getRequests(RequestStatus.APPROVED) }.thenReturn(listOf(

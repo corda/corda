@@ -39,7 +39,10 @@ class JiraCsrHandlerTest {
     private lateinit var certificateResponse: CertificateResponse.Ready
 
     private val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val pkcS10CertificationRequest = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "LegalName", country = "GB"), "my@mail.com", keyPair)
+    private val pkcS10CertificationRequest = X509Utilities.createCertificateSigningRequest(
+            CordaX500Name(locality = "London", organisation = "LegalName", country = "GB").x500Principal,
+            "my@mail.com",
+            keyPair)
 
     @Before
     fun setup() {

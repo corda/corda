@@ -13,7 +13,6 @@ import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
@@ -188,8 +187,8 @@ fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPriv
     val selfSignKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     // TODO Make the cert subject configurable
     val selfSignCert = X509Utilities.createSelfSignedCACertificate(
-            CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null),
-            selfSignKey).cert
+            CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null).x500Principal,
+            selfSignKey)
     rootStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
     rootStore.save(rootStoreFile, rootKeystorePassword)
 
@@ -226,11 +225,20 @@ fun generateCAKeyPair(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass:
         exitProcess(1)
     }
 
-    val intermediateKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val intermediateCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootKeyAndCert.certificate, rootKeyAndCert.keyPair,
-            CordaX500Name(commonName = "Corda Intermediate CA", organisation = "R3 Ltd", organisationUnit = "Corda", locality = "London", country = "GB", state = null), intermediateKey.public)
-    keyStore.addOrReplaceKey(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateKey.private,
-            caPrivateKeyPassword.toCharArray(), arrayOf(intermediateCert, rootKeyAndCert.certificate))
+    val intermediateKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val intermediateCert = X509Utilities.createCertificate(
+            CertificateType.INTERMEDIATE_CA,
+            rootKeyAndCert.certificate,
+            rootKeyAndCert.keyPair,
+            CordaX500Name(commonName = "Corda Intermediate CA", organisation = "R3 Ltd", organisationUnit = "Corda", locality = "London", country = "GB", state = null).x500Principal,
+            intermediateKeyPair.public
+    )
+    keyStore.addOrReplaceKey(
+            X509Utilities.CORDA_INTERMEDIATE_CA,
+            intermediateKeyPair.private,
+            caPrivateKeyPassword.toCharArray(),
+            arrayOf(intermediateCert, rootKeyAndCert.certificate)
+    )
     keyStore.save(keystoreFile, keystorePassword)
     println("Intermediate CA keypair and certificate stored in $keystoreFile.")
     println(loadKeyStore(keystoreFile, keystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey)

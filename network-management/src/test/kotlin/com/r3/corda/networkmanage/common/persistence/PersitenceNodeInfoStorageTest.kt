@@ -6,15 +6,16 @@ import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.internal.TestNodeInfoBuilder
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.signWith
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
@@ -22,6 +23,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.PrivateKey
+import java.security.cert.X509Certificate
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -31,13 +33,14 @@ class PersitenceNodeInfoStorageTest : TestBase() {
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
     private lateinit var persistence: CordaPersistence
 
-    private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
-    private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, CordaX500Name(commonName = "Corda Node Intermediate CA", locality = "London", organisation = "R3 LTD", country = "GB"), intermediateCAKey.public)
+    private lateinit var rootCaCert: X509Certificate
+    private lateinit var intermediateCa: CertificateAndKeyPair
 
     @Before
     fun startDb() {
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+        rootCaCert = rootCa.certificate
+        this.intermediateCa = intermediateCa
         persistence = configureDatabase(MockServices.makeTestDataSourceProperties())
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateRequestStorage(persistence)
@@ -53,9 +56,14 @@ class PersitenceNodeInfoStorageTest : TestBase() {
         // Create node info.
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val name = CordaX500Name(organisation = "Test", locality = "London", country = "GB")
-        val nodeCaCert = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, name, keyPair.public)
+        val nodeCaCert = X509Utilities.createCertificate(
+                CertificateType.NODE_CA,
+                intermediateCa.certificate,
+                intermediateCa.keyPair,
+                name.x500Principal,
+                keyPair.public)
 
-        val request = X509Utilities.createCertificateSigningRequest(name, "my@mail.com", keyPair)
+        val request = X509Utilities.createCertificateSigningRequest(name.x500Principal, "my@mail.com", keyPair)
 
         val requestId = requestStorage.saveRequest(request)
         requestStorage.markRequestTicketCreated(requestId)
@@ -63,12 +71,15 @@ class PersitenceNodeInfoStorageTest : TestBase() {
 
         assertNull(nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString())))
 
-        requestStorage.putCertificatePath(requestId, buildCertPath(nodeCaCert.cert, intermediateCACert.cert, rootCACert.cert), listOf(CertificationRequestStorage.DOORMAN_SIGNATURE))
+        requestStorage.putCertificatePath(
+                requestId,
+                buildCertPath(nodeCaCert, intermediateCa.certificate, rootCaCert),
+                listOf(CertificationRequestStorage.DOORMAN_SIGNATURE))
 
         val storedCertPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString()))
         assertNotNull(storedCertPath)
 
-        assertEquals(nodeCaCert.cert, storedCertPath!!.certificates.first())
+        assertEquals(nodeCaCert, storedCertPath!!.certificates.first())
     }
 
     @Test

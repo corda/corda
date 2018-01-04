@@ -3,7 +3,6 @@ package com.r3.corda.networkmanage.hsm.utils
 import CryptoServerJCE.CryptoServerProvider
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.x500Name
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -81,7 +80,7 @@ object X509Utilities {
         cert.checkValidity(Date())
         cert.verify(pubKey)
 
-        return CertificateAndKeyPair(cert.toX509CertHolder(), KeyPair(pubKey, keyPair.private))
+        return CertificateAndKeyPair(cert, KeyPair(pubKey, keyPair.private))
     }
 
     /**
@@ -109,7 +108,7 @@ object X509Utilities {
     fun retrieveCertificateAndKeys(certificateKeyName: String, privateKeyPassword: String, keyStore: KeyStore): CertificateAndKeyPair {
         val privateKey = keyStore.getKey(certificateKeyName, privateKeyPassword.toCharArray()) as PrivateKey
         val publicKey = keyStore.getCertificate(certificateKeyName).publicKey
-        val certificate = keyStore.getX509Certificate(certificateKeyName).toX509CertHolder()
+        val certificate = keyStore.getX509Certificate(certificateKeyName)
         return CertificateAndKeyPair(certificate, getCleanEcdsaKeyPair(publicKey, privateKey))
     }
 
@@ -160,7 +159,7 @@ object X509Utilities {
         cert.checkValidity(Date())
         cert.verify(certificateAuthority.keyPair.public)
 
-        return CertificateAndKeyPair(cert.toX509CertHolder(), KeyPair(pubKey, keyPair.private))
+        return CertificateAndKeyPair(cert, KeyPair(pubKey, keyPair.private))
     }
 
     /**
@@ -186,7 +185,7 @@ object X509Utilities {
         val subject = CordaX500Name.parse(jcaRequest.subject.toString()).x500Name
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(jcaRequest.publicKey.encoded))
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
-        val builder = JcaX509v3CertificateBuilder(issuerCertificate.subject, serial, validityWindow.first, validityWindow.second, subject, jcaRequest.publicKey)
+        val builder = JcaX509v3CertificateBuilder(issuerCertificate, serial, validityWindow.first, validityWindow.second, subject, jcaRequest.publicKey)
                 .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
                 .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)

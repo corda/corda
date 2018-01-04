@@ -4,9 +4,6 @@ import com.r3.corda.networkmanage.common.signer.Signer
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.withCert
 import net.corda.core.crypto.sign
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
@@ -18,6 +15,7 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
+import javax.security.auth.x500.X500Principal
 
 /**
  *  The [LocalSigner] class signs [PKCS10CertificationRequest] using provided CA key pair and certificate path.
@@ -35,12 +33,12 @@ class LocalSigner(private val caKeyPair: KeyPair, private val caCertPath: Array<
                 arrayOf())
         val nodeCaCert = X509Utilities.createCertificate(
                 CertificateType.NODE_CA,
-                caCertPath.first().toX509CertHolder(),
+                caCertPath[0],
                 caKeyPair,
-                CordaX500Name.parse(request.subject.toString()),
+                X500Principal(request.subject.encoded),
                 request.publicKey,
                 nameConstraints = nameConstraints)
-        return buildCertPath(nodeCaCert.cert, *caCertPath)
+        return buildCertPath(nodeCaCert, *caCertPath)
     }
 
     override fun sign(data: ByteArray): DigitalSignatureWithCert {
