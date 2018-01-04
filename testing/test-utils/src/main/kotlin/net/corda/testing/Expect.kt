@@ -1,6 +1,7 @@
 package net.corda.testing
 
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.DoNotImplement
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
@@ -189,6 +190,7 @@ fun <S, E : Any> S.genericExpectEvents(
     finishFuture.getOrThrow()
 }
 
+@DoNotImplement
 sealed class ExpectCompose<out E> {
     internal class Single<out E, T : E>(val expect: Expect<E, T>) : ExpectCompose<E>()
     internal class Sequential<out E>(val sequence: List<ExpectCompose<E>>) : ExpectCompose<E>()

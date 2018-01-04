@@ -8,13 +8,13 @@ import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
+import java.security.cert.X509Certificate
 
 /**
  * Create the node and SSL key stores needed by a node. The node key store will be populated with a node CA cert (using
  * the given legal name), and the SSL key store will store the TLS cert which is a sub-cert of the node CA.
  */
-fun SSLConfiguration.createDevKeyStores(rootCert: X509CertificateHolder, intermediateCa: CertificateAndKeyPair, legalName: CordaX500Name) {
+fun SSLConfiguration.createDevKeyStores(rootCert: X509Certificate, intermediateCa: CertificateAndKeyPair, legalName: CordaX500Name) {
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
 
     loadOrCreateKeyStore(nodeKeystore, keyStorePassword).apply {
@@ -27,7 +27,7 @@ fun SSLConfiguration.createDevKeyStores(rootCert: X509CertificateHolder, interme
     }
 
     val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName, tlsKeyPair.public)
+    val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)
 
     loadOrCreateKeyStore(sslKeystore, keyStorePassword).apply {
         addOrReplaceKey(
@@ -50,7 +50,7 @@ fun createDevNodeCa(intermediateCa: CertificateAndKeyPair, legalName: CordaX500N
             CertificateType.NODE_CA,
             intermediateCa.certificate,
             intermediateCa.keyPair,
-            legalName,
+            legalName.x500Principal,
             keyPair.public,
             nameConstraints = nameConstraints)
     return CertificateAndKeyPair(cert, keyPair)

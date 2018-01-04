@@ -9,7 +9,6 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.x500Name
 import net.corda.node.services.config.NodeConfiguration
@@ -26,6 +25,7 @@ import org.junit.Before
 import org.junit.Test
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -129,9 +129,9 @@ class NetworkRegistrationHelperTest {
     @Test
     fun `wrong root cert in truststore`() {
         val wrongRootCert = X509Utilities.createSelfSignedCACertificate(
-                CordaX500Name("Foo", "MU", "GB"),
+                X500Principal("O=Foo,L=MU,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        saveTrustStoreWithRootCa(wrongRootCert.cert)
+        saveTrustStoreWithRootCa(wrongRootCert)
         val registrationHelper = createRegistrationHelper(createNodeCaCertPath())
         assertThatThrownBy {
             registrationHelper.buildKeystore()
@@ -147,10 +147,10 @@ class NetworkRegistrationHelperTest {
                 type,
                 intermediateCa.certificate,
                 intermediateCa.keyPair,
-                legalName,
+                legalName.x500Principal,
                 keyPair.public,
                 nameConstraints = nameConstraints)
-        return arrayOf(nodeCaCert.cert, intermediateCa.certificate.cert, rootCa.certificate.cert)
+        return arrayOf(nodeCaCert, intermediateCa.certificate, rootCa.certificate)
     }
 
     private fun createRegistrationHelper(response: Array<X509Certificate>): NetworkRegistrationHelper {

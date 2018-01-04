@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -120,7 +121,7 @@ class InMemoryMessagingNetwork internal constructor(
         }
     }
 
-    interface LatencyCalculator {
+    interface LatencyCalculator { // XXX: Used?
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
 
@@ -178,6 +179,7 @@ class InMemoryMessagingNetwork internal constructor(
     /**
      * Mock service loadbalancing
      */
+    @DoNotImplement
     sealed class ServicePeerAllocationStrategy {
         abstract fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A
         class Random(val random: SplittableRandom = SplittableRandom()) : ServicePeerAllocationStrategy() {

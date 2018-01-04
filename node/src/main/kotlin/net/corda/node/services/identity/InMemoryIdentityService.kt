@@ -4,15 +4,12 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -27,7 +24,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
 class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
-                              trustRoot: X509CertificateHolder) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
     }
@@ -35,14 +32,12 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
     /**
      * Certificate store for certificate authority and intermediary certificates.
      */
-    override val caCertStore: CertStore
-    override val trustRoot = trustRoot.cert
-    override val trustAnchor: TrustAnchor = TrustAnchor(this.trustRoot, null)
+    override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
+    override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
 
     init {
-        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(this.trustRoot)))
         keyToParties.putAll(identities.associateBy { it.owningKey })
         principalToParties.putAll(identities.associateBy { it.name })
     }
@@ -57,7 +52,7 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
             log.warn("Certificate path :")
             identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
-                log.warn("$space${certificate.toX509CertHolder().subject}")
+                log.warn("$space${(certificate as X509Certificate).subjectX500Principal}")
             }
             throw e
         }

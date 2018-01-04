@@ -1,5 +1,6 @@
 package net.corda.testing.dsl
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -14,6 +15,7 @@ import java.time.Instant
  * @param <R> The return type of [verifies]/[failsWith] and the like. It is generic so that we have control over whether
  * we want to enforce users to call these methods (see [EnforceVerifyOrFail]) or not.
  */
+@DoNotImplement
 interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     /**
      * A reference to the enclosing ledger{..}'s interpreter.

@@ -6,8 +6,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -32,7 +30,7 @@ class InMemoryIdentityServiceTests {
         val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
         val BOB_PUBKEY get() = bob.publicKey
-        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_TRUST_ROOT)
+        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_ROOT_CA.certificate)
     }
 
     @Rule
@@ -100,11 +98,11 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `assert unknown anonymous key is unrecognised`() {
         val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
+        val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Principal, rootKey)
         val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val service = createService()
         // TODO: Generate certificate with an EdDSA key rather than ECDSA
-        val identity = Party(rootCert.cert)
+        val identity = Party(rootCert)
         val txIdentity = AnonymousParty(txKey.public)
 
         assertFailsWith<UnknownAnonymousPartyException> {
@@ -159,8 +157,8 @@ class InMemoryIdentityServiceTests {
         }
 
         assertFailsWith<IllegalArgumentException> {
-            val owningKey = Crypto.decodePublicKey(DEV_CA.certificate.subjectPublicKeyInfo.encoded)
-            val subject = CordaX500Name.build(DEV_CA.certificate.cert.subjectX500Principal)
+            val owningKey = DEV_INTERMEDIATE_CA.certificate.publicKey
+            val subject = CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
             service.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
         }
     }
@@ -168,9 +166,14 @@ class InMemoryIdentityServiceTests {
     private fun createConfidentialIdentity(x500Name: CordaX500Name): Pair<PartyAndCertificate, PartyAndCertificate> {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public)
-        val txKey = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_LEGAL_IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
-        val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
+        val txKeyPair = Crypto.generateKeyPair()
+        val txCert = X509Utilities.createCertificate(
+                CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
+                issuer.certificate,
+                issuerKeyPair,
+                x500Name.x500Principal,
+                txKeyPair.public)
+        val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 

@@ -2,6 +2,7 @@ package net.corda.testing
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -62,6 +63,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     }
 }
 
+@DoNotImplement
 interface GlobalSerializationEnvironment : SerializationEnvironment {
     /** Unset this environment. */
     fun unset()

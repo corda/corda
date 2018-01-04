@@ -4,6 +4,7 @@ import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -490,6 +491,7 @@ fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy
 }
 
 private fun mockNodeConfiguration(): NodeConfiguration {
+    @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
     return rigorousMock<AbstractNodeConfiguration>().also {
         doReturn("cordacadevpass").whenever(it).keyStorePassword
