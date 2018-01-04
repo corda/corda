@@ -1,7 +1,6 @@
 package net.corda.core.crypto
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.bouncycastle.asn1.x500.X500Name
@@ -14,6 +13,7 @@ import java.security.KeyStore
 import java.security.cert.CertPathValidator
 import java.security.cert.CertPathValidatorException
 import java.security.cert.PKIXParameters
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -26,17 +26,22 @@ class X509NameConstraintsTest {
                 CertificateType.NODE_CA,
                 intermediateCa.certificate,
                 intermediateCa.keyPair,
-                CordaX500Name("Corda Client CA", "R3 Ltd", "London", "GB"),
+                CordaX500Name("Corda Client CA", "R3 Ltd", "London", "GB").x500Principal,
                 nodeCaKeyPair.public,
                 nameConstraints = nameConstraints)
 
         val keyPass = "password"
         val trustStore = KeyStore.getInstance(KEYSTORE_TYPE)
         trustStore.load(null, keyPass.toCharArray())
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate.cert)
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate)
 
         val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, subjectName, tlsKeyPair.public)
+        val tlsCert = X509Utilities.createCertificate(
+                CertificateType.TLS,
+                nodeCaCert,
+                nodeCaKeyPair,
+                X500Principal(subjectName.encoded),
+                tlsKeyPair.public)
 
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
         keyStore.load(null, keyPass.toCharArray())

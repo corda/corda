@@ -1,5 +1,6 @@
 package net.corda.testing.dsl
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
@@ -50,6 +51,7 @@ import kotlin.collections.set
  * will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
  * the triggered diagnostic.
  */
+@DoNotImplement
 sealed class EnforceVerifyOrFail {
     internal object Token : EnforceVerifyOrFail()
 }

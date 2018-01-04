@@ -2,9 +2,7 @@ package net.corda.node.utilities.registration
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -38,8 +36,10 @@ import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.CertPathValidatorException
 import java.security.cert.Certificate
+import java.security.cert.X509Certificate
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.security.auth.x500.X500Principal
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -59,14 +59,13 @@ class NodeRegistrationTest : IntegrationTest() {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val portAllocation = PortAllocation.Incremental(13000)
-    private val registrationHandler = RegistrationHandler(ROOT_CA)
-
+    private val registrationHandler = RegistrationHandler(DEV_ROOT_CA)
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort
 
     @Before
     fun startServer() {
-        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), ROOT_CA, "localhost", registrationHandler)
+        server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), DEV_ROOT_CA, "localhost", registrationHandler)
         serverHostAndPort = server.start()
     }
 
@@ -80,7 +79,7 @@ class NodeRegistrationTest : IntegrationTest() {
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
                 publishNotaries = { server.networkParameters = testNetworkParameters(it) },
-                rootCert = ROOT_CA.certificate.cert)
+                rootCert = DEV_ROOT_CA.certificate)
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -116,12 +115,12 @@ class NodeRegistrationTest : IntegrationTest() {
     @Test
     fun `node registration wrong root cert`() {
         val someRootCert = X509Utilities.createSelfSignedCACertificate(
-                CordaX500Name("Integration Test Corda Node Root CA", "R3 Ltd", "London", "GB"),
+                X500Principal("CN=Integration Test Corda Node Root CA,O=R3 Ltd,L=London,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
                 publishNotaries = { server.networkParameters = testNetworkParameters(it) },
-                rootCert = someRootCert.cert)
+                rootCert = someRootCert)
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -149,7 +148,7 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
         val (certPath, name) = createSignedClientCertificate(
                 certificationRequest,
                 rootCertAndKeyPair.keyPair,
-                arrayOf(rootCertAndKeyPair.certificate.cert))
+                arrayOf(rootCertAndKeyPair.certificate))
         require(!name.organisation.contains("\\s".toRegex())) { "Whitespace in the organisation name not supported" }
         certPaths[name.organisation] = certPath
         return Response.ok(name.organisation).build()
@@ -183,12 +182,12 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
         val name = CordaX500Name.parse(request.subject.toString())
         val nodeCaCert = X509Utilities.createCertificate(
                 CertificateType.NODE_CA,
-                caCertPath.first().toX509CertHolder(),
+                caCertPath[0] as X509Certificate ,
                 caKeyPair,
-                name,
+                name.x500Principal,
                 request.publicKey,
                 nameConstraints = null)
-        val certPath = X509CertificateFactory().generateCertPath(nodeCaCert.cert, *caCertPath)
+        val certPath = X509CertificateFactory().generateCertPath(nodeCaCert, *caCertPath)
         return Pair(certPath, name)
     }
 }

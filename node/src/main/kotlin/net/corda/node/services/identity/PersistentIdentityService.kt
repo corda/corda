@@ -5,8 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -16,7 +14,6 @@ import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -30,7 +27,6 @@ import javax.persistence.Lob
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
                                 vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
-    constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {
         private val log = contextLogger()
@@ -121,7 +117,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             log.warn(e.localizedMessage)
             log.warn("Path = ")
             identity.certPath.certificates.reversed().forEach {
-                log.warn(it.toX509CertHolder().subject.toString())
+                log.warn((it as X509Certificate).subjectX500Principal.toString())
             }
             throw e
         }

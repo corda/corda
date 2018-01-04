@@ -5,10 +5,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
@@ -39,10 +37,10 @@ object DevIdentityGenerator {
         // TODO The passwords for the dev key stores are spread everywhere and should be constants in a single location
         val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
         val intermediateCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-        val rootCert = caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
+        val rootCert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
 
         nodeSslConfig.certificatesDirectory.createDirectories()
-        nodeSslConfig.createDevKeyStores(rootCert.toX509CertHolder(), intermediateCa, legalName)
+        nodeSslConfig.createDevKeyStores(rootCert, intermediateCa, legalName)
 
         val keyStoreWrapper = KeyStoreWrapper(nodeSslConfig.nodeKeystore, nodeSslConfig.keyStorePassword)
         val identity = keyStoreWrapper.storeLegalIdentity(legalName, "$NODE_IDENTITY_ALIAS_PREFIX-private-key", Crypto.generateKeyPair())
@@ -62,16 +60,21 @@ object DevIdentityGenerator {
 
         keyPairs.zip(dirs) { keyPair, nodeDir ->
             val (serviceKeyCert, compositeKeyCert) = listOf(keyPair.public, compositeKey).map { publicKey ->
-                X509Utilities.createCertificate(CertificateType.SERVICE_IDENTITY, intermediateCa.certificate, intermediateCa.keyPair, notaryName, publicKey)
+                X509Utilities.createCertificate(
+                        CertificateType.SERVICE_IDENTITY,
+                        intermediateCa.certificate,
+                        intermediateCa.keyPair,
+                        notaryName.x500Principal,
+                        publicKey)
             }
             val distServKeyStoreFile = (nodeDir / "certificates").createDirectories() / "distributedService.jks"
             val keystore = loadOrCreateKeyStore(distServKeyStoreFile, "cordacadevpass")
-            keystore.setCertificateEntry("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert.cert)
+            keystore.setCertificateEntry("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert)
             keystore.setKeyEntry(
                     "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
                     keyPair.private,
                     "cordacadevkeypass".toCharArray(),
-                    arrayOf(serviceKeyCert.cert, intermediateCa.certificate.cert, rootCert))
+                    arrayOf(serviceKeyCert, intermediateCa.certificate, rootCert))
             keystore.save(distServKeyStoreFile, "cordacadevpass")
         }
 

@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
 import net.corda.core.internal.read
 import java.nio.file.Path
 import java.security.KeyPair
@@ -15,8 +14,13 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
     fun storeLegalIdentity(legalName: CordaX500Name, alias: String, keyPair: KeyPair): PartyAndCertificate {
         val nodeCaCertChain = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         val nodeCa = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
-        val identityCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, nodeCa.certificate, nodeCa.keyPair, legalName, keyPair.public)
-        val identityCertPath = X509CertificateFactory().generateCertPath(identityCert.cert, *nodeCaCertChain)
+        val identityCert = X509Utilities.createCertificate(
+                CertificateType.LEGAL_IDENTITY,
+                nodeCa.certificate,
+                nodeCa.keyPair,
+                legalName.x500Principal,
+                keyPair.public)
+        val identityCertPath = X509CertificateFactory().generateCertPath(identityCert, *nodeCaCertChain)
         // Assume key password = store password.
         keyStore.addOrReplaceKey(alias, keyPair.private, storePassword.toCharArray(), identityCertPath.certificates.toTypedArray())
         keyStore.save(storePath, storePassword)

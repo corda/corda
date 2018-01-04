@@ -3,8 +3,9 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.*
-import org.bouncycastle.cert.X509CertificateHolder
+import net.corda.core.internal.exists
+import net.corda.core.internal.read
+import net.corda.core.internal.write
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -75,18 +76,6 @@ fun loadKeyStore(input: InputStream, storePassword: String): KeyStore {
  * but for SSL purposes this is recommended.
  * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
  */
-fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<out X509CertificateHolder>) {
-    addOrReplaceKey(alias, key, password, chain.map { it.cert }.toTypedArray<Certificate>())
-}
-
-/**
- * Helper extension method to add, or overwrite any key data in store.
- * @param alias name to record the private key and certificate chain under.
- * @param key cryptographic key to store.
- * @param password password for unlocking the key entry in the future. This does not have to be the same password as any keys stored,
- * but for SSL purposes this is recommended.
- * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
- */
 fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<out Certificate>) {
     if (containsAlias(alias)) {
         this.deleteEntry(alias)
@@ -132,9 +121,9 @@ fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertif
  * @param keyPassword The password for the PrivateKey (not the store access password).
  */
 fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
-    val cert = getX509Certificate(alias).toX509CertHolder()
-    val publicKey = Crypto.toSupportedPublicKey(cert.subjectPublicKeyInfo)
-    return CertificateAndKeyPair(cert, KeyPair(publicKey, getSupportedKey(alias, keyPassword)))
+    val certificate = getX509Certificate(alias)
+    val publicKey = Crypto.toSupportedPublicKey(certificate.publicKey)
+    return CertificateAndKeyPair(certificate, KeyPair(publicKey, getSupportedKey(alias, keyPassword)))
 }
 
 /**

@@ -10,7 +10,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -18,14 +17,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import org.bouncycastle.asn1.DERSet
-import org.bouncycastle.asn1.pkcs.CertificationRequestInfo
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
 import java.security.PublicKey
 import java.security.SignatureException
-import java.security.cert.CertPath
 import java.util.*
 
 /**
