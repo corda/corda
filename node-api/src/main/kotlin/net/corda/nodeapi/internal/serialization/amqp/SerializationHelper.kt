@@ -92,7 +92,7 @@ private fun <T : Any> propertiesForSerializationFromConstructor(
             .mapValues { it.value[0] }
 
     if (properties.isNotEmpty() && kotlinConstructor.parameters.isEmpty()) {
-        return propertiesForSerializationFromGetters(properties, type, factory)
+        return propertiesForSerializationFromSetters(properties, type, factory)
     }
 
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
@@ -129,7 +129,7 @@ private fun <T : Any> propertiesForSerializationFromConstructor(
  * If we determine a class has a constructor that takes no parameters then check for pairs of getters / setters
  * and use those
  */
-private fun propertiesForSerializationFromGetters(
+private fun propertiesForSerializationFromSetters(
         properties : Map<String, PropertyDescriptor>,
         type: Type,
         factory: SerializerFactory): ConstructorDestructorMethods {
@@ -142,9 +142,9 @@ private fun propertiesForSerializationFromGetters(
 
         if (getter == null || setter == null) return@forEach
 
-        // NOTE: For now we're ignoring type mismatches. I.e. where the setter or getter type differs
-        // from the underlying property as in this case the BEAN inspector doesn't return them as a property
-        // and thus they arne't visible here
+        // NOTE: There is no need to check return and parameter types vs the underlying type for
+        // the getter / setter vs property as if there is a difference then that property isn't reported
+        // by the BEAN inspector and thus we don't consider that case here
 
         getters += PropertySerializer.make(property.key, getter, resolveTypeVariables(getter.genericReturnType, type),
                 factory)

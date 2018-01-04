@@ -76,7 +76,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             obj: List<*>,
             schemas: SerializationSchemas,
             input: DeserializationInput) : Any = ifThrowsAppend({ clazz.typeName }){
-        logger.debug { "Calling construction based construction" }
+        logger.trace ("Calling construction based construction for ${clazz.typeName}")
 
         return construct(obj.zip(propertySerializers.getters).map { it.second.readProperty(it.first, schemas, input) })
     }
@@ -85,7 +85,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             obj: List<*>,
             schemas: SerializationSchemas,
             input: DeserializationInput) : Any = ifThrowsAppend({ clazz.typeName }){
-        logger.debug { "Calling setter based construction" }
+        logger.trace ("Calling setter based construction for ${clazz.typeName}")
 
         val instance : Any = javaConstructor?.newInstance() ?: throw NotSerializableException (
                 "Failed to instantiate instance of object $clazz")
