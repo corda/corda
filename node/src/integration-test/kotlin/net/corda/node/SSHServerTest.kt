@@ -14,10 +14,10 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
-import net.corda.testing.IntegrationTest
-import net.corda.testing.IntegrationTestSchemas
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.driver.driver
-import net.corda.testing.toDatabaseSchemaName
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.ClassRule

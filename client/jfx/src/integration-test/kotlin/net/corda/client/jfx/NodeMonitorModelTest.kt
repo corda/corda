@@ -31,6 +31,9 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaNames
 import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
@@ -54,7 +57,7 @@ class NodeMonitorModelTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaNames("","_10000","_10003") }.flatten().toTypedArray())
+                .map { it.toDatabaseSchemaNames("", "_10000", "_10003") }.flatten().toTypedArray())
     }
 
     private fun setup(runTest: () -> Unit) {

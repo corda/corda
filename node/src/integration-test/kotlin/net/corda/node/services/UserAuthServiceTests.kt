@@ -17,9 +17,9 @@ import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.ALICE_NAME
-import net.corda.testing.IntegrationTestSchemas
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.toDatabaseSchemaName
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
 import org.junit.Before

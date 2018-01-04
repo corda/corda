@@ -18,7 +18,11 @@ import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.performance.div
+import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.InternalDriverDSL
 import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector

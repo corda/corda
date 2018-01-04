@@ -3,6 +3,9 @@ package net.corda.node
 import com.google.common.base.Stopwatch
 import net.corda.testing.*
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
