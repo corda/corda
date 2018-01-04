@@ -6,15 +6,6 @@ installation node administrators should not need to be aware of these, however i
 be managed by external tools (such as an existing PKI solution deployed within an organisation), in which case it is
 important to understand these constraints.
 
-There are a number of roles in Corda that certificates are used for:
-
-* Doorman (Intermediate CA)
-* Well known service identity (network map and notary)
-* Node CA
-* TLS
-* Well known legal identity
-* Confidential legal identity
-
 Extension
 ---------
 
@@ -23,9 +14,10 @@ and is non-critical, as it is safe for implementations outside of Corda nodes to
 contains a single ASN.1 integer identifying the type of identity the certificate is for:
 
 1. Doorman
-2. Well known service identity
-3. Node CA
-4. TLS
+2. Network map
+3. Service identity (such as a notary or oracle)
+3. Node certificate authority (from which the TLS and well known identity certificates are issued)
+4. Transport layer security
 5. Well known legal identity
 6. Confidential legal identity
 
