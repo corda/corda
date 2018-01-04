@@ -117,18 +117,19 @@ fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 
 // Allow Kotlin destructuring:
 // val (private, public) = keyPair
-/* The [PrivateKey] of this [KeyPair] .*/
+/* The [PrivateKey] of this [KeyPair]. */
 operator fun KeyPair.component1(): PrivateKey = this.private
-/* The [PublicKey] of this [KeyPair] .*/
+/* The [PublicKey] of this [KeyPair]. */
 operator fun KeyPair.component2(): PublicKey = this.public
 
-/** A simple wrapper that will make it easier to swap out the EC algorithm we use in future. */
+/** A simple wrapper that will make it easier to swap out the signature algorithm we use in future. */
 fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 
 /**
  * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
  * you want hard-coded private keys.
- * This currently works for the default signature scheme EdDSA ed25519 only.
+ * @param entropy a [BigInteger] value.
+ * @return a deterministically generated [KeyPair] for the [Crypto.DEFAULT_SIGNATURE_SCHEME].
  */
 fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 

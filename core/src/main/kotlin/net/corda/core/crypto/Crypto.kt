@@ -30,6 +30,7 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.jce.spec.ECParameterSpec
 import org.bouncycastle.jce.spec.ECPrivateKeySpec
 import org.bouncycastle.jce.spec.ECPublicKeySpec
@@ -808,7 +809,7 @@ object Crypto {
     /**
      * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
      * and other cases where you want hard-coded private keys.
-     * Currently, [EDDSA_ED25519_SHA512] is the sole scheme supported for this operation.
+     * Currently, the following schemes are supported: [EDDSA_ED25519_SHA512], [ECDSA_SECP256R1_SHA256] and [ECDSA_SECP256K1_SHA256].
      * @param signatureScheme a supported [SignatureScheme], see [Crypto].
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
@@ -818,6 +819,7 @@ object Crypto {
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
             EDDSA_ED25519_SHA512 -> deriveEdDSAKeyPairFromEntropy(entropy)
+            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> deriveECDSAKeyPairFromEntropy(signatureScheme, entropy)
             else -> throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair " +
                     "generation: ${signatureScheme.schemeCodeName}")
         }
@@ -832,12 +834,41 @@ object Crypto {
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // Custom key pair generator from entropy.
+    // The BigIntenger.toByteArray() uses the two's-complement representation.
+    // The entropy is transformed to a byte array in big-endian byte-order and
+    // only the first ed25519.field.getb() / 8 bytes are used.
     private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
         val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val priv = EdDSAPrivateKeySpec(bytes, params)
         val pub = EdDSAPublicKeySpec(priv.a, params)
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+    }
+
+    // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
+    // but the accepted range of the input entropy is more relaxed:
+    // 2 <= entropy < N, where N is the order of base-point G.
+    private fun deriveECDSAKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+        val parameterSpec = signatureScheme.algSpec as ECNamedCurveParameterSpec
+
+        // The entropy might be a negative number and/or out of range (e.g. PRNG output).
+        // In such cases we retry with hash(currentEntropy).
+        while (entropy < ECConstants.TWO || entropy >= parameterSpec.n) {
+            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
+        }
+
+        val privateKeySpec = ECPrivateKeySpec(entropy, parameterSpec)
+        val priv = BCECPrivateKey("EC", privateKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, entropy)
+        while (pointQ.isInfinity) {
+            // Instead of throwing an exception, we retry with hash(entropy).
+            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
+        }
+        val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
+        val pub = BCECPublicKey("EC", publicKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        return KeyPair(pub, priv)
     }
 
     // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
