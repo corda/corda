@@ -21,6 +21,7 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.chooseIdentity
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
@@ -74,7 +75,7 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, portAllocation = PortAllocation.Incremental(300), startNodesInProcess = isQuasarAgentSpecified()) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name

@@ -29,8 +29,8 @@ import java.util.*
 class CashExitFlow(private val amount: Amount<Currency>,
                    private val issuerRef: OpaqueBytes,
                    progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
-    constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
-    constructor(request: ExitRequest) : this(request.amount, request.issueRef, tracker())
+    constructor(amount: Amount<Currency>, issuerRef: OpaqueBytes) : this(amount, issuerRef, tracker())
+    constructor(request: ExitRequest) : this(request.amount, request.issuerRef, tracker())
 
     companion object {
         fun tracker() = ProgressTracker(GENERATING_TX, SIGNING_TX, FINALISING_TX)
@@ -78,5 +78,5 @@ class CashExitFlow(private val amount: Amount<Currency>,
     }
 
     @CordaSerializable
-    class ExitRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes) : AbstractRequest(amount)
+    class ExitRequest(amount: Amount<Currency>, val issuerRef: OpaqueBytes) : AbstractRequest(amount)
 }
