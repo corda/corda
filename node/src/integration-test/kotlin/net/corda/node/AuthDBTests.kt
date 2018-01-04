@@ -50,7 +50,6 @@ class AuthDBTests : NodeBasedTest() {
 
     @Before
     fun setup() {
-
         db = UsersDB(
                 name = "SecurityDataSourceTestDB",
                 users = listOf(UserAndRoles(username = "user",
@@ -88,7 +87,7 @@ class AuthDBTests : NodeBasedTest() {
                                         "expireAfterSecs" to cacheExpireAfterSecs,
                                         "maxEntries" to 50
                                 )
-                        )
+                           )
                 )
         )
 
