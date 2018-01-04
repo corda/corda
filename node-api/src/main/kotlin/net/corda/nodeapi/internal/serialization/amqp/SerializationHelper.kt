@@ -85,7 +85,7 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
         val matchingProperty = properties[name] ?:
                 try {
                     clazz.getDeclaredField(param.name)
-                    throw NotSerializableException("Property '$name' or it's getter is non public, this renders class '$clazz' unserializable")
+                    throw NotSerializableException("Property '$name' or its getter is non public, this renders class '$clazz' unserializable")
                 } catch (e: NoSuchFieldException) {
                     throw NotSerializableException("No property matching constructor parameter named '$name' of '$clazz'. " +
                             "If using Java, check that you have the -parameters option specified in the Java compiler. " +
