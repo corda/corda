@@ -20,6 +20,8 @@ import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.sql.DriverManager
 import java.sql.Statement
 import kotlin.test.assertFailsWith
@@ -28,38 +30,51 @@ import kotlin.test.assertFailsWith
  * Starts Node's instance configured to load clients credentials and permissions from an external DB, then
  * check authentication/authorization of RPC connections.
  */
+@RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
 
-    protected lateinit var node: StartedNode<Node>
-    protected lateinit var client: CordaRPCClient
-    private val cacheExpireAfterSecs: Long = 1
-    private val passwordEncryption = PasswordEncryption.SHIRO_1_CRYPT
-    private val db = UsersDB(
-            name = "SecurityDataSourceTestDB",
-            users = listOf(UserAndRoles(username = "user",
-                    password = encodePassword("foo", passwordEncryption),
-                    roles = listOf("default"))),
-            roleAndPermissions = listOf(
-                    RoleAndPermissions(
-                            role = "default",
-                            permissions = listOf(
-                                    Permissions.startFlow<DummyFlow>(),
-                                    Permissions.invokeRpc("vaultQueryBy"),
-                                    Permissions.invokeRpc(CordaRPCOps::stateMachinesFeed),
-                                    Permissions.invokeRpc("vaultQueryByCriteria"))),
-                    RoleAndPermissions(
-                            role = "admin",
-                            permissions = listOf("ALL")
-                    )))
+    private lateinit var node: StartedNode<Node>
+    private lateinit var client: CordaRPCClient
+    private lateinit var db: UsersDB
+
+    companion object {
+        private val cacheExpireAfterSecs: Long = 1
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "password encryption format = {0}")
+        fun encFormats() = arrayOf(PasswordEncryption.NONE, PasswordEncryption.SHIRO_1_CRYPT)
+    }
+
+    @Parameterized.Parameter
+    lateinit var passwordEncryption: PasswordEncryption
 
     @Before
     fun setup() {
+
+        db = UsersDB(
+                name = "SecurityDataSourceTestDB",
+                users = listOf(UserAndRoles(username = "user",
+                        password = encodePassword("foo", passwordEncryption),
+                        roles = listOf("default"))),
+                roleAndPermissions = listOf(
+                        RoleAndPermissions(
+                                role = "default",
+                                permissions = listOf(
+                                        Permissions.startFlow<DummyFlow>(),
+                                        Permissions.invokeRpc("vaultQueryBy"),
+                                        Permissions.invokeRpc(CordaRPCOps::stateMachinesFeed),
+                                        Permissions.invokeRpc("vaultQueryByCriteria"))),
+                        RoleAndPermissions(
+                                role = "admin",
+                                permissions = listOf("ALL")
+                        )))
+
         val securityConfig = mapOf(
                 "security" to mapOf(
                         "authService" to mapOf(
                                 "dataSource" to mapOf(
                                         "type" to "DB",
-                                        "passwordEncryption" to "SHIRO_1_CRYPT",
+                                        "passwordEncryption" to passwordEncryption.toString(),
                                         "connection" to mapOf(
                                                 "jdbcUrl" to db.jdbcUrl,
                                                 "username" to "",
@@ -199,7 +214,7 @@ class AuthDBTests : NodeBasedTest() {
 
     @After
     fun tearDown() {
-        db.close()
+         db.close()
     }
 
     private fun encodePassword(s: String) = encodePassword(s, passwordEncryption)
