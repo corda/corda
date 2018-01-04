@@ -22,6 +22,8 @@ import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.dsl.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -77,7 +79,7 @@ class ObligationTests {
     )
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
     private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), miniCorp)
-    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
+    private val notaryServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
     private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
@@ -86,7 +88,7 @@ class ObligationTests {
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
     }
     private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), identityService, MEGA_CORP.name)
-    private val ledgerServices get() = MockServices(identityService, MEGA_CORP.name)
+    private val ledgerServices get() = MockServices(emptyList(), identityService, MEGA_CORP.name)
     private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {

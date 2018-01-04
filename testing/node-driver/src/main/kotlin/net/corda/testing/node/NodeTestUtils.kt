@@ -11,19 +11,34 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
+import net.corda.testing.dsl.*
 
 /**
  * Creates and tests a ledger built by the passed in dsl.
  */
+@JvmOverloads
 fun ServiceHub.ledger(
-        notary: Party,
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
+        notary: Party = TestIdentity.fresh("ledger notary").party,
+        script: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply(dsl)
+    val serializationExists = try {
+        effectiveSerializationEnv
+        true
+    } catch (e: IllegalStateException) {
+        false
+    }
+    return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply {
+        if (serializationExists) {
+            script()
+        } else {
+            SerializationEnvironmentRule.run("ledger") { script() }
+        }
+    }
 }
 
 /**
@@ -31,11 +46,12 @@ fun ServiceHub.ledger(
  *
  * @see LedgerDSLInterpreter._transaction
  */
+@JvmOverloads
 fun ServiceHub.transaction(
-        notary: Party,
-        dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
+        notary: Party = TestIdentity.fresh("transaction notary").party,
+        script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
 ) = ledger(notary) {
-    dsl(TransactionDSL(TestTransactionDSLInterpreter(interpreter, TransactionBuilder(notary)), notary))
+    TransactionDSL(TestTransactionDSLInterpreter(interpreter, TransactionBuilder(notary)), notary).script()
 }
 
 fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = Actor(Actor.Id("Only For Testing"), AuthServiceId("TEST"), owningLegalIdentity)

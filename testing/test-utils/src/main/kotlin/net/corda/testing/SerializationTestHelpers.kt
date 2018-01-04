@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.common.internal.asContextEnv
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
@@ -33,19 +34,30 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
                 }.whenever(it).execute(any())
             }
         }
+
+        /** Do not call, instead use [SerializationEnvironmentRule] as a [org.junit.Rule]. */
+        fun <T> run(taskLabel: String, task: (SerializationEnvironment) -> T): T {
+            return SerializationEnvironmentRule().apply { init(taskLabel) }.runTask(task)
+        }
     }
 
     lateinit var env: SerializationEnvironment
     override fun apply(base: Statement, description: Description): Statement {
-        env = createTestSerializationEnv(description.toString())
+        init(description.toString())
         return object : Statement() {
-            override fun evaluate() {
-                try {
-                    env.asContextEnv(inheritable) { base.evaluate() }
-                } finally {
-                    inVMExecutors.remove(env)
-                }
-            }
+            override fun evaluate() = runTask { base.evaluate() }
+        }
+    }
+
+    private fun init(envLabel: String) {
+        env = createTestSerializationEnv(envLabel)
+    }
+
+    private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
+        try {
+            return env.asContextEnv(inheritable, task)
+        } finally {
+            inVMExecutors.remove(env)
         }
     }
 }

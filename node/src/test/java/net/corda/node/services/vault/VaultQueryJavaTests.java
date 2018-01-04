@@ -24,8 +24,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;
 import net.corda.testing.TestIdentity;
-import net.corda.testing.contracts.DummyLinearContract;
-import net.corda.testing.contracts.VaultFiller;
+import net.corda.testing.internal.vault.DummyLinearContract;
+import net.corda.testing.internal.vault.VaultFiller;
 import net.corda.testing.node.MockServices;
 import org.junit.After;
 import org.junit.Before;
@@ -45,7 +45,7 @@ import java.util.stream.StreamSupport;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
-import static net.corda.testing.CoreTestUtils.rigorousMock;
+import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
 import static net.corda.testing.TestConstants.BOC_NAME;
 import static net.corda.testing.TestConstants.CHARLIE_NAME;
 import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
@@ -69,8 +69,8 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
-        List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity()));
+        List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        IdentityServiceInternal identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
                 identitySvc,

@@ -2,8 +2,7 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.CertRole
 import net.corda.core.utilities.days
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -33,11 +32,18 @@ fun freshCertificate(identityService: IdentityServiceInternal,
                      issuer: PartyAndCertificate,
                      issuerSigner: ContentSigner,
                      revocationEnabled: Boolean = false): PartyAndCertificate {
-    val issuerCert = issuer.certificate.toX509CertHolder()
+    val issuerRole = CertRole.extract(issuer.certificate)
+    require(issuerRole == CertRole.LEGAL_IDENTITY) { "Confidential identities can only be issued from well known identities, provided issuer ${issuer.name} has role $issuerRole" }
+    val issuerCert = issuer.certificate
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCert)
-    val ourCertificate = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, issuerCert.subject,
-            issuerSigner, issuer.name, subjectPublicKey, window)
-    val ourCertPath = X509CertificateFactory().generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
+    val ourCertificate = X509Utilities.createCertificate(
+            CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
+            issuerCert.subjectX500Principal,
+            issuerSigner,
+            issuer.name.x500Principal,
+            subjectPublicKey,
+            window)
+    val ourCertPath = X509CertificateFactory().generateCertPath(listOf(ourCertificate) + issuer.certPath.certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
     identityService.justVerifyAndRegisterIdentity(anonymisedIdentity)
     return anonymisedIdentity

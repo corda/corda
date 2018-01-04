@@ -12,6 +12,7 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.Rule
@@ -61,7 +62,7 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
     }, MEGA_CORP.name)
 

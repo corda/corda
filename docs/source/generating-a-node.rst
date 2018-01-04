@@ -92,7 +92,6 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         }
         node {
             name "O=PartyA,L=London,C=GB"
-            advertisedServices = []
             p2pPort  10005
             rpcPort  10006
             webPort  10007
@@ -103,7 +102,6 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         }
         node {
             name "O=PartyB,L=New York,C=US"
-            advertisedServices = []
             p2pPort  10009
             rpcPort  10010
             webPort  10011

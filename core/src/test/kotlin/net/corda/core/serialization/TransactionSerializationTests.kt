@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
@@ -106,7 +107,7 @@ class TransactionSerializationTests {
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)
-            val dummyServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
+            val dummyServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
             stx.copy(sigs = stx2.sigs).verifyRequiredSignatures()

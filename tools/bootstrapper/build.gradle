@@ -1,0 +1,33 @@
+apply plugin: 'us.kirchmeier.capsule'
+
+description 'Network bootstrapper'
+
+configurations {
+    runtimeArtifacts
+}
+
+dependencies {
+    compile "org.slf4j:slf4j-nop:$slf4j_version"
+}
+
+task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').compileJava) {
+    applicationClass 'net.corda.nodeapi.internal.network.NetworkBootstrapper'
+    archiveName "network-bootstrapper.jar"
+    capsuleManifest {
+        applicationVersion = corda_release_version
+        systemProperties['visualvm.display.name'] = 'Network Bootstrapper'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
+    applicationSource = files(
+            project(':node-api').configurations.runtime,
+            project(':node-api').jar
+    )
+}
+
+artifacts {
+    runtimeArtifacts buildBootstrapperJar
+}

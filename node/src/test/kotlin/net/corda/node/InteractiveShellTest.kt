@@ -17,7 +17,7 @@ import net.corda.node.internal.configureDatabase
 import net.corda.testing.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -52,7 +52,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = makeTestIdentityService(listOf(megaCorp.identity))
+    private val ids = makeTestIdentityService(megaCorp.identity)
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {

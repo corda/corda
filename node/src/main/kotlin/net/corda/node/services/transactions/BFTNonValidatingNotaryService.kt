@@ -34,12 +34,13 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
-                                    override val notaryIdentityKey: PublicKey,
-                                    private val bftSMaRtConfig: BFTSMaRtConfiguration,
-                                    cluster: BFTSMaRt.Cluster) : NotaryService() {
+class BFTNonValidatingNotaryService(
+        override val services: ServiceHubInternal,
+        override val notaryIdentityKey: PublicKey,
+        private val bftSMaRtConfig: BFTSMaRtConfiguration,
+        cluster: BFTSMaRt.Cluster
+) : NotaryService() {
     companion object {
-        val id = constructId(validating = false, bft = true)
         private val log = contextLogger()
     }
 

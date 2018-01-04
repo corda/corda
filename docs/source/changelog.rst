@@ -6,13 +6,19 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-* Support for external user credentials data source and password encryption [CORDA-827].
 
+* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
+  hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
+  until final documentation is prepared. Certificates at ``NODE_CA``, ``WELL_KNOWN_SERVICE_IDENTITY`` and above must
+  only ever by issued by network services and therefore issuance constraints are not relevant to end users.
+  The ``TLS``, ``WELL_KNOWN_LEGAL_IDENTITY`` roles must be issued by the ``NODE_CA`` certificate issued by the
+  Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
+  For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
 
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
    * The previous design was never intended to be final but was rather a quick implementation in the earliest days of the
-     Corda project to unblock higher priority items. It sufffers from numerous disadvantages including lack of scalability,
+     Corda project to unblock higher priority items. It suffers from numerous disadvantages including lack of scalability,
      as one node is expected to hold open and manage connections to every node on the network; not reliable; hard to defend
      against DoS attacks; etc.
 
@@ -49,6 +55,8 @@ UNRELEASED
 
    * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
      was needed to allow changes to the schema.
+
+* Support for external user credentials data source and password encryption [CORDA-827].
 
 * Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using
   DriverDSL and/or cordformation node runner.
@@ -126,6 +134,9 @@ UNRELEASED
 
 * Values for the ``database.transactionIsolationLevel`` config now follow the ``java.sql.Connection`` int constants but
   without the "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
+
+* Peer-to-peer communications is now via AMQP 1.0 as default.
+  Although the legacy Artemis CORE bridging can still be used by setting the ``useAMQPBridges`` configuration property to false.
 
 .. _changelog_v1:
 

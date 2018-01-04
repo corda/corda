@@ -42,8 +42,8 @@ import kotlin.concurrent.thread
  *     a service is addressed.
  */
 @ThreadSafe
-class InMemoryMessagingNetwork(
-        val sendManuallyPumped: Boolean,
+class InMemoryMessagingNetwork internal constructor(
+        private val sendManuallyPumped: Boolean,
         private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
@@ -91,7 +91,7 @@ class InMemoryMessagingNetwork(
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
      *
-     * @param manuallyPumped if set to true, then you are expected to call the [InMemoryMessaging.pump] method on the [InMemoryMessaging]
+     * @param manuallyPumped if set to true, then you are expected to call [InMemoryMessaging.pumpReceive]
      * in order to cause the delivery of a single message, which will occur on the thread of the caller. If set to false
      * then this class will set up a background thread to deliver messages asynchronously, if the handler specifies no
      * executor.
@@ -149,9 +149,6 @@ class InMemoryMessagingNetwork(
             messageReceiveQueues.getOrPut(it) { LinkedBlockingQueue() }
         }
     }
-
-
-    val everyoneOnline: AllPossibleRecipients = object : AllPossibleRecipients {}
 
     fun stop() {
         val nodes = synchronized(this) {
@@ -223,7 +220,7 @@ class InMemoryMessagingNetwork(
         return transfer
     }
 
-    fun pumpSendInternal(transfer: MessageTransfer) {
+    private fun pumpSendInternal(transfer: MessageTransfer) {
         when (transfer.recipients) {
             is PeerHandle -> getQueueForPeerHandle(transfer.recipients).add(transfer)
             is ServiceHandle -> {
@@ -268,8 +265,8 @@ class InMemoryMessagingNetwork(
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
                                   private val database: CordaPersistence) : SingletonSerializeAsToken(), MessagingService {
-        inner class Handler(val topicSession: TopicSession,
-                            val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+        private inner class Handler(val topicSession: TopicSession,
+                                    val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
         @Volatile
         private var running = true

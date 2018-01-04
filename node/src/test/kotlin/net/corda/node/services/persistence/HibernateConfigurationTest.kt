@@ -37,11 +37,12 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.*
-import net.corda.testing.contracts.*
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.schemas.DummyLinearStateSchemaV1
-import net.corda.testing.schemas.DummyLinearStateSchemaV2
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
@@ -92,7 +93,7 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
         bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
         issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
         notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)

@@ -25,6 +25,8 @@ import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.dsl.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -236,7 +238,7 @@ class IRSTests {
     private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
     private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
     private val ledgerServices
-        get() = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        get() = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
         }, MEGA_CORP.name)

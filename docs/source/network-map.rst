@@ -13,7 +13,7 @@ Protocol Design
 ---------------
 The node info publishing protocol:
 
-* Create a ``NodeInfo`` object, and sign it to create a ``SignedData<NodeInfo>`` object. TODO: We will need list of signatures in ``SignedData`` to support multiple node identities in the future.
+* Create a ``NodeInfo`` object, and sign it to create a ``SignedNodeInfo`` object.
 
 * Serialise the signed data and POST the data to the network map server.
 
@@ -61,7 +61,7 @@ The ``additional-node-infos`` directory
 ---------------------------------------
 Each Corda node reads, and continuously polls, the files contained in a directory named ``additional-node-infos`` inside the node base directory.
 
-Nodes expect to find a serialized ``SignedData<NodeInfo>`` object, the same object which is sent to network map server.
+Nodes expect to find a serialized ``SignedNodeInfo`` object, the same object which is sent to network map server.
 
 Whenever a node starts it writes on disk a file containing its own ``NodeInfo``, this file is called ``nodeInfo-XXX`` where ``XXX`` is a long string.
 

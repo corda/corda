@@ -18,7 +18,11 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.*
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
-import net.corda.testing.contracts.VaultFiller
+import net.corda.testing.dsl.EnforceVerifyOrFail
+import net.corda.testing.dsl.TransactionDSL
+import net.corda.testing.dsl.TransactionDSLInterpreter
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.ledger
@@ -120,7 +124,7 @@ class CommercialPaperTestsGeneric {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
-    private val ledgerServices = MockServices(rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
@@ -260,14 +264,14 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceServices: MockServices
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
-    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
+    private val notaryServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
     private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, dummyCashIssuer.keyPair)
     private lateinit var moveTX: SignedTransaction
     @Test
     fun `issue move and then redeem`() {
         val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(
                 listOf("net.corda.finance.contracts"),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(MEGA_CORP.name, ALICE_KEY))
         val databaseAlice = aliceDatabaseAndServices.first
         aliceServices = aliceDatabaseAndServices.second
@@ -279,7 +283,7 @@ class CommercialPaperTestsGeneric {
         }
         val bigCorpDatabaseAndServices = makeTestDatabaseAndMockServices(
                 listOf("net.corda.finance.contracts"),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(MEGA_CORP.name, BIG_CORP_KEY))
         val databaseBigCorp = bigCorpDatabaseAndServices.first
         bigCorpServices = bigCorpDatabaseAndServices.second

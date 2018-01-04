@@ -90,8 +90,12 @@ private abstract class JavaCommand(
         add(getJavaPath())
         addAll(jvmArgs)
         add("-Dname=$nodeName")
-        null != debugPort && add("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
-        null != monitoringPort && add("-Dcapsule.jvm.args=-javaagent:drivers/$jolokiaJar=port=$monitoringPort")
+        val jvmArgs: MutableList<String> = mutableListOf()
+        null != debugPort && jvmArgs.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
+        null != monitoringPort && jvmArgs.add("-javaagent:drivers/$jolokiaJar=port=$monitoringPort")
+        if (jvmArgs.isNotEmpty()) {
+            add("-Dcapsule.jvm.args=${jvmArgs.joinToString(separator = " ")}")
+        }
         add("-jar")
         add(jarName)
         init()

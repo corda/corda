@@ -20,7 +20,12 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.contracts.VaultFiller
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.dsl.EnforceVerifyOrFail
+import net.corda.testing.dsl.TransactionDSL
+import net.corda.testing.dsl.TransactionDSLInterpreter
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.ledger
@@ -99,7 +104,7 @@ class CashTests {
         val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf("net.corda.finance.contracts.asset"),
-                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
                 TestIdentity(CordaX500Name("Me", "London", "GB")))
         database = databaseAndServices.first
         ourServices = databaseAndServices.second
@@ -136,7 +141,7 @@ class CashTests {
     }
 
     private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-        MockServices(rigorousMock<IdentityServiceInternal>().also {
+        MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
             doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)

@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
@@ -21,7 +20,6 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
@@ -137,11 +135,7 @@ interface FlowStarter {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
-        val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
-        val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
-        return startFlow(logic, context)
-    }
+            vararg args: Any?): CordaFuture<FlowStateMachine<T>>
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter

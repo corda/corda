@@ -28,7 +28,7 @@ dependencies {
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Integration test helpers
-    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile "org.assertj:assertj-core:$assertj_version"
     integrationTestCompile "junit:junit:$junit_version"
 
     // Jetty dependencies for NetworkMapClient test.

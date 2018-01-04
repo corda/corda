@@ -70,7 +70,7 @@ class AttachmentSerializationTest {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(emptyList())
         server = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         client = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
@@ -159,7 +159,7 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(MockNodeParameters(client.internals.id), { args ->
+        client = mockNet.createNode(MockNodeParameters(client.internals.id, client.internals.configuration.myLegalName), { args ->
             object : MockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }

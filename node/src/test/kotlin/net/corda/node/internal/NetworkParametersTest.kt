@@ -7,20 +7,25 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.internal.NetworkParameters
-import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.NotaryInfo
-import net.corda.testing.*
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.chooseIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
 import kotlin.test.assertFails
-import org.assertj.core.api.Assertions.*
 
 class NetworkParametersTest {
     private val mockNet = MockNetwork(
+            emptyList(),
             MockNetworkParameters(networkSendManuallyPumped = true),
             notarySpecs = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME)))
 

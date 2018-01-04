@@ -20,12 +20,7 @@ class Node(private val project: Project) : CordformNode() {
         @JvmStatic
         val webJarName = "corda-webserver.jar"
         private val configFileProperty = "configFile"
-        val capsuleCacheDir: String = "./cache"
     }
-
-    fun fullPath(): Path = project.projectDir.toPath().resolve(nodeDir.toPath())
-    fun logDirectory(): Path = fullPath().resolve("logs")
-    fun makeLogDirectory() = Files.createDirectories(logDirectory())
 
     /**
      * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven

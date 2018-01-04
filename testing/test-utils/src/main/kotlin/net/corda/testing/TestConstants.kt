@@ -6,9 +6,10 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.toX509CertHolder
-import net.corda.nodeapi.internal.crypto.*
-import org.bouncycastle.cert.X509CertificateHolder
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import java.security.PublicKey
 import java.time.Instant
 
@@ -31,21 +32,16 @@ val ALICE_NAME = CordaX500Name("Alice Corp", "Madrid", "ES")
 val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
 @JvmField
 val CHARLIE_NAME = CordaX500Name("Charlie Ltd", "Athens", "GR")
-val DEV_CA: CertificateAndKeyPair by lazy {
+val DEV_INTERMEDIATE_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
     val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
     caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
 }
 
-val ROOT_CA: CertificateAndKeyPair by lazy {
+val DEV_ROOT_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
     val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
     caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, "cordacadevkeypass")
-}
-val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
-    // TODO: Should be identity scheme
-    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-    caKeyStore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).last().toX509CertHolder()
 }
 
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
@@ -53,4 +49,4 @@ fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) 
 object DummyCommandData : TypeOnlyCommandData()
 
 /** Maximum artemis message size. 10 MiB maximum allowed file size for attachments, including message headers. */
-const val MAX_MESSAGE_SIZE: Int = 1048576
+const val MAX_MESSAGE_SIZE: Int = 10485760

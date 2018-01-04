@@ -1836,7 +1836,7 @@ public @interface net.corda.core.node.services.CordaService
   @org.jetbrains.annotations.NotNull public static final String ID_PREFIX = "corda.notary."
 ##
 public static final class net.corda.core.node.services.NotaryService$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final String constructId(boolean, boolean, boolean, boolean)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public final String constructId(boolean, boolean, boolean, boolean)
 ##
 public abstract class net.corda.core.node.services.PartyInfo extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.identity.Party getParty()

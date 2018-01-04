@@ -33,6 +33,7 @@ include 'tools:explorer:capsule'
 include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
+include 'tools:bootstrapper'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
 include 'samples:attachment-demo'
