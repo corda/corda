@@ -210,22 +210,109 @@ Here are the rules to adhere to for support of your own types:
 Classes
 ```````
 
+General Rules
+'''''''''''''
+
+    #.  The class must be compiled with parameter names included in the ``.class`` file.  This is the default in Kotlin
+        but must be turned on in Java (``-parameters`` command line option to ``javac``).
+    #.  The class is annotated with ``@CordaSerializable``.
+    #.  The declared types of constructor arguments, getters, and setters must be supported, and where generics are used the
+        generic parameter must be a supported type, an open wildcard (``*``), or a bounded wildcard which is currently
+        widened to an open wildcard.
+    #.  Any superclass must adhere to the same rules, but can be abstract.
+    #.  Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly.
+
+Constructor Instantiation
+'''''''''''''''''''''''''
+
+The primary way the AMQP serialization framework for Corda instantiates objects is via a defined constructor. This is
+used to first determine which properties of an object are to be serialised then, on deserialization, it is used to
+instantiate the object with the serialized values.
+
+This is the recommended design idiom for serializable objects in Corda as it allows for immutable state objects to
+be created
+
+    #.  A Java Bean getter for each of the properties in the constructor, with the names matching up.  For example, for a constructor
+        parameter ``foo``, there must be a getter called ``getFoo()``.  If the type of ``foo`` is boolean, the getter may
+        optionally be called ``isFoo()``.  This is why the class must be compiled with parameter names turned on.
     #.  A constructor which takes all of the properties that you wish to record in the serialized form.  This is required in
         order for the serialization framework to reconstruct an instance of your class.
     #.  If more than one constructor is provided, the serialization framework needs to know which one to use.  The ``@ConstructorForDeserialization``
         annotation can be used to indicate which one.  For a Kotlin class, without the ``@ConstructorForDeserialization`` annotation, the
         *primary constructor* will be selected.
-    #.  The class must be compiled with parameter names included in the ``.class`` file.  This is the default in Kotlin
-        but must be turned on in Java (``-parameters`` command line option to ``javac``).
-    #.  A Java Bean getter for each of the properties in the constructor, with the names matching up.  For example, for a constructor
-        parameter ``foo``, there must be a getter called ``getFoo()``.  If the type of ``foo`` is boolean, the getter may
-        optionally be called ``isFoo()``.  This is why the class must be compiled with parameter names turned on.
-    #.  The class is annotated with ``@CordaSerializable``.
-    #.  The declared types of constructor arguments / getters must be supported, and where generics are used the
-        generic parameter must be a supported type, an open wildcard (``*``), or a bounded wildcard which is currently
-        widened to an open wildcard.
-    #.  Any superclass must adhere to the same rules, but can be abstract.
-    #.  Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly.
+
+In Kotlin, this maps cleanly to a data class where there getters are synthesized automatically. For example,
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        data class Example (val a: Int, val b: String)
+
+Both properties a and b will be included in the serialised form. However, as stated above, properties not mentioned in
+the constructor will not be serialised. For example, in the following code property c will not be considered part of the
+serialised form
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        data class Example (val a: Int, val b: String) {
+            var c: Int = 20
+        }
+
+        var e = Example (10, "hello")
+        e.c = 100;
+
+        val e2 = e.serialize().deserialize() // e2.c will be 20, not 100!!!
+
+.. warning:: Private properties in Kotlin classes render the class unserializable *unless* a public
+    getter is manually defined. For example:
+
+    .. container:: codeset
+
+        .. sourcecode:: kotlin
+
+            data class C(val a: Int, private val b: Int) {
+                // Without this C cannot be serialized
+                public fun getB() = b
+            }
+
+    .. note:: This is particularly relevant as IDE's can often point out where they believe a
+        property can be made private without knowing this can break Corda serialization. Should
+        this happen then a run time warning will be generated when the class fails to serialize
+
+Setter Instantiation
+''''''''''''''''''''
+
+As an alternative to constructor based initialisation Corda can also determine the important elements of an
+object by inspecting the getter and setter methods present on a class. If a class has **only** a default
+constructor **and** properties then the serializable properties will be determined by the presence of
+both a getter and setter for that property that are both publicly visible. I.e. the class adheres to
+the classic *idiom* of mutable JavaBeans.
+
+On deserialization, a default instance will first be created and then, in turn, the setters invoked
+on that object to populate the correct values.
+
+For example:
+
+.. container:: codeset
+
+    .. sourcecode:: Java
+
+        class Example {
+            private int a;
+            private int b;
+            private int c;
+
+            public int getA() { return a; }
+            public int getB() { return b; }
+            public int getC() { return c; }
+
+            public void setA(int a) { this.a = a; }
+            public void setB(int b) { this.b = b; }
+            public void setC(int c) { this.c = c; }
+        }
 
 Enums
 `````
