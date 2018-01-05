@@ -87,10 +87,12 @@ class NodeSchedulerServiceTest {
     }
 
     private fun assertWaitingFor(event: Event, total: Int = 1) {
+        // The timeout is to make verify wait, which is necessary as we're racing the NSS thread i.e. we often get here just before the trace:
         verify(log, timeout(5000).times(total)).trace(NodeSchedulerService.schedulingAsNextFormat, event.ssr)
     }
 
     private fun assertStarted(event: Event) {
+        // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
         verify(flowStarter, timeout(5000)).startFlow(same(event.flowLogic)!!, any())
     }
 
@@ -161,7 +163,7 @@ class NodeSchedulerServiceTest {
         val eventA = schedule(mark + 1.days)
         val eventB = schedule(mark + 1.days)
         scheduler.unscheduleStateActivity(eventA.stateRef)
-        assertWaitingFor(eventA) // XXX: Really?
+        assertWaitingFor(eventA) // XXX: Shouldn't it be waiting for eventB now?
         testClock.advanceBy(1.days)
         assertStarted(eventB)
     }
