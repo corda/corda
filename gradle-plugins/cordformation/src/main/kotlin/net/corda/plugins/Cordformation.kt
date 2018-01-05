@@ -20,12 +20,33 @@ class Cordformation : Plugin<Project> {
          * @return A file handle to the file in the JAR.
          */
         fun getPluginFile(project: Project, filePathInJar: String): File {
-            val archive: File? = project.rootProject.buildscript.configurations
+            val archive = project.rootProject.buildscript.configurations
                     .single { it.name == "classpath" }
-                    .find { it.name.contains("cordformation") }
+                    .first { it.name.contains("cordformation") }
             return project.rootProject.resources.text
                     .fromArchiveEntry(archive, filePathInJar)
                     .asFile()
+        }
+
+        /**
+         * Gets a current built corda jar file
+         *
+         * @param project The project environment this plugin executes in.
+         * @param jarName The name of the JAR you wish to access.
+         * @return A file handle to the file in the JAR.
+         */
+        fun verifyAndGetRuntimeJar(project: Project, jarName: String): File {
+            val releaseVersion = project.rootProject.ext<String>("corda_release_version")
+            val maybeJar = project.configuration("runtime").filter {
+                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
+            }
+            if (maybeJar.isEmpty) {
+                throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
+            } else {
+                val jar = maybeJar.singleFile
+                require(jar.isFile)
+                return jar
+            }
         }
 
         val executableFileMode = "0755".toInt(8)

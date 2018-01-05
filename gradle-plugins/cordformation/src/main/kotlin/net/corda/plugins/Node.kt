@@ -16,8 +16,6 @@ import java.nio.file.Path
 class Node(private val project: Project) : CordformNode() {
     companion object {
         @JvmStatic
-        val nodeJarName = "corda.jar"
-        @JvmStatic
         val webJarName = "corda-webserver.jar"
         private val configFileProperty = "configFile"
     }
@@ -30,9 +28,10 @@ class Node(private val project: Project) : CordformNode() {
      * @note Type is any due to gradle's use of "GStrings" - each value will have "toString" called on it
      */
     var cordapps = mutableListOf<Any>()
-
-    private val releaseVersion = project.rootProject.ext<String>("corda_release_version")
+    var additionalCordapps = mutableListOf<File>()
     internal lateinit var nodeDir: File
+        private set
+    internal lateinit var rootDir: File
         private set
 
     /**
@@ -65,16 +64,12 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     internal fun build() {
-        configureProperties()
-        installCordaJar()
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
         installAgentJar()
         installBuiltCordapp()
         installCordapps()
-        installConfig()
-        appendOptionalConfig()
     }
 
     internal fun rootDir(rootDir: Path) {
@@ -86,7 +81,9 @@ class Node(private val project: Project) : CordformNode() {
         // with loading our custom X509EdDSAEngine.
         val organizationName = name.trim().split(",").firstOrNull { it.startsWith("O=") }?.substringAfter("=")
         val dirName = organizationName ?: name
-        nodeDir = File(rootDir.toFile(), dirName)
+        this.rootDir = rootDir.toFile()
+        nodeDir = File(this.rootDir, dirName)
+        Files.createDirectories(nodeDir.toPath())
     }
 
     private fun configureProperties() {
@@ -100,25 +97,10 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Installs the corda fat JAR to the node directory.
-     */
-    private fun installCordaJar() {
-        val cordaJar = verifyAndGetRuntimeJar("corda")
-        project.copy {
-            it.apply {
-                from(cordaJar)
-                into(nodeDir)
-                rename(cordaJar.name, nodeJarName)
-                fileMode = Cordformation.executableFileMode
-            }
-        }
-    }
-
-    /**
      * Installs the corda webserver JAR to the node directory
      */
     private fun installWebserverJar() {
-        val webJar = verifyAndGetRuntimeJar("corda-webserver")
+        val webJar = Cordformation.verifyAndGetRuntimeJar(project, "corda-webserver")
         project.copy {
             it.apply {
                 from(webJar)
@@ -142,27 +124,14 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Installs other cordapps to this node's cordapps directory.
-     */
-    internal fun installCordapps(cordapps: Collection<File> = getCordappList()) {
-        val cordappsDir = File(nodeDir, "cordapps")
-        project.copy {
-            it.apply {
-                from(cordapps)
-                into(cordappsDir)
-            }
-        }
-    }
-
-    /**
      * Installs the jolokia monitoring agent JAR to the node/drivers directory
      */
     private fun installAgentJar() {
         val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
         val agentJar = project.configuration("runtime").files {
             (it.group == "org.jolokia") &&
-            (it.name == "jolokia-jvm") &&
-            (it.version == jolokiaVersion)
+                    (it.name == "jolokia-jvm") &&
+                    (it.version == jolokiaVersion)
             // TODO: revisit when classifier attribute is added. eg && (it.classifier = "agent")
         }.first()  // should always be the jolokia agent fat jar: eg. jolokia-jvm-1.3.7-agent.jar
         project.logger.info("Jolokia agent jar: $agentJar")
@@ -177,10 +146,7 @@ class Node(private val project: Project) : CordformNode() {
         }
     }
 
-    /**
-     * Installs the configuration file to this node's directory and detokenises it.
-     */
-    private fun installConfig() {
+    private fun createTempConfigFile(): File {
         val options = ConfigRenderOptions
                 .defaults()
                 .setOriginComments(false)
@@ -188,16 +154,26 @@ class Node(private val project: Project) : CordformNode() {
                 .setFormatted(true)
                 .setJson(false)
         val configFileText = config.root().render(options).split("\n").toList()
-
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
         val tmpDir = File(project.buildDir, "tmp")
-        val tmpConfFile = File(tmpDir, "node.conf")
+        Files.createDirectories(tmpDir.toPath())
+        var fileName = "${nodeDir.getName()}.conf"
+        val tmpConfFile = File(tmpDir, fileName)
         Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
+        return tmpConfFile
+    }
 
+    /**
+     * Installs the configuration file to the root directory and detokenises it.
+     */
+    internal fun installConfig() {
+        configureProperties()
+        val tmpConfFile = createTempConfigFile()
+        appendOptionalConfig(tmpConfFile)
         project.copy {
             it.apply {
                 from(tmpConfFile)
-                into(nodeDir)
+                into(rootDir)
             }
         }
     }
@@ -205,7 +181,7 @@ class Node(private val project: Project) : CordformNode() {
     /**
      * Appends installed config file with properties from an optional file.
      */
-    private fun appendOptionalConfig() {
+    private fun appendOptionalConfig(confFile: File) {
         val optionalConfig: File? = when {
             project.findProperty(configFileProperty) != null -> //provided by -PconfigFile command line property when running Gradle task
                 File(project.findProperty(configFileProperty) as String)
@@ -217,28 +193,22 @@ class Node(private val project: Project) : CordformNode() {
             if (!optionalConfig.exists()) {
                 project.logger.error("$configFileProperty '$optionalConfig' not found")
             } else {
-                val confFile = File(project.buildDir.path + "/../" + nodeDir, "node.conf")
                 confFile.appendBytes(optionalConfig.readBytes())
             }
         }
     }
 
     /**
-     * Find the given JAR amongst the dependencies
-     * @param jarName JAR name without the version part, for example for corda-2.0-SNAPSHOT.jar provide only "corda" as jarName
-     *
-     * @return A file representing found JAR
+     * Installs other cordapps to this node's cordapps directory.
      */
-    private fun verifyAndGetRuntimeJar(jarName: String): File {
-        val maybeJar = project.configuration("runtime").filter {
-            "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
-        }
-        if (maybeJar.isEmpty) {
-            throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
-        } else {
-            val jar = maybeJar.singleFile
-            require(jar.isFile)
-            return jar
+    internal fun installCordapps() {
+        additionalCordapps.addAll(getCordappList())
+        val cordappsDir = File(nodeDir, "cordapps")
+        project.copy {
+            it.apply {
+                from(additionalCordapps)
+                into(cordappsDir)
+            }
         }
     }
 
