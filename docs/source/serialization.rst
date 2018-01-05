@@ -373,6 +373,9 @@ Future Enhancements
 Type Evolution
 --------------
 
-When we move to AMQP as the serialization format, we will be adding explicit support for interoperability of different versions of the same code.
-We will describe here the rules and features for evolvability as part of a future update to the documentation.
+Type evolution is the mechanisms by which classes can be altered over time yet still remain serializable and deserializable across
+all versions of the class. This ensures an object serialized with an older idea of what the class "looked like" can be deserialized
+and a version of the current state of the class instantiated.
+
+More detail can be found in :doc:`serialization-default-evolution`
 
