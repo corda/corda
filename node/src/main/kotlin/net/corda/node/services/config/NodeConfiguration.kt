@@ -198,8 +198,16 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         data class Options(val cache: Options.Cache?) {
 
             // Cache parameters
-            data class Cache(val expireAfterSecs: Long, val maxEntries: Long)
-
+            data class Cache(val expireAfterSecs: Long, val maxEntries: Long) {
+                init {
+                    require(expireAfterSecs >= 0) {
+                        "Expected positive value for 'cache.expireAfterSecs'"
+                    }
+                    require(maxEntries > 0) {
+                        "Expected positive value for 'cache.maxEntries'"
+                    }
+                }
+            }
         }
 
         // Provider of users credentials and permissions data
@@ -223,12 +231,13 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                 AuthDataSourceType.DB -> AuthServiceId("REMOTE_DATABASE")
             }
 
-            fun fromUsers(users: List<User>) = AuthService(
-                    dataSource = DataSource(
-                            type = AuthDataSourceType.INMEMORY,
-                            users = users,
-                            passwordEncryption = PasswordEncryption.NONE),
-                    id = AuthServiceId("NODE_CONFIG"))
+            fun fromUsers(users: List<User>, encryption: PasswordEncryption = PasswordEncryption.NONE) =
+                    AuthService(
+                            dataSource = DataSource(
+                                    type = AuthDataSourceType.INMEMORY,
+                                    users = users,
+                                    passwordEncryption = encryption),
+                            id = AuthServiceId("NODE_CONFIG"))
         }
     }
 }
