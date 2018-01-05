@@ -158,17 +158,19 @@ networkMapConfig {
 ### 3. Create notary node and register with the doorman
    After the doorman service is started, start the notary node for the `initial-registration` process.
 
-### 4. Add notary identities to the network parameters
-   The network parameters should contain the name and public key of the newly created notaries.  
+### 4. Generate node info files for notary nodes
+   Once notary nodes are registered, run the notary nodes with the `just-generate-node-info` flag.
+   This will generate the node info files, which then should be referenced in the network parameters configuration.
+
+### 5. Add notary identities to the network parameters
+   The network parameters should contain reference to the notaries node info files.
       Example network parameters file:
       
       notaries : [{
-          name: "O=Notary A, L=Port Louis, C=MU, OU=Org Unit, CN=Service Name"
-          key: "GfHq2tTVk9z4eXgyWmExBB3JfHpeuYrk9jUc4zaVVSXpnW8FdCUNDhw6GRGN"
+          notaryNodeInfoFile: "/Path/To/NodeInfo/File1"
           validating: true
       }, {
-          name: "O=Notary B, L=Bali, C=ID, OU=Org Unit, CN=Service Name"
-          key: "GfHq2tTVk9z4eXgyEshv6vtBDjp7n76QZH5hk6VXLhk3vRTAmKcP9F9tRfPj"
+          notaryNodeInfoFile: "/Path/To/NodeInfo/File2"
           validating: false
       }]
       minimumPlatformVersion = 1
