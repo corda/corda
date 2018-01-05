@@ -47,8 +47,14 @@ Initial Margin Agreement Process
     - Agree on the calculation of the above with the other party
     - In practice, pay (or receive) this margin (omitted for the sake of complexity for this example)
 
-## Demo execution (step by step)
+## Requirements
 
+This document assumes you have cURL (curl) installed and ready to use. It is usually installed by default in many Linux
+distribution. If not, please refer to your operating system manual for instruction on how to install it.
+On Windows, there are numerous ways of installation, including package managers like Chocolatey, NuGet, or Linux subsystem.
+Detailed instructions are out of scope of this document.
+
+## Demo execution (step by step)
 
 **Setting up the Corda infrastructure**
 
