@@ -4,15 +4,13 @@ import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.internal.createDevNodeCaCertPath
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.hibernate.envers.AuditReaderFactory
@@ -21,9 +19,10 @@ import org.junit.Before
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
+import javax.security.auth.x500.X500Principal
 import kotlin.test.*
 
-class DBCertificateRequestStorageTest : TestBase() {
+class PersistentCertificateRequestStorageTest : TestBase() {
     private lateinit var storage: PersistentCertificateRequestStorage
     private lateinit var persistence: CordaPersistence
 
@@ -84,14 +83,15 @@ class DBCertificateRequestStorageTest : TestBase() {
         // New request should be empty.
         assertTrue(storage.getRequests(RequestStatus.NEW).isEmpty())
         // Sign certificate
-        storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
-            val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
-            val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-            val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-            buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        }, listOf(DOORMAN_SIGNATURE))
+        storage.putCertificatePath(
+                requestId,
+                JcaPKCS10CertificationRequest(csr).run {
+                    // TODO We need a utility in InternalUtils for converting X500Name -> CordaX500Name
+                    val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
+                    buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
+                },
+                listOf(DOORMAN_SIGNATURE)
+        )
         // Check request is ready
         assertNotNull(storage.getRequest(requestId)!!.certData)
     }
@@ -104,25 +104,24 @@ class DBCertificateRequestStorageTest : TestBase() {
         // Store certificate to DB.
         storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
-        storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
-            val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
-            val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-            val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-            buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        }, listOf(DOORMAN_SIGNATURE))
+        storage.putCertificatePath(
+                requestId,
+                JcaPKCS10CertificationRequest(csr).run {
+                    val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
+                    buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
+                },
+                listOf(DOORMAN_SIGNATURE)
+        )
         // Sign certificate
         // When subsequent signature requested
         assertFailsWith(IllegalArgumentException::class) {
-            storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
-                val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
-                val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-                val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-                buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-            }, listOf(DOORMAN_SIGNATURE))
+            storage.putCertificatePath(
+                    requestId,
+                    JcaPKCS10CertificationRequest(csr).run {
+                        val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
+                        buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
+                    },
+                    listOf(DOORMAN_SIGNATURE))
         }
     }
 
@@ -207,6 +206,6 @@ class DBCertificateRequestStorageTest : TestBase() {
 
 internal fun createRequest(organisation: String): Pair<PKCS10CertificationRequest, KeyPair> {
     val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(organisation = organisation, locality = "London", country = "GB"), "my@mail.com", keyPair)
+    val request = X509Utilities.createCertificateSigningRequest(X500Principal("O=$organisation,L=London,C=GB"), "my@mail.com", keyPair)
     return Pair(request, keyPair)
 }

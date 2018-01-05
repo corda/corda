@@ -3,25 +3,24 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.utils.withCert
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestNodeInfoBuilder
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.security.cert.X509Certificate
 import kotlin.test.assertEquals
 
 class PersistentNetworkMapStorageTest : TestBase() {
@@ -30,15 +29,16 @@ class PersistentNetworkMapStorageTest : TestBase() {
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
     private lateinit var requestStorage: PersistentCertificateRequestStorage
 
-    private val rootCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val rootCaCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name("Corda Node Root CA", "R3 LTD", "London", "GB"), rootCaKeyPair)
-    private val intermediateCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val intermediateCaCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCaCert, rootCaKeyPair, CordaX500Name("Corda Node Intermediate CA", "R3 LTD", "London", "GB"), intermediateCaKeyPair.public)
+    private lateinit var rootCaCert: X509Certificate
+    private lateinit var intermediateCa: CertificateAndKeyPair
 
     @Before
     fun startDb() {
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+        rootCaCert = rootCa.certificate
+        this.intermediateCa = intermediateCa
         persistence = configureDatabase(makeTestDataSourceProperties())
-        networkMapStorage = PersistentNetworkMapStorage(persistence, LocalSigner(intermediateCaKeyPair, arrayOf(intermediateCaCert.cert, rootCaCert.cert)))
+        networkMapStorage = PersistentNetworkMapStorage(persistence, LocalSigner(intermediateCa.keyPair, arrayOf(intermediateCa.certificate, rootCaCert)))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateRequestStorage(persistence)
     }
@@ -60,7 +60,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
 
         val networkMap = NetworkMap(listOf(nodeInfoHash), networkParametersHash)
         val serializedNetworkMap = networkMap.serialize()
-        val signatureData = intermediateCaKeyPair.sign(serializedNetworkMap).withCert(intermediateCaCert.cert)
+        val signatureData = intermediateCa.keyPair.sign(serializedNetworkMap).withCert(intermediateCa.certificate)
         val signedNetworkMap = SignedNetworkMap(serializedNetworkMap, signatureData)
 
         // when
@@ -70,7 +70,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val persistedSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
 
         assertEquals(signedNetworkMap.signature, persistedSignedNetworkMap?.signature)
-        assertEquals(signedNetworkMap.verified(rootCaCert.cert), persistedSignedNetworkMap?.verified(rootCaCert.cert))
+        assertEquals(signedNetworkMap.verified(rootCaCert), persistedSignedNetworkMap?.verified(rootCaCert))
     }
 
     @Test
@@ -96,7 +96,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         // Sign network map making it current network map
         val networkMap = NetworkMap(emptyList(), networkParametersHash)
         val serializedNetworkMap = networkMap.serialize()
-        val signatureData = intermediateCaKeyPair.sign(serializedNetworkMap).withCert(intermediateCaCert.cert)
+        val signatureData = intermediateCa.keyPair.sign(serializedNetworkMap).withCert(intermediateCa.certificate)
         val signedNetworkMap = SignedNetworkMap(serializedNetworkMap, signatureData)
         networkMapStorage.saveNetworkMap(signedNetworkMap)
 
@@ -117,7 +117,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val netParamsHash = networkMapStorage.saveNetworkParameters(netParams)
         val signedNetParams = networkMapStorage.getSignedNetworkParameters(netParamsHash)
         assertThat(signedNetParams?.verified()).isEqualTo(netParams)
-        assertThat(signedNetParams?.sig?.by).isEqualTo(intermediateCaKeyPair.public)
+        assertThat(signedNetParams?.sig?.by).isEqualTo(intermediateCa.keyPair.public)
     }
 
     @Test
@@ -135,7 +135,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val networkParametersHash = networkMapStorage.saveNetworkParameters(testNetworkParameters(emptyList()))
         val networkMap = NetworkMap(listOf(nodeInfoHashA), networkParametersHash)
         val serializedNetworkMap = networkMap.serialize()
-        val signatureData = intermediateCaKeyPair.sign(serializedNetworkMap).withCert(intermediateCaCert.cert)
+        val signatureData = intermediateCa.keyPair.sign(serializedNetworkMap).withCert(intermediateCa.certificate)
         val signedNetworkMap = SignedNetworkMap(serializedNetworkMap, signatureData)
 
         // Sign network map

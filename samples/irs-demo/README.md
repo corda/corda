@@ -9,11 +9,12 @@ webapp which provides REST API and web frontend. Application communicate using C
 
 To run from the command line in Unix:
 1. Run ``./gradlew samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under 
-   ``samples/irs-demo/build``
+   ``samples/irs-demo/cordapp/build``
 2. Run ``./gradlew samples:irs-demo:web:deployWebapps`` to install configs and tools for running webservers
 3. Move to the ``samples/irs-demo/`` directory
 4. Run ``./cordapp/build/nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm)
-5. Run ``./web/build/webapps/runwebapps`` to open three more terminals for associated webserver
+5. On Linux, run ``./web/build/webapps/runwebapps`` to open three more terminals for associated webservers. On macOS,
+   use the following command instead: ``osascript ./web/build/webapps/runwebapps.scpt``
 
 To run from the command line in Windows:
 

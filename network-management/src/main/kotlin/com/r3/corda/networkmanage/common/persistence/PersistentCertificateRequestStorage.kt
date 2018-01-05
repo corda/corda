@@ -5,15 +5,14 @@ import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRe
 import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.x500Name
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.Session
 import java.security.cert.CertPath
 import java.time.Instant
+import javax.security.auth.x500.X500Principal
 
 /**
  * Database implementation of the [CertificationRequestStorage] interface.
@@ -48,7 +47,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             val (legalName, rejectReason) = parseAndValidateLegalName(request, session)
             session.save(CertificateSigningRequestEntity(
                     requestId = requestId,
-                    legalName = legalName.toString(),
+                    legalName = legalName,
                     requestBytes = request.encoded,
                     remark = rejectReason,
                     modifiedBy = emptyList(),
@@ -126,25 +125,27 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         }
     }
 
-    private fun parseAndValidateLegalName(request: PKCS10CertificationRequest, session: Session): Pair<X500Name, String?> {
+    private fun parseAndValidateLegalName(request: PKCS10CertificationRequest, session: Session): Pair<String, String?> {
+        // It's important that we always use the toString() output of CordaX500Name as it standardises the string format
+        // to make querying possible.
         val legalName = try {
-            CordaX500Name.parse(request.subject.toString())
+            CordaX500Name.build(X500Principal(request.subject.encoded)).toString()
         } catch (e: IllegalArgumentException) {
-            return Pair(request.subject, "Name validation failed with exception : ${e.message}")
+            return Pair(request.subject.toString(), "Name validation failed: ${e.message}")
         }
+
         val query = session.criteriaBuilder.run {
             val criteriaQuery = createQuery(CertificateSigningRequestEntity::class.java)
             criteriaQuery.from(CertificateSigningRequestEntity::class.java).run {
-                criteriaQuery.where(equal(get<String>(CertificateSigningRequestEntity::legalName.name), legalName.toString()))
+                criteriaQuery.where(equal(get<String>(CertificateSigningRequestEntity::legalName.name), legalName))
             }
         }
+
         val duplicates = session.createQuery(query).resultList.filter {
-            it.status in setOf(RequestStatus.NEW, RequestStatus.TICKET_CREATED, RequestStatus.APPROVED) || it.certificateData?.certificateStatus == CertificateStatus.VALID
+            it.status in setOf(RequestStatus.NEW, RequestStatus.TICKET_CREATED, RequestStatus.APPROVED) ||
+                    it.certificateData?.certificateStatus == CertificateStatus.VALID
         }
-        return if (duplicates.isEmpty()) {
-            Pair(legalName.x500Name, null)
-        } else {
-            Pair(legalName.x500Name, "Duplicate legal name")
-        }
+
+        return Pair(legalName, if (duplicates.isEmpty()) null else "Duplicate legal name")
     }
 }

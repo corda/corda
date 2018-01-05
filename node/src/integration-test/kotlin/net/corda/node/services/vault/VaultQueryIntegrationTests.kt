@@ -3,6 +3,9 @@ package net.corda.node.services.vault
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.*
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.*
 
 class VaultQueryIntegrationTests : VaultQueryTests() {

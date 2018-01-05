@@ -1,7 +1,6 @@
-package net.corda.testing
+package net.corda.testing.internal
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.testing.database.DbScriptRunner.runDbScript
 import org.junit.After
 import org.junit.AfterClass

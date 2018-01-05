@@ -12,6 +12,9 @@ import net.corda.node.internal.NodeStartup
 import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound

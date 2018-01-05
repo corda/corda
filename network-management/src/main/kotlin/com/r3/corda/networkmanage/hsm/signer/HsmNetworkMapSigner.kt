@@ -9,13 +9,12 @@ import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.signData
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.verify
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import java.security.KeyPair
 import java.security.PrivateKey
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -68,7 +67,7 @@ class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
             val caKey = keyStore.getKey(caCertificateKeyName, caPrivateKeyPass.toCharArray()) as PrivateKey
             val signature = signData(data, KeyPair(caCertificateChain.first().publicKey, caKey), provider)
             verify(data, signature, caCertificateChain.first().publicKey)
-            signature.withCert(caCertificateChain.first().toX509CertHolder().cert)
+            signature.withCert(caCertificateChain[0] as X509Certificate)
         }
     }
 }

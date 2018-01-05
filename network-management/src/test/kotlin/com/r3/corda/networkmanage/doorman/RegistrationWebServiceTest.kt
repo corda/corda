@@ -4,45 +4,53 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.*
 import java.net.URL
+import java.nio.charset.StandardCharsets.UTF_8
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
+import javax.security.auth.x500.X500Principal
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
 class RegistrationWebServiceTest : TestBase() {
-    private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 Ltd", country = "GB"), rootCAKey)
-    private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
+    private lateinit var rootCaCert: X509Certificate
+    private lateinit var intermediateCa: CertificateAndKeyPair
     private lateinit var webServer: NetworkManagementWebServer
+
+    @Before
+    fun init() {
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+        rootCaCert = rootCa.certificate
+        this.intermediateCa = intermediateCa
+    }
 
     private fun startSigningServer(csrHandler: CsrHandler) {
         webServer = NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), RegistrationWebService(csrHandler))
@@ -65,7 +73,10 @@ class RegistrationWebServiceTest : TestBase() {
         startSigningServer(requestProcessor)
 
         val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair)
+        val request = X509Utilities.createCertificateSigningRequest(
+                CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB").x500Principal,
+                "my@mail.com",
+                keyPair)
         // Post request to signing server via http.
 
         assertEquals(id, submitRequest(request))
@@ -79,6 +90,8 @@ class RegistrationWebServiceTest : TestBase() {
         val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val id = SecureHash.randomSHA256().toString()
 
+        val subject = CordaX500Name(locality = "London", organisation = "LegalName", country = "GB").x500Principal
+
         // Mock Storage behaviour.
         val certificateStore = mutableMapOf<String, CertPath>()
         val requestProcessor = mock<CsrHandler> {
@@ -88,10 +101,15 @@ class RegistrationWebServiceTest : TestBase() {
                 } ?: CertificateResponse.NotReady
             }
             on { processApprovedRequests() }.then {
-                val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "LegalName", country = "GB"), "my@mail.com", keyPair)
+                val request = X509Utilities.createCertificateSigningRequest(subject, "my@mail.com", keyPair)
                 certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
-                    val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-                    buildCertPath(tlsCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
+                    val tlsCert = X509Utilities.createCertificate(
+                            CertificateType.TLS,
+                            intermediateCa.certificate,
+                            intermediateCa.keyPair,
+                            X500Principal(subject.encoded),
+                            publicKey)
+                    buildCertPath(tlsCert, intermediateCa.certificate, rootCaCert)
                 }
                 null
             }
@@ -104,22 +122,15 @@ class RegistrationWebServiceTest : TestBase() {
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
         verify(requestProcessor, times(2)).getResponse(any())
-        assertEquals(3, certificates.size)
 
-        certificates.first().run {
-            assertThat(subjectDN.name).contains("O=LegalName")
-            assertThat(subjectDN.name).contains("L=London")
-        }
-
-        certificates.last().run {
-            assertThat(subjectDN.name).contains("CN=Corda Node Root CA")
-            assertThat(subjectDN.name).contains("L=London")
-        }
+        assertThat(certificates).hasSize(3)
+        assertThat(certificates[0].subjectX500Principal).isEqualTo(subject)
+        assertThat(certificates).endsWith(intermediateCa.certificate, rootCaCert)
     }
 
     @Test
     fun `retrieve certificate and create valid TLS certificate`() {
-        val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val nodeCaKeyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val id = SecureHash.randomSHA256().toString()
 
         // Mock Storage behaviour.
@@ -131,11 +142,22 @@ class RegistrationWebServiceTest : TestBase() {
                 } ?: CertificateResponse.NotReady
             }
             on { processApprovedRequests() }.then {
-                val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair)
+                val request = X509Utilities.createCertificateSigningRequest(
+                        CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB").x500Principal,
+                        "my@mail.com",
+                        nodeCaKeyPair)
                 certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
-                    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, X500Name("CN=LegalName, L=London")))), arrayOf())
-                    val clientCert = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
-                    buildCertPath(clientCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
+                    val nameConstraints = NameConstraints(
+                            arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, X500Name("CN=LegalName, L=London")))),
+                            arrayOf())
+                    val clientCert = X509Utilities.createCertificate(
+                            CertificateType.NODE_CA,
+                            intermediateCa.certificate,
+                            intermediateCa.keyPair,
+                            X500Principal(subject.encoded),
+                            publicKey,
+                            nameConstraints = nameConstraints)
+                    buildCertPath(clientCert, intermediateCa.certificate, rootCaCert)
                 }
                 true
             }
@@ -149,11 +171,17 @@ class RegistrationWebServiceTest : TestBase() {
         verify(storage, times(2)).getResponse(any())
         assertEquals(3, certificates.size)
 
-        val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val sslCert = X509Utilities.createCertificate(CertificateType.TLS, X509CertificateHolder(certificates.first().encoded), keyPair, X500Name("CN=LegalName,L=London"), sslKey.public).toX509Certificate()
+        val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val sslCert = X509Utilities.createCertificate(
+                CertificateType.TLS,
+                certificates[0],
+                nodeCaKeyPair,
+                // TODO Investigate why X500Principal("CN=LegalName, L=London") results in a name constraints violation
+                X500Principal(X500Name("CN=LegalName, L=London").encoded),
+                sslKeyPair.public)
 
         // TODO: This is temporary solution, remove all certificate re-shaping after identity refactoring is done.
-        X509Utilities.validateCertificateChain(certificates.last(), sslCert, *certificates.toTypedArray())
+        X509Utilities.validateCertificateChain(rootCaCert, sslCert, *certificates.toTypedArray())
     }
 
     @Test
@@ -192,7 +220,7 @@ class RegistrationWebServiceTest : TestBase() {
                 PollResponse.Ready(certificates)
             }
             HTTP_NO_CONTENT -> PollResponse.NotReady
-            HTTP_UNAUTHORIZED -> PollResponse.Unauthorised(IOUtils.toString(conn.errorStream))
+            HTTP_UNAUTHORIZED -> PollResponse.Unauthorised(IOUtils.toString(conn.errorStream, UTF_8))
             else -> throw IOException("Cannot connect to Certificate Signing Server, HTTP response code : ${conn.responseCode}")
         }
     }

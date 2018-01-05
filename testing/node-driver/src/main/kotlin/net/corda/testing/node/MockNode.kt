@@ -4,7 +4,9 @@ import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -325,7 +327,8 @@ open class MockNetwork(private val cordappPackages: List<String>,
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
         override fun generateKeyPair(): KeyPair {
             counter = counter.add(BigInteger.ONE)
-            return entropyToKeyPair(counter)
+            // The MockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
+            return Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
         }
 
         /**
@@ -492,6 +495,7 @@ fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy
 }
 
 private fun mockNodeConfiguration(): NodeConfiguration {
+    @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
     return rigorousMock<AbstractNodeConfiguration>().also {
         doReturn("cordacadevpass").whenever(it).keyStorePassword

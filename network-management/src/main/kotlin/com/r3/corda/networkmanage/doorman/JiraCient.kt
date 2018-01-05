@@ -6,9 +6,7 @@ import com.atlassian.jira.rest.client.api.domain.Issue
 import com.atlassian.jira.rest.client.api.domain.IssueType
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder
 import com.atlassian.jira.rest.client.api.domain.input.TransitionInput
-import net.corda.core.internal.country
-import net.corda.core.internal.locality
-import net.corda.core.internal.organisation
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -17,6 +15,7 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
 import java.security.cert.CertPath
+import javax.security.auth.x500.X500Principal
 
 class JiraClient(private val restClient: JiraRestClient, private val projectCode: String, private val doneTransitionCode: Int) {
     companion object {
@@ -39,16 +38,17 @@ class JiraClient(private val restClient: JiraRestClient, private val projectCode
         JcaPEMWriter(request).use {
             it.writeObject(PemObject("CERTIFICATE REQUEST", signingRequest.encoded))
         }
-        val organisation = signingRequest.subject.organisation
-        val nearestCity = signingRequest.subject.locality
-        val country = signingRequest.subject.country
+
+        // TODO The subject of the signing request has already been validated and parsed into a CordaX500Name. We shouldn't
+        // have to do it again here.
+        val subject = CordaX500Name.build(X500Principal(signingRequest.subject.encoded))
 
         val email = signingRequest.getAttributes(BCStyle.E).firstOrNull()?.attrValues?.firstOrNull()?.toString()
 
         val issue = IssueInputBuilder().setIssueTypeId(taskIssueType.id)
                 .setProjectKey(projectCode)
-                .setDescription("Organisation: $organisation\nNearest City: $nearestCity\nCountry: $country\nEmail: $email\n\n{code}$request{code}")
-                .setSummary(organisation)
+                .setDescription("Organisation: ${subject.organisation}\nNearest City: ${subject.locality}\nCountry: ${subject.country}\nEmail: $email\n\n{code}$request{code}")
+                .setSummary(subject.organisation)
                 .setFieldValue(requestIdField.id, requestId)
         // This will block until the issue is created.
         restClient.issueClient.createIssue(issue.build()).fail { logger.error("Exception when creating JIRA issue.", it) }.claim()

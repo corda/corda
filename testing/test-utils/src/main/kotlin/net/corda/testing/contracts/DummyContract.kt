@@ -1,5 +1,6 @@
 package net.corda.testing.contracts
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -12,6 +13,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
 
     val PROGRAM_ID = "net.corda.testing.contracts.DummyContract"
 
+    @DoNotImplement // State is effectively a sealed class.
     interface State : ContractState {
         val magicNumber: Int
     }

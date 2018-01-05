@@ -15,6 +15,7 @@ import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
 import java.nio.file.Files
 import java.util.*
+import javax.security.auth.x500.X500Principal
 
 @Suppress("unused")
 inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
@@ -64,8 +65,8 @@ fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
     }
 }
 
-private val defaultRootCaName = CordaX500Name("Corda Root CA", "R3 Ltd", "London", "GB")
-private val defaultIntermediateCaName = CordaX500Name("Corda Intermediate CA", "R3 Ltd", "London", "GB")
+private val defaultRootCaName = X500Principal("CN=Corda Root CA,O=R3 Ltd,L=London,C=GB")
+private val defaultIntermediateCaName = X500Principal("CN=Corda Intermediate CA,O=R3 Ltd,L=London,C=GB")
 
 /**
  * Returns a pair of [CertificateAndKeyPair]s, the first being the root CA and the second the intermediate CA.
@@ -73,8 +74,8 @@ private val defaultIntermediateCaName = CordaX500Name("Corda Intermediate CA", "
  * @param intermediateCaName The subject name for the intermediate CA cert.
  */
 fun createDevIntermediateCaCertPath(
-        rootCaName: CordaX500Name = defaultRootCaName,
-        intermediateCaName: CordaX500Name = defaultIntermediateCaName
+        rootCaName: X500Principal = defaultRootCaName,
+        intermediateCaName: X500Principal = defaultIntermediateCaName
 ): Pair<CertificateAndKeyPair, CertificateAndKeyPair> {
     val rootKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val rootCert = X509Utilities.createSelfSignedCACertificate(rootCaName, rootKeyPair)
@@ -87,7 +88,10 @@ fun createDevIntermediateCaCertPath(
             intermediateCaName,
             intermediateCaKeyPair.public)
 
-    return Pair(CertificateAndKeyPair(rootCert, rootKeyPair), CertificateAndKeyPair(intermediateCaCert, intermediateCaKeyPair))
+    return Pair(
+            CertificateAndKeyPair(rootCert, rootKeyPair),
+            CertificateAndKeyPair(intermediateCaCert, intermediateCaKeyPair)
+    )
 }
 
 /**
@@ -97,8 +101,8 @@ fun createDevIntermediateCaCertPath(
  */
 fun createDevNodeCaCertPath(
         legalName: CordaX500Name,
-        rootCaName: CordaX500Name = defaultRootCaName,
-        intermediateCaName: CordaX500Name = defaultIntermediateCaName
+        rootCaName: X500Principal = defaultRootCaName,
+        intermediateCaName: X500Principal = defaultIntermediateCaName
 ): Triple<CertificateAndKeyPair, CertificateAndKeyPair, CertificateAndKeyPair> {
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath(rootCaName, intermediateCaName)
     val nodeCa = createDevNodeCa(intermediateCa, legalName)

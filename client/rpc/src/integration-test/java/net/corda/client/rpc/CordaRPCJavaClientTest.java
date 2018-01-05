@@ -12,8 +12,8 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.nodeapi.internal.config.User;
 import net.corda.testing.CoreTestUtils;
-import net.corda.testing.IntegrationTestKt;
-import net.corda.testing.IntegrationTestSchemas;
+import net.corda.testing.internal.IntegrationTestKt;
+import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
@@ -32,7 +32,6 @@ import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.TestConstants.ALICE_NAME;
-import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {

@@ -10,7 +10,6 @@ import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStor
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
@@ -28,12 +27,12 @@ import net.corda.testing.CHARLIE_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.h2.tools.Server
 import org.junit.*
 import org.junit.rules.TemporaryFolder
 import java.net.URL
+import java.security.cert.X509Certificate
 import java.util.*
 import javax.persistence.PersistenceException
 import kotlin.concurrent.scheduleAtFixedRate
@@ -55,7 +54,7 @@ class SigningServiceIntegrationTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var timer: Timer
-    private lateinit var rootCaCert: X509CertificateHolder
+    private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
 
     @Before
@@ -79,7 +78,7 @@ class SigningServiceIntegrationTest {
                 for (approvedRequest in approvedRequests) {
                     JcaPKCS10CertificationRequest(approvedRequest.request).run {
                         val nodeCa = createDevNodeCa(intermediateCa, CordaX500Name.parse(subject.toString()))
-                        approvedRequest.certPath = buildCertPath(nodeCa.certificate.cert, intermediateCa.certificate.cert, rootCaCert.cert)
+                        approvedRequest.certPath = buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCaCert)
                     }
                 }
                 storage.store(approvedRequests, listOf("TEST"))
@@ -124,7 +123,7 @@ class SigningServiceIntegrationTest {
             }
             config.certificatesDirectory.createDirectories()
             loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-                it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert.cert)
+                it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert)
                 it.save(config.trustStoreFile, config.trustStorePassword)
             }
             NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
@@ -168,7 +167,7 @@ class SigningServiceIntegrationTest {
                     }
                     config.certificatesDirectory.createDirectories()
                     loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-                        it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert.cert)
+                        it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert)
                         it.save(config.trustStoreFile, config.trustStorePassword)
                     }
                     NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()

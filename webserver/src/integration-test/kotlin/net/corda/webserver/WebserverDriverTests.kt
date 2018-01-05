@@ -3,13 +3,13 @@ package net.corda.webserver
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.IntegrationTest
-import net.corda.testing.IntegrationTestSchemas
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
-import net.corda.testing.toDatabaseSchemaName
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors

@@ -40,6 +40,18 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
         return createForRPC(flowClass, *args)
     }
 
+    override fun create(flowClassName: String, vararg args: Any?): FlowLogicRef {
+        val flowClass = Class.forName(flowClassName, true, classloader).asSubclass(FlowLogic::class.java)
+        if (flowClass == null) {
+            throw IllegalArgumentException("The class $flowClassName is not a subclass of FlowLogic.")
+        } else {
+            if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
+                throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
+            }
+            return createForRPC(flowClass, *args)
+        }
+    }
+
     override fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         // TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly
         // to avoid requiring only a single constructor.

@@ -22,6 +22,10 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.internal.toDatabaseSchemaNames
 import org.junit.Assume.assumeFalse
 import org.junit.ClassRule
 import org.junit.Test
@@ -36,7 +40,7 @@ class NodeStatePersistenceTests : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
-                .map { it.toDatabaseSchemaNames("", "_10000","_10003","_10006") }.flatten().toTypedArray(),
+                .map { it.toDatabaseSchemaNames("", "_10000", "_10003", "_10006") }.flatten().toTypedArray(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
     @Test
