@@ -22,6 +22,7 @@ import java.util.jar.JarInputStream
 @Suppress("unused")
 open class Cordform : DefaultTask() {
     private companion object {
+        val nodeJarName = "corda.jar"
         private val defaultDirectory: Path = Paths.get("build", "nodes")
     }
 
@@ -132,9 +133,26 @@ open class Cordform : DefaultTask() {
     fun build() {
         project.logger.info("Running Cordform task")
         initializeConfiguration()
+        nodes.forEach(Node::installConfig)
+        installCordaJar()
         installRunScript()
-        nodes.forEach(Node::build)
         bootstrapNetwork()
+        nodes.forEach(Node::build)
+    }
+
+    /**
+     * Installs the corda fat JAR to the root directory, for the network bootstrapper to use.
+     */
+    private fun installCordaJar() {
+        val cordaJar = Cordformation.verifyAndGetRuntimeJar(project, "corda")
+        project.copy {
+            it.apply {
+                from(cordaJar)
+                into(directory)
+                rename(cordaJar.name, nodeJarName)
+                fileMode = Cordformation.executableFileMode
+            }
+        }
     }
 
     private fun initializeConfiguration() {
@@ -150,8 +168,8 @@ open class Cordform : DefaultTask() {
             cd.nodeConfigurers.forEach {
                 val node = node { }
                 it.accept(node)
+                node.additionalCordapps.addAll(cordapps)
                 node.rootDir(directory)
-                node.installCordapps(cordapps)
             }
             cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
         } else {
