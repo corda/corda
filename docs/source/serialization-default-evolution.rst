@@ -177,12 +177,17 @@ that don't have matching parameters in the main constructor are simply omitted f
    .. sourcecode:: kotlin
 
         // Initial instance of the class
-        data class Example4 (val a: Int, val b: String, val c: Int) // (Version A)
+        data class Example4 (val a: Int?, val b: String?, val c: Int?) // (Version A)
 
 
         // Class post removal of property 'a'
-        data class Example4 (val b: String, c: Int) // (Version B)
+        data class Example4 (val b: String?, c: Int?) // (Version B)
 
+
+In practice, what this means is removing nullable properties is possible. However, removing non nullable properties isn't because
+a node receiving a message containing a serialized form of an object with fewer properties than it requires for construction has
+no capacity to guess at what values should or could be used as sensible defaults. When those properties are nullable it simply sets
+them to null.
 
 Reordering Constructor Parameter Order
 --------------------------------------
