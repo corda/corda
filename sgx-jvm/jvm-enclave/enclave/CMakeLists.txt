@@ -21,7 +21,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fpie -fstack-protec
 set(ENCLAVE_UNSIGNED_OUTPUT_LIB cordaenclave.so)
 set(ENCLAVE_SIGNED_OUTPUT_LIB cordaenclave.signed.so)
 set(SGX_SIGN_TOOL ${SGX_SDK}/build/linux/sgx_sign)
-set(PROGUARD_JAR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/root/usr/share/java/proguard.jar)
+set(PROGUARD_JAR_PATH /usr/share/proguard6.0beta1/lib/proguard.jar)
 set(AVIAN_PATH ${PROJECT_SOURCE_DIR}/../../avian)
 set(JDK_IMAGE ${PROJECT_SOURCE_DIR}/../../jdk8u/build/linux-x86_64-normal-server-release/images/j2re-image)
 set(ENCLAVE_JAR_PATH ${PROJECT_SOURCE_DIR}/../../../verify-enclave/build/libs/corda-enclavelet.jar)
