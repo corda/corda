@@ -1,27 +1,12 @@
 This is a small guide on how to generate the required files for Intel's
 Whitelisting form.
 
-To build the build docker image
-===
-
-```
-docker build -t minimal sgx-jvm/dependencies/docker-minimal
-```
-
 To build the hsm-tool.jar
 ===
-On the production box the docker image should be used for the build, defined in `sgx-jvm/dependencies/docker-minimal/Dockerfile`.
-
-To build the docker image:
+Build the JAR inside the build container (using the `sx` tool):
 
 ```
-docker build -t minimal sgx-jvm/dependencies/docker-minimal
-```
-
-To build the JAR inside the image:
-
-```
-bash run_in_image.sh minimal ./gradlew sgx-jvm/hsm-tool:jar
+sx exec ./gradlew sgx-jvm/hsm-tool:jar
 ```
 
 To generate the production key
@@ -53,7 +38,7 @@ This step requires the outer sgx-jvm to be built.
 First build the unsigned enclave within the docker image:
 
 ```
-bash run_in_image.sh minimal make -C sgx-jvm/noop-enclave unsigned
+sx build ../noop-enclave unsigned
 ```
 
 Now sign the enclave outside of the image:
@@ -65,7 +50,7 @@ java -jar sgx-jvm/hsm-tool/build/libs/sgx-jvm/hsm-tool-1.0-SNAPSHOT.jar --mode=S
 Now assemble the signed enclave and extract the SIGSTRUCT within the docker image.
 
 ```
-bash run_in_image.sh minimal make -C sgx-jvm/noop-enclave sigstruct-hsm
+sx build ../noop-enclave sigstruct-hsm
 ```
 
 Running the above steps will produce the following files in `sgx-jvm/noop-enclave/build/`:
@@ -90,8 +75,8 @@ from `noop_enclave.sigstruct-pretty.hsm.txt`, furthermore we need to attach
 To sanity check the signed enclave you need to build the test, load the isgx kernel module and load the aesmd systemd unit, then run the test itself. Note that this requires the kernel module to be built in `linux-sgx-driver`, and `aesm_service` to be built in `linux-sgx`.
 
 ```
-bash run_in_image.sh minimal make -C sgx-jvm/noop-enclave noop_test
-bash with_isgx.sh bash with_aesmd.sh bash with_ld_library_path.sh noop-enclave/build/noop_test noop-enclave/build/noop_enclave.signed.hsm.so
+sx build ../noop-enclave noop_test
+sx ./sgx-jvm/noop-enclave/build/noop_test sgx-jvm/noop-enclave/build/noop_enclave.signed.hsm.so
 ```
 
 The above should return cleanly.
