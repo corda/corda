@@ -50,14 +50,15 @@ Initial Margin Agreement Process
 ## Requirements
 
 This document assumes you have cURL (curl) installed and ready to use. It is usually installed by default in many Linux
-distribution. If not, please refer to your operating system manual for instruction on how to install it.
-On Windows, there are numerous ways of installation, including package managers like Chocolatey, NuGet, or Linux subsystem.
-Detailed instructions are out of scope of this document.
+distributions and MacOS.
+On Windows, there are numerous ways of installation, including [Cygwin](https://www.cygwin.com), [official distribution](https://curl.haxx.se),
+package managers like [Chocolatey](https://chocolatey.org), [NuGet](https://www.nuget.org/), or [Windows Linux subsystem](https://docs.microsoft.com/en-us/windows/wsl/about).
+Please refer to installation documents of your chosen source.
 
 ## Demo execution (step by step)
 
 **Setting up the Corda infrastructure**
-
+k
 To run from the command line in Unix:
 
 1. Deploy the nodes using ``./gradlew samples:simm-valuation-demo:deployNodes``
@@ -72,7 +73,7 @@ To run from the command line in Windows:
 
 From the command line run
 
-  curl http://localhost:10005/api/simmvaluationdemo/whoami
+    curl http://localhost:10005/api/simmvaluationdemo/whoami
 
 The response should be something like
 
