@@ -1,5 +1,6 @@
 package net.corda.testing.internal
 
+import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
@@ -108,3 +109,6 @@ fun createDevNodeCaCertPath(
     val nodeCa = createDevNodeCa(intermediateCa, legalName)
     return Triple(rootCa, intermediateCa, nodeCa)
 }
+
+/** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
+fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
