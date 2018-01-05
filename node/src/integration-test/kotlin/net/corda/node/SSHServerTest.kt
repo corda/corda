@@ -14,21 +14,19 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.driver.driver
 import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import java.net.ConnectException
 import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
-import java.util.regex.Pattern
 
 class SSHServerTest : IntegrationTest() {
     companion object {

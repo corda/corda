@@ -11,16 +11,12 @@ import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityConfiguration
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
@@ -42,19 +38,17 @@ class AuthDBTests : NodeBasedTest() {
     companion object {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
-    }
 
-    private lateinit var node: StartedNode<Node>
-    private lateinit var client: CordaRPCClient
-    private lateinit var db: UsersDB
-
-    companion object {
         private val cacheExpireAfterSecs: Long = 1
 
         @JvmStatic
         @Parameterized.Parameters(name = "password encryption format = {0}")
         fun encFormats() = arrayOf(PasswordEncryption.NONE, PasswordEncryption.SHIRO_1_CRYPT)
     }
+
+    private lateinit var node: StartedNode<Node>
+    private lateinit var client: CordaRPCClient
+    private lateinit var db: UsersDB
 
     @Parameterized.Parameter
     lateinit var passwordEncryption: PasswordEncryption
