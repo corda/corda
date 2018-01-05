@@ -285,15 +285,16 @@ serialised form
 Setter Instantiation
 ''''''''''''''''''''
 
-An alternative to constructor based initialisation Corda can also determine the important elements of an
-object by inspecting the getter and setter methods present on a class. If a class has only a default
+As an alternative to constructor based initialisation Corda can also determine the important elements of an
+object by inspecting the getter and setter methods present on a class. If a class has **only** a default
 constructor **and** properties then the serializable properties will be determined by the presence of
-both a getter and setter for that property that are both publicly visible.
+both a getter and setter for that property that are both publicly visible. I.e. the class adheres to
+the classic *idiom* of mutable JavaBeans.
 
 On deserialization, a default instance will first be created and then, in turn, the setters invoked
 on that object to populate the correct values.
 
-This is mostly relevant to certain java idioms where classes define only getters and setters. For example:
+For example:
 
 .. container:: codeset
 
