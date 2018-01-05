@@ -26,6 +26,9 @@ import java.net.ConnectException
 import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
+import java.util.regex.Pattern
 
 class SSHServerTest : IntegrationTest() {
     companion object {
@@ -33,6 +36,7 @@ class SSHServerTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
@@ -54,6 +58,7 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
@@ -74,6 +79,7 @@ class SSHServerTest : IntegrationTest() {
     }
 
 
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
@@ -97,6 +103,7 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
@@ -127,6 +134,7 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))

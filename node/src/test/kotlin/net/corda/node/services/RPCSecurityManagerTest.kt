@@ -7,6 +7,7 @@ import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
 import net.corda.nodeapi.internal.config.User
+import net.corda.node.services.config.SecurityConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import javax.security.auth.login.FailedLoginException
@@ -26,7 +27,7 @@ class RPCSecurityManagerTest {
 
     @Test
     fun `Generic RPC call authorization`() {
-        checkUserPermissions(
+        checkUserActions(
                 permitted = setOf(arrayListOf("nodeInfo"), arrayListOf("notaryIdentities")),
                 permissions = setOf(
                         Permissions.invokeRpc(CordaRPCOps::nodeInfo),
@@ -35,7 +36,7 @@ class RPCSecurityManagerTest {
 
     @Test
     fun `Flow invocation authorization`() {
-        checkUserPermissions(
+        checkUserActions(
             permissions = setOf(Permissions.startFlow<DummyFlow>()),
             permitted = setOf(
                 arrayListOf("startTrackedFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow"),
@@ -44,21 +45,21 @@ class RPCSecurityManagerTest {
 
     @Test
     fun `Check startFlow RPC permission implies startFlowDynamic`() {
-        checkUserPermissions(
+        checkUserActions(
                 permissions = setOf(Permissions.invokeRpc("startFlow")),
                 permitted = setOf(arrayListOf("startFlow"), arrayListOf("startFlowDynamic")))
     }
 
     @Test
     fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
-        checkUserPermissions(
+        checkUserActions(
                 permitted = setOf(arrayListOf("startTrackedFlow"), arrayListOf("startTrackedFlowDynamic")),
                 permissions = setOf(Permissions.invokeRpc("startTrackedFlow")))
     }
 
     @Test
     fun `Admin authorization`() {
-        checkUserPermissions(
+        checkUserActions(
             permissions = setOf("all"),
             permitted = allActions.map { arrayListOf(it) }.toSet())
     }
@@ -118,9 +119,9 @@ class RPCSecurityManagerTest {
                 users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
     }
 
-    private fun checkUserPermissions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
+    private fun checkUserActions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
         val user = User(username = "user", password = "password", permissions = permissions)
-        val userRealms = RPCSecurityManagerImpl.fromUserList(users = listOf(user), id = AuthServiceId("TEST"))
+        val userRealms = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(listOf(user)))
         val disabled = allActions.filter { !permitted.contains(listOf(it)) }
         for (subject in listOf(
                 userRealms.authenticate("user", Password("password")),
