@@ -58,7 +58,7 @@ Please refer to installation documents of your chosen source.
 ## Demo execution (step by step)
 
 **Setting up the Corda infrastructure**
-k
+
 To run from the command line in Unix:
 
 1. Deploy the nodes using ``./gradlew samples:simm-valuation-demo:deployNodes``
