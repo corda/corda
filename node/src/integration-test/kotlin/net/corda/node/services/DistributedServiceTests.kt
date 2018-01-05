@@ -20,6 +20,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -73,6 +74,7 @@ class DistributedServiceTests {
 
     // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
     // to handle distributed services
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `requests are distributed evenly amongst the nodes`() = setup {
         // Issue 100 pounds, then pay ourselves 50x2 pounds
@@ -101,6 +103,7 @@ class DistributedServiceTests {
     }
 
     // TODO This should be in RaftNotaryServiceTests
+    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `cluster survives if a notary is killed`() = setup {
         // Issue 100 pounds, then pay ourselves 10x5 pounds
