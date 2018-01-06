@@ -4,27 +4,47 @@ import co.paralleluniverse.fibers.Suspendable
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
-import net.corda.core.flows.*
+import com.jcraft.jsch.Random
+import net.corda.core.crypto.newSecureRandom
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.driver.driver
-import org.bouncycastle.util.io.Streams
-import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.driver.driver
+import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.util.io.Streams
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import org.junit.Test
 import java.net.ConnectException
+import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
-import java.util.regex.Pattern
 
 class SSHServerTest {
+    companion object {
+        private var defaultJschRandom: String? = null
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
+        @BeforeClass
+        @JvmStatic
+        fun setupNonBlockingRandom() {
+            defaultJschRandom = JSch.getConfig("random")
+            JSch.setConfig("random", CordaRandom::class.java.name)
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun restoreDefaultJschRandom() {
+            JSch.setConfig("random", defaultJschRandom)
+        }
+    }
+
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
@@ -46,7 +66,6 @@ class SSHServerTest {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
@@ -66,8 +85,6 @@ class SSHServerTest {
         }
     }
 
-
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
@@ -91,7 +108,6 @@ class SSHServerTest {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
@@ -122,7 +138,6 @@ class SSHServerTest {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
@@ -153,24 +168,31 @@ class SSHServerTest {
     @StartableByRPC
     @InitiatingFlow
     class FlowICanRun : FlowLogic<String>() {
-
         private val HELLO_STEP = ProgressTracker.Step("Hello")
+        override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
 
         @Suspendable
         override fun call(): String {
             progressTracker?.currentStep = HELLO_STEP
             return "bambam"
         }
-
-        override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
     }
 
     @StartableByRPC
     @InitiatingFlow
-    class FlowICannotRun(val otherParty: Party) : FlowLogic<String>() {
+    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
+        override val progressTracker: ProgressTracker? = ProgressTracker()
+
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
+    }
 
-        override val progressTracker: ProgressTracker? = ProgressTracker()
+    class CordaRandom : Random {
+        private var tmp = ByteArray(16)
+        override fun fill(foo: ByteArray, start: Int, len: Int) {
+            if (len > tmp.size) tmp = ByteArray(len)
+            newSecureRandom().nextBytes(tmp)
+            System.arraycopy(tmp, 0, foo, start, len)
+        }
     }
 }
