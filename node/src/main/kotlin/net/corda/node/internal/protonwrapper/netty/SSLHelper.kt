@@ -1,9 +1,9 @@
 package net.corda.node.internal.protonwrapper.netty
 
 import io.netty.handler.ssl.SslHandler
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport
-import java.security.SecureRandom
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
@@ -14,7 +14,7 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     val sslContext = SSLContext.getInstance("TLS")
     val keyManagers = keyManagerFactory.keyManagers
     val trustManagers = trustManagerFactory.trustManagers
-    sslContext.init(keyManagers, trustManagers, SecureRandom())
+    sslContext.init(keyManagers, trustManagers, newSecureRandom())
     val sslEngine = sslContext.createSSLEngine(target.host, target.port)
     sslEngine.useClientMode = true
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
@@ -28,7 +28,7 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     val sslContext = SSLContext.getInstance("TLS")
     val keyManagers = keyManagerFactory.keyManagers
     val trustManagers = trustManagerFactory.trustManagers
-    sslContext.init(keyManagers, trustManagers, SecureRandom())
+    sslContext.init(keyManagers, trustManagers, newSecureRandom())
     val sslEngine = sslContext.createSSLEngine()
     sslEngine.useClientMode = false
     sslEngine.needClientAuth = true
