@@ -79,7 +79,6 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
     private lateinit var rpcOps: CordaRPCOps
@@ -99,28 +98,22 @@ object InteractiveShell {
         this.nodeLegalName = configuration.myLegalName
         this.database = database
         val dir = configuration.baseDirectory
-        val runSshDaemon = configuration.sshd != null
 
         val config = Properties()
-        if (runSshDaemon) {
-            val sshKeysDir = dir / "sshkey"
-            sshKeysDir.toFile().mkdirs()
+        val sshKeysDir = (dir / "sshkey").createDirectories()
 
-            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
-            config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
-            config["crash.ssh.keygen"] = "true"
-            config["crash.ssh.port"] = configuration.sshd?.port.toString()
-            config["crash.auth"] = "corda"
-        }
+        // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
+        config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
+        config["crash.ssh.keygen"] = "true"
+        config["crash.ssh.port"] = configuration.sshd?.port.toString()
+        config["crash.auth"] = "corda"
 
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         shell = ShellLifecycle(dir).start(config)
 
-        if (runSshDaemon) {
-            Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
-        }
+        Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
     }
 
     fun runLocalShell(node: StartedNode<Node>) {
@@ -319,8 +312,7 @@ object InteractiveShell {
     // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
     @JvmStatic
     fun runStateMachinesView(out: RenderPrintWriter, rpcOps: CordaRPCOps): Any? {
-        val proxy = rpcOps
-        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
+        val (stateMachines, stateMachineUpdates) = rpcOps.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
         database.transaction {

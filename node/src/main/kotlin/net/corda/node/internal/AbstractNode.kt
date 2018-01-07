@@ -247,6 +247,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startShell(rpcOps)
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
+
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
@@ -280,8 +281,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      */
     protected abstract fun getRxIoScheduler(): Scheduler
 
-    open fun startShell(rpcOps: CordaRPCOps) {
-        InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
+    private fun startShell(rpcOps: CordaRPCOps) {
+        if (configuration.sshd != null) {
+            InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
+        }
     }
 
     private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
