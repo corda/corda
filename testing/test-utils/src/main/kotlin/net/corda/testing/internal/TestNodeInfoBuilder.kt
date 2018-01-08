@@ -22,17 +22,17 @@ class TestNodeInfoBuilder {
         }
     }
 
-    fun build(serial: Long = 1): NodeInfo {
+    fun build(serial: Long = 1, platformVersion: Int = 1): NodeInfo {
         return NodeInfo(
                 listOf(NetworkHostAndPort("my.${identitiesAndPrivateKeys[0].first.party.name.organisation}.com", 1234)),
                 identitiesAndPrivateKeys.map { it.first },
-                1,
+                platformVersion,
                 serial
         )
     }
 
-    fun buildWithSigned(serial: Long = 1): Pair<NodeInfo, SignedNodeInfo> {
-        val nodeInfo = build(serial)
+    fun buildWithSigned(serial: Long = 1, platformVersion: Int = 1): Pair<NodeInfo, SignedNodeInfo> {
+        val nodeInfo = build(serial, platformVersion)
         val privateKeys = identitiesAndPrivateKeys.map { it.second }
         return Pair(nodeInfo, nodeInfo.signWith(privateKeys))
     }
@@ -42,10 +42,10 @@ class TestNodeInfoBuilder {
     }
 }
 
-fun createNodeInfoAndSigned(vararg names: CordaX500Name, serial: Long = 1): Pair<NodeInfo, SignedNodeInfo> {
+fun createNodeInfoAndSigned(vararg names: CordaX500Name, serial: Long = 1, platformVersion: Int = 1): Pair<NodeInfo, SignedNodeInfo> {
     val nodeInfoBuilder = TestNodeInfoBuilder()
     names.forEach { nodeInfoBuilder.addIdentity(it) }
-    return nodeInfoBuilder.buildWithSigned(serial)
+    return nodeInfoBuilder.buildWithSigned(serial, platformVersion)
 }
 
 fun NodeInfo.signWith(keys: List<PrivateKey>): SignedNodeInfo {
