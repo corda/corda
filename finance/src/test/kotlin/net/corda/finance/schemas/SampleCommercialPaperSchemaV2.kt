@@ -8,10 +8,7 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
 import java.time.Instant
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * Second version of a cash contract ORM schema that extends the common
@@ -24,6 +21,14 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),
                     Index(name = "maturity_index2", columnList = "maturity_instant")))
     class PersistentCommercialPaperState(
+
+            @ElementCollection
+            @Column(name = "participants")
+            @CollectionTable(name="cp_states_v2_participants", joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+            override var participants: MutableSet<AbstractParty>? = null,
+
             @Column(name = "maturity_instant")
             var maturity: Instant,
 
