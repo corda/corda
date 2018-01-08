@@ -88,6 +88,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
         return database.transaction {
             val builder = session.criteriaBuilder
             val query = builder.createQuery(NetworkParametersEntity::class.java).run {
+                // TODO a limit of 1 since we only need the first result
                 from(NetworkParametersEntity::class.java).run {
                     orderBy(builder.desc(get<String>(NetworkParametersEntity::version.name)))
                 }
@@ -102,6 +103,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
             val builder = session.criteriaBuilder
             val query = builder.createQuery(NetworkMapEntity::class.java).run {
                 from(NetworkMapEntity::class.java).run {
+                    // TODO a limit of 1 since we only need the first result
                     where(builder.isNotNull(get<ByteArray?>(NetworkMapEntity::signature.name)))
                     orderBy(builder.desc(get<String>(NetworkMapEntity::version.name)))
                 }
