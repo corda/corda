@@ -28,7 +28,7 @@ class Node(private val project: Project) : CordformNode() {
      * @note Type is any due to gradle's use of "GStrings" - each value will have "toString" called on it
      */
     var cordapps = mutableListOf<Any>()
-    var additionalCordapps = mutableListOf<File>()
+    internal var additionalCordapps = mutableListOf<File>()
     internal lateinit var nodeDir: File
         private set
     internal lateinit var rootDir: File

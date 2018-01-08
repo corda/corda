@@ -20,7 +20,7 @@ class EvolutionSerializer(
         override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer(clazz, factory) {
 
     // explicitly set as empty to indicate it's unused by this type of serializer
-    override val propertySerializers: Collection<PropertySerializer> = emptyList()
+    override val propertySerializers = ConstructorDestructorMethods (emptyList(), emptyList())
 
     /**
      * Represents a parameter as would be passed to the constructor of the class as it was
