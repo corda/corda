@@ -13,8 +13,22 @@ import javax.xml.bind.DatatypeConverter
  */
 @CordaSerializable
 sealed class ByteSequence : Comparable<ByteSequence> {
+    constructor() {
+        this._bytes = COPY_BYTES
+    }
+
     /**
-     * The underlying bytes.
+     * This constructor allows to bypass calls to [bytes] for functions in this class if the implementation
+     * of [bytes] makes a copy of the underlying [ByteArray] (as [OpaqueBytes] does for safety).  This improves
+     * performance.  It is recommended to use this constructor rather than the default constructor.
+     */
+    constructor(uncopiedBytes: ByteArray) {
+        this._bytes = uncopiedBytes
+    }
+
+    /**
+     * The underlying bytes.  Some implementations may choose to make a copy of the underlying [ByteArray] for
+     * security reasons.  For example, [OpaqueBytes].
      */
     abstract val bytes: ByteArray
     /**
@@ -26,8 +40,11 @@ sealed class ByteSequence : Comparable<ByteSequence> {
      */
     abstract val offset: Int
 
+    private val _bytes: ByteArray
+        get() = if (field === COPY_BYTES) bytes else field
+
     /** Returns a [ByteArrayInputStream] of the bytes */
-    fun open() = ByteArrayInputStream(bytes, offset, size)
+    fun open() = ByteArrayInputStream(_bytes, offset, size)
 
     /**
      * Create a sub-sequence backed by the same array.
@@ -38,19 +55,22 @@ sealed class ByteSequence : Comparable<ByteSequence> {
     fun subSequence(offset: Int, size: Int): ByteSequence {
         require(offset >= 0)
         require(offset + size <= this.size)
+        // Intentionally use bytes rather than _bytes, to mirror the copy-or-not behaviour of that property.
         return if (offset == 0 && size == this.size) this else of(bytes, this.offset + offset, size)
     }
 
     companion object {
         /**
          * Construct a [ByteSequence] given a [ByteArray] and optional offset and size, that represents that potentially
-         * sub-sequence of bytes.  The returned implementation is optimised when the whole [ByteArray] is the sequence.
+         * sub-sequence of bytes.
          */
         @JvmStatic
         @JvmOverloads
         fun of(bytes: ByteArray, offset: Int = 0, size: Int = bytes.size): ByteSequence {
-            return if (offset == 0 && size == bytes.size && size != 0) OpaqueBytes(bytes) else OpaqueBytesSubSequence(bytes, offset, size)
+            return OpaqueBytesSubSequence(bytes, offset, size)
         }
+
+        private val COPY_BYTES: ByteArray = ByteArray(0)
     }
 
     /**
@@ -65,7 +85,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
      * Copy this sequence, complete with new backing array.  This can be helpful to break references to potentially
      * large backing arrays from small sub-sequences.
      */
-    fun copy(): ByteSequence = of(bytes.copyOfRange(offset, offset + size))
+    fun copy(): ByteSequence = of(_bytes.copyOfRange(offset, offset + size))
 
     /**
      * Compare byte arrays byte by byte.  Arrays that are shorter are deemed less than longer arrays if all the bytes
@@ -73,10 +93,12 @@ sealed class ByteSequence : Comparable<ByteSequence> {
      */
     override fun compareTo(other: ByteSequence): Int {
         val min = minOf(this.size, other.size)
+        val thisBytes = this._bytes
+        val otherBytes = other._bytes
         // Compare min bytes
         for (index in 0 until min) {
-            val unsignedThis = java.lang.Byte.toUnsignedInt(this.bytes[this.offset + index])
-            val unsignedOther = java.lang.Byte.toUnsignedInt(other.bytes[other.offset + index])
+            val unsignedThis = java.lang.Byte.toUnsignedInt(thisBytes[this.offset + index])
+            val unsignedOther = java.lang.Byte.toUnsignedInt(otherBytes[other.offset + index])
             if (unsignedThis != unsignedOther) {
                 return Integer.signum(unsignedThis - unsignedOther)
             }
@@ -89,7 +111,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
         if (this === other) return true
         if (other !is ByteSequence) return false
         if (this.size != other.size) return false
-        return subArraysEqual(this.bytes, this.offset, this.size, other.bytes, other.offset)
+        return subArraysEqual(this._bytes, this.offset, this.size, other._bytes, other.offset)
     }
 
     private fun subArraysEqual(a: ByteArray, aOffset: Int, length: Int, b: ByteArray, bOffset: Int): Boolean {
@@ -103,14 +125,15 @@ sealed class ByteSequence : Comparable<ByteSequence> {
     }
 
     override fun hashCode(): Int {
+        val thisBytes = _bytes
         var result = 1
         for (index in offset until (offset + size)) {
-            result = 31 * result + bytes[index]
+            result = 31 * result + thisBytes[index]
         }
         return result
     }
 
-    override fun toString(): String = "[${bytes.copyOfRange(offset, offset + size).toHexString()}]"
+    override fun toString(): String = "[${_bytes.copyOfRange(offset, offset + size).toHexString()}]"
 }
 
 /**
@@ -118,7 +141,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
  * In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
  * functionality to Java, but it won't arrive for a few years yet!
  */
-open class OpaqueBytes(bytes: ByteArray) : ByteSequence() {
+open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes) {
     companion object {
         /**
          * Create [OpaqueBytes] from a sequence of [Byte] values.
@@ -147,7 +170,7 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence() {
 }
 
 /**
- * Copy [size] bytes from this [ByteArray] starting from [offset] into a new [ByteArray].
+ * Wrap [size] bytes from this [ByteArray] starting from [offset] into a new [ByteArray].
  */
 fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of(this, offset, size)
 
@@ -165,7 +188,7 @@ fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 /**
  * Class is public for serialization purposes
  */
-class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence() {
+class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence(bytes) {
     init {
         require(offset >= 0 && offset < bytes.size)
         require(size >= 0 && size <= bytes.size)
