@@ -1,7 +1,7 @@
-.. contents::
-
 Object serialization
 ====================
+
+.. contents::
 
 What is serialization (and deserialization)?
 --------------------------------------------
@@ -54,7 +54,7 @@ was a compelling use case for the definition and development of a custom format 
 
     #.  A desire to have a schema describing what has been serialized along-side the actual data:
 
-        #.  To assist with versioning, both in terms of being able to interpret long ago archivEd data (e.g. trades from
+        #.  To assist with versioning, both in terms of being able to interpret long ago archived data (e.g. trades from
             a decade ago, long after the code has changed) and between differing code versions.
         #.  To make it easier to write user interfaces that can navigate the serialized form of data.
         #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted.
@@ -78,7 +78,7 @@ Finally, for the checkpointing of flows Corda will continue to use the existing 
 
 This separation of serialization schemes into different contexts allows us to use the most suitable framework for that context rather than
 attempting to force a one size fits all approach. Where ``Kryo`` is more suited to the serialization of a programs stack frames, being more flexible
-than our AMQP framework in what it can construct and serialize, that flexibility makes it exceptionally difficult to make secure. Conversly
+than our AMQP framework in what it can construct and serialize, that flexibility makes it exceptionally difficult to make secure. Conversely
 our AMQP framework allows us to concentrate on a robust a secure framework that can be reasoned about thus made safer with far fewer unforeseen
 security holes.
 
@@ -284,28 +284,6 @@ serialised form
 
         val e2 = e.serialize().deserialize() // e2.c will be 20, not 100!!!
 
-.. note:: Whilst the Corda AMQP serialization framework supports private object properties without publicly
-    accessible getter methods this development idiom is strongly discouraged. Support for this will be phased
-    removed in the future.
-
-    When designing stateful objects is should be remembered that they are not, despite appearances, traditional
-    programmatic constructs, they are signed over, transformed, serialised, and relationally mapped. As such,
-    all elements should be publicly accessible by design
-
-    .. warning:: IDE's will indiciate erroneously that properties can be given something other than public
-        visibility. Ignore this as whilst it will work, as discussed aboce there are may reasons why this isn't
-        a good idea and those are beyodn the scope of the IDE's inference rules
-
-    Providing a public getter, as per the following example, is acceptable
-
-        .. container:: codeset
-
-            .. sourcecode:: kotlin
-
-                data class C(val a: Int, private val b: Int) {
-                    public fun getB() = b
-                }
-
 Setter Instantiation
 ''''''''''''''''''''
 
@@ -337,6 +315,76 @@ For example:
             public void setB(int b) { this.b = b; }
             public void setC(int c) { this.c = c; }
         }
+
+Inaccessible Private Properties
+```````````````````````````````
+
+Whilst the Corda AMQP serialization framework supports private object properties without publicly
+accessible getter methods this development idiom is strongly discouraged. Support for this will be phased
+removed in the future.
+
+For example.
+
+    .. container:: codeset
+
+        Kotlin:
+
+        .. sourcecode:: kotlin
+
+            data class C(val a: Int, private val b: Int)
+
+        Java:
+
+        .. sourcecode:: Java
+
+            class C {
+                public Integer a;
+                private Integer b;
+
+                C(Integer a, Integer b) {
+                    this.a = a;
+                    this.b = b;
+                }
+            }
+
+When designing stateful objects is should be remembered that they are not, despite appearances, traditional
+programmatic constructs. They are signed over, transformed, serialised, and relationally mapped. As such,
+all elements should be publicly accessible by design
+
+.. warning:: IDEs will indiciate erroneously that properties can be given something other than public
+    visibility. Ignore this as whilst it will work, as discussed above there are many reasons why this isn't
+    a good idea and those are beyond the scope of the IDEs inference rules
+
+Providing a public getter, as per the following example, is acceptable
+
+    .. container:: codeset
+
+        Kotlin:
+
+        .. sourcecode:: kotlin
+
+            data class C(val a: Int, private val b: Int) {
+                public fun getB() = b
+            }
+
+        Java:
+
+        .. sourcecode:: Java
+
+            class C {
+                public Integer a;
+                private Integer b;
+
+                C(Integer a, Integer b) {
+                    this.a = a;
+                    this.b = b;
+                }
+
+                public Integer getB() {
+                    return b;
+                }
+            }
+
 
 Enums
 `````
