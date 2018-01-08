@@ -7,6 +7,7 @@ import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.driver.driver
@@ -20,7 +21,7 @@ import javax.security.auth.x500.X500Principal
 class NodeKeystoreCheckTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     @Test

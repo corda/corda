@@ -49,7 +49,7 @@ import javax.ws.rs.core.Response
 class NodeRegistrationTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas("Alice")
+        val databaseSchemas = IntegrationTestSchemas("NotaryService", "Alice", "Genevieve")
 
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
