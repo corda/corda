@@ -1,3 +1,5 @@
+.. contents::
+
 Object serialization
 ====================
 
@@ -282,21 +284,27 @@ serialised form
 
         val e2 = e.serialize().deserialize() // e2.c will be 20, not 100!!!
 
-.. warning:: Private properties in Kotlin classes render the class unserializable *unless* a public
-    getter is manually defined. For example:
+.. note:: Whilst the Corda AMQP serialization framework supports private object properties without publicly
+    accessible getter methods this development idiom is strongly discouraged. Support for this will be phased
+    removed in the future.
 
-    .. container:: codeset
+    When designing stateful objects is should be remembered that they are not, despite appearances, traditional
+    programmatic constructs, they are signed over, transformed, serialised, and relationally mapped. As such,
+    all elements should be publicly accessible by design
 
-        .. sourcecode:: kotlin
+    .. warning:: IDE's will indiciate erroneously that properties can be given something other than public
+        visibility. Ignore this as whilst it will work, as discussed aboce there are may reasons why this isn't
+        a good idea and those are beyodn the scope of the IDE's inference rules
 
-            data class C(val a: Int, private val b: Int) {
-                // Without this C cannot be serialized
-                public fun getB() = b
-            }
+    Providing a public getter, as per the following example, is acceptable
 
-    .. note:: This is particularly relevant as IDE's can often point out where they believe a
-        property can be made private without knowing this can break Corda serialization. Should
-        this happen then a run time warning will be generated when the class fails to serialize
+        .. container:: codeset
+
+            .. sourcecode:: kotlin
+
+                data class C(val a: Int, private val b: Int) {
+                    public fun getB() = b
+                }
 
 Setter Instantiation
 ''''''''''''''''''''

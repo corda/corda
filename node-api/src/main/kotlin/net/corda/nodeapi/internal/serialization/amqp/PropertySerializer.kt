@@ -1,17 +1,75 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
 import java.lang.reflect.Type
+import java.lang.reflect.Field
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaGetter
+import kotlin.reflect.jvm.kotlinProperty
+
+abstract class PropertyReader {
+    abstract fun read(obj: Any?): Any?
+    abstract fun isNullable(): Boolean
+}
+
+class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
+    init {
+        readMethod?.isAccessible = true
+    }
+
+    private fun Method.returnsNullable(): Boolean {
+        try {
+            val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
+            return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
+        } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
+            // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
+            // TODO: Revisit this when Kotlin issue is fixed.
+
+            loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
+            return true
+        }
+    }
+
+    override fun read(obj: Any?): Any? {
+        return readMethod!!.invoke(obj)
+    }
+
+    override fun isNullable(): Boolean = readMethod?.returnsNullable() ?: false
+}
+
+class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader() {
+    init {
+        loggerFor<PropertySerializer>().warn("Create property Serializer for private property '${field.name}' not "
+                + "exposed by a getter on class '$parentType'\n"
+                + "\tNOTE: This behaviour will be deprecated at some point in the future and a getter required")
+    }
+
+    override fun read(obj: Any?): Any? {
+        field.isAccessible = true
+        val rtn = field.get(obj)
+        field.isAccessible = false
+        return rtn
+    }
+
+    override fun isNullable() = try {
+        field.kotlinProperty?.returnType?.isMarkedNullable ?: false
+    } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
+        // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
+        // TODO: Revisit this when Kotlin issue is fixed.
+
+        loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
+        true
+    }
+}
+
 
 /**
  * Base class for serialization of a property of an object.
  */
-sealed class PropertySerializer(val name: String, val readMethod: Method?, val resolvedType: Type) {
+sealed class PropertySerializer(val name: String, val readMethod: PropertyReader, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any?
@@ -44,25 +102,11 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             }
 
     private fun generateMandatory(): Boolean {
-        return isJVMPrimitive || readMethod?.returnsNullable() == false
-    }
-
-    private fun Method.returnsNullable(): Boolean {
-        try {
-            val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
-            return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
-        } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
-            // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
-            // TODO: Revisit this when Kotlin issue is fixed.
-            logger.error("Unexpected internal Kotlin error", e)
-            return true
-        }
+        return isJVMPrimitive || !(readMethod.isNullable())
     }
 
     companion object {
-        private val logger = contextLogger()
-        fun make(name: String, readMethod: Method?, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
-            readMethod?.isAccessible = true
+        fun make(name: String, readMethod: PropertyReader, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
             if (SerializerFactory.isPrimitive(resolvedType)) {
                 return when (resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
@@ -78,7 +122,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
      * A property serializer for a complex type (another object).
      */
     class DescribedTypePropertySerializer(
-            name: String, readMethod: Method?,
+            name: String,
+            readMethod: PropertyReader,
             resolvedType: Type,
             private val lazyTypeSerializer: () -> AMQPSerializer<*>) : PropertySerializer(name, readMethod, resolvedType) {
         // This is lazy so we don't get an infinite loop when a method returns an instance of the class.
@@ -90,12 +135,15 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             }
         }
 
-        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
+        override fun readProperty(
+                obj: Any?,
+                schemas: SerializationSchemas,
+                input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
             input.readObjectOrNull(obj, schemas, resolvedType)
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
-            output.writeObjectOrNull(readMethod!!.invoke(obj), data, resolvedType)
+            output.writeObjectOrNull(readMethod.read(obj), data, resolvedType)
         }
 
         private val nameForDebug = "$name(${resolvedType.typeName})"
@@ -104,7 +152,10 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     /**
      * A property serializer for most AMQP primitive type (Int, String, etc).
      */
-    class AMQPPrimitivePropertySerializer(name: String, readMethod: Method?, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
+    class AMQPPrimitivePropertySerializer(
+            name: String,
+            readMethod: PropertyReader,
+            resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
         override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
@@ -112,7 +163,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            val value = readMethod!!.invoke(obj)
+            val value = readMethod.read(obj)
             if (value is ByteArray) {
                 data.putObject(Binary(value))
             } else {
@@ -126,7 +177,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
      * value of the character is stored in numeric UTF-16 form and on deserialisation requires explicit
      * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
      */
-    class AMQPCharPropertySerializer(name: String, readMethod: Method?) :
+    class AMQPCharPropertySerializer(name: String, readMethod: PropertyReader) :
             PropertySerializer(name, readMethod, Character::class.java) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
@@ -135,7 +186,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            val input = readMethod!!.invoke(obj)
+            val input = readMethod.read(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
     }
