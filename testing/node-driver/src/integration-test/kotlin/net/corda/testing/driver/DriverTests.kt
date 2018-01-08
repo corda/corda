@@ -41,8 +41,17 @@ class DriverTests {
     }
 
     @Test
-    fun `simple node startup and shutdown`() {
-        val handle = driver {
+    fun `simple in-process node startup and shutdown`() {
+        val handle = internalDriver(startNodesInProcess = true) {
+            val node = startNode(providedName = DUMMY_REGULATOR_NAME)
+            nodeMustBeUp(node)
+        }
+        nodeMustBeDown(handle)
+    }
+
+    @Test
+    fun `simple out-of-process node startup and shutdown`() {
+        val handle = internalDriver(startNodesInProcess = false) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME)
             nodeMustBeUp(node)
         }
@@ -51,7 +60,7 @@ class DriverTests {
 
     @Test
     fun `starting with default notary`() {
-        driver {
+        internalDriver {
             // Make sure the default is a single-node notary
             val notary = defaultNotaryNode.getOrThrow()
             val notaryIdentities = notary.nodeInfo.legalIdentitiesAndCerts
@@ -67,7 +76,7 @@ class DriverTests {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
+        val nodeHandle = internalDriver(portAllocation = PortAllocation.RandomFree) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -79,7 +88,10 @@ class DriverTests {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
+        internalDriver(
+                isDebug = true,
+                startNodesInProcess = false,
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
@@ -89,7 +101,7 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(jmxPolicy = JmxPolicy(true)) {
+        internalDriver(jmxPolicy = JmxPolicy(true), startNodesInProcess = false) {
             // start another node so we gain access to node JMX metrics
             startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             val webAddress = NetworkHostAndPort("localhost", 7006)
@@ -104,12 +116,14 @@ class DriverTests {
     fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
-        driver {
+        internalDriver(startNodesInProcess = false) {
             val baseDirectory = defaultNotaryNode.getOrThrow().configuration.baseDirectory
             assertThat(baseDirectory / "process-id").exists()
         }
 
-        val baseDirectory = internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME))) {
+        val baseDirectory = internalDriver(
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME))) {
             baseDirectory(DUMMY_NOTARY_NAME)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()

@@ -9,9 +9,12 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
+import net.corda.testing.BOC_NAME
+import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.testing.DUMMY_BANK_B_NAME
+import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
@@ -24,12 +27,8 @@ class TraderDemoTest {
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
-        val bankUser = User("user1", "test", permissions = setOf(
-                startFlow<CashIssueFlow>(),
-                startFlow<CashPaymentFlow>(),
-                startFlow<CommercialPaperIssueFlow>(),
-                all()))
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        val bankUser = User("user1", "test", permissions = setOf(all()))
+        internalDriver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),

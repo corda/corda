@@ -21,10 +21,9 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.chooseIdentity
-import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Table
@@ -40,7 +39,7 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = internalDriver {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
@@ -74,7 +73,7 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = internalDriver {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
@@ -99,11 +98,6 @@ class NodeStatePersistenceTests {
         val retrievedMessage = stateAndRef!!.state.data.message
         assertEquals(message, retrievedMessage)
     }
-}
-
-fun isQuasarAgentSpecified(): Boolean {
-    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.endsWith("quasar.jar") }
 }
 
 @CordaSerializable

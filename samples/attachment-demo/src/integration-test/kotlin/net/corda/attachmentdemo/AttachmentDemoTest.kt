@@ -8,7 +8,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.internalDriver
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
@@ -17,7 +17,7 @@ class AttachmentDemoTest {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(isDebug = true, portAllocation = PortAllocation.Incremental(20000)) {
+        internalDriver(portAllocation = PortAllocation.Incremental(20000)) {
             val demoUser = listOf(User("demo", "demo", setOf(
                     startFlow<AttachmentDemoFlow>(),
                     invokeRpc(CordaRPCOps::attachmentExists),

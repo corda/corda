@@ -9,17 +9,19 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
-import net.corda.testing.driver.driver
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.chooseIdentity
+import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class CordappScanningDriverTest {
+class CordappScanningTest {
     @Test
     fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))
         // The driver will automatically pick up the annotated flows below
-        driver {
+        internalDriver {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
                     startNode(providedName = BOB_NAME)).transpose().getOrThrow()
@@ -34,13 +36,13 @@ class CordappScanningDriverTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class ReceiveFlow(val otherParty: Party) : FlowLogic<String>() {
+    class ReceiveFlow(private val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
     }
 
     @InitiatedBy(ReceiveFlow::class)
-    open class SendClassFlow(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+    open class SendClassFlow(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = otherPartySession.send(javaClass.name)
     }
