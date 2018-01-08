@@ -51,7 +51,13 @@ class HibernateConfiguration(
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
         databaseConfig.schema?.apply {
-            config.setProperty("hibernate.default_schema", databaseConfig.schema)
+            //preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
+            val schemaName = if (jdbcUrl.contains(":postgresql:", ignoreCase = true) && !databaseConfig.schema.startsWith("\"")) {
+                "\"" + databaseConfig.schema + "\""
+            }  else {
+                databaseConfig.schema
+            }
+            config.setProperty("hibernate.default_schema", schemaName)
         }
 
         schemas.forEach { schema ->
@@ -97,7 +103,7 @@ class HibernateConfiguration(
             applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
             // When connecting to SqlServer (and only then) do we need to tell hibernate to use
             // nationalised (i.e. Unicode) strings by default
-            val forceUnicodeForSqlServer = jdbcUrl.contains(":sqlserver:", ignoreCase = true);
+            val forceUnicodeForSqlServer = jdbcUrl.contains(":sqlserver:", ignoreCase = true)
             enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
             build()
         }

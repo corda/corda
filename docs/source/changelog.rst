@@ -155,6 +155,8 @@ UNRELEASED
 
 * Enterprise Corda only: node configuration property ``database.schema`` and documented existing database properties.
 
+* Enterprise Corda only: Compatibility with PostgreSQL 9.6 database.
+
 .. _changelog_v1:
 
 Release 1.0

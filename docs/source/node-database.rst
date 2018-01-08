@@ -58,3 +58,25 @@ database {
     transactionIsolationLevel = "readCommitted"
     schema = [SCHEMA]
 }
+
+PostgreSQL
+````````````````````````
+Corda supports PostgreSQL 9.6 database.
+The property ``database.schema`` is optional. The value of ``database.schema`` is automatically wrapped in double quotes
+to preserve case-sensitivity (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`).
+Corda ships with PostgreSQL JDBC Driver 42.1.4 out-of-the-box.
+
+Example node configuration for PostgreSQL:
+
+.. sourcecode:: none
+
+dataSourceProperties = {
+    dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
+    dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/postgres"
+    dataSource.user = [USER]
+    dataSource.password = [PASSWORD]
+}
+database = {
+    transactionIsolationLevel = READ_COMMITTED
+    schema = [SCHEMA]
+}

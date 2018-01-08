@@ -1,0 +1,10 @@
+DROP SCHEMA IF EXISTS "${schema}" CASCADE;
+DROP OWNED by "${schema}";
+DROP USER IF EXISTS "${schema}";
+CREATE USER "${schema}" WITH LOGIN password '1234';
+CREATE SCHEMA "${schema}";
+GRANT ALL ON SCHEMA "${schema}" TO "${schema}";
+GRANT ALL ON ALL tables IN SCHEMA "${schema}" TO "${schema}";
+ALTER DEFAULT privileges IN SCHEMA "${schema}" GRANT ALL ON tables TO "${schema}";
+GRANT ALL ON ALL sequences IN SCHEMA "${schema}" TO "${schema}";
+ALTER DEFAULT privileges IN SCHEMA "${schema}" GRANT ALL ON sequences TO "${schema}";
