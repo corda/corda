@@ -16,6 +16,7 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.DummyClusterSpec
@@ -45,7 +46,8 @@ class DistributedServiceTests {
                                 DUMMY_NOTARY_NAME,
                                 rpcUsers = listOf(testUser),
                                 cluster = DummyClusterSpec(clusterSize = 3, compositeServiceIdentity = compositeIdentity))
-                )
+                ),
+                portAllocation = PortAllocation.RandomFree
         ) {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
