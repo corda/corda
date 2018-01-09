@@ -159,7 +159,8 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
- * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block.
+ * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block. 
+ *     It will wait for them to be shut down externally instead.
  * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
  * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
