@@ -125,6 +125,7 @@ private fun <T : Any> propertiesForSerializationFromConstructor(
                         "Alternately, provide a proxy serializer (SerializationCustomSerializer) if recompiling isn't an option")
             }
         }
+
     }
 
     return ConstructorDestructorMethods(rc, emptyList())

@@ -18,17 +18,25 @@ Unreleased
 
 * **AMQP Enabled**
 
-AMQP Serialization is now enabled for both peer to peer communication and writing states to the vault. This change
-brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
-users.
+  AMQP Serialization is now enabled for both peer to peer communication and writing states to the vault. This change
+  brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
+  users.
+
+  This release delivers the bulk of our transition from Kryo serialisation to AMQP serialisation. This means that many of the restrictions
+  that were documented in previous versions of Corda are now enforced. (https://docs.corda.net/releases/release-V1.0/serialization.html).
+
+  In particular, you are advised to review the section titled "Custom Types". To aid with the transition, we have included support
+  in this release for default construction of objects and their instantiation through getters as well as objects with inacessible
+  private fields but it is not guaranteed that this support will continue into future versions; the restrictions documented at the
+  link above are the canonical source.
 
 * **Custom Serializers**
 
-To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
-to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
-serializers to operate on those types.
+  To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
+  to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
+  serializers to operate on those types.
 
-A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
+  A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
 
 Release 2.0
 ----------

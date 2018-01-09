@@ -320,8 +320,7 @@ Inaccessible Private Properties
 ```````````````````````````````
 
 Whilst the Corda AMQP serialization framework supports private object properties without publicly
-accessible getter methods this development idiom is strongly discouraged. Support for this will be phased
-removed in the future.
+accessible getter methods this development idiom is strongly discouraged.
 
 For example.
 
