@@ -4,12 +4,17 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.NonSingletonSerializeAsToken
+import net.corda.core.serialization.internal.SerializationProperties
+import net.corda.core.serialization.internal.SerializationToken
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.catchThrowable
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -94,5 +99,28 @@ class SerializationTokenTest {
         }
         val serializedBytes = SerializedBytes<Any>(stream.toByteArray())
         serializedBytes.deserialize(factory, testContext)
+    }
+
+    private class UnitNonSingletonSerializeAsToken : NonSingletonSerializeAsToken {
+        override fun toToken() = throw UnsupportedOperationException()
+    }
+
+    private class WrongTypeSerializeAsToken : NonSingletonSerializeAsToken {
+        object UnitSerializationToken : SerializationToken<UnitNonSingletonSerializeAsToken> {
+            override fun fromToken(properties: SerializationProperties) = UnitNonSingletonSerializeAsToken()
+        }
+
+        override fun toToken() = UnitSerializationToken
+    }
+
+    @Test
+    fun `token returns unexpected type`() {
+        val tokenizableBefore = WrongTypeSerializeAsToken()
+        val context = serializeAsTokenContext(tokenizableBefore)
+        val testContext = this.context.withTokenContext(context)
+        val serializedBytes = tokenizableBefore.serialize(factory, testContext)
+        catchThrowable { serializedBytes.deserialize(factory, testContext) }.run {
+            assertSame(KryoException::class.java, javaClass)
+        }
     }
 }
