@@ -25,6 +25,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
 import java.io.InputStream
 import java.net.InetSocketAddress
+import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
@@ -32,6 +33,7 @@ import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
+import javax.ws.rs.core.Response.status
 
 class NetworkMapServer(cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
@@ -116,11 +118,18 @@ class NetworkMapServer(cacheTimeout: Duration,
         @Path("publish")
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
         fun publishNodeInfo(input: InputStream): Response {
-            val registrationData = input.readBytes().deserialize<SignedNodeInfo>()
-            val nodeInfo = registrationData.verified()
-            val nodeInfoHash = nodeInfo.serialize().sha256()
-            nodeInfoMap.put(nodeInfoHash, registrationData)
-            return ok().build()
+            return try {
+                val registrationData = input.readBytes().deserialize<SignedNodeInfo>()
+                val nodeInfo = registrationData.verified()
+                val nodeInfoHash = nodeInfo.serialize().sha256()
+                nodeInfoMap.put(nodeInfoHash, registrationData)
+                ok()
+            } catch (e: Exception){
+                when(e) {
+                    is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
+                    else -> status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.message)
+                }
+            }.build()
         }
 
         @GET
