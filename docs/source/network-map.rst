@@ -1,84 +1,78 @@
 Network Map
 ===========
 
-The network map stores a collection of ``NodeInfo`` objects, each representing another node with which the node can interact.
-There are two sources from which a Corda node can retrieve ``NodeInfo`` objects:
+The network map is a collection of signed ``NodeInfo`` objects (signed by the node it represents and thus tamper-proof)
+forming the set of reachable nodes in a compatbility zone. A node can receive these objects from two sources:
 
-1. the REST protocol with the network map service, which also provides a publishing API,
+1. The HTTP network map service if the ``compatibilityZoneURL`` config key is specified.
+2. The ``additional-node-infos`` directory within the node's directory.
 
-2. the ``additional-node-infos`` directory.
+HTTP network map service
+------------------------
 
+If the node is configured with the ``compatibilityZoneURL`` config then it first uploads its own signed ``NodeInfo``
+to the server (and each time it changes on startup) and then proceeds to download the entire network map. The network map
+consists of a list of ``NodeInfo`` hashes. The node periodically polls for the network map (based on the HTTP cache expiry
+header) and any new hash entries are downloaded and cached. Entries which no longer exist are deleted from the node's cache.
 
-Protocol Design
----------------
-The node info publishing protocol:
+The set of REST end-points for the network map service are as follows.
 
-* Create a ``NodeInfo`` object, and sign it to create a ``SignedNodeInfo`` object.
-
-* Serialise the signed data and POST the data to the network map server.
-
-* The network map server validates the signature and acknowledges the registration with a HTTP 200 response, it will return HTTP 400 "Bad Request" if the data failed validation or if the public key wasn't registered with the network.
-
-* The network map server will sign and distribute the new network map periodically.
-
-Node side network map update protocol:
-
-* The Corda node will query the network map service periodically according to the ``Expires`` attribute in the HTTP header.
-
-* The network map service returns a signed ``NetworkMap`` object which looks as follows:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        data class NetworkMap {
-            val nodeInfoHashes: List<SecureHash>,
-            val networkParametersHash: SecureHash
-        }
-
-The object contains list of node info hashes and hash of the network parameters data structure (without the signatures).
-
-* The node updates its local copy of ``NodeInfos`` if it is different from the newly downloaded ``NetworkMap``.
-
-Network Map service REST API:
-
-+----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Request method | Path                              | Description                                                                                                                                            |
-+================+===================================+========================================================================================================================================================+
-| POST           | /network-map/publish              | Publish new ``NodeInfo`` to the network map service, the legal identity in ``NodeInfo`` must match with the identity registered with the doorman.      |
-+----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map                      | Retrieve ``NetworkMap`` from the server, the ``NetworkMap`` object contains list of node info hashes and ``NetworkParameters`` hash.                   |
-+----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/node-info/{hash}     | Retrieve ``NodeInfo`` object with the same hash.                                                                                                       |
-+----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/parameters/{hash}    | Retrieve ``NetworkParameters`` object with the same hash.                                                                                              |
-+----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-TODO: Access control of the network map will be added in the future.
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| Request method | Path                                    | Description                                                                                                                                  |
++================+=========================================+==============================================================================================================================================+
+| POST           | /network-map/publish                    | For the node to upload its signed ``NodeInfo`` object to the network map.                                                                    |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map                            | Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.         |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map/network-parameters/{hash}  | Retrieve the signed network parameters (see below). The entire object is signed with the network map certificate which is also attached.     |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
 
 The ``additional-node-infos`` directory
 ---------------------------------------
-Each Corda node reads, and continuously polls, the files contained in a directory named ``additional-node-infos`` inside the node base directory.
 
-Nodes expect to find a serialized ``SignedNodeInfo`` object, the same object which is sent to network map server.
+Alongside the HTTP network map service, or as a replacement if the node isn't connected to one, the node polls the
+contents of the ``additional-node-infos`` directory located in its base directory. Each file is expected to be the same
+signed ``NodeInfo`` object that the network map service vends. These are automtically added to the node's cache and can
+be used to supplement or replace the HTTP network map. If the same node is advertised through both mechanisms then the
+latest one is taken.
 
-Whenever a node starts it writes on disk a file containing its own ``NodeInfo``, this file is called ``nodeInfo-XXX`` where ``XXX`` is a long string.
-
-Hence if an operator wants node A to see node B they can pick B's ``NodeInfo`` file from B base directory and drop it into A's ``additional-node-infos`` directory.
-
+On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. To create a simple
+network without the HTTP network map service then simply place this file in the ``additional-node-infos`` directory
+of every node that's part of this network.
 
 Network parameters
 ------------------
-Network parameters are constants that every node participating in the network needs to agree on and use for interop purposes.
-The structure is distributed as a file containing serialized ``SignedData<NetworkParameters>`` with a signature from
-a sub-key of the compatibility zone root cert. Network map advertises the hash of currently used network parameters.
-The ``NetworkParameters`` structure contains:
- * ``minimumPlatformVersion`` -  minimum version of Corda platform that is required for nodes in the network.
- * ``notaries`` - list of well known and trusted notary identities with information on validation type.
- * ``maxMessageSize`` - maximum P2P message size sent over the wire in bytes.
- * ``maxTransactionSize`` - maximum permitted transaction size in bytes.
- * ``modifiedTime`` - the time the network parameters were created by the CZ operator.
- * ``epoch`` - version number of the network parameters. Starting from 1, this will always increment on each new set of parameters.
 
-The set of parameters is still under development and we may find the need to add additional fields.
+Network parameters are a set of values that every node participating in the network needs to agree on and use to
+correctly interoperate with each other. If the node is using the HTTP network map service then on first startup it will
+download the signed network parameters, cache it in a ``network-parameters`` file and apply them on the node.
+
+.. warning:: If the ``network-parameters`` file is changed and no longer matches what the network map service is advertising
+  then the node will automatically shutdown. Resolution to this is to delete the incorrect file and restart the node so
+  that the parameters can be downloaded again.
+
+.. note:: A future release will support the notion of network parameters changes.
+
+If the node isn't using a HTTP network map service then it's expected the signed file is provided by some other means.
+For such a scenario there is the network bootstrapper tool which in addition to generating the network parameters file
+also distributes the node info files to the node directories. More information can be found in :doc:`setting-up-a-corda-network`.
+
+The current set of network parameters:
+
+:minimumPlatformVersion: The minimum platform version that the nodes must be running. Any node which is below this will
+        not start.
+:notaries: List of identity and validation type (either validating or non-validating) of the notaries which are permitted
+        in the compatibility zone.
+:maxMessageSize: Maximum allowed P2P message size sent over the wire in bytes. Any message larger than this will be
+        split up.
+:maxTransactionSize: Maximum permitted transaction size in bytes.
+:modifiedTime: The time when the network parameters were last modified by the compatibility zone operator.
+:epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
+        parameters change.
+
+.. note:: ``maxTransactionSize`` is currently not enforced in the node, but will be in a later release.
+
+More parameters may be added in future releases.

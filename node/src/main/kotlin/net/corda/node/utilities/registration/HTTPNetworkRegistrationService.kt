@@ -24,9 +24,7 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
     @Throws(CertificateRequestException::class)
     override fun retrieveCertificates(requestId: String): Array<Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
-        val url = URL("$registrationURL/$requestId")
-
-        val conn = url.openConnection() as HttpURLConnection
+        val conn = URL("$registrationURL/$requestId").openHttpConnection()
         conn.requestMethod = "GET"
 
         return when (conn.responseCode) {

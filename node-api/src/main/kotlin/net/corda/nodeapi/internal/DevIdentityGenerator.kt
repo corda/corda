@@ -34,13 +34,8 @@ object DevIdentityGenerator {
             override val trustStorePassword get() = throw NotImplementedError("Not expected to be called")
         }
 
-        // TODO The passwords for the dev key stores are spread everywhere and should be constants in a single location
-        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-        val intermediateCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-        val rootCert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
-
         nodeSslConfig.certificatesDirectory.createDirectories()
-        nodeSslConfig.createDevKeyStores(rootCert, intermediateCa, legalName)
+        nodeSslConfig.createDevKeyStores(legalName)
 
         val keyStoreWrapper = KeyStoreWrapper(nodeSslConfig.nodeKeystore, nodeSslConfig.keyStorePassword)
         val identity = keyStoreWrapper.storeLegalIdentity(legalName, "$NODE_IDENTITY_ALIAS_PREFIX-private-key", Crypto.generateKeyPair())
@@ -54,16 +49,12 @@ object DevIdentityGenerator {
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val compositeKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
 
-        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-        val intermediateCa = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-        val rootCert = caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
-
         keyPairs.zip(dirs) { keyPair, nodeDir ->
             val (serviceKeyCert, compositeKeyCert) = listOf(keyPair.public, compositeKey).map { publicKey ->
                 X509Utilities.createCertificate(
                         CertificateType.SERVICE_IDENTITY,
-                        intermediateCa.certificate,
-                        intermediateCa.keyPair,
+                        DEV_INTERMEDIATE_CA.certificate,
+                        DEV_INTERMEDIATE_CA.keyPair,
                         notaryName.x500Principal,
                         publicKey)
             }
@@ -74,7 +65,7 @@ object DevIdentityGenerator {
                     "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
                     keyPair.private,
                     "cordacadevkeypass".toCharArray(),
-                    arrayOf(serviceKeyCert, intermediateCa.certificate, rootCert))
+                    arrayOf(serviceKeyCert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
             keystore.save(distServKeyStoreFile, "cordacadevpass")
         }
 
