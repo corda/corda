@@ -148,7 +148,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         assertThat(validNodeInfoHash).containsOnly(nodeInfoHashA, nodeInfoHashB)
     }
 
-    private fun createValidSignedNodeInfo(organisation: String): SignedNodeInfo {
+    private fun createValidSignedNodeInfo(organisation: String): NodeInfoWithSigned {
         val nodeInfoBuilder = TestNodeInfoBuilder()
         val requestId = requestStorage.saveRequest(createRequest(organisation).first)
         requestStorage.markRequestTicketCreated(requestId)
@@ -156,6 +156,6 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val (identity) = nodeInfoBuilder.addIdentity(CordaX500Name(organisation, "London", "GB"))
         val nodeCaCertPath = X509CertificateFactory().generateCertPath(identity.certPath.certificates.drop(1))
         requestStorage.putCertificatePath(requestId, nodeCaCertPath, emptyList())
-        return nodeInfoBuilder.buildWithSigned().second
+        return NodeInfoWithSigned(nodeInfoBuilder.buildWithSigned().second)
     }
 }

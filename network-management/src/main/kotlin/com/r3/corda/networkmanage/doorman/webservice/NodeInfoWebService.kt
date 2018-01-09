@@ -5,12 +5,16 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
+import com.r3.corda.networkmanage.common.persistence.NodeInfoWithSigned
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
@@ -29,35 +33,41 @@ import javax.ws.rs.core.Response.status
 class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
                          private val networkMapStorage: NetworkMapStorage,
                          private val config: NetworkMapConfig) {
+
     companion object {
+        val log = contextLogger()
         const val NETWORK_MAP_PATH = "network-map"
     }
 
-    private val networkMapCache: LoadingCache<Boolean, SignedNetworkMap?> = CacheBuilder.newBuilder()
+    private val networkMapCache: LoadingCache<Boolean, Pair<SignedNetworkMap?, NetworkParameters?>> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ -> networkMapStorage.getCurrentNetworkMap() })
+            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getCurrentNetworkParameters()) })
 
     @POST
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun registerNode(input: InputStream): Response {
-        val registrationData = input.readBytes().deserialize<SignedNodeInfo>()
+        val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
         return try {
             // Store the NodeInfo
-            nodeInfoStorage.putNodeInfo(registrationData)
+            val nodeInfoWithSignature = NodeInfoWithSigned(signedNodeInfo)
+            verifyNodeInfo(nodeInfoWithSignature.nodeInfo)
+            nodeInfoStorage.putNodeInfo(nodeInfoWithSignature)
             ok()
         } catch (e: Exception) {
             // Catch exceptions thrown by signature verification.
             when (e) {
+                is NetworkMapNotInitialisedException -> status(Response.Status.SERVICE_UNAVAILABLE).entity(e.message)
+                is InvalidPlatformVersionException -> status(Response.Status.BAD_REQUEST).entity(e.message)
                 is IllegalArgumentException, is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+            // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                 else -> throw e
             }
         }.build()
     }
 
     @GET
-    fun getNetworkMap(): Response = createResponse(networkMapCache.get(true), addCacheTimeout = true)
+    fun getNetworkMap(): Response = createResponse(networkMapCache.get(true).first, addCacheTimeout = true)
 
     @GET
     @Path("node-info/{nodeInfoHash}")
@@ -80,6 +90,18 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
         return ok(request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}").build()
     }
 
+    private fun verifyNodeInfo(nodeInfo: NodeInfo) {
+        val minimumPlatformVersion = networkMapCache.get(true).second?.minimumPlatformVersion
+        if (minimumPlatformVersion == null) {
+            log.error("Network parameters have not been initialised")
+            throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
+        }
+        if (nodeInfo.platformVersion < minimumPlatformVersion) {
+            log.error("Minimum platform version is $minimumPlatformVersion")
+            throw InvalidPlatformVersionException("Minimum platform version is $minimumPlatformVersion")
+        }
+    }
+
     private fun createResponse(payload: Any?, addCacheTimeout: Boolean = false): Response {
         return if (payload != null) {
             val ok = Response.ok(payload.serialize().bytes)
@@ -91,4 +113,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
             status(Response.Status.NOT_FOUND)
         }.build()
     }
+
+    class NetworkMapNotInitialisedException(message: String?) : Exception(message)
+    class InvalidPlatformVersionException(message: String?) : Exception(message)
 }

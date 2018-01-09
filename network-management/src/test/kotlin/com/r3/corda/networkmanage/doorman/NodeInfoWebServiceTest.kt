@@ -25,13 +25,15 @@ import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.createNodeInfoAndSigned
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.apache.commons.io.IOUtils
+import org.assertj.core.api.Assertions.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.net.URL
+import java.nio.charset.Charset
 import java.security.cert.X509Certificate
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
@@ -44,7 +46,7 @@ class NodeInfoWebServiceTest {
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
 
-    private val testNetworkMapConfig =  NetworkMapConfig(10.seconds.toMillis(), 10.seconds.toMillis())
+    private val testNetworkMapConfig = NetworkMapConfig(10.seconds.toMillis(), 10.seconds.toMillis())
 
     @Before
     fun init() {
@@ -55,14 +57,49 @@ class NodeInfoWebServiceTest {
 
     @Test
     fun `submit nodeInfo`() {
+        val networkMapStorage: NetworkMapStorage = mock {
+            on { getCurrentNetworkParameters() }.thenReturn(testNetworkParameters(emptyList()))
+        }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"))
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), mock(), testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
             // Post node info and signature to doorman, this should pass without any exception.
             it.doPost("publish", nodeInfoAndSignature)
+        }
+    }
+
+    @Test
+    fun `submit old nodeInfo`() {
+        val networkMapStorage: NetworkMapStorage = mock {
+            on { getCurrentNetworkParameters() }.thenReturn(testNetworkParameters(emptyList(), minimumPlatformVersion = 2))
+        }
+        // Create node info.
+        val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
+
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+            it.start()
+            val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
+            assertThatThrownBy { it.doPost("publish", nodeInfoAndSignature) }
+                    .hasMessageStartingWith("Response Code 400: Minimum platform version is 2")
+        }
+    }
+
+    @Test
+    fun `submit nodeInfo when no network parameters`() {
+        val networkMapStorage: NetworkMapStorage = mock {
+            on { getCurrentNetworkParameters() }.thenReturn(null)
+        }
+        // Create node info.
+        val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
+
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+            it.start()
+            val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
+            assertThatThrownBy { it.doPost("publish", nodeInfoAndSignature) }
+                    .hasMessageStartingWith("Response Code 503: Network parameters have not been initialised")
         }
     }
 
@@ -136,7 +173,10 @@ class NodeInfoWebServiceTest {
             requestMethod = "POST"
             setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
             outputStream.write(payload)
-            inputStream.close() // This will give us a nice IOException if the response isn't HTTP 200
+            if (responseCode != 200) {
+                throw IOException("Response Code $responseCode: ${IOUtils.toString(errorStream, Charset.defaultCharset())}")
+            }
+            inputStream.close()
         }
     }
 

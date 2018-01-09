@@ -28,7 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-class PersitenceNodeInfoStorageTest : TestBase() {
+class PersistentNodeInfoStorageTest : TestBase() {
     private lateinit var requestStorage: CertificationRequestStorage
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
     private lateinit var persistence: CordaPersistence
@@ -85,34 +85,34 @@ class PersitenceNodeInfoStorageTest : TestBase() {
     @Test
     fun `getNodeInfo returns persisted SignedNodeInfo using the hash of just the NodeInfo`() {
         // given
-        val (nodeInfoA, signedNodeInfoA) = createValidSignedNodeInfo("TestA")
-        val (nodeInfoB, signedNodeInfoB) = createValidSignedNodeInfo("TestB")
+        val (nodeA) = createValidSignedNodeInfo("TestA")
+        val (nodeB) = createValidSignedNodeInfo("TestB")
 
         // Put signed node info data
-        nodeInfoStorage.putNodeInfo(signedNodeInfoA)
-        nodeInfoStorage.putNodeInfo(signedNodeInfoB)
+        nodeInfoStorage.putNodeInfo(nodeA)
+        nodeInfoStorage.putNodeInfo(nodeB)
 
         // when
-        val persistedSignedNodeInfoA = nodeInfoStorage.getNodeInfo(nodeInfoA.serialize().hash)
-        val persistedSignedNodeInfoB = nodeInfoStorage.getNodeInfo(nodeInfoB.serialize().hash)
+        val persistedSignedNodeInfoA = nodeInfoStorage.getNodeInfo(nodeA.nodeInfo.serialize().hash)
+        val persistedSignedNodeInfoB = nodeInfoStorage.getNodeInfo(nodeB.nodeInfo.serialize().hash)
 
         // then
-        assertEquals(persistedSignedNodeInfoA?.verified(), nodeInfoA)
-        assertEquals(persistedSignedNodeInfoB?.verified(), nodeInfoB)
+        assertEquals(persistedSignedNodeInfoA?.verified(), nodeA.nodeInfo)
+        assertEquals(persistedSignedNodeInfoB?.verified(), nodeB.nodeInfo)
     }
 
     @Test
     fun `same public key with different node info`() {
         // Create node info.
-        val (nodeInfo1, signedNodeInfo1, key) = createValidSignedNodeInfo("Test", serial = 1)
-        val nodeInfo2 = nodeInfo1.copy(serial = 2)
-        val signedNodeInfo2 = nodeInfo2.signWith(listOf(key))
+        val (node1, key) = createValidSignedNodeInfo("Test", serial = 1)
+        val nodeInfo2 = node1.nodeInfo.copy(serial = 2)
+        val node2 = NodeInfoWithSigned(nodeInfo2.signWith(listOf(key)))
 
-        val nodeInfo1Hash = nodeInfoStorage.putNodeInfo(signedNodeInfo1)
-        assertEquals(nodeInfo1, nodeInfoStorage.getNodeInfo(nodeInfo1Hash)?.verified())
+        val nodeInfo1Hash = nodeInfoStorage.putNodeInfo(node1)
+        assertEquals(node1.nodeInfo, nodeInfoStorage.getNodeInfo(nodeInfo1Hash)?.verified())
 
         // This should replace the node info.
-        nodeInfoStorage.putNodeInfo(signedNodeInfo2)
+        nodeInfoStorage.putNodeInfo(node2)
 
         // Old node info should be removed.
         assertNull(nodeInfoStorage.getNodeInfo(nodeInfo1Hash))
@@ -122,17 +122,17 @@ class PersitenceNodeInfoStorageTest : TestBase() {
     @Test
     fun `putNodeInfo persists SignedNodeInfo with its signature`() {
         // given
-        val (_, signedNodeInfo) = createValidSignedNodeInfo("Test")
+        val (nodeInfoWithSigned) = createValidSignedNodeInfo("Test")
 
         // when
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(signedNodeInfo)
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoWithSigned)
 
         // then
         val persistedSignedNodeInfo = nodeInfoStorage.getNodeInfo(nodeInfoHash)
-        assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(signedNodeInfo.signatures)
+        assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoWithSigned.signedNodeInfo.signatures)
     }
 
-    private fun createValidSignedNodeInfo(organisation: String, serial: Long = 1): Triple<NodeInfo, SignedNodeInfo, PrivateKey> {
+    private fun createValidSignedNodeInfo(organisation: String, serial: Long = 1): Pair<NodeInfoWithSigned, PrivateKey> {
         val nodeInfoBuilder = TestNodeInfoBuilder()
         val requestId = requestStorage.saveRequest(createRequest(organisation).first)
         requestStorage.markRequestTicketCreated(requestId)
@@ -140,7 +140,7 @@ class PersitenceNodeInfoStorageTest : TestBase() {
         val (identity, key) = nodeInfoBuilder.addIdentity(CordaX500Name(organisation, "London", "GB"))
         val nodeCaCertPath = X509CertificateFactory().generateCertPath(identity.certPath.certificates.drop(1))
         requestStorage.putCertificatePath(requestId, nodeCaCertPath, emptyList())
-        val (nodeInfo, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(serial)
-        return Triple(nodeInfo, signedNodeInfo, key)
+        val (_, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(serial)
+        return Pair(NodeInfoWithSigned(signedNodeInfo), key)
     }
 }

@@ -17,10 +17,12 @@ import java.security.cert.CertPath
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
-    override fun putNodeInfo(signedNodeInfo: SignedNodeInfo): SecureHash {
-        val nodeInfo = signedNodeInfo.verified()
+    override fun putNodeInfo(nodeInfoWithSigned: NodeInfoWithSigned): SecureHash {
+        val nodeInfo = nodeInfoWithSigned.nodeInfo
+        val signedNodeInfo = nodeInfoWithSigned.signedNodeInfo
         val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
+            // TODO Move these checks out of data access layer
             val request = nodeCaCert?.let {
                 singleRequestWhere(CertificateDataEntity::class.java) { builder, path ->
                     val certPublicKeyHashEq = builder.equal(path.get<String>(CertificateDataEntity::publicKeyHash.name), it.publicKey.encoded.sha256().toString())
