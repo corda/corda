@@ -60,7 +60,7 @@ class BFTNotaryServiceTests {
         (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
 
-        notary = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
+        notary = DevIdentityGenerator.generateDistributedNotaryIdentity(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
                 CordaX500Name("BFT", "Zurich", "CH"))
 
