@@ -60,10 +60,10 @@ class NetworkMapServer(cacheTimeout: Duration,
 
     private val server: Server
     var networkParameters: NetworkParameters = stubNetworkParameters
-      set(networkParameters) {
-          check(field == stubNetworkParameters) { "Network parameters can be set only once" }
-          field = networkParameters
-      }
+        set(networkParameters) {
+            check(field == stubNetworkParameters) { "Network parameters can be set only once" }
+            field = networkParameters
+        }
     private val serializedParameters get() = networkParameters.serialize()
     private val service = InMemoryNetworkMapService(cacheTimeout, networkMapKeyAndCert(rootCa))
 
@@ -110,9 +110,11 @@ class NetworkMapServer(cacheTimeout: Duration,
                                           private val networkMapKeyAndCert: CertificateAndKeyPair) {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
         private val parametersHash by lazy { serializedParameters.hash }
-        private val signedParameters by lazy { SignedData(
-                serializedParameters,
-                DigitalSignature.WithKey(networkMapKeyAndCert.keyPair.public, Crypto.doSign(networkMapKeyAndCert.keyPair.private, serializedParameters.bytes))) }
+        private val signedParameters by lazy {
+            SignedData(
+                    serializedParameters,
+                    DigitalSignature.WithKey(networkMapKeyAndCert.keyPair.public, Crypto.doSign(networkMapKeyAndCert.keyPair.private, serializedParameters.bytes)))
+        }
 
         @POST
         @Path("publish")
@@ -124,8 +126,8 @@ class NetworkMapServer(cacheTimeout: Duration,
                 val nodeInfoHash = nodeInfo.serialize().sha256()
                 nodeInfoMap.put(nodeInfoHash, registrationData)
                 ok()
-            } catch (e: Exception){
-                when(e) {
+            } catch (e: Exception) {
+                when (e) {
                     is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
                     else -> status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.message)
                 }
