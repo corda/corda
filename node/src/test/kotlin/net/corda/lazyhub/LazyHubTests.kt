@@ -4,6 +4,7 @@ import net.corda.core.internal.uncheckedCast
 import org.assertj.core.api.Assertions.catchThrowable
 import org.hamcrest.CoreMatchers.*
 import org.junit.Assert.*
+import org.junit.Ignore
 import org.junit.Test
 import java.io.Closeable
 import java.io.IOException
@@ -62,7 +63,8 @@ open class LazyHubTests {
         }
     }
 
-    private class Subclass : LazyHubTests() { // Should not run as tests.
+    @Ignore
+    class Subclass : LazyHubTests() { // Should not run as tests.
         @Suppress("unused")
         private fun createA(@Suppress("UNUSED_PARAMETER") config: Config): A = fail("Should not be called.")
 
