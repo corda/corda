@@ -135,6 +135,13 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
+
+        // ensure our datasource configuration is sane
+        require(dataSourceProperties.get("autoCommit") != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
+        dataSourceProperties.set("autoCommit", false)
+        if (dataSourceProperties.get("transactionIsolation") == null) {
+            dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
+        }
     }
 }
 
