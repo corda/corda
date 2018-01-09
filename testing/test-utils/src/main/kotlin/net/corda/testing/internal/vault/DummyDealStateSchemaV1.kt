@@ -25,7 +25,6 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
             @CollectionTable(name = "dummy_deal_states_participants", joinColumns = arrayOf(
                     JoinColumn(name = "output_index", referencedColumnName = "output_index"),
                     JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
-
             override var participants: MutableSet<AbstractParty>? = null,
 
             @Transient
