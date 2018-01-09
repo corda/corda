@@ -15,6 +15,7 @@ import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.ClusterSpec
@@ -33,7 +34,8 @@ class RaftNotaryServiceTests {
         driver(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
-                notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
+                notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3))),
+                portAllocation = PortAllocation.RandomFree
         ) {
             val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as NodeHandle.InProcess).node }.getOrThrow()
             val inputState = issueState(bankA, defaultNotaryIdentity)
