@@ -43,7 +43,6 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
             if (responseCode != 200) {
                 throw IOException("Response Code $responseCode: ${IOUtils.toString(errorStream)}")
             }
-            inputStream.close()
         }
     }
 
