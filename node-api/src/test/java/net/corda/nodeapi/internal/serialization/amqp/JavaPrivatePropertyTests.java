@@ -39,6 +39,7 @@ public class JavaPrivatePropertyTests {
         //
         Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
         f.setAccessible(true);
+
         ConcurrentHashMap<Object, AMQPSerializer<Object>> serializersByDescriptor =
                 (ConcurrentHashMap<Object, AMQPSerializer<Object>>) f.get(factory);
 
@@ -46,7 +47,7 @@ public class JavaPrivatePropertyTests {
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
         assertEquals(1, cSerializer.getPropertySerializers().component1().size());
         Object[] propertyReaders = cSerializer.getPropertySerializers().component1().toArray();
-        assertTrue (((PropertySerializer)propertyReaders[0]).getReadMethod() instanceof PrivatePropertyReader);
+        assertTrue (((PropertySerializer)propertyReaders[0]).getPropertyReader() instanceof PrivatePropertyReader);
     }
 
     @Test
@@ -73,6 +74,6 @@ public class JavaPrivatePropertyTests {
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
         assertEquals(1, cSerializer.getPropertySerializers().component1().size());
         Object[] propertyReaders = cSerializer.getPropertySerializers().component1().toArray();
-        assertTrue (((PropertySerializer)propertyReaders[0]).getReadMethod() instanceof PublicPropertyReader);
+        assertTrue (((PropertySerializer)propertyReaders[0]).getPropertyReader() instanceof PublicPropertyReader);
     }
 }

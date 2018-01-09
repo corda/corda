@@ -55,6 +55,7 @@ class PrivatePropertyTests {
 
         val field = SerializerFactory::class.java.getDeclaredField("serializersByDescriptor")
         field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
         val serializersByDescriptor = field.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
@@ -64,11 +65,11 @@ class PrivatePropertyTests {
             val propertySerializers = (this.first() as ObjectSerializer).propertySerializers.getters.toList()
             assertEquals(2, propertySerializers.size)
             // a was public so should have a synthesised getter
-            assertTrue(propertySerializers[0].readMethod is PublicPropertyReader)
+            assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
 
             // b is private and thus won't have teh getter so we'll have reverted
             // to using reflection to remove the inaccessible property
-            assertTrue(propertySerializers[1].readMethod is PrivatePropertyReader)
+            assertTrue(propertySerializers[1].propertyReader is PrivatePropertyReader)
         }
     }
 
@@ -85,6 +86,7 @@ class PrivatePropertyTests {
 
         val field = SerializerFactory::class.java.getDeclaredField("serializersByDescriptor")
         field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
         val serializersByDescriptor = field.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
@@ -95,11 +97,11 @@ class PrivatePropertyTests {
             assertEquals(2, propertySerializers.size)
 
             // as before, a is public so we'll use the getter method
-            assertTrue(propertySerializers[0].readMethod is PublicPropertyReader)
+            assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
 
             // the getB() getter explicitly added means we should use the "normal" public
             // method reader rather than the private oen
-            assertTrue(propertySerializers[1].readMethod is PublicPropertyReader)
+            assertTrue(propertySerializers[1].propertyReader is PublicPropertyReader)
         }
     }
 

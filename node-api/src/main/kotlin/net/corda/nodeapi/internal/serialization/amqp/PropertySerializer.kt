@@ -59,7 +59,6 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
     } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
         // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
         // TODO: Revisit this when Kotlin issue is fixed.
-
         loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
         true
     }
@@ -69,7 +68,7 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
 /**
  * Base class for serialization of a property of an object.
  */
-sealed class PropertySerializer(val name: String, val readMethod: PropertyReader, val resolvedType: Type) {
+sealed class PropertySerializer(val name: String, val propertyReader: PropertyReader, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any?
@@ -102,7 +101,7 @@ sealed class PropertySerializer(val name: String, val readMethod: PropertyReader
             }
 
     private fun generateMandatory(): Boolean {
-        return isJVMPrimitive || !(readMethod.isNullable())
+        return isJVMPrimitive || !(propertyReader.isNullable())
     }
 
     companion object {
@@ -143,7 +142,7 @@ sealed class PropertySerializer(val name: String, val readMethod: PropertyReader
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
-            output.writeObjectOrNull(readMethod.read(obj), data, resolvedType)
+            output.writeObjectOrNull(propertyReader.read(obj), data, resolvedType)
         }
 
         private val nameForDebug = "$name(${resolvedType.typeName})"
@@ -163,7 +162,7 @@ sealed class PropertySerializer(val name: String, val readMethod: PropertyReader
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            val value = readMethod.read(obj)
+            val value = propertyReader.read(obj)
             if (value is ByteArray) {
                 data.putObject(Binary(value))
             } else {
@@ -186,7 +185,7 @@ sealed class PropertySerializer(val name: String, val readMethod: PropertyReader
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            val input = readMethod.read(obj)
+            val input = propertyReader.read(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
     }
