@@ -173,11 +173,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private inline fun signNodeInfo(nodeInfo: NodeInfo, sign: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
-        // For now we assume the node has only one identity (excluding any composite ones)
-        val owningKey = nodeInfo.legalIdentities.single { it.owningKey !is CompositeKey }.owningKey
+        // For now we exclude any composite identities, see [SignedNodeInfo]
+        val owningKeys = nodeInfo.legalIdentities.map { it.owningKey }.filter { it !is CompositeKey }
         val serialised = nodeInfo.serialize()
-        val signature = sign(owningKey, serialised)
-        return SignedNodeInfo(serialised, listOf(signature))
+        val signatures = owningKeys.map { sign(it, serialised) }
+        return SignedNodeInfo(serialised, signatures)
     }
 
     open fun generateAndSaveNodeInfo(): NodeInfo {
