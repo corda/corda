@@ -13,6 +13,7 @@ import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -201,7 +202,19 @@ open class NodeStartup(val args: Array<String>) {
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
     open protected fun banJavaSerialisation(conf: NodeConfiguration) {
-        SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+        val isOracleDbDriver = conf.dataSourceProperties.getProperty("dataSource.url", "").startsWith("jdbc:oracle:")
+        val filter =
+                if (conf.notary?.bftSMaRt != null && isOracleDbDriver) {
+                    val bftAndOracleSerialFilter: (Class<*>) -> Boolean = { clazz -> bftSMaRtSerialFilter(clazz) || oracleJdbcDriverSerialFilter(clazz) }
+                    bftAndOracleSerialFilter
+                } else if (conf.notary?.bftSMaRt != null) {
+                    ::bftSMaRtSerialFilter
+                } else if (isOracleDbDriver) {
+                    ::oracleJdbcDriverSerialFilter
+                } else {
+                    ::defaultSerialFilter
+                }
+        SerialFilter.install(filter)
     }
 
     open protected fun getVersionInfo(): VersionInfo {

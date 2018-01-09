@@ -174,3 +174,6 @@ class HibernateConfiguration(
         }
     }
 }
+
+/** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */
+fun oracleJdbcDriverSerialFilter(clazz: Class<*>) : Boolean = clazz.name.startsWith("oracle.sql.converter.")
