@@ -3,38 +3,30 @@
 
 package net.corda.testing
 
+import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
-import org.mockito.Mockito.mock
-import org.mockito.internal.stubbing.answers.ThrowsException
-import java.lang.reflect.Modifier
-import java.nio.file.Files
+import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
-import java.util.*
+import java.security.cert.X509Certificate
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -54,45 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
  *   - The Int.DOLLARS syntax doesn't work from Java.  Use the DOLLARS(int) function instead.
  */
-
-// TODO: Refactor these dummies to work with the new identities framework.
-
-// A few dummy values for testing.
-val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
-
-val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
-
-val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
-
-val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
-val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
-val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
-
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MegaCorp", locality = "London", country = "GB"), MEGA_CORP_PUBKEY)
-val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
-val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
-
-val BOC_NAME: CordaX500Name = CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB")
-val BOC_KEY: KeyPair by lazy { generateKeyPair() }
-val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOC_NAME, BOC_PUBKEY)
-val BOC: Party get() = BOC_IDENTITY.party
-
-val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US"), BIG_CORP_PUBKEY)
-val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
-val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
-
-val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
-
-val DUMMY_CASH_ISSUER_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_CASH_ISSUER.party as Party)
-
-val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -121,32 +74,23 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort..freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
+    return (0 until numberToAlloc).map { NetworkHostAndPort(hostName, freePort + it) }
 }
 
-@JvmOverloads
-fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguration = object : SSLConfiguration {
-    override val certificatesDirectory = Files.createTempDirectory("certs")
-    override val keyStorePassword: String get() = "cordacadevpass"
-    override val trustStorePassword: String get() = "trustpass"
-
-    init {
-        configureDevKeyAndTrustStores(legalName)
-    }
-}
 fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
-    val trustRoot: X509CertificateHolder = DEV_TRUST_ROOT
-    val intermediate: CertificateAndKeyPair = DEV_CA
+    val trustRoot: X509Certificate = DEV_ROOT_CA.certificate
+    val intermediate: CertificateAndKeyPair = DEV_INTERMEDIATE_CA
 
-    val nodeCaName = party.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN)
-    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, party.name.x500Name))), arrayOf())
-    val issuerKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-    val issuerCertificate = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediate.certificate, intermediate.keyPair, nodeCaName, issuerKeyPair.public,
-            nameConstraints = nameConstraints)
+    val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediate, party.name)
 
-    val certHolder = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, issuerCertificate, issuerKeyPair, party.name, party.owningKey)
-    val pathElements = listOf(certHolder, issuerCertificate, intermediate.certificate, trustRoot)
-    val certPath = X509CertificateFactory().delegate.generateCertPath(pathElements.map(X509CertificateHolder::cert))
+    val identityCert = X509Utilities.createCertificate(
+            CertificateType.LEGAL_IDENTITY,
+            nodeCaCert,
+            nodeCaKeyPair,
+            party.name.x500Principal,
+            party.owningKey)
+
+    val certPath = X509CertificateFactory().generateCertPath(identityCert, nodeCaCert, intermediate.certificate, trustRoot)
     return PartyAndCertificate(certPath)
 }
 
@@ -157,18 +101,29 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
     return getTestPartyAndCertificate(Party(name, publicKey))
 }
 
-@Suppress("unused")
-inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
-    function()
-} else {
-    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason")
-}
+class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
+    companion object {
+        /**
+         * Creates an identity that won't equal any other. This is mostly useful as a throwaway for test helpers.
+         * @param organisation the organisation part of the new identity's name.
+         */
+        fun fresh(organisation: String): TestIdentity {
+            val keyPair = generateKeyPair()
+            val name = CordaX500Name(organisation, keyPair.public.toStringShort(), CordaX500Name.unspecifiedCountry)
+            return TestIdentity(name, keyPair)
+        }
+    }
 
-@Suppress("unused")
-inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit) = if (AMQP_ENABLED) {
-    function()
-} else {
-    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
+    /** Creates an identity with a deterministic [keyPair] i.e. same [entropy] same keyPair .*/
+    constructor(name: CordaX500Name, entropy: Long) : this(name, entropyToKeyPair(BigInteger.valueOf(entropy)))
+
+    /** Creates an identity with the given name and a fresh keyPair. */
+    constructor(name: CordaX500Name) : this(name, generateKeyPair())
+
+    val publicKey: PublicKey get() = keyPair.public
+    val party: Party = Party(name, publicKey)
+    val identity: PartyAndCertificate by lazy { getTestPartyAndCertificate(party) } // Often not needed.
+    fun ref(vararg bytes: Byte): PartyAndReference = party.ref(*bytes)
 }
 
 /**
@@ -187,25 +142,3 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
-
-/**
- * A method on a mock was called, but no behaviour was previously specified for that method.
- * You can use [com.nhaarman.mockito_kotlin.doReturn] or similar to specify behaviour, see Mockito documentation for details.
- */
-class UndefinedMockBehaviorException(message: String) : RuntimeException(message)
-
-inline fun <reified T : Any> rigorousMock() = rigorousMock(T::class.java)
-/**
- * Create a Mockito mock that has [UndefinedMockBehaviorException] as the default behaviour of all abstract methods,
- * and [org.mockito.invocation.InvocationOnMock.callRealMethod] as the default for all concrete methods.
- * @param T the type to mock. Note if you want concrete methods of a Kotlin interface to be invoked,
- * it won't work unless you mock a (trivial) abstract implementation of that interface instead.
- */
-fun <T> rigorousMock(clazz: Class<T>): T = mock(clazz) {
-    if (Modifier.isAbstract(it.method.modifiers)) {
-        // Use ThrowsException to hack the stack trace, and lazily so we can customise the message:
-        ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it. Args: ${Arrays.toString(it.arguments)}")).answer(it)
-    } else {
-        it.callRealMethod()
-    }
-}

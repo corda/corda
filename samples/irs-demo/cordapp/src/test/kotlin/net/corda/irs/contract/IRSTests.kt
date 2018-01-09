@@ -25,7 +25,11 @@ import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
+import net.corda.testing.dsl.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.ledger
+import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
@@ -34,6 +38,17 @@ import java.util.*
 import kotlin.test.assertEquals
 
 private val DUMMY_PARTY = Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public)
+private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).publicKey
+private val DUMMY_NOTARY get() = dummyNotary.party
+private val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
+private val MEGA_CORP get() = megaCorp.party
+private val MEGA_CORP_KEY get() = megaCorp.keyPair
+private val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+private val MINI_CORP get() = miniCorp.party
+private val MINI_CORP_KEY get() = miniCorp.keyPair
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {
@@ -222,6 +237,12 @@ class IRSTests {
     private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
     private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
     private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+    private val ledgerServices
+        get() = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
+        }, MEGA_CORP.name)
+
     @Test
     fun ok() {
         trade().verifies()
@@ -391,8 +412,7 @@ class IRSTests {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
-
-        return ledger {
+        return ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement", singleIRS())
@@ -417,6 +437,10 @@ class IRSTests {
                 this.verifies()
             }
         }
+    }
+
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+        ledgerServices.transaction(DUMMY_NOTARY, script)
     }
 
     @Test
@@ -656,8 +680,7 @@ class IRSTests {
         val bd1 = BigDecimal("0.0063518")
 
         val irs = singleIRS()
-
-        return ledger {
+        return ledgerServices.ledger(DUMMY_NOTARY) {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement1",

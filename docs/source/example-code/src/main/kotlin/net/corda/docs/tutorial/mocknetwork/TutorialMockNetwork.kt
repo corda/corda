@@ -19,7 +19,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MessagingServiceSpy
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.setMessagingServiceSpy
-import net.corda.testing.startFlow
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -65,7 +65,7 @@ class TutorialMockNetwork {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(emptyList())
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeB.registerInitiatedFlow(FlowB::class.java)

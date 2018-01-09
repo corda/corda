@@ -4,19 +4,19 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.VaultService
 import net.corda.node.services.api.SchedulerService
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 
 /**
  * This observes the vault and schedules and unschedules activities appropriately based on state production and
  * consumption.
  */
-class ScheduledActivityObserver private constructor(private val schedulerService: SchedulerService) {
+class ScheduledActivityObserver private constructor(private val schedulerService: SchedulerService, private val FlowLogicRefFactory: FlowLogicRefFactory) {
     companion object {
         @JvmStatic
-        fun install(vaultService: VaultService, schedulerService: SchedulerService) {
-            val observer = ScheduledActivityObserver(schedulerService)
+        fun install(vaultService: VaultService, schedulerService: SchedulerService, flowLogicRefFactory: FlowLogicRefFactory) {
+            val observer = ScheduledActivityObserver(schedulerService, flowLogicRefFactory)
             vaultService.rawUpdates.subscribe { (consumed, produced) ->
                 consumed.forEach { schedulerService.unscheduleStateActivity(it.ref) }
                 produced.forEach { observer.scheduleStateActivity(it) }
@@ -32,7 +32,7 @@ class ScheduledActivityObserver private constructor(private val schedulerService
     private fun scheduleStateActivity(produced: StateAndRef<ContractState>) {
         val producedState = produced.state.data
         if (producedState is SchedulableState) {
-            val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, FlowLogicRefFactoryImpl)?.scheduledAt } ?: return
+            val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, FlowLogicRefFactory)?.scheduledAt } ?: return
             schedulerService.scheduleStateActivity(ScheduledStateRef(produced.ref, scheduledAt))
         }
     }

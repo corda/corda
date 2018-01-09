@@ -1,20 +1,19 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.CompositeKey.NodeAndWeight
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.cert
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.internal.kryoSpecific
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.PublicKey
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -24,6 +23,7 @@ class CompositeKeyTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
@@ -40,9 +40,9 @@ class CompositeKeyTests {
     private val secureHash = message.sha256()
 
     // By lazy is required so that the serialisers are configured before vals initialisation takes place (they internally invoke serialise).
-    val aliceSignature by lazy { aliceKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID))) }
-    val bobSignature by lazy { bobKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(bobPublicKey).schemeNumberID))) }
-    val charlieSignature by lazy { charlieKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(charliePublicKey).schemeNumberID))) }
+    private val aliceSignature by lazy { aliceKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID))) }
+    private val bobSignature by lazy { bobKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(bobPublicKey).schemeNumberID))) }
+    private val charlieSignature by lazy { charlieKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(charliePublicKey).schemeNumberID))) }
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
@@ -333,16 +333,16 @@ class CompositeKeyTests {
 
         // Create self sign CA.
         val caKeyPair = Crypto.generateKeyPair()
-        val caName = CordaX500Name(commonName = "Test CA", organisation = "R3 Ltd", locality = "London", country = "GB")
+        val caName = X500Principal("CN=Test CA,O=R3 Ltd,L=London,C=GB")
         val ca = X509Utilities.createSelfSignedCACertificate(caName, caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, ca, caKeyPair, caName.copy(commonName = "CompositeKey"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, ca, caKeyPair, caName, compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"
         val keystore = loadOrCreateKeyStore(keystorePath, "password")
-        keystore.setCertificateEntry("CompositeKey", compositeKeyCert.cert)
+        keystore.setCertificateEntry("CompositeKey", compositeKeyCert)
         keystore.save(keystorePath, "password")
 
         // Load keystore from disk.

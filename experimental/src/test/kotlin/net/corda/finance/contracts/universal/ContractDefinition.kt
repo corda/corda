@@ -1,20 +1,17 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.Party
-import net.corda.testing.ALICE
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MINI_CORP
+import net.corda.core.identity.CordaX500Name
+import net.corda.testing.TestIdentity
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 // Test parties
-val acmeCorp = Party(ALICE.name, generateKeyPair().public)
-val highStreetBank = Party(MEGA_CORP.name, generateKeyPair().public)
-val momAndPop = Party(MINI_CORP.name, generateKeyPair().public)
-
+val acmeCorp = TestIdentity(CordaX500Name("Alice Corp", "Madrid", "ES")).party
+val highStreetBank = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
+val momAndPop = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
 val acmeCorporationHasDefaulted = TerminalEvent(acmeCorp, generateKeyPair().public)
 
 

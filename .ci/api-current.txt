@@ -1836,7 +1836,7 @@ public @interface net.corda.core.node.services.CordaService
   @org.jetbrains.annotations.NotNull public static final String ID_PREFIX = "corda.notary."
 ##
 public static final class net.corda.core.node.services.NotaryService$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final String constructId(boolean, boolean, boolean, boolean)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public final String constructId(boolean, boolean, boolean, boolean)
 ##
 public abstract class net.corda.core.node.services.PartyInfo extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.identity.Party getParty()
@@ -2724,6 +2724,10 @@ public static final class net.corda.core.serialization.SerializationContext$UseC
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
   public static net.corda.core.serialization.SerializationContext$UseCase[] values()
 ##
+public interface net.corda.core.serialization.SerializationCustomSerializer
+  public abstract Object fromProxy(Object)
+  public abstract Object toProxy(Object)
+##
 public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
@@ -3517,6 +3521,9 @@ public static final class net.corda.client.jackson.StringToMethodCallParser$Unpa
 public static final class net.corda.client.jackson.StringToMethodCallParser$UnparseableCallException$UnknownMethod extends net.corda.client.jackson.StringToMethodCallParser$UnparseableCallException
   public <init>(String)
   @org.jetbrains.annotations.NotNull public final String getMethodName()
+##
+public static interface net.corda.testing.node.InMemoryMessagingNetwork$LatencyCalculator
+  @org.jetbrains.annotations.NotNull public abstract java.time.Duration between(net.corda.core.messaging.SingleMessageRecipient, net.corda.core.messaging.SingleMessageRecipient)
 ##
 public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public <init>(net.corda.core.utilities.NetworkHostAndPort)

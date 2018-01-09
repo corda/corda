@@ -4,8 +4,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.CertRole
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -13,9 +12,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import org.bouncycastle.cert.X509CertificateHolder
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -25,10 +23,10 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 
+// TODO There is duplicated logic between this and InMemoryIdentityService
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
                                 vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
-    constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {
         private val log = contextLogger()
@@ -119,21 +117,17 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             log.warn(e.localizedMessage)
             log.warn("Path = ")
             identity.certPath.certificates.reversed().forEach {
-                log.warn(it.toX509CertHolder().subject.toString())
+                log.warn((it as X509Certificate).subjectX500Principal.toString())
             }
             throw e
         }
 
         // Ensure we record the first identity of the same name, first
-        val identityPrincipal = identity.name.x500Principal
-        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
-            val principal = (it as? X509Certificate)?.subjectX500Principal
-            principal == identityPrincipal
-        }
-        if (firstCertWithThisName != identity.certificate) {
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
+        if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(firstCertWithThisName)
-            val firstPath = X509CertificateFactory().delegate.generateCertPath(certificates.slice(idx until certificates.size))
+            val idx = certificates.lastIndexOf(wellKnownCert)
+            val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 

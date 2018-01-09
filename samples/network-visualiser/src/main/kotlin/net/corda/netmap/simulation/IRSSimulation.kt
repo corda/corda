@@ -24,7 +24,7 @@ import net.corda.irs.flows.FixingFlow
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.startFlow
+import net.corda.testing.node.startFlow
 import rx.Observable
 import java.time.LocalDate
 import java.util.*
@@ -44,7 +44,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        om = JacksonSupport.createInMemoryMapper(makeTestIdentityService((banks + regulators + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }))
+        om = JacksonSupport.createInMemoryMapper(makeTestIdentityService(*(banks + regulators + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }.toTypedArray()))
         registerFinanceJSONMappers(om)
 
         return startIRSDealBetween(0, 1).thenCompose {

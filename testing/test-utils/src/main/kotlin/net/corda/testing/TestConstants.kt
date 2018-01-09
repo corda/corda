@@ -4,77 +4,49 @@ package net.corda.testing
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.toX509CertHolder
-import net.corda.core.internal.x500Name
-import net.corda.nodeapi.internal.crypto.*
-import org.bouncycastle.asn1.x509.GeneralName
-import org.bouncycastle.asn1.x509.GeneralSubtree
-import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
-import java.math.BigInteger
-import java.security.KeyPair
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import java.security.PublicKey
-import java.security.Security
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
-val TEST_TX_TIME: Instant get() = Instant.parse("2015-04-17T12:00:00.00Z")
-val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
-/** Dummy notary identity for tests and simulations */
-val DUMMY_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_NOTARY)
-val DUMMY_NOTARY: Party get() = Party(CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"), DUMMY_NOTARY_KEY.public)
-
-val DUMMY_BANK_A_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(40)) }
-/** Dummy bank identity for tests and simulations */
-val DUMMY_BANK_A: Party get() = Party(CordaX500Name(organisation = "Bank A", locality = "London", country = "GB"), DUMMY_BANK_A_KEY.public)
-
-val DUMMY_BANK_B_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(50)) }
-/** Dummy bank identity for tests and simulations */
-val DUMMY_BANK_B: Party get() = Party(CordaX500Name(organisation = "Bank B", locality = "New York", country = "US"), DUMMY_BANK_B_KEY.public)
-
-val DUMMY_BANK_C_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(60)) }
-/** Dummy bank identity for tests and simulations */
-val DUMMY_BANK_C: Party get() = Party(CordaX500Name(organisation = "Bank C", locality = "Tokyo", country = "JP"), DUMMY_BANK_C_KEY.public)
-
-val ALICE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(70)) }
-/** Dummy individual identity for tests and simulations */
-val ALICE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(ALICE)
-val ALICE_NAME = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES")
-val ALICE: Party get() = Party(ALICE_NAME, ALICE_KEY.public)
-
-val BOB_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(80)) }
-/** Dummy individual identity for tests and simulations */
-val BOB_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOB)
-val BOB_NAME = CordaX500Name(organisation = "Bob Plc", locality = "Rome", country = "IT")
-val BOB: Party get() = Party(BOB_NAME, BOB_KEY.public)
-
-val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
-/** Dummy individual identity for tests and simulations */
-val CHARLIE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CHARLIE)
-val CHARLIE_NAME = CordaX500Name(organisation = "Charlie Ltd", locality = "Athens", country = "GR")
-val CHARLIE: Party get() = Party(CHARLIE_NAME, CHARLIE_KEY.public)
-
-val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(100)) }
-/** Dummy regulator for tests and simulations */
-val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(organisation = "Regulator A", locality = "Paris", country = "FR"), DUMMY_REGULATOR_KEY.public)
-
-val DEV_CA: CertificateAndKeyPair by lazy {
+@JvmField
+val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
+@JvmField
+val DUMMY_NOTARY_NAME = CordaX500Name("Notary Service", "Zurich", "CH")
+@JvmField
+val DUMMY_BANK_A_NAME = CordaX500Name("Bank A", "London", "GB")
+@JvmField
+val DUMMY_BANK_B_NAME = CordaX500Name("Bank B", "New York", "US")
+@JvmField
+val DUMMY_BANK_C_NAME = CordaX500Name("Bank C", "Tokyo", "JP")
+@JvmField
+val BOC_NAME = CordaX500Name("BankOfCorda", "London", "GB")
+@JvmField
+val ALICE_NAME = CordaX500Name("Alice Corp", "Madrid", "ES")
+@JvmField
+val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
+@JvmField
+val CHARLIE_NAME = CordaX500Name("Charlie Ltd", "Athens", "GR")
+val DEV_INTERMEDIATE_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
     caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
 }
-val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
+
+val DEV_ROOT_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
-    caKeyStore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).last().toX509CertHolder()
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
+    caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, "cordacadevkeypass")
 }
 
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
 
 object DummyCommandData : TypeOnlyCommandData()
+
+/** Maximum artemis message size. 10 MiB maximum allowed file size for attachments, including message headers. */
+const val MAX_MESSAGE_SIZE: Int = 10485760

@@ -2,18 +2,16 @@ package net.corda.plugins
 
 import groovy.lang.Closure
 import net.corda.cordform.CordformDefinition
-import net.corda.cordform.CordformNode
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
 import java.io.File
+import java.lang.reflect.InvocationTargetException
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
 import java.util.jar.JarInputStream
 
 /**
@@ -24,6 +22,7 @@ import java.util.jar.JarInputStream
 @Suppress("unused")
 open class Cordform : DefaultTask() {
     private companion object {
+        val nodeJarName = "corda.jar"
         private val defaultDirectory: Path = Paths.get("build", "nodes")
     }
 
@@ -118,15 +117,42 @@ open class Cordform : DefaultTask() {
     }
 
     /**
+     * The NetworkBootstrapper needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
+     */
+    private fun loadNetworkBootstrapperClass(): Class<*> {
+        val plugin = project.convention.getPlugin(JavaPluginConvention::class.java)
+        val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
+        val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
+        return URLClassLoader(urls, javaClass.classLoader).loadClass("net.corda.nodeapi.internal.network.NetworkBootstrapper")
+    }
+
+    /**
      * This task action will create and install the nodes based on the node configurations added.
      */
     @TaskAction
     fun build() {
         project.logger.info("Running Cordform task")
         initializeConfiguration()
+        nodes.forEach(Node::installConfig)
+        installCordaJar()
         installRunScript()
+        bootstrapNetwork()
         nodes.forEach(Node::build)
-        generateAndInstallNodeInfos()
+    }
+
+    /**
+     * Installs the corda fat JAR to the root directory, for the network bootstrapper to use.
+     */
+    private fun installCordaJar() {
+        val cordaJar = Cordformation.verifyAndGetRuntimeJar(project, "corda")
+        project.copy {
+            it.apply {
+                from(cordaJar)
+                into(directory)
+                rename(cordaJar.name, nodeJarName)
+                fileMode = Cordformation.executableFileMode
+            }
+        }
     }
 
     private fun initializeConfiguration() {
@@ -142,14 +168,27 @@ open class Cordform : DefaultTask() {
             cd.nodeConfigurers.forEach {
                 val node = node { }
                 it.accept(node)
+                node.additionalCordapps.addAll(cordapps)
                 node.rootDir(directory)
-                node.installCordapps(cordapps)
             }
             cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
         } else {
             nodes.forEach {
                 it.rootDir(directory)
             }
+        }
+    }
+
+    private fun bootstrapNetwork() {
+        val networkBootstrapperClass = loadNetworkBootstrapperClass()
+        val networkBootstrapper = networkBootstrapperClass.newInstance()
+        val bootstrapMethod = networkBootstrapperClass.getMethod("bootstrap", Path::class.java).apply { isAccessible = true }
+        // Call NetworkBootstrapper.bootstrap
+        try {
+            val rootDir = project.projectDir.toPath().resolve(directory).toAbsolutePath().normalize()
+            bootstrapMethod.invoke(networkBootstrapper, rootDir)
+        } catch (e: InvocationTargetException) {
+            throw e.cause!!
         }
     }
 
@@ -176,91 +215,4 @@ open class Cordform : DefaultTask() {
             return false
         }
     }
-
-    private fun generateAndInstallNodeInfos() {
-        generateNodeInfos()
-        installNodeInfos()
-    }
-
-    private fun generateNodeInfos() {
-        project.logger.info("Generating node infos")
-        val nodeProcesses = buildNodeProcesses()
-        try {
-            validateNodeProcessess(nodeProcesses)
-        } finally {
-            destroyNodeProcesses(nodeProcesses)
-        }
-    }
-
-    private fun buildNodeProcesses(): Map<Node, Process> {
-        return nodes
-                .map { buildNodeProcess(it) }
-                .toMap()
-    }
-
-    private fun validateNodeProcessess(nodeProcesses: Map<Node, Process>) {
-        nodeProcesses.forEach { (node, process) ->
-            validateNodeProcess(node, process)
-        }
-    }
-
-    private fun destroyNodeProcesses(nodeProcesses: Map<Node, Process>) {
-        nodeProcesses.forEach { (_, process) ->
-            process.destroyForcibly()
-        }
-    }
-
-    private fun buildNodeProcess(node: Node): Pair<Node, Process> {
-        node.makeLogDirectory()
-        val process = ProcessBuilder(generateNodeInfoCommand())
-                .directory(node.fullPath().toFile())
-                .redirectErrorStream(true)
-                // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
-                // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(node.logFile().toFile())
-                .addEnvironment("CAPSULE_CACHE_DIR", Node.capsuleCacheDir)
-                .start()
-        return Pair(node, process)
-    }
-
-    private fun generateNodeInfoCommand(): List<String> = listOf(
-            "java",
-            "-Dcapsule.log=verbose",
-            "-Dcapsule.dir=${Node.capsuleCacheDir}",
-            "-jar",
-            Node.nodeJarName,
-            "--just-generate-node-info"
-    )
-
-    private fun validateNodeProcess(node: Node, process: Process) {
-        val generateTimeoutSeconds = 60L
-        if (!process.waitFor(generateTimeoutSeconds, TimeUnit.SECONDS)) {
-            throw GradleException("Node took longer $generateTimeoutSeconds seconds than too to generate node info - see node log at ${node.fullPath()}/logs")
-        }
-        if (process.exitValue() != 0) {
-            throw GradleException("Node exited with ${process.exitValue()} when generating node infos - see node log at ${node.fullPath()}/logs")
-        }
-        project.logger.info("Generated node info for ${node.fullPath()}")
-    }
-
-    private fun installNodeInfos() {
-        project.logger.info("Installing node infos")
-        for (source in nodes) {
-            for (destination in nodes) {
-                if (source.nodeDir != destination.nodeDir) {
-                    project.copy {
-                        it.apply {
-                            from(source.fullPath().toString())
-                            include("nodeInfo-*")
-                            into(destination.fullPath().resolve(CordformNode.NODE_INFO_DIRECTORY).toString())
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
-
-    private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }

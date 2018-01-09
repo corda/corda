@@ -8,6 +8,10 @@ import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
+data class BytesAndSchemas<T : Any>(
+        val obj: SerializedBytes<T>,
+        val schema: Schema,
+        val transformsSchema: TransformsSchema)
 
 /**
  * Main entry point for serializing an object to AMQP.
@@ -30,6 +34,18 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
             return _serialize(obj)
+        } finally {
+            andFinally()
+        }
+    }
+
+
+    @Throws(NotSerializableException::class)
+    fun <T : Any> serializeAndReturnSchema(obj: T): BytesAndSchemas<T> {
+        try {
+            val blob = _serialize(obj)
+            val schema = Schema(schemaHistory.toList())
+            return BytesAndSchemas(blob, schema, TransformsSchema.build(schema, serializerFactory))
         } finally {
             andFinally()
         }

@@ -34,7 +34,7 @@ fun RPCSecurityManager.tryAuthenticate(principal: String, password: Password): A
     password.use {
         return try {
             authenticate(principal, password)
-        } catch (e: AuthenticationException) {
+        } catch (e: FailedLoginException) {
             null
         }
     }

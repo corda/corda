@@ -3,11 +3,13 @@ package net.corda.core.serialization
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
@@ -19,6 +21,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionSerializationTests {
+    private companion object {
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_KEY get() = megaCorp.keyPair
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -95,7 +107,7 @@ class TransactionSerializationTests {
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
 
             val ptx2 = notaryServices.signInitialTransaction(tx2)
-            val dummyServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
+            val dummyServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, DUMMY_KEY_2)
             val stx2 = dummyServices.addSignature(ptx2)
 
             stx.copy(sigs = stx2.sigs).verifyRequiredSignatures()
@@ -113,8 +125,7 @@ class TransactionSerializationTests {
     @Test
     fun storeAndLoadWhenSigning() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
-        ptx.verifySignaturesExcept(notaryServices.key.public)
-
+        ptx.verifySignaturesExcept(DUMMY_NOTARY_KEY.public)
         val stored = ptx.serialize()
         val loaded = stored.deserialize()
 

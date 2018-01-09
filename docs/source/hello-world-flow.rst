@@ -6,8 +6,8 @@
 
 Writing the flow
 ================
-A flow encodes a sequence of steps that a node can run to achieve a specific ledger update. By installing new flows on
-a node, we allow the node to handle new business processes. The flow we define will allow a node to issue an
+A flow encodes a sequence of steps that a node can perform to achieve a specific ledger update. By installing new flows
+on a node, we allow the node to handle new business processes. The flow we define will allow a node to issue an
 ``IOUState`` onto the ledger.
 
 Flow outline
@@ -40,8 +40,8 @@ FlowLogic
 ---------
 All flows must subclass ``FlowLogic``. You then define the steps taken by the flow by overriding ``FlowLogic.call``.
 
-Let's define our ``IOUFlow`` in either ``TemplateFlow.java`` or ``App.kt``. Delete both the existing flows in the
-template, and replace them with the following:
+Let's define our ``IOUFlow`` in either ``TemplateFlow.java`` or ``App.kt``. Delete the two existing flows in the
+template (``Initiator`` and ``Responder``), and replace them with the following:
 
 .. container:: codeset
 

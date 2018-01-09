@@ -5,12 +5,30 @@ Here are release notes for each snapshot release from M9 onwards.
 
 Unreleased
 ----------
+* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
+  hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
+  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
+  found at see :doc:`permissioning-certificate-specification`.
 
 * **Enum Class Evolution**
   With the addition of AMQP serialization Corda now supports enum constant evolution.
 
   That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
   annotations applied, have older and newer instances of that enumeration be understood.
+
+* **AMQP Enabled**
+
+AMQP Serialization is now enabled for both peer to peer communication and writing states to the vault. This change
+brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
+users.
+
+* **Custom Serializers**
+
+To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
+to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
+serializers to operate on those types.
+
+A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
 
 Release 2.0
 ----------

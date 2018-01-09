@@ -6,10 +6,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -42,6 +42,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
+    val useAMQPBridges: Boolean get() = true
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
@@ -116,7 +117,8 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode)
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
+        override val useAMQPBridges: Boolean = true
         ) : NodeConfiguration {
 
     override val exportJMXto: String get() = "http"
@@ -125,7 +127,6 @@ data class NodeConfigurationImpl(
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
-        require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
@@ -197,8 +198,16 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         data class Options(val cache: Options.Cache?) {
 
             // Cache parameters
-            data class Cache(val expiryTimeInSecs: Long, val capacity: Long)
-
+            data class Cache(val expireAfterSecs: Long, val maxEntries: Long) {
+                init {
+                    require(expireAfterSecs >= 0) {
+                        "Expected positive value for 'cache.expireAfterSecs'"
+                    }
+                    require(maxEntries > 0) {
+                        "Expected positive value for 'cache.maxEntries'"
+                    }
+                }
+            }
         }
 
         // Provider of users credentials and permissions data
@@ -222,12 +231,13 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                 AuthDataSourceType.DB -> AuthServiceId("REMOTE_DATABASE")
             }
 
-            fun fromUsers(users: List<User>) = AuthService(
-                    dataSource = DataSource(
-                            type = AuthDataSourceType.INMEMORY,
-                            users = users,
-                            passwordEncryption = PasswordEncryption.NONE),
-                    id = AuthServiceId("NODE_CONFIG"))
+            fun fromUsers(users: List<User>, encryption: PasswordEncryption = PasswordEncryption.NONE) =
+                    AuthService(
+                            dataSource = DataSource(
+                                    type = AuthDataSourceType.INMEMORY,
+                                    users = users,
+                                    passwordEncryption = encryption),
+                            id = AuthServiceId("NODE_CONFIG"))
         }
     }
 }

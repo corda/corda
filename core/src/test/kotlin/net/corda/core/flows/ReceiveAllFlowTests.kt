@@ -7,13 +7,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.singleIdentity
-import net.corda.testing.startFlow
+import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
 
 class ReceiveMultipleFlowTests {
-    private val mockNet = MockNetwork()
+    private val mockNet = MockNetwork(emptyList())
     private val nodes = (0..2).map { mockNet.createPartyNode() }
     @After
     fun stopNodes() {

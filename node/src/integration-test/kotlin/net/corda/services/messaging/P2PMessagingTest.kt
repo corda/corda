@@ -15,8 +15,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
-import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
@@ -32,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")
     }
 
     @Test
@@ -99,7 +98,7 @@ class P2PMessagingTest {
             }
 
             // Wait until the first request is received
-            crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
+            crashingNodes.firstRequestReceived.await()
             // Stop alice's node after we ensured that the first request was delivered and ignored.
             alice.dispose()
             val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
@@ -109,8 +108,7 @@ class P2PMessagingTest {
 
             // Restart the node and expect a response
             val aliceRestarted = startAlice()
-            val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
-
+            val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow()
             assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
             assertThat(response).isEqualTo(responseMessage)
         }
@@ -123,7 +121,7 @@ class P2PMessagingTest {
     }
 
     private fun DriverDSL.startAlice(): StartedNode<Node> {
-        return startNode(providedName = ALICE.name, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
+        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
                 .map { (it as NodeHandle.InProcess).node }
                 .getOrThrow()
     }

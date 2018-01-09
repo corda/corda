@@ -21,7 +21,7 @@ define([
                 $scope.formError = resp.data;
             }, handleHttpFail);
         };
-        $('input.percent').mask("9.999999%", {placeholder: "", autoclear: false});
+        $('input.percent').mask("9.999999", {placeholder: "", autoclear: false});
         $('#swapirscolumns').click(() => {
             let first = $('#irscolumns .irscolumn:eq( 0 )');
             let last = $('#irscolumns .irscolumn:eq( 1 )');

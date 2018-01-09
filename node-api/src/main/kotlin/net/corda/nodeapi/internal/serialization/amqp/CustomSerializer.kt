@@ -6,22 +6,27 @@ import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
+interface SerializerFor {
+    /**
+     * This method should return true if the custom serializer can serialize an instance of the class passed as the
+     * parameter.
+     */
+    fun isSerializerFor(clazz: Class<*>): Boolean
+
+    val revealSubclassesInSchema: Boolean
+}
+
 /**
  * Base class for serializers of core platform types that do not conform to the usual serialization rules and thus
  * cannot be automatically serialized.
  */
-abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
+abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     /**
      * This is a collection of custom serializers that this custom serializer depends on.  e.g. for proxy objects
      * that refer to other custom types etc.
      */
     open val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
-    /**
-     * This method should return true if the custom serializer can serialize an instance of the class passed as the
-     * parameter.
-     */
-    abstract fun isSerializerFor(clazz: Class<*>): Boolean
 
     protected abstract val descriptor: Descriptor
     /**
@@ -33,7 +38,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
     /**
      * Whether subclasses using this serializer via inheritance should have a mapping in the schema.
      */
-    open val revealSubclassesInSchema: Boolean = false
+    override val revealSubclassesInSchema: Boolean get() = false
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         data.withDescribed(descriptor) {
@@ -127,7 +132,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
             val proxy = toProxy(obj)
             data.withList {
-                for (property in proxySerializer.propertySerializers) {
+                for (property in proxySerializer.propertySerializers.getters) {
                     property.writeProperty(proxy, this, output)
                 }
             }
@@ -147,8 +152,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
      *
      * @param clazz The type to be marshalled
      * @param withInheritance Whether subclasses of the class can also be marshalled.
-     * @param make A lambda for constructing an instance, that defaults to calling a constructor that expects a string.
-     * @param unmake A lambda that extracts the string value for an instance, that defaults to the [toString] method.
+     * @param maker A lambda for constructing an instance, that defaults to calling a constructor that expects a string.
+     * @param unmaker A lambda that extracts the string value for an instance, that defaults to the [toString] method.
      */
     abstract class ToString<T : Any>(clazz: Class<T>, withInheritance: Boolean = false,
                                      private val maker: (String) -> T = clazz.getConstructor(String::class.java).let { `constructor` ->

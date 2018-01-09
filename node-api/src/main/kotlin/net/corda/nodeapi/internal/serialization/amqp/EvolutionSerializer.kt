@@ -10,8 +10,8 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaType
 
 /**
- * Serializer for deserialising objects whose definition has changed since they
- * were serialised
+ * Serializer for deserializing objects whose definition has changed since they
+ * were serialised.
  */
 class EvolutionSerializer(
         clazz: Type,
@@ -20,7 +20,7 @@ class EvolutionSerializer(
         override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer(clazz, factory) {
 
     // explicitly set as empty to indicate it's unused by this type of serializer
-    override val propertySerializers: Collection<PropertySerializer> = emptyList()
+    override val propertySerializers = ConstructorDestructorMethods (emptyList(), emptyList())
 
     /**
      * Represents a parameter as would be passed to the constructor of the class as it was
@@ -38,16 +38,16 @@ class EvolutionSerializer(
 
     companion object {
         /**
-         * Unlike the generic deserialisation case where we need to locate the primary constructor
+         * Unlike the generic deserialization case where we need to locate the primary constructor
          * for the object (or our best guess) in the case of an object whose structure has changed
-         * since serialisation we need to attempt to locate a constructor that we can use. I.e.
-         * it's parameters match the serialised members and it will initialise any newly added
-         * elements
+         * since serialisation we need to attempt to locate a constructor that we can use. For example,
+         * its parameters match the serialised members and it will initialise any newly added
+         * elements.
          *
          * TODO: Type evolution
          * TODO: rename annotation
          */
-        internal fun getEvolverConstructor(type: Type, oldArgs: Map<String?, Type>): KFunction<Any>? {
+        private fun getEvolverConstructor(type: Type, oldArgs: Map<String?, Type>): KFunction<Any>? {
             val clazz: Class<*> = type.asClass()!!
             if (!isConcrete(clazz)) return null
 
@@ -70,13 +70,15 @@ class EvolutionSerializer(
         }
 
         /**
-         * Build a serialization object for deserialisation only of objects serialised
-         * as different versions of a class
+         * Build a serialization object for deserialization only of objects serialised
+         * as different versions of a class.
          *
          * @param old is an object holding the schema that represents the object
          *  as it was serialised and the type descriptor of that type
          * @param new is the Serializer built for the Class as it exists now, not
          * how it was serialised and persisted.
+         * @param factory the [SerializerFactory] associated with the serialization
+         * context this serializer is being built for
          */
         fun make(old: CompositeType, new: ObjectSerializer,
                  factory: SerializerFactory): AMQPSerializer<Any> {
@@ -117,7 +119,7 @@ class EvolutionSerializer(
      * to the object list of values we need to map that list, which is ordered per the
      * constructor of the original state of the object, we need to map the new parameter order
      * of the current constructor onto that list inserting nulls where new parameters are
-     * encountered
+     * encountered.
      *
      * TODO: Object references
      */

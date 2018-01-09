@@ -2,6 +2,7 @@ package net.corda.core.identity
 
 import com.google.common.collect.ImmutableSet
 import net.corda.core.internal.LegalNameValidator
+import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.ASN1Encodable
@@ -35,7 +36,9 @@ data class CordaX500Name(val commonName: String?,
                          val locality: String,
                          val state: String?,
                          val country: String) {
-    constructor(commonName: String, organisation: String, locality: String, country: String) : this(commonName = commonName, organisationUnit = null, organisation = organisation, locality = locality, state = null, country = country)
+    constructor(commonName: String, organisation: String, locality: String, country: String) :
+            this(commonName = commonName, organisationUnit = null, organisation = organisation, locality = locality, state = null, country = country)
+
     /**
      * @param organisation name of the organisation.
      * @param locality locality of the organisation, typically nearest major city.
@@ -45,7 +48,7 @@ data class CordaX500Name(val commonName: String?,
 
     init {
         // Legal name checks.
-        LegalNameValidator.validateOrganization(organisation)
+        LegalNameValidator.validateOrganization(organisation, LegalNameValidator.Validation.MINIMAL)
 
         // Attribute data width checks.
         require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be $LENGTH_COUNTRY letters ISO code " }
@@ -77,8 +80,9 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_STATE = 64
         const val MAX_LENGTH_ORGANISATION_UNIT = 64
         const val MAX_LENGTH_COMMON_NAME = 64
+
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
-        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries())
+        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries() + unspecifiedCountry)
 
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
@@ -113,20 +117,12 @@ data class CordaX500Name(val commonName: String?,
     }
 
     @Transient
-    private var x500Cache: X500Name? = null
+    private var _x500Principal: X500Principal? = null
 
-    val x500Principal: X500Principal
-        get() {
-            if (x500Cache == null) {
-                x500Cache = this.x500Name
-            }
-            return X500Principal(x500Cache!!.encoded)
-        }
-
-    override fun toString(): String {
-        if (x500Cache == null) {
-            x500Cache = this.x500Name
-        }
-        return x500Cache.toString()
+    /** Return the [X500Principal] equivalent of this name. */
+    val x500Principal: X500Principal get() {
+        return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
     }
+
+    override fun toString(): String = x500Principal.toString()
 }

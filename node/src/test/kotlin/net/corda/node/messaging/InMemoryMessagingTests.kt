@@ -1,8 +1,10 @@
 package net.corda.node.messaging
 
+import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -17,7 +19,7 @@ class InMemoryMessagingTests {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(emptyList())
     }
 
     @After
@@ -73,7 +75,7 @@ class InMemoryMessagingTests {
 
         var counter = 0
         listOf(node1, node2, node3).forEach { it.network.addMessageHandler { _, _ -> counter++ } }
-        node1.network.send(node2.network.createMessage("test.topic", data = bits), mockNet.messagingNetwork.everyoneOnline)
+        node1.network.send(node2.network.createMessage("test.topic", data = bits), rigorousMock<AllPossibleRecipients>())
         mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }

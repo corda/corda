@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -42,8 +43,8 @@ import kotlin.concurrent.thread
  *     a service is addressed.
  */
 @ThreadSafe
-class InMemoryMessagingNetwork(
-        val sendManuallyPumped: Boolean,
+class InMemoryMessagingNetwork internal constructor(
+        private val sendManuallyPumped: Boolean,
         private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
@@ -91,7 +92,7 @@ class InMemoryMessagingNetwork(
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
      *
-     * @param manuallyPumped if set to true, then you are expected to call the [InMemoryMessaging.pump] method on the [InMemoryMessaging]
+     * @param manuallyPumped if set to true, then you are expected to call [InMemoryMessaging.pumpReceive]
      * in order to cause the delivery of a single message, which will occur on the thread of the caller. If set to false
      * then this class will set up a background thread to deliver messages asynchronously, if the handler specifies no
      * executor.
@@ -120,7 +121,7 @@ class InMemoryMessagingNetwork(
         }
     }
 
-    interface LatencyCalculator {
+    interface LatencyCalculator { // XXX: Used?
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
 
@@ -150,9 +151,6 @@ class InMemoryMessagingNetwork(
         }
     }
 
-
-    val everyoneOnline: AllPossibleRecipients = object : AllPossibleRecipients {}
-
     fun stop() {
         val nodes = synchronized(this) {
             counter = -1
@@ -181,6 +179,7 @@ class InMemoryMessagingNetwork(
     /**
      * Mock service loadbalancing
      */
+    @DoNotImplement
     sealed class ServicePeerAllocationStrategy {
         abstract fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A
         class Random(val random: SplittableRandom = SplittableRandom()) : ServicePeerAllocationStrategy() {
@@ -223,7 +222,7 @@ class InMemoryMessagingNetwork(
         return transfer
     }
 
-    fun pumpSendInternal(transfer: MessageTransfer) {
+    private fun pumpSendInternal(transfer: MessageTransfer) {
         when (transfer.recipients) {
             is PeerHandle -> getQueueForPeerHandle(transfer.recipients).add(transfer)
             is ServiceHandle -> {
@@ -268,8 +267,8 @@ class InMemoryMessagingNetwork(
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
                                   private val database: CordaPersistence) : SingletonSerializeAsToken(), MessagingService {
-        inner class Handler(val topicSession: TopicSession,
-                            val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+        private inner class Handler(val topicSession: TopicSession,
+                                    val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
         @Volatile
         private var running = true

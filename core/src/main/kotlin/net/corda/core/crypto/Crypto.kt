@@ -30,6 +30,7 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.jce.spec.ECParameterSpec
 import org.bouncycastle.jce.spec.ECPrivateKeySpec
 import org.bouncycastle.jce.spec.ECPublicKeySpec
@@ -63,7 +64,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 object Crypto {
     /**
-     * RSA_SHA256 signature scheme using SHA256 as hash algorithm.
+     * RSA signature scheme using SHA256 for message hashing.
      * Note: Recommended key size >= 3072 bits.
      */
     @JvmField
@@ -80,7 +81,7 @@ object Crypto {
             "RSA_SHA256 signature scheme using SHA256 as hash algorithm."
     )
 
-    /** ECDSA signature scheme using the secp256k1 Koblitz curve. */
+    /** ECDSA signature scheme using the secp256k1 Koblitz curve and SHA256 for message hashing. */
     @JvmField
     val ECDSA_SECP256K1_SHA256 = SignatureScheme(
             2,
@@ -95,7 +96,7 @@ object Crypto {
             "ECDSA signature scheme using the secp256k1 Koblitz curve."
     )
 
-    /** ECDSA signature scheme using the secp256r1 (NIST P-256) curve. */
+    /** ECDSA signature scheme using the secp256r1 (NIST P-256) curve and SHA256 for message hashing. */
     @JvmField
     val ECDSA_SECP256R1_SHA256 = SignatureScheme(
             3,
@@ -110,7 +111,11 @@ object Crypto {
             "ECDSA signature scheme using the secp256r1 (NIST P-256) curve."
     )
 
-    /** EdDSA signature scheme using the ed255519 twisted Edwards curve. */
+    /**
+     * EdDSA signature scheme using the ed25519 twisted Edwards curve and SHA512 for message hashing.
+     * The actual algorithm is PureEdDSA Ed25519 as defined in https://tools.ietf.org/html/rfc8032
+     * Not to be confused with the EdDSA variants, Ed25519ctx and Ed25519ph.
+     */
     @JvmField
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
@@ -127,13 +132,15 @@ object Crypto {
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
 
-    /**
-     * SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers
-     * at the cost of larger key sizes and loss of compatibility.
-     */
+    /** DLSequence (ASN1Sequence) for SHA512 truncated to 256 bits, used in SPHINCS-256 signature scheme. */
     @JvmField
     val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
 
+    /**
+     * SPHINCS-256 hash-based signature scheme using SHA512 for message hashing. It provides 128bit security against
+     * post-quantum attackers at the cost of larger key nd signature sizes and loss of compatibility.
+     */
+    // TODO: change val name to SPHINCS256_SHA512. This will break backwards compatibility.
     @JvmField
     val SPHINCS256_SHA256 = SignatureScheme(
             5,
@@ -149,7 +156,8 @@ object Crypto {
                     "at the cost of larger key sizes and loss of compatibility."
     )
 
-    /** Corda composite key type. */
+    /** Corda [CompositeKey] signature type. */
+    // TODO: change the val name to a more descriptive one as it's now confusing and looks like a Key type.
     @JvmField
     val COMPOSITE_KEY = SignatureScheme(
             6,
@@ -801,7 +809,7 @@ object Crypto {
     /**
      * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
      * and other cases where you want hard-coded private keys.
-     * Currently, [EDDSA_ED25519_SHA512] is the sole scheme supported for this operation.
+     * Currently, the following schemes are supported: [EDDSA_ED25519_SHA512], [ECDSA_SECP256R1_SHA256] and [ECDSA_SECP256K1_SHA256].
      * @param signatureScheme a supported [SignatureScheme], see [Crypto].
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
@@ -811,6 +819,7 @@ object Crypto {
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
             EDDSA_ED25519_SHA512 -> deriveEdDSAKeyPairFromEntropy(entropy)
+            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> deriveECDSAKeyPairFromEntropy(signatureScheme, entropy)
             else -> throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair " +
                     "generation: ${signatureScheme.schemeCodeName}")
         }
@@ -825,12 +834,41 @@ object Crypto {
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // Custom key pair generator from entropy.
+    // The BigIntenger.toByteArray() uses the two's-complement representation.
+    // The entropy is transformed to a byte array in big-endian byte-order and
+    // only the first ed25519.field.getb() / 8 bytes are used.
     private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
         val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val priv = EdDSAPrivateKeySpec(bytes, params)
         val pub = EdDSAPublicKeySpec(priv.a, params)
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+    }
+
+    // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
+    // but the accepted range of the input entropy is more relaxed:
+    // 2 <= entropy < N, where N is the order of base-point G.
+    private fun deriveECDSAKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+        val parameterSpec = signatureScheme.algSpec as ECNamedCurveParameterSpec
+
+        // The entropy might be a negative number and/or out of range (e.g. PRNG output).
+        // In such cases we retry with hash(currentEntropy).
+        while (entropy < ECConstants.TWO || entropy >= parameterSpec.n) {
+            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
+        }
+
+        val privateKeySpec = ECPrivateKeySpec(entropy, parameterSpec)
+        val priv = BCECPrivateKey("EC", privateKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, entropy)
+        while (pointQ.isInfinity) {
+            // Instead of throwing an exception, we retry with hash(entropy).
+            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
+        }
+        val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
+        val pub = BCECPublicKey("EC", publicKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        return KeyPair(pub, priv)
     }
 
     // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.

@@ -13,6 +13,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -28,7 +29,7 @@ class AttachmentTests {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(emptyList())
     }
 
     @After
@@ -48,9 +49,8 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
-
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
         val alice = aliceNode.info.singleIdentity()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -81,8 +81,8 @@ class AttachmentTests {
 
     @Test
     fun `missing`() {
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         // Get node one to fetch a non-existent attachment.
@@ -97,13 +97,13 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = { args ->
+        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME), nodeFactory = { args ->
             object : MockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
         })
-        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
-        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
+        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        val alice = aliceNode.info.singleIdentity()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         val attachment = fakeAttachment()

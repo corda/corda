@@ -9,6 +9,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
+import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -18,6 +19,11 @@ import kotlin.test.assertTrue
  * Tests for the version 2 dummy contract, to cover ensuring upgrade transactions are built correctly.
  */
 class DummyContractV2Tests {
+    private companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

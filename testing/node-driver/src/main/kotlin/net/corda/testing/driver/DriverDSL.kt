@@ -1,5 +1,6 @@
 package net.corda.testing.driver
 
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -10,6 +11,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.node.NotarySpec
 import java.nio.file.Path
 
+@DoNotImplement
 interface DriverDSL {
     /** Returns a list of [NotaryHandle]s matching the list of [NotarySpec]s passed into [driver]. */
     val notaryHandles: List<NotaryHandle>
@@ -64,7 +66,8 @@ interface DriverDSL {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize): CordaFuture<NodeHandle>
+            maximumHeapSize: String = defaultParameters.maximumHeapSize
+    ): CordaFuture<NodeHandle>
 
     /**
      * Helper function for starting a [Node] with custom parameters from Java.

@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.MissingAttachmentsException
@@ -19,11 +20,8 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.testing.BOB_IDENTITY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.withTestSerialization
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
@@ -31,6 +29,7 @@ import org.apache.qpid.proton.codec.EncoderImpl
 import org.assertj.core.api.Assertions.*
 import org.junit.Assert.*
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -46,6 +45,20 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class SerializationOutputTests {
+    private companion object {
+        val BOB_IDENTITY = TestIdentity(BOB_NAME, 80).identity
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+        val MEGA_CORP get() = megaCorp.party
+        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+        val MINI_CORP get() = miniCorp.party
+        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
+    }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     data class Foo(val bar: String, val pub: Int)
 
     data class testFloat(val f: Float)
@@ -465,9 +478,9 @@ class SerializationOutputTests {
         assertSerializedThrowableEquivalent(t, desThrowable)
     }
 
-    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable = withTestSerialization {
+    private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable {
         val newContext = SerializationFactory.defaultFactory.defaultContext.withProperty(CommonPropertyNames.IncludeInternalInfo, true)
-        SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
+        return SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
     }
 
     @Test
@@ -593,7 +606,7 @@ class SerializationOutputTests {
     fun `test transaction state`() {
         val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
-        val scheme = AMQPServerSerializationScheme()
+        val scheme = AMQPServerSerializationScheme(emptyList())
         val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
                 .java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
         func.isAccessible = true

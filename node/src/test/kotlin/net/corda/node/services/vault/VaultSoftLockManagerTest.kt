@@ -28,9 +28,9 @@ import net.corda.node.services.api.VaultServiceInternal
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.rigorousMock
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.startFlow
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Test
 import java.util.*

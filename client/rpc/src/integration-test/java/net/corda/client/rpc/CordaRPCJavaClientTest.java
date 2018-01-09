@@ -12,7 +12,7 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.nodeapi.internal.config.User;
 import net.corda.testing.CoreTestUtils;
-import net.corda.testing.internal.NodeBasedTest;
+import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +28,7 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
-import static net.corda.testing.TestConstants.getALICE;
+import static net.corda.testing.TestConstants.ALICE_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
@@ -55,8 +55,8 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @Before
-    public void setUp() throws ExecutionException, InterruptedException {
-        node = startNode(getALICE().getName(), 1, singletonList(rpcUser));
+    public void setUp() throws Exception {
+        node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 
@@ -71,11 +71,11 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @Test
-    public void testCashBalances() throws NoSuchFieldException, ExecutionException, InterruptedException {
+    public void testCashBalances() throws ExecutionException, InterruptedException {
         login(rpcUser.getUsername(), rpcUser.getPassword());
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
-                DOLLARS(123), OpaqueBytes.of("1".getBytes()),
+                DOLLARS(123), OpaqueBytes.of((byte)0),
                 CoreTestUtils.chooseIdentity(node.getInfo()));
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();

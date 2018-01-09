@@ -1,7 +1,7 @@
 package net.corda.node.internal.cordapp
 
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.testing.node.MockAttachmentStorage
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test

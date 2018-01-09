@@ -2,7 +2,6 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -20,7 +19,9 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.*
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
@@ -33,6 +34,7 @@ import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,7 +69,7 @@ open class Node(configuration: NodeConfiguration,
             exitProcess(1)
         }
 
-        private fun createClock(configuration: NodeConfiguration): Clock {
+        private fun createClock(configuration: NodeConfiguration): CordaClock {
             return (if (configuration.useTestClock) ::DemoClock else ::SimpleClock)(Clock.systemUTC())
         }
 
@@ -144,9 +146,9 @@ open class Node(configuration: NodeConfiguration,
         val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-        rpcMessagingClient = RPCMessagingClient(configuration, serverAddress)
+        rpcMessagingClient = RPCMessagingClient(configuration, serverAddress, networkParameters.maxMessageSize)
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics)
+            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
         }
         return P2PMessagingClient(
@@ -156,12 +158,13 @@ open class Node(configuration: NodeConfiguration,
                 info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
-                advertisedAddress)
+                advertisedAddress,
+                networkParameters.maxMessageSize)
     }
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -190,11 +193,17 @@ open class Node(configuration: NodeConfiguration,
         return if (!AddressUtils.isPublic(host)) {
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
             if (foundPublicIP == null) {
-                val retrievedHostName = networkMapClient?.myPublicHostname()
-                if (retrievedHostName != null) {
-                    log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
+                try {
+                    val retrievedHostName = networkMapClient?.myPublicHostname()
+                    if (retrievedHostName != null) {
+                        log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
+                    }
+                    retrievedHostName
+                } catch (ignore: Throwable) {
+                    // Cannot reach the network map service, ignore the exception and use provided P2P address instead.
+                    log.warn("Cannot connect to the network map service for public IP detection.")
+                    null
                 }
-                retrievedHostName
             } else {
                 log.info("Detected public IP: ${foundPublicIP.hostAddress}. This will be used instead of the provided \"$host\" as the advertised address.")
                 foundPublicIP.hostAddress
@@ -258,15 +267,13 @@ open class Node(configuration: NodeConfiguration,
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
-    override fun generateNodeInfo() {
+    override fun generateAndSaveNodeInfo(): NodeInfo {
         initialiseSerialization()
-        super.generateNodeInfo()
+        return super.generateAndSaveNodeInfo()
     }
 
     override fun start(): StartedNode<Node> {
-        if (initialiseSerialization) {
-            initialiseSerialization()
-        }
+        initialiseSerialization()
         val started: StartedNode<Node> = uncheckedCast(super.start())
         nodeReadyFuture.thenMatch({
             serverThread.execute {
@@ -299,17 +306,19 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
-    override fun getRxIoScheduler() = Schedulers.io()!!
+    override fun getRxIoScheduler(): Scheduler = Schedulers.io()
+
     private fun initialiseSerialization() {
+        if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoServerSerializationScheme())
-                    registerScheme(AMQPServerSerializationScheme())
+                    registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
                 },
-                KRYO_P2P_CONTEXT.withClassLoader(classloader),
+                p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
-                storageContext = KRYO_STORAGE_CONTEXT.withClassLoader(classloader),
+                storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 

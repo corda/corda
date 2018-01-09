@@ -3,15 +3,13 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.internal.cert
-import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.CertRole
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -23,9 +21,10 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
+// TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
-class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
-                              trustRoot: X509CertificateHolder) : SingletonSerializeAsToken(), IdentityServiceInternal {
+class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
+                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
     }
@@ -33,14 +32,12 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
     /**
      * Certificate store for certificate authority and intermediary certificates.
      */
-    override val caCertStore: CertStore
-    override val trustRoot = trustRoot.cert
-    override val trustAnchor: TrustAnchor = TrustAnchor(this.trustRoot, null)
+    override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
+    override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
 
     init {
-        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(this.trustRoot)))
         keyToParties.putAll(identities.associateBy { it.owningKey })
         principalToParties.putAll(identities.associateBy { it.name })
     }
@@ -55,21 +52,17 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
             log.warn("Certificate path :")
             identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
-                log.warn("$space${certificate.toX509CertHolder().subject}")
+                log.warn("$space${(certificate as X509Certificate).subjectX500Principal}")
             }
             throw e
         }
 
         // Ensure we record the first identity of the same name, first
-        val identityPrincipal = identity.name.x500Principal
-        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
-            val principal = (it as? X509Certificate)?.subjectX500Principal
-            principal == identityPrincipal
-        }
-        if (firstCertWithThisName != identity.certificate) {
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
+        if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(firstCertWithThisName)
-            val firstPath = X509CertificateFactory().delegate.generateCertPath(certificates.slice(idx until certificates.size))
+            val idx = certificates.lastIndexOf(wellKnownCert)
+            val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 

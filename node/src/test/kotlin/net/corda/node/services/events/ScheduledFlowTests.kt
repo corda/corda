@@ -24,11 +24,13 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
@@ -51,7 +53,7 @@ class ScheduledFlowTests {
                               override val linearId: UniqueIdentifier = UniqueIdentifier()) : SchedulableState, LinearState {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             return if (!processed) {
-                val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.java, thisStateRef)
+                val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.jvmName, thisStateRef)
                 ScheduledActivity(logicRef, creationTime)
             } else {
                 null

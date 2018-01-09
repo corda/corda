@@ -19,6 +19,9 @@ import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
+import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
@@ -33,6 +36,14 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 class NodeInterestRatesTest {
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val MEGA_CORP_KEY = generateKeyPair()
+        val ALICE get() = alice.party
+        val ALICE_PUBKEY get() = alice.publicKey
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -44,10 +55,8 @@ class NodeInterestRatesTest {
         EURIBOR 2016-03-15 1M = 0.123
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
-
-    private val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    private val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
-    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_CASH_ISSUER.name, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+    private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
     // This is safe because MockServices only ever have a single identity
     private val identity = services.myInfo.singleIdentity()
 
@@ -244,7 +253,7 @@ class NodeInterestRatesTest {
     }
 
     private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
-            TransactionState(1000.DOLLARS.CASH issuedBy DUMMY_CASH_ISSUER ownedBy ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
+            TransactionState(1000.DOLLARS.CASH issuedBy dummyCashIssuer.party ownedBy ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
 
     private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }

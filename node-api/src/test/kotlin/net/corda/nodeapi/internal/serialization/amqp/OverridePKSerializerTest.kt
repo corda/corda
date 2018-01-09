@@ -25,7 +25,7 @@ class OverridePKSerializerTest {
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
     }
 
-    class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme() {
+    class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
         override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }

@@ -6,7 +6,7 @@ Generates a text summary of Corda's public API that we can check for API-breakin
 $ gradlew generateApi
 ```
 
-See [here](../../docs/source/api-index.rst) for Corda's public API strategy. We will need to
+See [here](../../docs/source/corda-api.rst) for Corda's public API strategy. We will need to
 apply this plugin to other modules in future Corda releases as those modules' APIs stabilise.
 
 Basically, this plugin will document a module's `public` and `protected` classes/methods/fields,

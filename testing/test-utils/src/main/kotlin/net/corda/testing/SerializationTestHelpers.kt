@@ -2,6 +2,7 @@ package net.corda.testing
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -9,6 +10,7 @@ import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.common.internal.asContextEnv
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
@@ -33,45 +35,38 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
                 }.whenever(it).execute(any())
             }
         }
+
+        /** Do not call, instead use [SerializationEnvironmentRule] as a [org.junit.Rule]. */
+        fun <T> run(taskLabel: String, task: (SerializationEnvironment) -> T): T {
+            return SerializationEnvironmentRule().apply { init(taskLabel) }.runTask(task)
+        }
     }
 
     lateinit var env: SerializationEnvironment
     override fun apply(base: Statement, description: Description): Statement {
-        env = createTestSerializationEnv(description.toString())
+        init(description.toString())
         return object : Statement() {
-            override fun evaluate() {
-                try {
-                    env.asContextEnv(inheritable) { base.evaluate() }
-                } finally {
-                    inVMExecutors.remove(env)
-                }
-            }
+            override fun evaluate() = runTask { base.evaluate() }
+        }
+    }
+
+    private fun init(envLabel: String) {
+        env = createTestSerializationEnv(envLabel)
+    }
+
+    private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
+        try {
+            return env.asContextEnv(inheritable, task)
+        } finally {
+            inVMExecutors.remove(env)
         }
     }
 }
 
+@DoNotImplement
 interface GlobalSerializationEnvironment : SerializationEnvironment {
     /** Unset this environment. */
     fun unset()
-}
-
-/** @param inheritable whether new threads inherit the environment, use sparingly. */
-fun <T> withTestSerialization(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
-    return createTestSerializationEnv("<context>").asContextEnv(inheritable, callable)
-}
-
-/**
- * For example your test class uses [SerializationEnvironmentRule] but you want to turn it off for one method.
- * Use sparingly, ideally a test class shouldn't mix serialization init mechanisms.
- */
-fun <T> withoutTestSerialization(callable: () -> T): T {
-    val (property, env) = listOf(_contextSerializationEnv, _inheritableContextSerializationEnv).map { Pair(it, it.get()) }.single { it.second != null }
-    property.set(null)
-    try {
-        return callable()
-    } finally {
-        property.set(env)
-    }
 }
 
 /**
@@ -95,22 +90,21 @@ fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
     }
 }
 
-private fun createTestSerializationEnv(label: String) = object : SerializationEnvironmentImpl(
-        SerializationFactoryImpl().apply {
-            registerScheme(KryoClientSerializationScheme())
-            registerScheme(KryoServerSerializationScheme())
-            registerScheme(AMQPClientSerializationScheme())
-            registerScheme(AMQPServerSerializationScheme())
-        },
-        if (isAmqpEnabled()) AMQP_P2P_CONTEXT else KRYO_P2P_CONTEXT,
-        KRYO_RPC_SERVER_CONTEXT,
-        KRYO_RPC_CLIENT_CONTEXT,
-        if (isAmqpEnabled()) AMQP_STORAGE_CONTEXT else KRYO_STORAGE_CONTEXT,
-        KRYO_CHECKPOINT_CONTEXT) {
-    override fun toString() = "testSerializationEnv($label)"
+private fun createTestSerializationEnv(label: String): SerializationEnvironmentImpl {
+    val factory = SerializationFactoryImpl().apply {
+        registerScheme(KryoClientSerializationScheme())
+        registerScheme(KryoServerSerializationScheme())
+        registerScheme(AMQPClientSerializationScheme(emptyList()))
+        registerScheme(AMQPServerSerializationScheme(emptyList()))
+    }
+    return object : SerializationEnvironmentImpl(
+            factory,
+            AMQP_P2P_CONTEXT,
+            KRYO_RPC_SERVER_CONTEXT,
+            KRYO_RPC_CLIENT_CONTEXT,
+            AMQP_STORAGE_CONTEXT,
+            KRYO_CHECKPOINT_CONTEXT
+    ) {
+        override fun toString() = "testSerializationEnv($label)"
+    }
 }
-
-private const val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
-
-// TODO: Remove usages of this function when we fully switched to AMQP
-private fun isAmqpEnabled(): Boolean = java.lang.Boolean.getBoolean(AMQP_ENABLE_PROP_NAME)

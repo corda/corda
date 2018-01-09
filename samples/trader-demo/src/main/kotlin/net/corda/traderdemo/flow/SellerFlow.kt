@@ -40,7 +40,8 @@ class SellerFlow(private val otherParty: Party,
         progressTracker.currentStep = SELF_ISSUING
 
         val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
-        val commercialPaper = serviceHub.vaultService.queryBy(CommercialPaper.State::class.java).states.first()
+        val commercialPaper = serviceHub.vaultService.queryBy(CommercialPaper.State::class.java)
+                .states.firstOrNull() ?: throw IllegalStateException("No commercial paper found. Please check if you issued the papers first, follow the README for instructions.")
 
         progressTracker.currentStep = TRADING
 

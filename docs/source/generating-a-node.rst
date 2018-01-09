@@ -50,16 +50,20 @@ The name must also obey the following constraints:
 
 * The country attribute is a valid ISO 3166-1 two letter code in upper-case
 
-* The organisation field of the name obeys the following constraints:
+* All attributes must obey the following constraints:
 
     * Upper-case first letter
     * Has at least two letters
     * No leading or trailing whitespace
-    * No double-spacing
-    * Does not contain the words "node" or "server"
     * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
     * Is in NFKC normalization form
+    * Does not contain the null character
     * Only the latin, common and inherited unicode scripts are supported
+
+* The organisation field of the name also obeys the following constraints:
+
+    * No double-spacing
+    * Does not contain the words "node" or "server"
 
         * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
           character confusability attacks
@@ -88,7 +92,6 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         }
         node {
             name "O=PartyA,L=London,C=GB"
-            advertisedServices = []
             p2pPort  10005
             rpcPort  10006
             webPort  10007
@@ -99,7 +102,6 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         }
         node {
             name "O=PartyB,L=New York,C=US"
-            advertisedServices = []
             p2pPort  10009
             rpcPort  10010
             webPort  10011

@@ -4,16 +4,16 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.MerkleTreeException
+import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.FilteredTransactionVerificationException
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.contracts.Fix
-import net.corda.testing.ALICE
 import java.util.function.Predicate
 
 fun main(args: Array<String>) {
     // Typealias to make the example coherent.
-    val oracle = ALICE
+    val oracle = Any() as AbstractParty
     val stx = Any() as SignedTransaction
 
     // DOCSTART 1

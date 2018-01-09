@@ -5,12 +5,14 @@ package net.corda.core.internal
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -25,8 +27,6 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
-import java.security.cert.Certificate
-import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -118,6 +118,8 @@ fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(th
 inline val Path.size: Long get() = Files.size(this)
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
+fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
+fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
 fun Path.readAll(): ByteArray = Files.readAllBytes(this)
 inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
 inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
@@ -182,9 +184,6 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
             println("$label took $elapsed msec")
     }
 }
-
-fun Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
-val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
@@ -316,3 +315,24 @@ fun ExecutorService.join() {
         // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
     }
 }
+
+/**
+ * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
+ * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
+ */
+val CordaX500Name.x500Name: X500Name
+    get() {
+        return X500NameBuilder(BCStyle.INSTANCE).apply {
+            addRDN(BCStyle.C, country)
+            state?.let { addRDN(BCStyle.ST, it) }
+            addRDN(BCStyle.L, locality)
+            addRDN(BCStyle.O, organisation)
+            organisationUnit?.let { addRDN(BCStyle.OU, it) }
+            commonName?.let { addRDN(BCStyle.CN, it) }
+        }.build()
+    }
+
+@Suppress("unused")
+@VisibleForTesting
+val CordaX500Name.Companion.unspecifiedCountry
+    get() = "ZZ"

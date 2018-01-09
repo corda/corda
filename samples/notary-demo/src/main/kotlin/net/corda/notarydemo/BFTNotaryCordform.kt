@@ -7,12 +7,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.internal.demorun.*
+import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.testing.node.internal.demorun.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = BFTNotaryCordform().deployNodes()
@@ -23,18 +22,18 @@ private val notaryNames = createNotaryNames(clusterSize)
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
 class BFTNotaryCordform : CordformDefinition() {
-    private val clusterName = CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH")
+    private val clusterName = CordaX500Name("BFT", "Zurich", "CH")
 
     init {
         nodesDirectory = Paths.get("build", "nodes", "nodesBFT")
         node {
-            name(ALICE.name)
+            name(ALICE_NAME)
             p2pPort(10002)
             rpcPort(10003)
             rpcUsers(notaryDemoUser)
         }
         node {
-            name(BOB.name)
+            name(BOB_NAME)
             p2pPort(10005)
             rpcPort(10006)
         }
@@ -63,6 +62,10 @@ class BFTNotaryCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.toString()) }, clusterName, threshold = minCorrectReplicas(clusterSize))
+        DevIdentityGenerator.generateDistributedNotaryIdentity(
+                notaryNames.map { context.baseDirectory(it.toString()) },
+                clusterName,
+                minCorrectReplicas(clusterSize)
+        )
     }
 }

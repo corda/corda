@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
-import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -38,37 +37,40 @@ open class NodeStartup(val args: Array<String>) {
      * @return true if the node startup was successful. This value is intended to be the exit code of the process.
      */
     open fun run(): Boolean {
-        try {
-            val startTime = System.currentTimeMillis()
-            assertCanNormalizeEmptyPath()
-            val (argsParser, cmdlineOptions) = parseArguments()
+        val startTime = System.currentTimeMillis()
+        if (!canNormalizeEmptyPath()) {
+            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            println("Corda will now exit...")
+            return false
+        }
+        val (argsParser, cmdlineOptions) = parseArguments()
 
-            // We do the single node check before we initialise logging so that in case of a double-node start it
-            // doesn't mess with the running node's logs.
-            enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
+        // We do the single node check before we initialise logging so that in case of a double-node start it
+        // doesn't mess with the running node's logs.
+        enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
-            initLogging(cmdlineOptions)
+        initLogging(cmdlineOptions)
 
-            val versionInfo = getVersionInfo()
+        val versionInfo = getVersionInfo()
 
-            if (cmdlineOptions.isVersion) {
-                println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
-                println("Revision ${versionInfo.revision}")
-                println("Platform Version ${versionInfo.platformVersion}")
-                return true
-            }
+        if (cmdlineOptions.isVersion) {
+            println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
+            println("Revision ${versionInfo.revision}")
+            println("Platform Version ${versionInfo.platformVersion}")
+            return true
+        }
 
-            // Maybe render command line help.
-            if (cmdlineOptions.help) {
-                argsParser.printHelp(System.out)
-                return true
-            }
+        // Maybe render command line help.
+        if (cmdlineOptions.help) {
+            argsParser.printHelp(System.out)
+            return true
+        }
 
-            drawBanner(versionInfo)
-            Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
+        drawBanner(versionInfo)
+        Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
+        val conf = try {
             val conf0 = loadConfigFile(cmdlineOptions)
-
-            val conf = if (cmdlineOptions.bootstrapRaftCluster) {
+            if (cmdlineOptions.bootstrapRaftCluster) {
                 if (conf0 is NodeConfigurationImpl) {
                     println("Bootstrapping raft cluster (starting up as seed node).")
                     // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
@@ -80,33 +82,39 @@ open class NodeStartup(val args: Array<String>) {
             } else {
                 conf0
             }
+        } catch (e: Exception) {
+            logger.error("Exception during node configuration", e)
+            return false
+        }
 
-        banJavaSerialisation(conf)
-        preNetworkRegistration(conf)
-        if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
+        try {
+            banJavaSerialisation(conf)
+            preNetworkRegistration(conf)
+            if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
                 registerWithNetwork(cmdlineOptions, conf)
                 return true
             }
-        logStartupInfo(versionInfo, cmdlineOptions, conf)
-
-            try {
-                cmdlineOptions.baseDirectory.createDirectories()
-                startNode(conf, versionInfo, startTime, cmdlineOptions)
-            } catch (e: Exception) {
-                if (e.message?.startsWith("Unknown named curve:") == true) {
-                    logger.error("Exception during node startup - ${e.message}. " +
-                            "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-                } else {
-                    logger.error("Exception during node startup", e)
-                }
-                return false
-            }
-
-            logger.info("Node exiting successfully")
-            return true
+            logStartupInfo(versionInfo, cmdlineOptions, conf)
         } catch (e: Exception) {
+            logger.error("Exception during node registration", e)
             return false
         }
+
+        try {
+            cmdlineOptions.baseDirectory.createDirectories()
+            startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: Exception) {
+            if (e.message?.startsWith("Unknown named curve:") == true) {
+                logger.error("Exception during node startup - ${e.message}. " +
+                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            } else {
+                logger.error("Exception during node startup", e)
+            }
+            return false
+        }
+
+        logger.info("Node exiting successfully")
+        return true
     }
 
     open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
@@ -117,7 +125,7 @@ open class NodeStartup(val args: Array<String>) {
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
-            node.generateNodeInfo()
+            node.generateAndSaveNodeInfo()
             return
         }
         val startedNode = node.start()
@@ -182,14 +190,7 @@ open class NodeStartup(val args: Array<String>) {
         NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration {
-        try {
-            return cmdlineOptions.loadConfig()
-        } catch (configException: ConfigException) {
-            println("Unable to load the configuration file: ${configException.rootCause.message}")
-            throw configException
-        }
-    }
+    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
     open protected fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
@@ -281,12 +282,13 @@ open class NodeStartup(val args: Array<String>) {
         return hostName
     }
 
-    private fun assertCanNormalizeEmptyPath() {
+    private fun canNormalizeEmptyPath(): Boolean {
         // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
-        try {
+        return try {
             Paths.get("").normalize()
+            true
         } catch (e: ArrayIndexOutOfBoundsException) {
-            Node.failStartUp("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            false
         }
     }
 

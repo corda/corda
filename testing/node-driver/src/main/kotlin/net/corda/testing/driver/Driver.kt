@@ -3,6 +3,7 @@
 package net.corda.testing.driver
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -14,12 +15,11 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.internal.InProcessNode
-import net.corda.testing.internal.DriverDSLImpl
-import net.corda.testing.internal.genericDriver
-import net.corda.testing.internal.getTimestampAsDirectoryName
+import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.genericDriver
+import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHandles: CordaFuture<List<NodeHandle>>)
 
+@DoNotImplement
 sealed class NodeHandle {
     abstract val nodeInfo: NodeInfo
     /**
@@ -91,6 +92,7 @@ data class WebserverHandle(
         val process: Process
 )
 
+@DoNotImplement
 sealed class PortAllocation {
     abstract fun nextPort(): Int
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
@@ -157,6 +159,8 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
+ * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block. 
+ *     It will wait for them to be shut down externally instead.
  * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
  * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
@@ -178,7 +182,7 @@ fun <A> driver(
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
+        jmxPolicy: JmxPolicy = defaultParameters.jmxPolicy,
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -193,7 +197,8 @@ fun <A> driver(
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    jmxPolicy = jmxPolicy
+                    jmxPolicy = jmxPolicy,
+                    compatibilityZone = null
             ),
             coerce = { it },
             dsl = dsl,
@@ -227,10 +232,9 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
-        val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
+        val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy()
-
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -241,7 +245,7 @@ data class DriverParameters(
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
     fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean) = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
-    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
+    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setJmxPolicy(jmxPolicy: JmxPolicy) = copy(jmxPolicy = jmxPolicy)
 }

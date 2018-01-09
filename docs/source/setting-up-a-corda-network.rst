@@ -6,11 +6,9 @@ Creating a Corda network
 A Corda network consists of a number of machines running nodes. These nodes communicate using persistent protocols in
 order to create and validate transactions.
 
-There are four broader categories of functionality one such node may have. These pieces of functionality are provided
+There are three broader categories of functionality one such node may have. These pieces of functionality are provided
 as services, and one node may run several of them.
 
-* Network map: The node running the network map provides a way to resolve identities to physical node addresses and
-  associated public keys
 * Notary: Nodes running a notary service witness state spends and have the final say in whether a transaction is a
   double-spend or not
 * Oracle: Network services that link the ledger to the outside world by providing facts that affect the validity of
@@ -45,15 +43,50 @@ The most important fields regarding network configuration are:
   resolvable name of a machine in a VPN.
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.
 * ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress`` and ``rpcAddress`` if they are on the same machine.
-* ``networkMapService``: Details of the node running the network map service. If it's this node that's running the service
-  then this field must not be specified.
+
+Bootstrapping the network
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The nodes see each other using the network map. This is a collection of statically signed node-info files, one for each
+node in the network. Most production deployments will use a highly available, secure distribution of the network map via HTTP.
+
+For test deployments where the nodes (at least initially) reside on the same filesystem, these node-info files can be
+placed directly in the node's ``additional-node-infos`` directory from where the node will pick them up and store them
+in its local network map cache. The node generates its own node-info file on startup.
+
+In addition to the network map, all the nodes on a network must use the same set of network parameters. These are a set
+of constants which guarantee interoperability between nodes. The HTTP network map distributes the network parameters
+which the node downloads automatically. In the absence of this the network parameters must be generated locally. This can
+be done with the network bootstrapper. This a tool that scans all the node configurations from a common directory to
+generate the network parameters file which is copied to the nodes' directories. It also copies each node's node-info file
+to every other node.
+
+The bootstrapper tool can be built with the command:
+
+``gradlew buildBootstrapperJar``
+
+The resulting jar can be found in ``tools/bootstrapper/build/libs/``.
+
+To use it, create a directory containing a ``node.conf`` file for each node you want to create. Then run the following command:
+
+``java -jar network-bootstrapper.jar <nodes-root-dir>``
+
+For example running the command on a directory containing these files :
+
+.. sourcecode:: none
+
+    .
+    ├── notary.conf             // The notary's node.conf file
+    ├── partya.conf             // Party A's node.conf file
+    └── partyb.conf             // Party B's node.conf file
+
+Would generate directories containing three nodes: notary, partya and partyb.
 
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~
 
-You may now start the nodes in any order. Note that the node is not fully started until it has successfully registered with the network map!
-
-You should see a banner, some log lines and eventually ``Node started up and registered``, indicating that the node is fully started.
+You may now start the nodes in any order. You should see a banner, some log lines and eventually ``Node started up and registered``,
+indicating that the node is fully started.
 
 .. TODO: Add a better way of polling for startup. A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
 
@@ -67,7 +100,6 @@ details/diagnosing problems check the logs.
 
 Logging is standard log4j2_ and may be configured accordingly. Logs
 are by default redirected to files in ``NODE_DIRECTORY/logs/``.
-
 
 Connecting to the nodes
 ~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import io.netty.handler.ssl.SslHandler
 import net.corda.core.crypto.AddressFormatException
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
@@ -24,11 +23,10 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.nodeapi.internal.crypto.loadKeyStore
-import net.corda.nodeapi.*
+import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
@@ -37,15 +35,17 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
-import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
-import org.apache.activemq.artemis.core.remoting.impl.netty.*
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.SecuritySettingPlugin
@@ -53,22 +53,17 @@ import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.settings.HierarchicalRepository
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
-import org.apache.activemq.artemis.spi.core.remoting.*
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
-import org.apache.activemq.artemis.utils.ConfigurationHelper
 import rx.Subscription
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.Principal
-import java.time.Duration
 import java.util.*
-import java.util.concurrent.Executor
-import java.util.concurrent.ScheduledExecutorService
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.Subject
 import javax.security.auth.callback.CallbackHandler
@@ -80,7 +75,6 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 import javax.security.auth.login.FailedLoginException
 import javax.security.auth.login.LoginException
 import javax.security.auth.spi.LoginModule
-import javax.security.auth.x500.X500Principal
 import javax.security.cert.CertificateException
 
 // TODO: Verify that nobody can connect to us and fiddle with our config over the socket due to the secman.
@@ -101,14 +95,11 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val p2pPort: Int,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
-                             val securityManager: RPCSecurityManager) : SingletonSerializeAsToken() {
+                             val securityManager: RPCSecurityManager,
+                             val maxMessageSize: Int) : SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
-        /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
-        @JvmStatic
-        val MAX_FILE_SIZE = 10485760
     }
-
     private class InnerState {
         var running = false
     }
@@ -117,6 +108,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     private lateinit var activeMQServer: ActiveMQServer
     val serverControl: ActiveMQServerControl get() = activeMQServer.activeMQServerControl
     private var networkChangeHandle: Subscription? = null
+    private lateinit var bridgeManager: BridgeManager
 
     init {
         config.baseDirectory.requireOnDefaultFileSystem()
@@ -136,6 +128,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     }
 
     fun stop() = mutex.locked {
+        bridgeManager.close()
         networkChangeHandle?.unsubscribe()
         networkChangeHandle = null
         activeMQServer.stop()
@@ -156,7 +149,14 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             registerPostQueueCreationCallback { deployBridgesFromNewQueue(it.toString()) }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
+        // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
+        bridgeManager = if (config.useAMQPBridges) {
+            AMQPBridgeManager(config, NetworkHostAndPort("localhost", p2pPort), maxMessageSize)
+        } else {
+            CoreBridgeManager(config, activeMQServer)
+        }
         activeMQServer.start()
+        bridgeManager.start()
         Node.printBasicNodeInfo("Listening on port", p2pPort.toString())
         if (rpcPort != null) {
             Node.printBasicNodeInfo("RPC service listening on port", rpcPort.toString())
@@ -181,9 +181,9 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
         isPersistIDCache = true
         isPopulateValidatedUser = true
-        journalBufferSize_NIO = MAX_FILE_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
-        journalBufferSize_AIO = MAX_FILE_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
-        journalFileSize = MAX_FILE_SIZE // The size of each journal file in bytes. Artemis default is 10MiB.
+        journalBufferSize_NIO = maxMessageSize // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
+        journalBufferSize_AIO = maxMessageSize // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+        journalFileSize = maxMessageSize // The size of each journal file in bytes. Artemis default is 10MiB.
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
         // Artemis allows multiple servers to be grouped together into a cluster for load balancing purposes. The cluster
         // user is used for connecting the nodes together. It has super-user privileges and so it's imperative that its
@@ -211,15 +211,17 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         )
         addressesSettings = mapOf(
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
-                    maxSizeBytes = 10L * MAX_FILE_SIZE
+                    maxSizeBytes = 10L * maxMessageSize
                     addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
                 }
         )
-            // JMX enablement
-            if (config.exportJMXto.isNotEmpty()) {isJMXManagementEnabled = true
-            isJMXUseBrokerName = true}
+        // JMX enablement
+        if (config.exportJMXto.isNotEmpty()) {
+            isJMXManagementEnabled = true
+            isJMXUseBrokerName = true
+        }
 
-        }.configureAddressSecurity()
+    }.configureAddressSecurity()
 
 
     private fun queueConfig(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
@@ -302,7 +304,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         fun deployBridgeToPeer(nodeInfo: NodeInfo) {
             log.debug("Deploying bridge for $queueName to $nodeInfo")
             val address = nodeInfo.addresses.first()
-            deployBridge(queueName, address, nodeInfo.legalIdentitiesAndCerts.map { it.name }.toSet())
+            bridgeManager.deployBridge(queueName, address, nodeInfo.legalIdentitiesAndCerts.map { it.name }.toSet())
         }
 
         if (queueName.startsWith(PEERS_PREFIX)) {
@@ -337,14 +339,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
         fun deployBridges(node: NodeInfo) {
             gatherAddresses(node)
-                    .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
+                    .filter { queueExists(it.queueName) && !bridgeManager.bridgeExists(it.bridgeName) }
                     .forEach { deployBridge(it, node.legalIdentitiesAndCerts.map { it.name }.toSet()) }
-        }
-
-        fun destroyBridges(node: NodeInfo) {
-            gatherAddresses(node).forEach {
-                activeMQServer.destroyBridge(it.bridgeName)
-            }
         }
 
         when (change) {
@@ -352,130 +348,28 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                 deployBridges(change.node)
             }
             is MapChange.Removed -> {
-                destroyBridges(change.node)
+                bridgeManager.destroyBridges(change.node)
             }
             is MapChange.Modified -> {
                 // TODO Figure out what has actually changed and only destroy those bridges that need to be.
-                destroyBridges(change.previousNode)
+                bridgeManager.destroyBridges(change.previousNode)
                 deployBridges(change.node)
             }
         }
     }
 
     private fun deployBridge(address: ArtemisPeerAddress, legalNames: Set<CordaX500Name>) {
-        deployBridge(address.queueName, address.hostAndPort, legalNames)
+        bridgeManager.deployBridge(address.queueName, address.hostAndPort, legalNames)
     }
 
     private fun createTcpTransport(connectionDirection: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
             ArtemisTcpTransport.tcpTransport(connectionDirection, NetworkHostAndPort(host, port), config, enableSSL = enableSSL)
 
-    /**
-     * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
-     * messages from other nodes. When we want to send a message to a node we send it to our internal address/queue for it,
-     * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
-     * P2P address.
-     */
-    private fun deployBridge(queueName: String, target: NetworkHostAndPort, legalNames: Set<CordaX500Name>) {
-        val connectionDirection = ConnectionDirection.Outbound(
-                connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
-                expectedCommonNames = legalNames
-        )
-        val tcpTransport = createTcpTransport(connectionDirection, target.host, target.port)
-        tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
-        // We intentionally overwrite any previous connector config in case the peer legal name changed
-        activeMQServer.configuration.addConnectorConfiguration(target.toString(), tcpTransport)
-
-        activeMQServer.deployBridge(BridgeConfiguration().apply {
-            name = getBridgeName(queueName, target)
-            this.queueName = queueName
-            forwardingAddress = P2P_QUEUE
-            staticConnectors = listOf(target.toString())
-            confirmationWindowSize = 100000 // a guess
-            isUseDuplicateDetection = true // Enable the bridge's automatic deduplication logic
-            // We keep trying until the network map deems the node unreachable and tells us it's been removed at which
-            // point we destroy the bridge
-            retryInterval = config.activeMQServer.bridge.retryIntervalMs
-            retryIntervalMultiplier = config.activeMQServer.bridge.retryIntervalMultiplier
-            maxRetryInterval = Duration.ofMinutes(config.activeMQServer.bridge.maxRetryIntervalMin).toMillis()
-            // As a peer of the target node we must connect to it using the peer user. Actual authentication is done using
-            // our TLS certificate.
-            user = PEER_USER
-            password = PEER_USER
-        })
-    }
-
     private fun queueExists(queueName: String): Boolean = activeMQServer.queueQuery(SimpleString(queueName)).isExists
-
-    private fun bridgeExists(bridgeName: String): Boolean = activeMQServer.clusterManager.bridges.containsKey(bridgeName)
 
     private val ArtemisPeerAddress.bridgeName: String get() = getBridgeName(queueName, hostAndPort)
 
     private fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
-}
-
-class VerifyingNettyConnectorFactory : NettyConnectorFactory() {
-    override fun createConnector(configuration: MutableMap<String, Any>,
-                                 handler: BufferHandler?,
-                                 listener: ClientConnectionLifeCycleListener?,
-                                 closeExecutor: Executor?,
-                                 threadPool: Executor?,
-                                 scheduledThreadPool: ScheduledExecutorService?,
-                                 protocolManager: ClientProtocolManager?): Connector {
-        return VerifyingNettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool,
-                protocolManager)
-    }
-}
-
-private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
-                                      handler: BufferHandler?,
-                                      listener: ClientConnectionLifeCycleListener?,
-                                      closeExecutor: Executor?,
-                                      threadPool: Executor?,
-                                      scheduledThreadPool: ScheduledExecutorService?,
-                                      protocolManager: ClientProtocolManager?) :
-        NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
-    companion object {
-        private val log = contextLogger()
-    }
-
-    private val sslEnabled = ConfigurationHelper.getBooleanProperty(TransportConstants.SSL_ENABLED_PROP_NAME, TransportConstants.DEFAULT_SSL_ENABLED, configuration)
-
-    override fun createConnection(): Connection? {
-        val connection = super.createConnection() as? NettyConnection
-        if (sslEnabled && connection != null) {
-            val expectedLegalNames: Set<CordaX500Name> = uncheckedCast(configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] ?: emptySet<CordaX500Name>())
-            try {
-                val session = connection.channel
-                        .pipeline()
-                        .get(SslHandler::class.java)
-                        .engine()
-                        .session
-                // Checks the peer name is the one we are expecting.
-                // TODO Some problems here: after introduction of multiple legal identities on the node and removal of the main one,
-                //  we run into the issue, who are we connecting to. There are some solutions to that: advertise `network identity`;
-                //  have mapping port -> identity (but, design doc says about removing SingleMessageRecipient and having just NetworkHostAndPort,
-                //  it was convenient to store that this way); SNI.
-                val peerLegalName = CordaX500Name.parse(session.peerPrincipal.name)
-                val expectedLegalName = expectedLegalNames.singleOrNull { it == peerLegalName }
-                require(expectedLegalName != null) {
-                    "Peer has wrong CN - expected $expectedLegalNames but got $peerLegalName. This is either a fatal " +
-                            "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
-                }
-                // Make sure certificate has the same name.
-                val peerCertificateName = CordaX500Name.build(X500Principal(session.peerCertificateChain[0].subjectDN.name))
-                require(peerCertificateName == expectedLegalName) {
-                    "Peer has wrong subject name in the certificate - expected $expectedLegalNames but got $peerCertificateName. This is either a fatal " +
-                            "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
-                }
-                X509Utilities.validateCertificateChain(session.localCertificates.last() as java.security.cert.X509Certificate, *session.peerCertificates)
-            } catch (e: IllegalArgumentException) {
-                connection.close()
-                log.error(e.message)
-                return null
-            }
-        }
-        return connection
-    }
 }
 
 sealed class CertificateChainCheckPolicy {
