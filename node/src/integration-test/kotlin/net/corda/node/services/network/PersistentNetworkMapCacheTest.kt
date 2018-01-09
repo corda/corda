@@ -65,7 +65,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val aliceCache = aliceNode.services.networkMapCache
         aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(charliePartyCert)))
         val res = aliceNode.database.transaction {
-            aliceCache.getNodesByAddress(aliceNode.info.addresses[0])
+            aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
         }
         assertEquals(2, res.size)
     }

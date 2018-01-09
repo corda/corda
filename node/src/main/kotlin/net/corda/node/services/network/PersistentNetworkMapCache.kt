@@ -149,9 +149,7 @@ open class PersistentNetworkMapCache(
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             database.transaction { queryByIdentityKey(session, identityKey) }
 
-    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address).singleOrNull() }
-
-    override fun getNodesByAddress(address: NetworkHostAndPort): List<NodeInfo> = database.transaction { queryByAddress(session, address) }
+    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address).firstOrNull() }
 
     override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = database.transaction { queryIdentityByLegalName(session, name) }
 
