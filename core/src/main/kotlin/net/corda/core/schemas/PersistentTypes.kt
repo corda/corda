@@ -1,5 +1,6 @@
 package net.corda.core.schemas
 
+import com.google.common.base.CaseFormat
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
@@ -47,7 +48,7 @@ open class MappedSchema(schemaFamily: Class<*>,
      */
     protected open val migrationResource: String? = null
 
-    internal fun getMigrationResource(): String = migrationResource ?: throw IllegalStateException("Migration resource not set for schema $this")
+    internal fun getMigrationResource(): String? = migrationResource
 
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
 }
@@ -79,4 +80,24 @@ data class PersistentStateRef(
  */
 interface StatePersistable
 
-fun getMigrationResource(schema: MappedSchema): String = schema.getMigrationResource()
+private const val MIGRATION_PREFIX = "migration"
+private val possibleMigrationExtensions = listOf(".xml", ".sql", ".yml", ".json")
+fun getMigrationResource(schema: MappedSchema): String? {
+
+    val declaredMigration = schema.getMigrationResource()
+
+    if (declaredMigration == null) {
+        // try to apply a naming convention
+        // SchemaName will be transformed from camel case to hyphen
+        // then ".changelog-master" plus one of the supported extensions will be added
+        val name: String = schema::class.simpleName!!
+        val fileName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name)
+        val resource = "${MIGRATION_PREFIX}/${fileName}.changelog-master"
+        val foundResource = possibleMigrationExtensions.map { "${resource}${it}" }.firstOrNull {
+            Thread.currentThread().contextClassLoader.getResource(it) != null
+        }
+        return foundResource
+    } else {
+        return "${MIGRATION_PREFIX}/${declaredMigration}.xml"
+    }
+}

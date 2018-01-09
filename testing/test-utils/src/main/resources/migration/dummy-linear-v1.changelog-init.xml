@@ -2,7 +2,7 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="tudormalene (generated)" id="1512743023716-7">
+    <changeSet author="R3.Corda" id="1512743023716-7">
         <createTable tableName="dummy_linear_states">
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
@@ -22,6 +22,22 @@
 
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_6"
                        tableName="dummy_linear_states"/>
+
+        <createTable tableName="dummy_linear_state_participants">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
+                                 baseTableName="dummy_linear_state_participants"
+                                 constraintName="FK8y6k4thqq0udg07ojffpbgblq"
+                                 referencedColumnNames="output_index,transaction_id"
+                                 referencedTableName="dummy_linear_states"/>
 
     </changeSet>
 

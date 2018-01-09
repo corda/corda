@@ -4,7 +4,7 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
-    <changeSet author="tudormalene (generated)" id="1512743551377-2">
+    <changeSet author="R3.Corda" id="1512743551377-2">
         <createTable tableName="cash_states_v3">
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
@@ -21,6 +21,16 @@
 
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_DC"
                        tableName="cash_states_v3"/>
+
+        <createTable tableName="cash_state_participants">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
 
     </changeSet>
 

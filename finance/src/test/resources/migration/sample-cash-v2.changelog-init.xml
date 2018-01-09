@@ -4,7 +4,7 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
-    <changeSet author="tudormalene (generated)" id="1512743551377-1">
+    <changeSet author="R3.Corda" id="1512743551377-1">
         <createTable tableName="cash_states_v2">
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
@@ -25,6 +25,22 @@
         <createIndex indexName="ccy_code_idx2" tableName="cash_states_v2">
             <column name="ccy_code"/>
         </createIndex>
+
+        <createTable tableName="cash_states_v2_participants">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
+                                 baseTableName="cash_states_v2_participants"
+                                 constraintName="FKg6ab1fhx6aesnmhlo62o4dnrt_"
+                                 referencedColumnNames="output_index,transaction_id"
+                                 referencedTableName="cash_states_v2"/>
 
     </changeSet>
 

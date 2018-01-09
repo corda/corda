@@ -100,7 +100,7 @@ class CertificateDataEntity(
         val certificatePathBytes: ByteArray,
 
         @OneToOne(fetch = FetchType.EAGER, optional = false)
-        @JoinColumn(name = "certificate_signing_request")
+        @JoinColumn(name = "certificate_signing_request", foreignKey = ForeignKey(name = "FK__cert_data__cert_sign_req"))
         val certificateSigningRequest: CertificateSigningRequestEntity
 ) {
     fun toCertificateData(): CertificateData {

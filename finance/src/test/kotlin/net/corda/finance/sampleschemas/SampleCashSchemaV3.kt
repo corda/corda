@@ -23,7 +23,7 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
 
             /** X500Name of participant parties **/
             @ElementCollection
-            @CollectionTable(name="state_participants", joinColumns = arrayOf(
+            @CollectionTable(name="cash_state_participants", joinColumns = arrayOf(
                     JoinColumn(name = "output_index", referencedColumnName = "output_index"),
                     JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             var participants: MutableSet<AbstractParty>? = null,

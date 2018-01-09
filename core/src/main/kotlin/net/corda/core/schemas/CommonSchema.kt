@@ -23,12 +23,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** [ContractState] attributes */
 
             /** X500Name of participant parties **/
-            @ElementCollection
-            @Column(name = "participants")
-            @CollectionTable(name="state_participants",joinColumns = arrayOf(
-                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
-            var participants: MutableSet<AbstractParty>? = null,
+            @Transient
+            open var participants: MutableSet<AbstractParty>? = null,
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -52,12 +48,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** [ContractState] attributes */
 
             /** X500Name of participant parties **/
-            @ElementCollection
-            @Column(name = "participants")
-            @CollectionTable(name="state_participants",joinColumns = arrayOf(
-                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
-            var participants: MutableSet<AbstractParty>? = null,
+            @Transient
+            open var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 

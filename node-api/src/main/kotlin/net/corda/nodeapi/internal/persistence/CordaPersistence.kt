@@ -229,3 +229,5 @@ fun parserTransactionIsolationLevel(property: String?): Int =
                 Connection.TRANSACTION_REPEATABLE_READ
             }
         }
+
+fun isH2Database(jdbcUrl: String) = jdbcUrl.startsWith("jdbc:h2:")

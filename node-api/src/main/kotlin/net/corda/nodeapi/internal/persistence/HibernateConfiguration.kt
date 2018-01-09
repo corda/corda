@@ -47,7 +47,7 @@ class HibernateConfiguration(
         val metadataSources = MetadataSources(serviceRegistry)
 
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", "validate")
+                .setProperty("hibernate.hbm2ddl.auto", if (isH2Database(jdbcUrl)) "update" else "validate")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
         databaseConfig.schema?.apply {
@@ -86,8 +86,7 @@ class HibernateConfiguration(
 
         try {
             mbeanServer.registerMBean(statisticsMBean, statsName)
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             logger.warn(e.message)
         }
     }

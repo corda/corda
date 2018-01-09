@@ -1,3 +1,9 @@
+DROP TABLE IF EXISTS ${schema}.cash_state_participants;
+DROP TABLE IF EXISTS ${schema}.cash_states_v2_participants;
+DROP TABLE IF EXISTS ${schema}.cp_states_v2_participants;
+DROP TABLE IF EXISTS ${schema}.dummy_linear_state_participants;
+DROP TABLE IF EXISTS ${schema}.dummy_linear_states_v2_participants;
+DROP TABLE IF EXISTS ${schema}.dummy_deal_states_participants;
 DROP TABLE IF EXISTS ${schema}.node_attachments;
 DROP TABLE IF EXISTS ${schema}.node_checkpoints;
 DROP TABLE IF EXISTS ${schema}.node_transactions;

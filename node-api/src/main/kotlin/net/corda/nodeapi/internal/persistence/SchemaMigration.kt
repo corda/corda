@@ -14,9 +14,7 @@ import net.corda.core.utilities.contextLogger
 import java.io.*
 import javax.sql.DataSource
 
-private const val MIGRATION_PREFIX = "migration"
-
-class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource, private val schemaName: String? = null) {
+class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource, val failOnMigrationMissing: Boolean, private val schemaName: String? = null) {
 
     companion object {
         private val logger = contextLogger()
@@ -33,10 +31,17 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
 
         dataSource.connection.use { connection ->
 
-            //collect all changelog file referenced in the included schemas
+            // collect all changelog file referenced in the included schemas
+            // for backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update
             val changelogList = schemas.map { mappedSchema ->
-                getMigrationResource(mappedSchema).let {
-                    "${MIGRATION_PREFIX}/${it}.xml"
+                val resource = getMigrationResource(mappedSchema)
+                when {
+                    resource != null -> resource
+                    failOnMigrationMissing -> throw IllegalStateException("No migration defined for schema: ${mappedSchema.name} v${mappedSchema.version}")
+                    else -> {
+                        logger.warn("No migration defined for schema: ${mappedSchema.name} v${mappedSchema.version}")
+                        null
+                    }
                 }
             }
 
@@ -46,7 +51,7 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
 
                     if (path == dynamicInclude) {
                         //create a map in liquibase format including all migration files
-                        val includeAllFiles = mapOf("databaseChangeLog" to changelogList.map { file -> mapOf("include" to mapOf("file" to file)) })
+                        val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
 
                         // transform it to json
                         val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)

@@ -3,7 +3,7 @@
                    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="tudormalene (generated)" id="1511451595465-4">
+    <changeSet author="R3.Corda" id="1511451595465-4">
         <createTable tableName="node_link_nodeinfo_party">
             <column name="node_info_id" type="INT">
                 <constraints nullable="false"/>
@@ -13,7 +13,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-10">
+    <changeSet author="R3.Corda" id="1511451595465-10">
         <createTable tableName="node_info_hosts">
             <column name="host" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
@@ -24,7 +24,7 @@
             <column name="node_info_id" type="INT"/>
         </createTable>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-11">
+    <changeSet author="R3.Corda" id="1511451595465-11">
         <createTable tableName="node_info_party_cert">
             <column name="party_name" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
@@ -36,7 +36,7 @@
             <column name="party_cert_binary" type="blob"/>
         </createTable>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-12">
+    <changeSet author="R3.Corda" id="1511451595465-12">
         <createTable tableName="node_infos">
             <column name="node_info_id" type="INT">
                 <constraints nullable="false"/>
@@ -46,27 +46,25 @@
             <column name="serial" type="BIGINT"/>
         </createTable>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-35">
+    <changeSet author="R3.Corda" id="1511451595465-35">
         <addPrimaryKey columnNames="host, port" constraintName="node_info_hosts_pkey" tableName="node_info_hosts"/>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-36">
+    <changeSet author="R3.Corda" id="1511451595465-36">
         <addPrimaryKey columnNames="party_name" constraintName="node_info_party_cert_pkey"
                        tableName="node_info_party_cert"/>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-37">
+    <changeSet author="R3.Corda" id="1511451595465-37">
         <addPrimaryKey columnNames="node_info_id" constraintName="node_infos_pkey" tableName="node_infos"/>
     </changeSet>
 
-    <changeSet author="tudormalene (generated)" id="1511451595465-62">
+    <changeSet author="R3.Corda" id="1511451595465-62">
         <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="node_link_nodeinfo_party"
-                                 constraintName="FK__node_link_nodeinfo_party__node_infos" deferrable="false"
-                                 initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 constraintName="FK__link_nodeinfo_party__infos"
                                  referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
     </changeSet>
-    <changeSet author="tudormalene (generated)" id="1511451595465-63">
+    <changeSet author="R3.Corda" id="1511451595465-63">
         <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="node_info_hosts"
-                                 constraintName="FK__node_info_hosts__node_infos" deferrable="false"
-                                 initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 constraintName="FK__info_hosts__infos"
                                  referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
     </changeSet>
 </databaseChangeLog>

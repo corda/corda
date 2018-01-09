@@ -68,10 +68,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.persistence.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
@@ -206,13 +203,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     fun generateDatabaseSchema(outputFile: String) {
         HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource, configuration.database.schema).generateMigrationScript(File(outputFile))
+            val jdbcUrl = configuration.dataSourceProperties.getProperty("url", "")
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database.schema).generateMigrationScript(File(outputFile))
         }
     }
 
     fun runDbMigration() {
         HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource, configuration.database.schema).runMigration()
+            val jdbcUrl = configuration.dataSourceProperties.getProperty("url", "")
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database.schema).runMigration()
         }
     }
 
@@ -557,7 +556,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage,  database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
+    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
@@ -885,9 +884,11 @@ fun configureDatabase(dataSourceProperties: Properties,
 
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
 
-    if(databaseConfig.runMigration){
-        SchemaMigration(schemaService.schemaOptions.keys, dataSource, databaseConfig.schema).runMigration()
+    val jdbcUrl = config.dataSourceProperties.getProperty("url", "")
+
+    if (databaseConfig.runMigration) {
+        SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig.schema).runMigration()
     }
 
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, config.dataSourceProperties.getProperty("url", ""), attributeConverters)
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
 }

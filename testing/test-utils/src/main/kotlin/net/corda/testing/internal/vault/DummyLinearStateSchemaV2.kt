@@ -4,9 +4,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * Second version of a cash contract ORM schema that extends the common
@@ -20,6 +18,14 @@ object DummyLinearStateSchemaV2 : MappedSchema(schemaFamily = DummyLinearStateSc
     @Entity
     @Table(name = "dummy_linear_states_v2")
     class PersistentDummyLinearState(
+
+            @ElementCollection
+            @Column(name = "participants")
+            @CollectionTable(name = "dummy_linear_states_v2_participants", joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+            override var participants: MutableSet<AbstractParty>? = null,
+
             @Column(name = "linear_string") var linearString: String,
 
             @Column(name = "linear_number") var linearNumber: Long,
@@ -28,11 +34,7 @@ object DummyLinearStateSchemaV2 : MappedSchema(schemaFamily = DummyLinearStateSc
 
             @Column(name = "linear_boolean") var linearBoolean: Boolean,
 
-            /** parent attributes */
-            @Transient
-            val _participants: Set<AbstractParty>,
-
             @Transient
             val uid: UniqueIdentifier
-    ) : CommonSchemaV1.LinearState(uid, _participants)
+    ) : CommonSchemaV1.LinearState(uuid = uid.id, externalId = uid.externalId, participants = participants)
 }
