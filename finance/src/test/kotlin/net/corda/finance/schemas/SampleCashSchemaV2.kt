@@ -4,10 +4,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.OpaqueBytes
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * Second version of a cash contract ORM schema that extends the common
@@ -19,6 +16,14 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
     @Table(name = "cash_states_v2",
             indexes = arrayOf(Index(name = "ccy_code_idx2", columnList = "ccy_code")))
     class PersistentCashState(
+
+            @ElementCollection
+            @Column(name = "participants")
+            @CollectionTable(name="cash_states_v2_participants", joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+            override var participants: MutableSet<AbstractParty>? = null,
+
             /** product type */
             @Column(name = "ccy_code", length = 3)
             var currency: String,
