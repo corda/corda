@@ -18,9 +18,11 @@ import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.SignedNodeInfo
 import okhttp3.CacheControl
 import okhttp3.Headers
+import org.apache.commons.io.IOUtils
 import rx.Subscription
 import java.io.BufferedReader
 import java.io.Closeable
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.cert.X509Certificate
@@ -33,15 +35,15 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
 
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
-        val conn = publishURL.openHttpConnection()
-        conn.doOutput = true
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", "application/octet-stream")
-        conn.outputStream.use { signedNodeInfo.serialize().open().copyTo(it) }
-
-        // This will throw IOException if the response code is not HTTP 200.
-        // This gives a much better exception then reading the error stream.
-        conn.inputStream.close()
+        publishURL.openHttpConnection().apply {
+            doOutput = true
+            requestMethod = "POST"
+            setRequestProperty("Content-Type", "application/octet-stream")
+            outputStream.use { signedNodeInfo.serialize().open().copyTo(it) }
+            if (responseCode != 200) {
+                throw IOException("Response Code $responseCode: ${IOUtils.toString(errorStream)}")
+            }
+        }
     }
 
     fun getNetworkMap(): NetworkMapResponse {
