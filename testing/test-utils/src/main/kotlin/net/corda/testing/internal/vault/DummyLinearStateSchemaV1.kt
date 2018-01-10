@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import org.hibernate.annotations.Type
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -36,6 +37,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
+            @Type(type = "uuid-char")
             var uuid: UUID,
 
             /**

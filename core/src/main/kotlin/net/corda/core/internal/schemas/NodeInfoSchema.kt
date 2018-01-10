@@ -32,14 +32,14 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @Column(name = "addresses")
             @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
-            @JoinColumn(name = "node_info_id")
+            @JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__info_hosts__infos"))
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))
             @JoinTable(name = "node_link_nodeinfo_party",
-                    joinColumns = arrayOf(JoinColumn(name = "node_info_id")),
-                    inverseJoinColumns = arrayOf(JoinColumn(name = "party_name")))
+                    joinColumns = arrayOf(JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__link_nodeinfo_party__infos"))),
+                    inverseJoinColumns = arrayOf(JoinColumn(name = "party_name", foreignKey = ForeignKey(name = "FK__link_ni_p__info_p_cert"))))
             val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
