@@ -52,7 +52,7 @@ DROP SEQUENCE IF EXISTS ${schema}.hibernate_sequence;
 DROP USER IF EXISTS ${schema};
 DROP LOGIN ${schema};
 DROP SCHEMA IF EXISTS ${schema};
-CREATE LOGIN ${schema} WITH PASSWORD = 'yourStrong(!)Password';
+IF NOT EXISTS (SELECT * FROM sys.server_principals WHERE name = N'${schema}') CREATE LOGIN ${schema} WITH PASSWORD = 'yourStrong(!)Password';
 CREATE SCHEMA ${schema};
 CREATE USER ${schema} FOR LOGIN ${schema} WITH DEFAULT_SCHEMA = ${schema};
 GRANT ALTER, DELETE, EXECUTE, INSERT, REFERENCES, SELECT, UPDATE, VIEW DEFINITION ON SCHEMA::${schema} TO ${schema};

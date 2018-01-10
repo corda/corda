@@ -14,6 +14,7 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.toDatabaseSchemaNames
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -27,7 +28,8 @@ class BootTests : IntegrationTest() {
      companion object {
         @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
-                .map { it.toDatabaseSchemaNames("", "_10000", "_10003") }.flatten().toTypedArray())
+                .map { it.toDatabaseSchemaNames("", "_10000", "_10003") }.flatten().toTypedArray()
+                + DUMMY_NOTARY_NAME.toDatabaseSchemaName())
      }
 
     @Test
