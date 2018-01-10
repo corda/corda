@@ -118,6 +118,7 @@
       <module name="node_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
+      <module name="perftestcordapp_integrationTest" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />

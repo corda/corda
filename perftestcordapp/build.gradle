@@ -10,6 +10,30 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 description 'Corda performance test modules'
 
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+            srcDir file('../../testing/test-utils/src/main/resources')
+        }
+    }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
 dependencies {
     // Note the :finance module is a CorDapp in its own right
     // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
@@ -29,6 +53,9 @@ dependencies {
 
 configurations {
     testArtifacts.extendsFrom testRuntime
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 task testJar(type: Jar) {
