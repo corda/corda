@@ -141,9 +141,11 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             }
         }
 
+        // TODO consider scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
+        // Also, at the moment we assume that once the CSR is approved it cannot be rejected.
+        // What if we approved something by mistake.
         val duplicates = session.createQuery(query).resultList.filter {
-            it.status in setOf(RequestStatus.NEW, RequestStatus.TICKET_CREATED, RequestStatus.APPROVED) ||
-                    it.certificateData?.certificateStatus == CertificateStatus.VALID
+            it.status != RequestStatus.REJECTED
         }
 
         return Pair(legalName, if (duplicates.isEmpty()) null else "Duplicate legal name")

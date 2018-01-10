@@ -157,6 +157,26 @@ class PersistentCertificateRequestStorageTest : TestBase() {
     }
 
     @Test
+    fun `request with the same legal name as a previously signed request`() {
+        val csr = createRequest("BankA").first
+        val requestId = storage.saveRequest(csr)
+        storage.markRequestTicketCreated(requestId)
+        storage.approveRequest(requestId, DOORMAN_SIGNATURE)
+        // Sign certificate
+        storage.putCertificatePath(
+                requestId,
+                JcaPKCS10CertificationRequest(csr).run {
+                    // TODO We need a utility in InternalUtils for converting X500Name -> CordaX500Name
+                    val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
+                    buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
+                },
+                listOf(DOORMAN_SIGNATURE)
+        )
+        val rejectedRequestId = storage.saveRequest(createRequest("BankA").first)
+        assertThat(storage.getRequest(rejectedRequestId)!!.remark).containsIgnoringCase("duplicate")
+    }
+
+    @Test
     fun `request with the same legal name as a previously rejected request`() {
         val requestId1 = storage.saveRequest(createRequest("BankA").first)
         storage.rejectRequest(requestId1, DOORMAN_SIGNATURE, "Because I said so!")
