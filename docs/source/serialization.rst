@@ -37,7 +37,7 @@ It's reproduced here as an example of both ways you can do this for a couple of 
     :end-before: END 7
 
 .. note:: Several of the core interfaces at the heart of Corda are already annotated and so any classes that implement
-   them will automatically be whitelisted.  This includes `Contract`, `ContractState` and `CommandData`.
+   them will automatically be whitelisted.  This includes ``Contract``, ``ContractState`` and ``CommandData``.
 
 .. warning:: Java 8 Lambda expressions are not serializable except in flow checkpoints, and then not by default. The syntax to declare a serializable Lambda
    expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
@@ -101,7 +101,7 @@ The following collection types are supported.  Any implementation of the followi
 For example, if you use a Guava implementation of a collection, it will deserialize as the primitive collection type.
 
 The declared types of properties should only use these types, and not any concrete implementation types (e.g.
-Guava implementations). Collections must be used in their generic form, the generic type parameters will be included in
+Guava implementations). Collections must specify their generic type, the generic type parameters will be included in
 the schema, and the element's type will be checked against the generic parameters when deserialized.
 
 ::
@@ -407,9 +407,10 @@ The following rules apply to supported ``Throwable`` implementations.
 Kotlin Objects
 ``````````````
 
-    #.  Kotlin ``object`` s are singletons and treated differently.  They are recorded into the stream with no properties,
-        and deserialize back to the singleton instance. Currently, the same is not true of Java singletons,
-        which will deserialize to new instances of the class
+    #.  Kotlin's non-anonymous ``object`` s (i.e. constructs like ``object foo : Contract {...}``) are singletons and
+        treated differently.  They are recorded into the stream with no properties, and deserialize back to the
+        singleton instance. Currently, the same is not true of Java singletons, which will deserialize to new instances
+        of the class
     #.  Kotlin's anonymous ``object`` s (i.e. constructs like ``object : Contract {...}``) are not currently supported
         and will not serialize correctly. They need to be re-written as an explicit class declaration
 
