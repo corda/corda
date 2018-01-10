@@ -43,9 +43,6 @@ It's reproduced here as an example of both ways you can do this for a couple of 
    expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
    ``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
 
-.. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
-   likely.
-
 AMQP
 ====
 
@@ -233,6 +230,11 @@ General Rules
 
     #.  The class must be compiled with parameter names included in the ``.class`` file.  This is the default in Kotlin
         but must be turned on in Java (``-parameters`` command line option to ``javac``).
+
+        .. note:: In circumstances where classes cannot be recompiled, such as when using a third party library, then
+            the creation of a proxy serializer can be used to avoid this problem. Details on creating such an object can be found on the
+            :doc:`cordapp-custom-serializers` page.
+
     #.  The class is annotated with ``@CordaSerializable``.
     #.  The declared types of constructor arguments, getters, and setters must be supported, and where generics are used the
         generic parameter must be a supported type, an open wildcard (``*``), or a bounded wildcard which is currently
@@ -413,7 +415,7 @@ Kotlin Objects
 The Carpenter
 `````````````
 
-We will support a class carpenter that can dynamically manufacture classes from the supplied schema when deserializing
+We support a class carpenter that can dynamically manufacture classes from the supplied schema when deserializing
 in the JVM without the supporting classes on the classpath.  This can be useful where other components might expect to
 be able to use reflection over the deserialized data, and also for ensuring classes not on the classpath can be
 deserialized without loading potentially malicious code dynamically without security review outside of a fully sandboxed
