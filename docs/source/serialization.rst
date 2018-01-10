@@ -47,62 +47,62 @@ AMQP
 ====
 
 Originally Corda used a ``Kryo``-based serialization scheme throughout for all serialization contexts. However, it was realised there
-was a compelling use case for the definition and development of a custom format based upon AMQP 1.0. The primary drivers for this were
+was a compelling use case for the definition and development of a custom format based upon AMQP 1.0. The primary drivers for this were:
 
-    #.  A desire to have a schema describing what has been serialized along-side the actual data:
+    #.  A desire to have a schema describing what has been serialized alongside the actual data:
 
-        #.  To assist with versioning, both in terms of being able to interpret long ago archived data (e.g. trades from
-            a decade ago, long after the code has changed) and between differing code versions.
-        #.  To make it easier to write user interfaces that can navigate the serialized form of data.
-        #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted.
+        #.  To assist with versioning, both in terms of being able to interpret data archived long ago (e.g. trades from
+            a decade ago, long after the code has changed) and between differing code versions
+        #.  To make it easier to write user interfaces that can navigate the serialized form of data
+        #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted
     #.  A desire to use a documented and static wire format that is platform independent, and is not subject to change with
-        3rd party library upgrades etc.
+        3rd party library upgrades, etc.
     #.  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
-        and do not need to be defined in the schema *upfront*, which is key to many Corda concepts, such as contract states.
-    #.  Increased security from deserialized objects being constructed through supported constructors rather than having
-        data poked directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
-        supposed invariants.
+        and the subclasses do not need to be defined in the schema *upfront*. This is key to many Corda concepts, such as states.
+    #.  Increased security by constructing deserialized objects through supported constructors, rather than having
+        data inserted directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
+        supposed invariants
 
 Delivering this is an ongoing effort by the Corda development team. At present, the ``Kryo``-based format is still used by the RPC framework on
-both the client and server side. However, it is planned that this will move to the AMQP framework when ready.
+both the client and server side. However, it is planned that the RPC framework will move to the AMQP framework when ready.
 
 The AMQP framework is currently used for:
 
-    #.  The peer to peer context, representing inter-node communication.
-    #.  The persistence layer, representing contract states persisted into the vault.
+    #.  The peer-to-peer context, representing inter-node communication
+    #.  The persistence layer, representing contract states persisted into the vault
 
-Finally, for the checkpointing of flows Corda will continue to use the existing ``Kryo`` scheme.
+Finally, for the checkpointing of flows, Corda will continue to use the existing ``Kryo`` scheme.
 
 This separation of serialization schemes into different contexts allows us to use the most suitable framework for that context rather than
-attempting to force a one size fits all approach. Where ``Kryo`` is more suited to the serialization of a programs stack frames, being more flexible
-than our AMQP framework in what it can construct and serialize, that flexibility makes it exceptionally difficult to make secure. Conversely
-our AMQP framework allows us to concentrate on a robust a secure framework that can be reasoned about thus made safer with far fewer unforeseen
+attempting to force a one-size-fits-all approach. ``Kryo`` is more suited to the serialization of a program's stack frames, as it is more flexible
+than our AMQP framework in what it can construct and serialize. However, that flexibility makes it exceptionally difficult to make secure. Conversely,
+our AMQP framework allows us to concentrate on a secure framework that can be reasoned about and thus made safer, with far fewer
 security holes.
 
 .. note:: Selection of serialization context should, for the most part, be opaque to CorDapp developers, the Corda framework selecting
-    the correct context as confugred.
+    the correct context as configured.
 
-.. For information on our choice of AMQP 1.0, see :doc:`amqp-choice`.  For detail on how we utilise AMQP 1.0 and represent
+.. note:: For information on our choice of AMQP 1.0, see :doc:`amqp-choice`.  For detail on how we utilise AMQP 1.0 and represent
    objects in AMQP types, see :doc:`amqp-format`.
 
-We describe here what is and will be supported in the Corda AMQP format from the perspective
-of CorDapp developers, to allow for CorDapps to take into consideration the future state.  The AMQP serialization format will of
-course continue to apply the whitelisting functionality that is already in place and described in :doc:`serialization`.
+This document describes what is currently and what will be supported in the Corda AMQP format from the perspective
+of CorDapp developers, to allow CorDapps to take into consideration the future state.  The AMQP serialization format will
+continue to apply the whitelisting functionality that is already in place and described in :doc:`serialization`.
 
 Core Types
 ----------
 
-Here we describe the classes and interfaces that the AMQP serialization format will support.
+This section describes the classes and interfaces that the AMQP serialization format supports.
 
 Collection Types
 ````````````````
 
 The following collection types are supported.  Any implementation of the following will be mapped to *an* implementation of the interface or class on the other end.
-e.g. If you, for example, use a Guava implementation of a collection it will deserialize as a different implementation,
-but will continue to adhere to the most specific of any of the following interfaces.  You should use only these types
-as the declared types of fields and properties, and not the concrete implementation types.  Collections must be used
-in their generic form, the generic type parameters will be included in the schema, and the elements type checked against the
-generic parameters when deserialized.
+For example, if you use a Guava implementation of a collection, it will deserialize as the primitive collection type.
+
+The declared types of properties should only use these types, and not any concrete implementation types (e.g.
+Guava implementations). Collections must be used in their generic form, the generic type parameters will be included in
+the schema, and the element's type will be checked against the generic parameters when deserialized.
 
 ::
 
@@ -116,8 +116,8 @@ generic parameters when deserialized.
     java.util.SortedMap
     java.util.NavigableMap
 
-However, we will support the concrete implementation types below explicitly and also as the declared type of a field, as
-a convenience.
+However, as a convenience, we explicitly support the concrete implementation types below, and they can be used as the
+declared types of properties.
 
 ::
 
@@ -146,12 +146,12 @@ All the primitive types are supported.
 Arrays
 ``````
 
-We also support arrays of any supported type, primitive or otherwise.
+Arrays of any type are supported, primitive or otherwise.
 
 JDK Types
 `````````
 
-The following types are supported from the JDK libraries.
+The following JDK library types are supported:
 
 ::
 
@@ -195,10 +195,10 @@ The following types are supported from the JDK libraries.
     java.util.Currency
     java.util.UUID
 
-Third Party Types
+Third-Party Types
 `````````````````
 
-The following 3rd party types are supported.
+The following 3rd-party types are supported:
 
 ::
 
@@ -210,17 +210,17 @@ The following 3rd party types are supported.
 Corda Types
 ```````````
 
-Classes and interfaces in the Corda codebase annotated with ``@CordaSerializable`` are of course supported.
+Any classes and interfaces in the Corda codebase annotated with ``@CordaSerializable`` are supported.
 
-All Corda exceptions that are expected to be serialized inherit from ``CordaThrowable`` via either ``CordaException``, for
-checked exceptions, or ``CordaRuntimeException``, for unchecked exceptions.  Any ``Throwable`` that is serialized but does
-not conform to ``CordaThrowable`` will be converted to a ``CordaRuntimeException`` with the original exception type
+All Corda exceptions that are expected to be serialized inherit from ``CordaThrowable`` via either ``CordaException`` (for
+checked exceptions) or ``CordaRuntimeException`` (for unchecked exceptions).  Any ``Throwable`` that is serialized but does
+not conform to ``CordaThrowable`` will be converted to a ``CordaRuntimeException``, with the original exception type
 and other properties retained within it.
 
 Custom Types
 ------------
 
-Here are the rules to adhere to for support of your own types:
+You own types must adhere to the following rules to be supported:
 
 Classes
 ```````
@@ -229,39 +229,40 @@ General Rules
 '''''''''''''
 
     #.  The class must be compiled with parameter names included in the ``.class`` file.  This is the default in Kotlin
-        but must be turned on in Java (``-parameters`` command line option to ``javac``).
+        but must be turned on in Java using the ``-parameters`` command line option to ``javac``
 
-        .. note:: In circumstances where classes cannot be recompiled, such as when using a third party library, then
-            the creation of a proxy serializer can be used to avoid this problem. Details on creating such an object can be found on the
+        .. note:: In circumstances where classes cannot be recompiled, such as when using a third-party library, a
+           proxy serializer can be used to avoid this problem. Details on creating such an object can be found on the
             :doc:`cordapp-custom-serializers` page.
 
-    #.  The class is annotated with ``@CordaSerializable``.
-    #.  The declared types of constructor arguments, getters, and setters must be supported, and where generics are used the
+    #.  The class must be annotated with ``@CordaSerializable``
+    #.  The declared types of constructor arguments, getters, and setters must be supported, and where generics are used, the
         generic parameter must be a supported type, an open wildcard (``*``), or a bounded wildcard which is currently
-        widened to an open wildcard.
-    #.  Any superclass must adhere to the same rules, but can be abstract.
-    #.  Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly.
+        widened to an open wildcard
+    #.  Any superclass must adhere to the same rules, but can be abstract
+    #.  Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly
 
 Constructor Instantiation
 '''''''''''''''''''''''''
 
-The primary way the AMQP serialization framework for Corda instantiates objects is via a defined constructor. This is
-used to first determine which properties of an object are to be serialised then, on deserialization, it is used to
+The primary way Corda's AMQP serialization framework instantiates objects is via a specified constructor. This is
+used to first determine which properties of an object are to be serialised, then, on deserialization, it is used to
 instantiate the object with the serialized values.
 
-This is the recommended design idiom for serializable objects in Corda as it allows for immutable state objects to
-be created
+It is recommended that serializable objects in Corda adhere to the following rules, as they allow immutable state
+objects to be deserialised:
 
-    #.  A Java Bean getter for each of the properties in the constructor, with the names matching up.  For example, for a constructor
-        parameter ``foo``, there must be a getter called ``getFoo()``.  If the type of ``foo`` is boolean, the getter may
-        optionally be called ``isFoo()``.  This is why the class must be compiled with parameter names turned on.
+    #.  A Java Bean getter for each of the properties in the constructor, with a name of the form ``getX``.  For example, for a constructor
+        parameter ``foo``, there must be a getter called ``getFoo()``.  If ``foo`` is a boolean, the getter may
+        optionally be called ``isFoo()`` (this is why the class must be compiled with parameter names turned on)
     #.  A constructor which takes all of the properties that you wish to record in the serialized form.  This is required in
-        order for the serialization framework to reconstruct an instance of your class.
+        order for the serialization framework to reconstruct an instance of your class
     #.  If more than one constructor is provided, the serialization framework needs to know which one to use.  The ``@ConstructorForDeserialization``
         annotation can be used to indicate which one.  For a Kotlin class, without the ``@ConstructorForDeserialization`` annotation, the
-        *primary constructor* will be selected.
+        *primary constructor* will be selected
 
-In Kotlin, this maps cleanly to a data class where there getters are synthesized automatically. For example,
+In Kotlin, this maps cleanly to a data class where there getters are synthesized automatically. For example, suppose we
+have the following data class:
 
 .. container:: codeset
 
@@ -269,9 +270,10 @@ In Kotlin, this maps cleanly to a data class where there getters are synthesized
 
         data class Example (val a: Int, val b: String)
 
-Both properties a and b will be included in the serialised form. However, as stated above, properties not mentioned in
-the constructor will not be serialised. For example, in the following code property c will not be considered part of the
-serialised form
+Properties ``a`` and ``b`` will be included in the serialised form.
+
+However, properties not mentioned in the constructor will not be serialised. For example, in the following code,
+property ``c`` will not be considered part of the serialised form:
 
 .. container:: codeset
 
@@ -289,14 +291,14 @@ serialised form
 Setter Instantiation
 ''''''''''''''''''''
 
-As an alternative to constructor based initialisation Corda can also determine the important elements of an
-object by inspecting the getter and setter methods present on a class. If a class has **only** a default
+As an alternative to constructor-based initialisation, Corda can also determine the important elements of an
+object by inspecting the getter and setter methods present on the class. If a class has **only** a default
 constructor **and** properties then the serializable properties will be determined by the presence of
-both a getter and setter for that property that are both publicly visible. I.e. the class adheres to
-the classic *idiom* of mutable JavaBeans.
+both a getter and setter for that property that are both publicly visible (i.e. the class adheres to
+the classic *idiom* of mutable JavaBeans).
 
-On deserialization, a default instance will first be created and then, in turn, the setters invoked
-on that object to populate the correct values.
+On deserialization, a default instance will first be created, and then the setters will be invoked on that object to
+populate it with the correct values.
 
 For example:
 
@@ -322,7 +324,7 @@ Inaccessible Private Properties
 ```````````````````````````````
 
 Whilst the Corda AMQP serialization framework supports private object properties without publicly
-accessible getter methods this development idiom is strongly discouraged.
+accessible getter methods, this development idiom is strongly discouraged.
 
 For example.
 
@@ -348,15 +350,14 @@ For example.
                 }
             }
 
-When designing stateful objects is should be remembered that they are not, despite appearances, traditional
+When designing stateful objects, is should be remembered that they are not, despite appearances, traditional
 programmatic constructs. They are signed over, transformed, serialised, and relationally mapped. As such,
-all elements should be publicly accessible by design
+all elements should be publicly accessible by design.
 
-.. warning:: IDEs will indiciate erroneously that properties can be given something other than public
-    visibility. Ignore this as whilst it will work, as discussed above there are many reasons why this isn't
-    a good idea and those are beyond the scope of the IDEs inference rules
+.. warning:: IDEs will indicate erroneously that properties can be given something other than public visibility. Ignore
+   this, as whilst it will work, as discussed above there are many reasons why this isn't a good idea.
 
-Providing a public getter, as per the following example, is acceptable
+Providing a public getter, as per the following example, is acceptable:
 
     .. container:: codeset
 
@@ -390,7 +391,7 @@ Providing a public getter, as per the following example, is acceptable
 Enums
 `````
 
-    #.  All enums are supported, provided they are annotated with ``@CordaSerializable``.
+    #.  All enums are supported, provided they are annotated with ``@CordaSerializable``
 
 
 Exceptions
@@ -399,24 +400,24 @@ Exceptions
 The following rules apply to supported ``Throwable`` implementations.
 
     #.  If you wish for your exception to be serializable and transported type safely it should inherit from either
-        ``CordaException`` or ``CordaRuntimeException``.
+        ``CordaException`` or ``CordaRuntimeException``
     #.  If not, the ``Throwable`` will deserialize to a ``CordaRuntimeException`` with the details of the original
-        ``Throwable`` contained within it, including the class name of the original ``Throwable``.
+        ``Throwable`` contained within it, including the class name of the original ``Throwable``
 
 Kotlin Objects
 ``````````````
 
-    #.  Kotlin ``object`` s are singletons and treated differently.  They are recorded into the stream with no properties
+    #.  Kotlin ``object`` s are singletons and treated differently.  They are recorded into the stream with no properties,
         and deserialize back to the singleton instance. Currently, the same is not true of Java singletons,
-        and they will deserialize to new instances of the class.
-    #.  Kotlin's anonymous ``object`` s are not currently supported. I.e. constructs like:
-        ``object : Contract {...}`` will not serialize correctly and need to be re-written as an explicit class declaration.
+        which will deserialize to new instances of the class
+    #.  Kotlin's anonymous ``object`` s (i.e. constructs like ``object : Contract {...}``) are not currently supported
+        and will not serialize correctly. They need to be re-written as an explicit class declaration
 
 The Carpenter
 `````````````
 
-We support a class carpenter that can dynamically manufacture classes from the supplied schema when deserializing
-in the JVM without the supporting classes on the classpath.  This can be useful where other components might expect to
+We support a class carpenter that can dynamically manufacture classes from the supplied schema when deserializing,
+without the supporting classes being present on the classpath.  This can be useful where other components might expect to
 be able to use reflection over the deserialized data, and also for ensuring classes not on the classpath can be
 deserialized without loading potentially malicious code dynamically without security review outside of a fully sandboxed
 environment.  A more detailed discussion of the carpenter will be provided in a future update to the documentation.
@@ -425,25 +426,25 @@ Future Enhancements
 ```````````````````
 
     #.  Java singleton support.  We will add support for identifying classes which are singletons and identifying the
-        static method responsible for returning the singleton instance.
+        static method responsible for returning the singleton instance
     #.  Instance internalizing support.  We will add support for identifying classes that should be resolved against an instances map to avoid
-        creating many duplicate instances that are equal.  Similar to ``String.intern()``.
+        creating many duplicate instances that are equal (similar to ``String.intern()``)
 
 .. Type Evolution:
 
 Type Evolution
 --------------
 
-Type evolution is the mechanisms by which classes can be altered over time yet still remain serializable and deserializable across
+Type evolution is the mechanism by which classes can be altered over time yet still remain serializable and deserializable across
 all versions of the class. This ensures an object serialized with an older idea of what the class "looked like" can be deserialized
 and a version of the current state of the class instantiated.
 
-More detail can be found in :doc:`serialization-default-evolution`
+More detail can be found in :doc:`serialization-default-evolution`.
 
 Enum Evolution
 ``````````````
 Corda supports interoperability of enumerated type versions. This allows such types to be changed over time without breaking
-backward (or forward) compatibility. The rules and mechanisms for doing this are discussed in :doc:`serialization-enum-evolution``
+backward (or forward) compatibility. The rules and mechanisms for doing this are discussed in :doc:`serialization-enum-evolution``.
 
 
 
