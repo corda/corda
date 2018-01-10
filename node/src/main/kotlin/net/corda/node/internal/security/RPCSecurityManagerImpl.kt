@@ -141,7 +141,6 @@ private class RPCPermission : DomainPermission {
  *
  *   - `StartFlow.$FlowClassName`: allowing to call a `startFlow*` RPC method targeting a Flow instance
  *     of a given class
- *
  */
 private object RPCPermissionResolver : PermissionResolver {
 
