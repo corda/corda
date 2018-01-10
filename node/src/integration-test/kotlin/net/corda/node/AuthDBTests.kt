@@ -97,21 +97,21 @@ class AuthDBTests : NodeBasedTest() {
 
     @Test
     fun `login with correct credentials`() {
-        client.start("user", "foo")
+        client.start("user", "foo").close()
     }
 
     @Test
     fun `login with wrong credentials`() {
-        client.start("user", "foo")
+        client.start("user", "foo").close()
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with incorrect password should fail") {
-            client.start("user", "bar")
+            client.start("user", "bar").close()
         }
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with unknown username should fail") {
-            client.start("X", "foo")
+            client.start("X", "foo").close()
         }
     }
 
@@ -153,7 +153,7 @@ class AuthDBTests : NodeBasedTest() {
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with incorrect password should fail") {
-            client.start("user2", "bar")
+            client.start("user2", "bar").close()
         }
 
         db.insert(UserAndRoles(
@@ -161,7 +161,7 @@ class AuthDBTests : NodeBasedTest() {
                 password = encodePassword("bar"),
                 roles = listOf("default")))
 
-        client.start("user2", "bar")
+        client.start("user2", "bar").close()
     }
 
     @Test
