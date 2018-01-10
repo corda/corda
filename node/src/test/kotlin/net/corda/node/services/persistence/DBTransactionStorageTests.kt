@@ -40,7 +40,7 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
+        database = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), rigorousMock())
         newTransactionStorage()
     }
 

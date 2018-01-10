@@ -38,9 +38,7 @@ fun configureDatabase(dataSourceProperties: Properties,
     val dataSource = HikariDataSource(config)
 
     val schemas = setOf(NetworkManagementSchemaServices.SchemaV1)
-    if (databaseConfig.runMigration) {
-        SchemaMigration(schemas, dataSource, true, databaseConfig.schema).runMigration()
-    }
+    SchemaMigration(schemas, dataSource, true, databaseConfig).nodeStartup()
 
     return CordaPersistence(dataSource, databaseConfig, schemas, config.dataSourceProperties.getProperty("url", ""), emptyList())
 }

@@ -108,7 +108,7 @@ class HibernateConfigurationTest {
             }
         }
         val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1 ))
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
+        database = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), identityService, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
             // `consumeCash` expects we can self-notarise transactions

@@ -87,6 +87,7 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     private fun configureProperties() {
+        config = config.withValue("database.runMigration", ConfigValueFactory.fromAnyRef(true))
         config = config.withValue("rpcUsers", ConfigValueFactory.fromIterable(rpcUsers))
         if (notary != null) {
             config = config.withValue("notary", ConfigValueFactory.fromMap(notary))

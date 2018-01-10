@@ -91,6 +91,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
+                        "database" to mapOf("runMigration" to "true"),
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
                         "rpcAddress" to localPort[1].toString(),

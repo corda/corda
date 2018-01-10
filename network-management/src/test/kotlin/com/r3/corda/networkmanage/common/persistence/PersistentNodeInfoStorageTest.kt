@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.signWith
@@ -41,7 +42,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.intermediateCa = intermediateCa
-        persistence = configureDatabase(MockServices.makeTestDataSourceProperties())
+        persistence = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateRequestStorage(persistence)
     }

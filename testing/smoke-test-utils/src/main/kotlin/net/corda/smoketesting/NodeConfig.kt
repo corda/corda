@@ -14,7 +14,8 @@ class NodeConfig(
         val rpcPort: Int,
         val webPort: Int,
         val isNotary: Boolean,
-        val users: List<User>
+        val users: List<User>,
+        val runMigration: Boolean = true
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -34,6 +35,7 @@ class NodeConfig(
                 .withValue("webAddress", addressValueFor(webPort))
                 .withValue("rpcAddress", addressValueFor(rpcPort))
                 .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
+                .withValue("database", valueFor(mapOf("runMigration" to runMigration)))
                 .withValue("useTestClock", valueFor(true))
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))

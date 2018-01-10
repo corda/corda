@@ -209,6 +209,7 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = configOf(
+                        "database" to mapOf("runMigration" to "true"),
                         "myLegalName" to name.toString(),
                         "p2pAddress" to p2pAddress.toString(),
                         "rpcAddress" to rpcAddress.toString(),
@@ -227,6 +228,7 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
+                        "database" to mapOf("runMigration" to "true"),
                         "p2pAddress" to "localhost:1222", // required argument, not really used
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString())
@@ -313,7 +315,8 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = cordform.config + rpcAddress + notary + mapOf(
-                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
+                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers,
+                        "database" to mapOf("runMigration" to "true")
                 )
         ))
         return startNodeInternal(config, webAddress, null, "200m", localNetworkMap)

@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import liquibase.Contexts
+import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.database.Database
 import liquibase.database.DatabaseFactory
@@ -14,17 +15,34 @@ import net.corda.core.utilities.contextLogger
 import java.io.*
 import javax.sql.DataSource
 
-class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource, val failOnMigrationMissing: Boolean, private val schemaName: String? = null) {
+class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource, val failOnMigrationMissing: Boolean, private val databaseConfig: DatabaseConfig) {
 
     companion object {
         private val logger = contextLogger()
     }
 
-    fun generateMigrationScript(outputFile: File) = doRunMigration(PrintWriter(outputFile))
+    /**
+     * Main entry point to the schema migration.
+     * Called during node startup.
+     */
+    fun nodeStartup() = if (databaseConfig.runMigration) runMigration() else checkState()
 
-    fun runMigration() = doRunMigration()
+    /**
+     * will run the liquibase migration on the actual database
+     */
+    fun runMigration() = doRunMigration(run = true, outputWriter = null, check = false)
 
-    private fun doRunMigration(outputWriter: Writer? = null) {
+    /**
+     * will write the migration to the outputFile
+     */
+    fun generateMigrationScript(outputFile: File) = doRunMigration(run = false, outputWriter = PrintWriter(outputFile), check = false)
+
+    /**
+     * ensures that the database is up to date with the latest migration changes
+     */
+    fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
+
+    private fun doRunMigration(run: Boolean, outputWriter: Writer?, check: Boolean) {
 
         // virtual file name of the changelog that includes all schemas
         val dynamicInclude = "master.changelog.json"
@@ -65,6 +83,7 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
+            val schemaName: String? = databaseConfig.schema
             if (!schemaName.isNullOrBlank()) {
                 if (liquibase.database.defaultSchemaName != schemaName) {
                     logger.debug("defaultSchemaName=${liquibase.database.defaultSchemaName} changed to $schemaName")
@@ -79,10 +98,16 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
             logger.info("liquibaseSchemaName=${liquibase.database.liquibaseSchemaName}")
             logger.info("outputDefaultSchema=${liquibase.database.outputDefaultSchema}")
 
-            if (outputWriter != null) {
-                liquibase.update(Contexts(), outputWriter)
-            } else {
-                liquibase.update(Contexts())
+            when {
+                run && !check -> liquibase.update(Contexts())
+                check && !run -> {
+                    val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
+                    if (unRunChanges.isNotEmpty()) {
+                        throw Exception("There are ${unRunChanges.size} outstanding database changes that need to be run. Please use the provided tools to update the database.")
+                    }
+                }
+                (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
+                else -> throw IllegalStateException("Invalid usage.")
             }
         }
     }

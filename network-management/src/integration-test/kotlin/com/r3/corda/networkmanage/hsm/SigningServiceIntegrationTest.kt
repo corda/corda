@@ -89,7 +89,7 @@ class SigningServiceIntegrationTest {
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties())
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
 
         NetworkManagementServer().use { server ->
             server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)
@@ -99,7 +99,7 @@ class SigningServiceIntegrationTest {
                 doReturn(ALICE_NAME).whenever(it).myLegalName
                 doReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}")).whenever(it).compatibilityZoneURL
             }
-            val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties()))
+            val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)))
 
             val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
             // Poll the database for approved requests
@@ -143,7 +143,7 @@ class SigningServiceIntegrationTest {
     @Test
     fun `DEMO - Create CSR and poll`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig())
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
 
         NetworkManagementServer().use { server ->
             server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)

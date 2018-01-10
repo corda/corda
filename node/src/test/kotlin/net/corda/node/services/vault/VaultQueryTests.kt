@@ -131,7 +131,7 @@ open class VaultQueryTests {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc)
+        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(runMigration = true), identitySvc)
         setUpDb(database, 5000)
 
         database.close()

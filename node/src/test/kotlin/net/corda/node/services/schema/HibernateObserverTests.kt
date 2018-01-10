@@ -69,7 +69,7 @@ class HibernateObserverTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock(), schemaService)
         HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig, schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party

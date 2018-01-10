@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.internal.createDevNodeCaCertPath
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -28,7 +29,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Before
     fun startDb() {
-        persistence = configureDatabase(makeTestDataSourceProperties())
+        persistence = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         storage = PersistentCertificateRequestStorage(persistence)
     }
 

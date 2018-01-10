@@ -32,7 +32,7 @@ class InteractiveShellTest {
 
     @Before
     fun setup() {
-        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock())
     }
 
     @After

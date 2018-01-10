@@ -107,7 +107,7 @@ open class MockServices private constructor(
             val transactionIsolationLevel = if (config.hasPath(TRANSACTION_ISOLATION_LEVEL)) TransactionIsolationLevel.valueOf(config.getString(TRANSACTION_ISOLATION_LEVEL))
                                                 else TransactionIsolationLevel.READ_COMMITTED
             val schema = if (config.hasPath(SCHEMA)) config.getString(SCHEMA) else ""
-            return DatabaseConfig(transactionIsolationLevel = transactionIsolationLevel, schema = schema)
+            return DatabaseConfig(runMigration = true, transactionIsolationLevel = transactionIsolationLevel, schema = schema)
         }
 
         /**

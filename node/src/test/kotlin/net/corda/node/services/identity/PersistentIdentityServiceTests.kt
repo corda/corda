@@ -49,7 +49,7 @@ class PersistentIdentityServiceTests {
     @Before
     fun setup() {
         identityService = PersistentIdentityService(DEV_ROOT_CA.certificate)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), identityService)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), identityService)
     }
 
     @After

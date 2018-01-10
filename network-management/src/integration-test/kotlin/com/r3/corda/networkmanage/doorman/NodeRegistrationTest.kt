@@ -17,6 +17,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.NodeHandle
@@ -136,7 +137,7 @@ class NodeRegistrationTest : IntegrationTest() {
         return NetworkManagementServer().apply {
             start(
                     serverAddress,
-                    configureDatabase(makeTestDataSourceProperties()),
+                    configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)),
                     LocalSigner(intermediateCa.keyPair, arrayOf(intermediateCa.certificate, rootCaCert)),
                     networkParameters,
                     networkParameters?.let { NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis) },

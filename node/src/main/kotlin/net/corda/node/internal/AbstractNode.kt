@@ -204,14 +204,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     fun generateDatabaseSchema(outputFile: String) {
         HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
             val jdbcUrl = configuration.dataSourceProperties.getProperty("url", "")
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database.schema).generateMigrationScript(File(outputFile))
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database).generateMigrationScript(File(outputFile))
         }
     }
 
     fun runDbMigration() {
         HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
             val jdbcUrl = configuration.dataSourceProperties.getProperty("url", "")
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database.schema).runMigration()
+            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database).runMigration()
         }
     }
 
@@ -887,7 +887,7 @@ fun configureDatabase(dataSourceProperties: Properties,
     val jdbcUrl = config.dataSourceProperties.getProperty("url", "")
 
     if (databaseConfig.runMigration) {
-        SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig.schema).runMigration()
+        SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig).runMigration()
     }
 
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)

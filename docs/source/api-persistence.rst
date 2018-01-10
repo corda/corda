@@ -151,6 +151,7 @@ As a database migration tool, we use the open source library liquibase  <http://
 
 If migration is enabled, the database state is checked (and updated) during node startup. (After deploying a new version of the code that contains database migrations, they are executed at that point).
 Possible database changes range from schema changes to data changes.
+If migration is disabled (the default), then on node startup, the database "version" is checked if it is up-to-date with the deployed code.
 
 Liquibase will create a table called ``DATABASECHANGELOG``, that will store useful information about each change ( like timestamp, description, user, md5 hash so it can't be changed, etc)
 We can also "tag" the database at each release to make rollback easier.
@@ -228,7 +229,7 @@ Usage:
 Configurations:
 
 - To enable migration at startup, set:
-	- database.runMigration = true   // true by default
+	- database.runMigration = true   // false by default,
 
 Command line arguments:
 

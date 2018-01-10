@@ -81,7 +81,7 @@ class ArtemisMessagingTests {
             doReturn(true).whenever(it).useAMQPBridges
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock())
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())
     }
 

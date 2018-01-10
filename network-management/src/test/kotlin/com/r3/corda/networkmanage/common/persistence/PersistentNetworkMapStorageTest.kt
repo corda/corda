@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -37,7 +38,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.intermediateCa = intermediateCa
-        persistence = configureDatabase(makeTestDataSourceProperties())
+        persistence = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         networkMapStorage = PersistentNetworkMapStorage(persistence, LocalSigner(intermediateCa.keyPair, arrayOf(intermediateCa.certificate, rootCaCert)))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateRequestStorage(persistence)
