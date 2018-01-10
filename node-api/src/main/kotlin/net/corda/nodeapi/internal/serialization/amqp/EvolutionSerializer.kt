@@ -96,7 +96,7 @@ class EvolutionSerializer(
             old.fields.forEach {
                 val returnType = it.getTypeAsClass(factory.classloader)
                 oldArgs[it.name] = OldParam(
-                        returnType, idx++, PropertySerializer.make(it.name, null, returnType, factory))
+                        returnType, idx++, PropertySerializer.make(it.name, PublicPropertyReader(null), returnType, factory))
             }
 
             val readers = constructor.parameters.map {

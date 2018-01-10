@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import org.assertj.core.api.Assertions
+import org.junit.Ignore
 import org.junit.Test
 import java.io.NotSerializableException
 
@@ -12,6 +13,8 @@ class ErrorMessagesTests {
     private fun errMsg(property:String, testname: String) =
             "Property '$property' or its getter is non public, this renders class 'class $testname\$C' unserializable -> class $testname\$C"
 
+    // Java allows this to be set at the class level yet Kotlin doesn't for some reason
+    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun privateProperty() {
         data class C(private val a: Int)
@@ -25,6 +28,8 @@ class ErrorMessagesTests {
         }.isInstanceOf(NotSerializableException::class.java).hasMessage(errMsg("a", testname))
     }
 
+    // Java allows this to be set at the class level yet Kotlin doesn't for some reason
+    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun privateProperty2() {
         data class C(val a: Int, private val b: Int)
@@ -38,6 +43,8 @@ class ErrorMessagesTests {
         }.isInstanceOf(NotSerializableException::class.java).hasMessage(errMsg("b", testname))
     }
 
+    // Java allows this to be set at the class level yet Kotlin doesn't for some reason
+    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun privateProperty3() {
         // despite b being private, the getter we've added is public and thus allows for the serialisation
@@ -54,6 +61,8 @@ class ErrorMessagesTests {
         val c = DeserializationInput(sf).deserialize(bytes)
     }
 
+    // Java allows this to be set at the class level yet Kotlin doesn't for some reason
+    @Ignore("Current behaviour allows for the serialization of objects with private members, this will be disallowed at some point in the future")
     @Test
     fun protectedProperty() {
         data class C(protected val a: Int)
