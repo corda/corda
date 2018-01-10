@@ -252,7 +252,7 @@ private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource
 
 private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
 
-/**
+/*
  * Adapts a [com.google.common.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
  */
 private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
@@ -284,7 +284,7 @@ private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<
     override fun toString() = "Guava cache adapter [$impl]"
 }
 
-/**
+/*
  * Implementation of [org.apache.shiro.cache.CacheManager] based on
  * cache implementation in [com.google.common.cache]
  */
