@@ -5,8 +5,8 @@ import net.corda.core.identity.AbstractParty
 import org.hibernate.annotations.Type
 import java.util.*
 import javax.persistence.Column
-import javax.persistence.ElementCollection
 import javax.persistence.MappedSuperclass
+import javax.persistence.Transient
 
 /**
  * JPA representation of the common schema entities
@@ -23,9 +23,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** [ContractState] attributes */
 
             /** X500Name of participant parties **/
-            @ElementCollection
-            @Column(name = "participants")
-            var participants: MutableSet<AbstractParty>? = null,
+            @Transient
+            open var participants: MutableSet<AbstractParty>? = null,
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -34,6 +33,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
+            @Type(type = "uuid-char")
             var uuid: UUID
 
     ) : PersistentState() {
@@ -48,9 +48,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** [ContractState] attributes */
 
             /** X500Name of participant parties **/
-            @ElementCollection
-            @Column(name = "participants")
-            var participants: MutableSet<AbstractParty>? = null,
+            @Transient
+            open var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 

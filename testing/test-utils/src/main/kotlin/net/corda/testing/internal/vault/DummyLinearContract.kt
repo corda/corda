@@ -49,7 +49,7 @@ class DummyLinearContract : Contract {
                         linearBoolean = linearBoolean
                 )
                 is DummyLinearStateSchemaV2 -> DummyLinearStateSchemaV2.PersistentDummyLinearState(
-                        _participants = participants.toSet(),
+                        participants = participants.toMutableSet(),
                         uid = linearId,
                         linearString = linearString,
                         linearNumber = linearNumber,

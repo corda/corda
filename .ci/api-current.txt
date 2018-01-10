@@ -2613,22 +2613,22 @@ public final class net.corda.core.schemas.CommonSchemaV1 extends net.corda.core.
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty getIssuer()
   @org.jetbrains.annotations.NotNull public final byte[] getIssuerRef()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty getOwner()
-  @org.jetbrains.annotations.Nullable public final Set getParticipants()
+  @org.jetbrains.annotations.Nullable public Set getParticipants()
   public final long getQuantity()
   public final void setIssuer(net.corda.core.identity.AbstractParty)
   public final void setIssuerRef(byte[])
   public final void setOwner(net.corda.core.identity.AbstractParty)
-  public final void setParticipants(Set)
+  public void setParticipants(Set)
   public final void setQuantity(long)
 ##
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public static class net.corda.core.schemas.CommonSchemaV1$LinearState extends net.corda.core.schemas.PersistentState
   public <init>(Set, String, UUID)
   public <init>(net.corda.core.contracts.UniqueIdentifier, Set)
   @org.jetbrains.annotations.Nullable public final String getExternalId()
-  @org.jetbrains.annotations.Nullable public final Set getParticipants()
+  @org.jetbrains.annotations.Nullable public Set getParticipants()
   @org.jetbrains.annotations.NotNull public final UUID getUuid()
   public final void setExternalId(String)
-  public final void setParticipants(Set)
+  public void setParticipants(Set)
   public final void setUuid(UUID)
 ##
 public class net.corda.core.schemas.MappedSchema extends java.lang.Object
