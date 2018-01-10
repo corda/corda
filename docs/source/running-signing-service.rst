@@ -13,7 +13,7 @@ See the :doc:`signing-service` for a more detailed description of the service.
 
 Configuration file
 ------------------
-At startup the signing service reads a configuration file, passed with ``--configFile`` on the command line.
+At startup the signing service reads a configuration file, passed with ``--config-file`` on the command line.
 
 This is an example of what a signing service configuration file might look like:
     .. literalinclude:: ../../network-management/hsm.conf

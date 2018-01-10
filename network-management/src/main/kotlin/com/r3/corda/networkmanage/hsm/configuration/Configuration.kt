@@ -61,9 +61,10 @@ data class Parameters(val dataSourceProperties: Properties,
 fun parseParameters(vararg args: String): Parameters {
     val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
-        accepts("configFile", "Overriding configuration file.").withRequiredArg().defaultsTo("node.conf").describedAs("filepath")
+        accepts("config-file", "Overriding configuration file.").withRequiredArg().describedAs("filepath")
     }
 
+    // The config-file option is changed to configFile
     val configFile = if (argConfig.hasPath("configFile")) {
         Paths.get(argConfig.getString("configFile"))
     } else {

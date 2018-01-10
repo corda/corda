@@ -15,7 +15,7 @@ class ConfigurationTest : TestBase() {
 
     @Test
     fun `config file is parsed correctly`() {
-        val paramsWithPassword = parseParameters("--configFile", validConfigPath)
+        val paramsWithPassword = parseParameters("--config-file", validConfigPath)
         assertEquals(AuthMode.PASSWORD, paramsWithPassword.authMode)
         assertEquals("3001@192.168.0.1", paramsWithPassword.device)
     }
@@ -24,7 +24,7 @@ class ConfigurationTest : TestBase() {
     fun `should fail when config missing database source properties`() {
         // dataSourceProperties is missing from node_fail.conf and it should fail during parsing, and shouldn't use default from reference.conf.
         assertFailsWith<ConfigException.Missing> {
-            parseParameters("--configFile", invalidConfigPath)
+            parseParameters("--config-file", invalidConfigPath)
         }
     }
 

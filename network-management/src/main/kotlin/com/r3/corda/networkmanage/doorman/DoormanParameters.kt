@@ -84,6 +84,7 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
                 .defaultsTo(Mode.DOORMAN.name)
     }
 
+    // The config-file option is changed to configFile
     val configFile = if (argConfig.hasPath("configFile")) {
         Paths.get(argConfig.getString("configFile"))
     } else {
