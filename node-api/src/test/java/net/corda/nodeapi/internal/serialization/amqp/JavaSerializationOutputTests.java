@@ -172,8 +172,11 @@ public class JavaSerializationOutputTests {
     }
 
     private Object serdes(Object obj) throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
-        SerializerFactory factory2 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
+        SerializerFactory factory2 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(obj);
 

@@ -25,7 +25,9 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerializerGetter);
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -53,7 +55,9 @@ public class JavaPrivatePropertyTests {
     @Test
     public void singlePrivateWithConstructorAndGetter()
             throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(), evolutionSerializerGetter);
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
