@@ -61,9 +61,7 @@ class CordaPersistence(
         DatabaseTransactionManager(this)
         // Check not in read-only mode.
         transaction {
-            dataSource.connection.use {
-                check(!it.metaData.isReadOnly) { "Database should not be readonly." }
-            }
+            check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
         }
     }
 

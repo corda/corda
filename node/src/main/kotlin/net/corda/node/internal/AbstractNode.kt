@@ -611,9 +611,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         if (props.isNotEmpty()) {
             val database = configureDatabase(props, configuration.database, identityService, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            database.transaction {
-                log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
-            }
+            logVendorString(database, log)
             runOnStop += database::close
             return database.transaction {
                 insideTransaction(database)
@@ -814,6 +812,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
 
         override fun jdbcSession(): Connection = database.createSession()
+    }
+}
+
+@VisibleForTesting
+internal fun logVendorString(database: CordaPersistence, log: Logger) {
+    database.transaction {
+        log.info("Connected to ${connection.metaData.databaseProductName} database.")
     }
 }
 
