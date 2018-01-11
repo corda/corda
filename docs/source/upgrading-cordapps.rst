@@ -1,5 +1,5 @@
-Upgrading CorDapps
-==================
+Upgrading a CorDapp (outside of platform version upgrades)
+==========================================================
 
 .. note:: This document only concerns the upgrading of CorDapps and not the Corda platform itself (wire format, node
    database schemas, etc.).
