@@ -12,8 +12,11 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
-import net.corda.testing.driver.driver
+import net.corda.testing.BOC_NAME
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
+import net.corda.testing.node.internal.internalDriver
+import net.corda.testing.sequence
 import org.junit.Test
 
 class BankOfCordaRPCClientTest {
@@ -24,7 +27,7 @@ class BankOfCordaRPCClientTest {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities)
         )
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {
+        internalDriver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)

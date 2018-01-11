@@ -16,9 +16,9 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
@@ -27,7 +27,7 @@ import java.util.*
 
 class DistributedServiceTests {
     private lateinit var alice: NodeHandle
-    private lateinit var notaryNodes: List<NodeHandle.OutOfProcess>
+    private lateinit var notaryNodes: List<NodeHandle>
     private lateinit var aliceProxy: CordaRPCOps
     private lateinit var raftNotaryIdentity: Party
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
@@ -39,14 +39,13 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::nodeInfo),
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
-
-        driver(
+        internalDriver(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
-            notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as NodeHandle.OutOfProcess }
+            notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow()
 
             assertThat(notaryNodes).hasSize(3)
 
@@ -113,11 +112,8 @@ class DistributedServiceTests {
             paySelf(5.POUNDS)
         }
 
-        // Now kill a notary node
-        with(notaryNodes[0].process) {
-            destroy()
-            waitFor()
-        }
+            // Now kill a notary node
+            notaryNodes[0].stop()
 
         // Pay ourselves another 20x5 pounds
         for (i in 1..20) {

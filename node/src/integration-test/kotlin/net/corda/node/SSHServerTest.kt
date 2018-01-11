@@ -4,23 +4,26 @@ import co.paralleluniverse.fibers.Suspendable
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.driver.driver
-import org.bouncycastle.util.io.Streams
-import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.internalDriver
+import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.util.io.Streams
+import org.junit.Ignore
+import org.junit.Test
 import java.net.ConnectException
+import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
-import java.util.regex.Pattern
 
 class SSHServerTest {
 
@@ -29,7 +32,7 @@ class SSHServerTest {
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        internalDriver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             node.getOrThrow()
 
@@ -51,7 +54,7 @@ class SSHServerTest {
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        internalDriver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -72,7 +75,7 @@ class SSHServerTest {
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        internalDriver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -96,7 +99,7 @@ class SSHServerTest {
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        internalDriver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -109,7 +112,7 @@ class SSHServerTest {
             assertTrue(session.isConnected)
 
             val channel = session.openChannel("exec") as ChannelExec
-            channel.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
+            channel.setCommand("start FlowICannotRun otherParty: \"$ALICE_NAME\"")
             channel.connect()
             val response = String(Streams.readAll(channel.inputStream))
 
@@ -127,7 +130,7 @@ class SSHServerTest {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        internalDriver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -167,7 +170,7 @@ class SSHServerTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class FlowICannotRun(val otherParty: Party) : FlowLogic<String>() {
+    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
 

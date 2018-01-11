@@ -345,6 +345,9 @@ class DriverDSLImpl(
     }
 
     override fun start() {
+        if (isDebug) check(!startNodesInProcess) { "Debugging can only occur with out-of-process nodes" }
+        if (jmxPolicy.startJmxHttpServer) check(!startNodesInProcess) { "Using JMX can only occur with out-of-process nodes" }
+
         if (startNodesInProcess) {
             Schedulers.reset()
         }
@@ -661,6 +664,14 @@ class DriverDSLImpl(
 
         private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
+
+        private val driverEntryClasses = setOf(
+                "net.corda.testing.driver.Driver",
+                "net.corda.testing.node.internal.DriverDSLImplKt",
+                "net.corda.testing.node.internal.RPCDriverKt",
+                "net.corda.verifier.VerifierDriverKt"
+        )
+
         /**
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
          * in demo application like NodeExplorer.
@@ -783,17 +794,14 @@ class DriverDSLImpl(
         /**
          * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
          * This makes the driver automatically pick the CorDapp module that it's run from.
-         *
-         * This returns List<String> rather than String? to make it easier to bolt onto extraCordappPackagesToScan.
          */
-        private fun getCallerPackage(): List<String> {
+        private fun getCallerPackage(): String {
             val stackTrace = Throwable().stackTrace
-            val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
-            // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
-            if (index == -1) return emptyList()
+            val index = stackTrace.indexOfLast { it.className in driverEntryClasses }
+            require(index != -1)
             val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
                     throw IllegalStateException("Function instantiating driver must be defined in a package.")
-            return listOf(callerPackage.name)
+            return callerPackage.name
         }
 
         /**
@@ -945,7 +953,7 @@ fun <A> internalDriver(
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
         initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
-        startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
+        startNodesInProcess: Boolean = true,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,

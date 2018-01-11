@@ -12,7 +12,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.internalDriver
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -69,7 +69,7 @@ class LargeTransactionsTest {
         val bigFile2 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 1)
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 3)
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.testing.contracts")) {
+        internalDriver(extraCordappPackagesToScan = listOf("net.corda.testing.contracts")) {
             val rpcUser = User("admin", "admin", setOf("ALL"))
             val (alice, _) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()
             alice.rpcClientToNode().use(rpcUser.username, rpcUser.password) {

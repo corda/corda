@@ -20,18 +20,18 @@ fun CordformDefinition.clean() {
  * have terminated.
  */
 fun CordformDefinition.deployNodes() {
-    runNodes(waitForAllNodesToFinish = true) { }
+    runNodes(waitForAllNodesToFinish = true, startNodesInProcess = false) { }
 }
 
 /**
  * Deploy the nodes specified in the given [CordformDefinition] and then execute the given [block] once all the nodes
  * and webservers are up. After execution all these processes will be terminated.
  */
-fun CordformDefinition.deployNodesThen(block: () -> Unit) {
-    runNodes(waitForAllNodesToFinish = false, block = block)
+fun CordformDefinition.deployNodesThen(startNodesInProcess: Boolean, block: () -> Unit) {
+    runNodes(waitForAllNodesToFinish = false, startNodesInProcess = startNodesInProcess, block = block)
 }
 
-private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block: () -> Unit) {
+private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, startNodesInProcess: Boolean, block: () -> Unit) {
     clean()
     val nodes = nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } }
     val maxPort = nodes
@@ -39,8 +39,9 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             .mapNotNull { address -> address?.let { NetworkHostAndPort.parse(it).port } }
             .max()!!
     internalDriver(
-            isDebug = true,
-            jmxPolicy = JmxPolicy(true),
+            startNodesInProcess = startNodesInProcess,
+            isDebug = !startNodesInProcess,
+            jmxPolicy = JmxPolicy(!startNodesInProcess),
             driverDirectory = nodesDirectory,
             extraCordappPackagesToScan = cordappPackages,
             // Notaries are manually specified in Cordform so we don't want the driver automatically starting any

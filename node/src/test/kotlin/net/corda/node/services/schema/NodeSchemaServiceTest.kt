@@ -10,9 +10,9 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.driver
-import net.corda.testing.node.MockNetwork
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.internalDriver
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Test
@@ -41,7 +41,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
-        driver(startNodesInProcess = true) {
+        internalDriver {
             val result = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
             assertTrue(mappedSchemas.contains(TestSchema.name))
@@ -51,7 +51,7 @@ class NodeSchemaServiceTest {
     @Test
     fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
-        val tables = driver(startNodesInProcess = true) {
+        val tables = internalDriver {
             (defaultNotaryNode.getOrThrow() as NodeHandle.InProcess).node.database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }

@@ -26,7 +26,7 @@ fun <A> springDriver(
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        startNodesInProcess: Boolean = true,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringBootDriverDSL.() -> A

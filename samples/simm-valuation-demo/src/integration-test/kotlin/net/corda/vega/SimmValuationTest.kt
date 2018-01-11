@@ -5,8 +5,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.DUMMY_BANK_B_NAME
-import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
+import net.corda.testing.node.internal.internalDriver
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
@@ -27,7 +27,10 @@ class SimmValuationTest {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers")) {
+        internalDriver(
+                startNodesInProcess = false,
+                extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers")
+        ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }

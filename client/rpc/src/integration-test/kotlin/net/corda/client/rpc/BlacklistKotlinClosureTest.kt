@@ -8,7 +8,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE_NAME
-import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 
@@ -28,7 +28,7 @@ class BlacklistKotlinClosureTest {
 
     @Test
     fun `closure sent via RPC`() {
-        driver(startNodesInProcess = true) {
+        internalDriver {
             val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(KryoException::class.java)
