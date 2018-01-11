@@ -43,6 +43,17 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val useAMQPBridges: Boolean get() = true
+    val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
+
+    companion object {
+        // default to at least 8MB and a bit extra for larger heap sizes
+        val defaultTransactionCacheSize: Long = 8388608 + getAdditionalCacheMemory()
+
+        // add 5% of any heapsize over 300MB to the default transaction cache size
+        private fun getAdditionalCacheMemory(): Long {
+            return Math.max((Runtime.getRuntime().maxMemory() - 314572800) / 20, 0)
+        }
+    }
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
@@ -118,7 +129,8 @@ data class NodeConfigurationImpl(
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
-        override val useAMQPBridges: Boolean = true
+        override val useAMQPBridges: Boolean = true,
+        override val transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize
         ) : NodeConfiguration {
 
     override val exportJMXto: String get() = "http"

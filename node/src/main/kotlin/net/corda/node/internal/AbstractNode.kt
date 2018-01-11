@@ -214,7 +214,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
-            val transactionStorage = makeTransactionStorage(database)
+            val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
@@ -559,7 +559,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return tokenizableServices
     }
 
-    protected open fun makeTransactionStorage(database: CordaPersistence): WritableTransactionStorage = DBTransactionStorage()
+    protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
     private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
         VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService, flowLogicRefFactory)
