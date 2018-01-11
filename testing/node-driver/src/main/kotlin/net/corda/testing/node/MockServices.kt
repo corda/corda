@@ -10,6 +10,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.node.*
+import net.corda.core.node.config.NodeConfigurator
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -57,6 +58,9 @@ open class MockServices private constructor(
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>
 ) : ServiceHub, StateLoader by validatedTransactions {
+    override val nodeConfig: NodeConfigurator
+        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+
     companion object {
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")

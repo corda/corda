@@ -23,6 +23,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.*
+import net.corda.core.node.config.NodeConfigurator
 import net.corda.core.node.services.*
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
@@ -534,7 +535,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage,  database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
+    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService,
+                             transactionStorage: WritableTransactionStorage,
+                             database: CordaPersistence,
+                             info: NodeInfo,
+                             identityService: IdentityServiceInternal,
+                             networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
@@ -549,7 +555,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 cordappProvider,
                 database,
                 info,
-                networkMapCache)
+                networkMapCache,
+                FilteredNodeConfiguration(configuration))
         network = makeMessagingService(database, info)
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
@@ -790,7 +797,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             override val cordappProvider: CordappProviderInternal,
             override val database: CordaPersistence,
             override val myInfo: NodeInfo,
-            override val networkMapCache: NetworkMapCacheInternal
+            override val networkMapCache: NetworkMapCacheInternal,
+            override val nodeConfig: NodeConfigurator
     ) : SingletonSerializeAsToken(), ServiceHubInternal, StateLoader by validatedTransactions {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
