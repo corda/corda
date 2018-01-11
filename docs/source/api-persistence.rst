@@ -18,10 +18,11 @@ The ORM mapping is specified using the `Java Persistence API <https://en.wikiped
 (JPA) as annotations and is converted to database table rows by the node automatically every time a state is recorded
 in the node's local vault as part of a transaction.
 
-.. note:: Presently the node includes an instance of the H2 database but any database that supports JDBC is a
-          candidate and the node will in the future support a range of database implementations via their JDBC drivers. Much
-          of the node internal state is also persisted there. You can access the internal H2 database via JDBC, please see the
-          info in ":doc:`node-administration`" for details.
+.. note:: Presently the node includes an instance of the H2 database. H2 database is supported for development purposes,
+          and we have certified R3 Corda to work against SQL Server 2017 and Azure SQL.
+          PostgreSQL 9.6 is supported preliminarily. Other databases will be officially supported very soon.
+          Much of the node internal state is also persisted there. You can access
+          the internal H2 database via JDBC, please see the info in ":doc:`node-administration`" for details.
 
 Schemas
 -------
@@ -128,7 +129,7 @@ Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as i
   :start-after: DOCSTART JdbcSession
   :end-before: DOCEND JdbcSession
 
-JDBC session's can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
+JDBC sessions can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
 
 The following example illustrates the creation of a custom corda service using a jdbcSession:
 
@@ -149,15 +150,17 @@ Database Migration
 
 As a database migration tool, we use the open source library liquibase  <http://www.liquibase.org/>.
 
-If migration is enabled, the database state is checked (and updated) during node startup. (After deploying a new version of the code that contains database migrations, they are executed at that point).
-Possible database changes range from schema changes to data changes.
-If migration is disabled (the default), then on node startup, the database "version" is checked if it is up-to-date with the deployed code.
+If migration is enabled (using the `database.runMigration` node configuration), the database state is checked (and updated) during node startup.
+For example, after deploying a new version of the code that contains database migrations (see example below for a possible scenario), they are executed at that point (during startup).
+Possible database changes range from schema changes to data changes (organized on changesets)
 
-Liquibase will create a table called ``DATABASECHANGELOG``, that will store useful information about each change ( like timestamp, description, user, md5 hash so it can't be changed, etc)
+Liquibase will create a table called ``DATABASECHANGELOG``, that will store information about each executed change (like timestamp, description, user, md5 hash so it can't be changed, etc).
+This table will be used every time a migration is run to determine what changesets need to be applied.
+Changesets should never be modified once they were executed. Any correction should be applied in a new changeset.
 We can also "tag" the database at each release to make rollback easier.
 
 Database changes are maintained in several xml files per ``MappedSchema``, so that only migrations corresponding to the node’s configured schemas are run.
-For example, on the node-info schema, if there are any database changes for release 12, the changes will be added to a new file called:  ``node-info.changelog-v12.xml`` which has to be included in ``node-info.changelog-master.xml``.
+By following our convention, and using the node-info schema as an example, if there are any database changes for release 12, the changes will be added to a new file called:  ``node-info.changelog-v12.xml`` which has to be included in ``node-info.changelog-master.xml``.
 
 
 Example:
@@ -188,7 +191,7 @@ The ``DBAttachment`` entity is included in the ``NodeServicesV1`` schema, so we 
 
 .. code-block:: xml
 
-    <changeSet author="developer_name" id="add content_size column">
+    <changeSet author="R3.Corda" id="add content_size column">
         <addColumn tableName="node_attachments">
             <column name="content_size" type="INT"/>
         </addColumn>
@@ -233,6 +236,35 @@ Configurations:
 
 Command line arguments:
 
-- To export the migration to a file use `—just-generate-database-migration outputSqlFile`. This will generate the delta from the last release, and will output the resulting sql into the outputSqlFile. It will not write to the db. It will not start the node! ( default value for `outputSqlFile` is a `.sql` file with the current date )
+- To export the migration to a file use `—just-generate-db-migration outputSqlFile`. This will generate the delta from the last release, and will output the resulting sql into the outputSqlFile. It will not write to the db. It will not start the node! ( default value for `outputSqlFile` is a `.sql` file with the current date)
 
 - To run the migration without starting the node: `--just-run-db-migration`
+
+
+CorDapps:
+---------
+
+CorDapp developers who decide to store contract state in custom entities can create migration files for the ``MappedSchema`` they define.
+
+There are 2 ways of associating a migration file with a schema:
+ 1) By overriding ``val migrationResource: String`` and pointing to a file that needs to be in the classpath
+ 2) By putting a file on the classpath in a `migration` package whose name is the hyphenated name of the schema. ( All supported file extensions will be appended to the name)
+
+CorDapp developers can use any of the supported formats (xml, sql, json, yaml) for the migration files they create.
+
+In case CorDapp developers distribute their CorDapps with migration files, these will be automatically applied when the CorDapp is deployed on an R3 Corda node.
+If they are deployed on a standard ("Open source") Corda node, then the migration will be ignored, and the database tables will be generated by Hibernate.
+
+In case CorDapp developers don't distribute a CorDapp with migration files, then the organisation that decides to deploy this CordApp on an R3 Corda ("Enterprise Blockchain") node has the responsibility to manage the database.
+
+The following options are available:
+ 1) In case the organisation is running a demo or trial node on the default H2 database, then the CorDapp will just work when deployed by relying on the migration tool provided by hibernate, which is not intended for production.
+ 2) In case the organisation is running a production node with live data on an enterprise database, then they will have to manage the database migration for the CorDapp.
+
+    These are the steps to do this:
+        - find out the name of the MappedSchema containing the new contract state entities and hyphenate it. For example:
+            - `CommercialPaperSchemaV1` -> `commercial-paper-schema-v1.changelog-master.xml`.
+            - `IOUSchemaV1` -> `i-o-u-schema-v1.changelog-master.xml`.
+        - create a file with the preferred extension and add the migration in it (see <http://www.liquibase.org/documentation/index.html>). For DBAs, the Sql format might be very familiar (basically T-SQL with metadata). The first changeset should be just creating the tables, indexes, etc. The author name should not be `R3.Corda`, because this is reserved.
+        - add the files to a folder named `migration` and create a jar (by convention it could be named: originalCorDappName-migration.jar), and deploy this jar together with the CorDapp
+        - by using the `--just-generate-db-migration` flag, the migration can be tested by inspecting the generated sql.
