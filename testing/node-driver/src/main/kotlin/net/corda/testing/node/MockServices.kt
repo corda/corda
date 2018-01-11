@@ -93,6 +93,7 @@ open class MockServices private constructor(
             props.setProperty("dataSource.url", config.getString("dataSourceProperties.dataSource.url"))
             props.setProperty("dataSource.user", config.getString("dataSourceProperties.dataSource.user"))
             props.setProperty("dataSource.password", config.getString("dataSourceProperties.dataSource.password"))
+            props["autoCommit"] = false
             return props
         }
 
