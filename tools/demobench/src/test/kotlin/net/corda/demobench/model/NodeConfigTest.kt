@@ -7,6 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.webserver.WebServerConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -44,7 +45,7 @@ class NodeConfigTest {
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
-        assertThat(fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001")
+        assertThat(fullConfig.dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] as String).contains("AUTO_SERVER_PORT=30001")
         assertTrue(fullConfig.useTestClock)
         assertFalse(fullConfig.detectPublicIp)
     }

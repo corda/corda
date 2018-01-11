@@ -65,6 +65,10 @@ class CordaPersistence(
         }
     }
 
+    object DataSourceConfigTag {
+        const val DATA_SOURCE_URL = "dataSource.url"
+    }
+
     /**
      * Creates an instance of [DatabaseTransaction], with the given transaction isolation level.
      */

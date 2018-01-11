@@ -1,12 +1,17 @@
 package net.corda.node.services.config
 
+import com.zaxxer.hikari.HikariConfig
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Paths
+import java.util.*
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NodeConfigurationImplTest {
@@ -27,8 +32,39 @@ class NodeConfigurationImplTest {
         assertFalse { configDebugOptions(true, DevModeOptions(true)).shouldCheckCheckpoints() }
     }
 
+    @Test
+    fun `check SQLServer unicode check`() {
+        val dataSourceProperties = Properties()
+        dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = "jdbc:sqlserver://localhost:10433;databaseName=perftesting;sendStringParametersAsUnicode=false"
+        assertEquals("jdbc:sqlserver://localhost:10433;databaseName=perftesting;sendStringParametersAsUnicode=false", testConfiguration(dataSourceProperties).dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL))
+
+        dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = "jdbc:sqlserver://localhost:10433;databaseName=perftesting"
+        assertEquals("jdbc:sqlserver://localhost:10433;databaseName=perftesting;sendStringParametersAsUnicode=false", testConfiguration(dataSourceProperties).dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL))
+
+        dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = "jdbc:sqlserver://localhost:10433;databaseName=perftesting;sendStringParametersAsUnicode=true"
+        assertEquals("jdbc:sqlserver://localhost:10433;databaseName=perftesting;sendStringParametersAsUnicode=true", testConfiguration(dataSourceProperties).dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL))
+
+        dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = "jdbc:h2:///some/dir/persistence"
+        assertEquals("jdbc:h2:///some/dir/persistence", testConfiguration(dataSourceProperties).dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL))
+
+        assertNull(testConfiguration(Properties()).dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL])
+    }
+
+    @Test
+    fun `create hikari data source config`() {
+        val dataSourceProperties = Properties()
+        dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = "jdbc:sqlserver://localhost:10433;databaseName=perftesting"
+        val testConf = testConfiguration(dataSourceProperties)
+        assertEquals("jdbc:sqlserver://localhost:10433;databaseName=perftesting;sendStringParametersAsUnicode=false", testConf.dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL))
+        HikariConfig(testConf.dataSourceProperties)
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?) : NodeConfiguration {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
+    }
+
+    private fun testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
+        return testConfiguration.copy(dataSourceProperties = dataSourceProperties)
     }
 
     private val testConfiguration = NodeConfigurationImpl(

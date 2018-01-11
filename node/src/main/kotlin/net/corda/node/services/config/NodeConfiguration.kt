@@ -9,6 +9,7 @@ import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
@@ -141,6 +142,12 @@ data class NodeConfigurationImpl(
         dataSourceProperties.set("autoCommit", false)
         if (dataSourceProperties.get("transactionIsolation") == null) {
             dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
+        }
+
+        // enforce that SQLServer does not get sent all strings as Unicode - hibernate handles this "cleverly"
+        val dataSourceUrl = dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL, "")
+        if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
+            dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = dataSourceUrl + ";sendStringParametersAsUnicode=false"
         }
     }
 }
