@@ -103,7 +103,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
     }
 }
 
-/**
+/*
  * Provide a representation of RPC permissions based on Apache Shiro permissions framework.
  * A permission represents a set of actions: for example, the set of all RPC invocations, or the set
  * of RPC invocations acting on a given class of Flows in input. A permission `implies` another one if
@@ -128,7 +128,7 @@ private class RPCPermission : DomainPermission {
     constructor() : super()
 }
 
-/**
+/*
  * A [org.apache.shiro.authz.permission.PermissionResolver] implementation for RPC permissions.
  * Provides a method to construct an [RPCPermission] instance from its string representation
  * in the form used by a Node admin.
