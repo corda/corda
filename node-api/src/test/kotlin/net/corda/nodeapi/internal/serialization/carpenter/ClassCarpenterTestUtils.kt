@@ -35,9 +35,16 @@ fun Schema.mangleNames(names: List<String>): Schema {
     return Schema(types = newTypes)
 }
 
+/**
+ * Custom implementation of a [SerializerFactory] where we need to give it a class carpenter
+ * rather than have it create its own
+ */
+class SerializerFactoryExternalCarpenter(override val classCarpenter: ClassCarpenter)
+    : SerializerFactory (classCarpenter.whitelist, classCarpenter.classloader)
+
 open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     var cc = ClassCarpenter(whitelist = whitelist)
-    var factory = SerializerFactory(AllWhitelist, cc.classloader)
+    var factory = SerializerFactoryExternalCarpenter(cc)
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
     fun testName(): String = Thread.currentThread().stackTrace[2].methodName

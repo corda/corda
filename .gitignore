@@ -88,6 +88,7 @@ crashlytics-build.properties
 
 # docs related
 docs/virtualenv/
+virtualenv/
 
 # bft-smart
 **/config/currentView
