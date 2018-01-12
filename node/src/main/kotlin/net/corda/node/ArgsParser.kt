@@ -44,6 +44,9 @@ class ArgsParser {
     private val justGenerateDatabaseMigrationArg = optionParser
             .accepts("just-generate-db-migration", "Generate the database migration in the specified output file, and then quit.")
             .withOptionalArg()
+    private val justCreateMigrationForCorDappArg = optionParser
+            .accepts("just-create-migration-cordapp", "Create migration files for a CorDapp")
+            .withRequiredArg()
     private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
     private val helpArg = optionParser.accepts("help").forHelp()
 
@@ -67,9 +70,10 @@ class ArgsParser {
             Pair(true, optionSet.valueOf(justGenerateDatabaseMigrationArg) ?: "migration${SimpleDateFormat("yyyyMMddHHmmss").format(Date())}.sql")
         else
             Pair(false, null)
+        val createMigrationForCorDapp: String? = optionSet.valueOf(justCreateMigrationForCorDappArg)
         val bootstrapRaftCluster = optionSet.has(bootstrapRaftClusterArg)
         return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion,
-                noLocalShell, sshdServer, justGenerateNodeInfo, justRunDbMigration, generateDatabaseMigrationToFile, bootstrapRaftCluster)
+                noLocalShell, sshdServer, justGenerateNodeInfo, justRunDbMigration, generateDatabaseMigrationToFile, bootstrapRaftCluster, createMigrationForCorDapp)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -87,7 +91,8 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val justGenerateNodeInfo: Boolean,
                           val justRunDbMigration: Boolean,
                           val generateDatabaseMigrationToFile: Pair<Boolean, String?>,
-                          val bootstrapRaftCluster: Boolean) {
+                          val bootstrapRaftCluster: Boolean,
+                          val justCreateMigrationForCorDapp: String?) {
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
         if (isRegistration) {

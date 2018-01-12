@@ -81,23 +81,28 @@ data class PersistentStateRef(
 interface StatePersistable
 
 private const val MIGRATION_PREFIX = "migration"
+private const val DEFAULT_MIGRATION_EXTENSION = "xml"
+private const val CHANGELOG_NAME = "changelog-master"
 private val possibleMigrationExtensions = listOf(".xml", ".sql", ".yml", ".json")
-fun getMigrationResource(schema: MappedSchema): String? {
 
+fun getMigrationResource(schema: MappedSchema): String? {
     val declaredMigration = schema.getMigrationResource()
 
     if (declaredMigration == null) {
-        // try to apply a naming convention
-        // SchemaName will be transformed from camel case to hyphen
-        // then ".changelog-master" plus one of the supported extensions will be added
-        val name: String = schema::class.simpleName!!
-        val fileName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name)
-        val resource = "${MIGRATION_PREFIX}/${fileName}.changelog-master"
-        val foundResource = possibleMigrationExtensions.map { "${resource}${it}" }.firstOrNull {
+        // try to apply the naming convention and find the migration file in the classpath
+        val resource = migrationResourceNameForSchema(schema)
+        return possibleMigrationExtensions.map { "${resource}${it}" }.firstOrNull {
             Thread.currentThread().contextClassLoader.getResource(it) != null
         }
-        return foundResource
-    } else {
-        return "${MIGRATION_PREFIX}/${declaredMigration}.xml"
     }
+
+    return "${MIGRATION_PREFIX}/${declaredMigration}.${DEFAULT_MIGRATION_EXTENSION}"
+}
+
+// SchemaName will be transformed from camel case to lower_hyphen
+// then add ".changelog-master"
+fun migrationResourceNameForSchema(schema: MappedSchema): String {
+    val name: String = schema::class.simpleName!!
+    val fileName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name)
+    return "${MIGRATION_PREFIX}/${fileName}.${CHANGELOG_NAME}"
 }
