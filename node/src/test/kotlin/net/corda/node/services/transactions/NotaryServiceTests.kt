@@ -101,7 +101,7 @@ class NotaryServiceTests {
     }
 
     @Test
-    fun `should sign identical transaction multiple times (signing is idempotent)`() {
+    fun `should sign identical transaction multiple times (notarisation is idempotent)`() {
         val stx = run {
             val inputState = issueState(aliceServices, alice)
             val tx = TransactionBuilder(notary)
@@ -117,6 +117,9 @@ class NotaryServiceTests {
 
         mockNet.runNetwork()
 
+        // Note that the notary will only return identical signatures when using deterministic signature
+        // schemes (e.g. EdDSA) and when deterministic metadata is attached (no timestamps or nonces).
+        // We only really care that both signatures are over the same transaction and by the same notary.
         val sig1 = f1.resultFuture.getOrThrow().single()
         assertEquals(sig1.by, notary.owningKey)
         assertTrue(sig1.isValid(stx.id))
