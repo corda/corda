@@ -173,6 +173,7 @@ class ArtemisMessagingTests {
                     MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                     server,
                     identity.public,
+                    null,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     maxMessageSize = maxMessageSize).apply {
