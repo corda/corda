@@ -3,8 +3,6 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
@@ -844,7 +842,7 @@ class ConfigurationException(message: String) : CordaException(message)
  */
 internal class NetworkMapCacheEmptyException : Exception()
 
-fun configureDatabase(dataSourceProperties: Properties,
+fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       identityService: IdentityService,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
@@ -853,8 +851,7 @@ fun configureDatabase(dataSourceProperties: Properties,
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
-    val config = HikariConfig(dataSourceProperties)
-    val dataSource = HikariDataSource(config)
+    val dataSource = DataSourceFactory.createDataSource(hikariProperties)
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }
