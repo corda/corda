@@ -48,7 +48,7 @@ data class Parameters(val dataSourceProperties: Properties,
         val DEFAULT_KEY_FILE_PATH: Path? = null //Paths.get("/Users/michalkit/WinDev1706Eval/Shared/TEST4.key")
         val DEFAULT_KEY_FILE_PASSWORD: String? = null
         val DEFAULT_AUTO_USERNAME: String? = null
-        val DEFAULT_NETWORK_MAP_CERTIFICATE_NAME = "cordaintermediateca_nm"
+        val DEFAULT_NETWORK_MAP_CERTIFICATE_NAME = "cordaintermediateca_nm" // TODO Change the value to "cordanetworkmap" since this is not a CA
         val DEFAULT_SIGN_INTERVAL = 600L // in seconds (10 minutes)
     }
 }

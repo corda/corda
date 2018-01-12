@@ -134,8 +134,8 @@ networkMapConfig {
 
 ### 1. Create keystore for local signer
 
-   If local signer is enabled, the server will look for keystores in the certificate folder on start up.  
-   The keystores can be created using `--mode` flag.
+   If local signer is enabled, the server will look for key stores in the certificate folder on start up.  
+   The key stores can be created using `--mode` flag.
    ```
    java -jar doorman-<version>.jar --mode ROOT_KEYGEN
    ```
@@ -180,8 +180,8 @@ networkMapConfig {
    Save the parameters to `network-parameters.conf`
 
 ### 5. Load initial network parameters file for network map service
-A network parameters file is required to start the network map service for the first time. The initial network parameters file can be loaded using the `--update-network-parameter` flag.
+A network parameters file is required to start the network map service for the first time. The initial network parameters file can be loaded using the `--update-network-parameters` flag.
 We can now restart the network management server with both doorman and network map service.  
 ```
-java -jar doorman-<version>.jar --update-network-parameter network-parameters.conf
+java -jar doorman-<version>.jar --update-network-parameters network-parameters.conf
 ```

@@ -4,16 +4,15 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.signer.Signer
-import com.r3.corda.networkmanage.common.utils.withCert
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
+import com.r3.corda.networkmanage.hsm.utils.X509Utilities
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getAndInitializeKeyStore
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities.signData
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.verify
+import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
-import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
-import java.security.KeyPair
 import java.security.PrivateKey
+import java.security.Signature
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -24,6 +23,7 @@ import java.util.concurrent.TimeUnit
  * Encapsulates logic for periodic network map signing execution.
  * It uses HSM as the signing entity with keys and certificates specified at the construction time.
  */
+// TODO Rename this to HsmSigner
 class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
                           private val caCertificateKeyName: String,
                           private val caPrivateKeyPass: String,
@@ -40,6 +40,7 @@ class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
     private val networkMapSigner = NetworkMapSigner(networkMapStorage, this)
     private lateinit var scheduledExecutor: ScheduledExecutorService
 
+    // TODO This doesn't belong in this class
     fun start(): HsmNetworkMapSigner {
         val signingPeriodMillis = signingPeriod.toMillis()
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
@@ -60,14 +61,18 @@ class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
     /**
      * Signs given data using [CryptoServerJCE.CryptoServerProvider], which connects to the underlying HSM.
      */
-    override fun sign(data: ByteArray): DigitalSignatureWithCert {
+    override fun signBytes(data: ByteArray): DigitalSignatureWithCert {
         return authenticator.connectAndAuthenticate { provider, _ ->
             val keyStore = getAndInitializeKeyStore(provider)
             val caCertificateChain = keyStore.getCertificateChain(caCertificateKeyName)
             val caKey = keyStore.getKey(caCertificateKeyName, caPrivateKeyPass.toCharArray()) as PrivateKey
-            val signature = signData(data, KeyPair(caCertificateChain.first().publicKey, caKey), provider)
-            verify(data, signature, caCertificateChain.first().publicKey)
-            signature.withCert(caCertificateChain[0] as X509Certificate)
+            val signature = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM, provider).run {
+                initSign(caKey)
+                update(data)
+                sign()
+            }
+            verify(data, signature, caCertificateChain[0].publicKey)
+            DigitalSignatureWithCert(caCertificateChain[0] as X509Certificate, signature)
         }
     }
 }

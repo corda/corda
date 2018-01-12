@@ -2,11 +2,10 @@ package com.r3.corda.networkmanage.doorman.signer
 
 import com.r3.corda.networkmanage.common.signer.Signer
 import com.r3.corda.networkmanage.common.utils.buildCertPath
-import com.r3.corda.networkmanage.common.utils.withCert
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.Crypto
+import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -21,7 +20,9 @@ import javax.security.auth.x500.X500Principal
  *  The [LocalSigner] class signs [PKCS10CertificationRequest] using provided CA key pair and certificate path.
  *  This is intended to be used in testing environment where hardware signing module is not available.
  */
-class LocalSigner(private val caKeyPair: KeyPair, private val caCertPath: Array<X509Certificate>) : Signer {
+//TODO Use a list instead of array
+class LocalSigner(private val signingKeyPair: KeyPair, private val signingCertPath: Array<X509Certificate>) : Signer {
+    // TODO This doesn't belong in this class
     fun createSignedClientCertificate(certificationRequest: PKCS10CertificationRequest): CertPath {
         // The sub certs issued by the client must satisfy this directory name (or legal name in Corda) constraints, sub certs' directory name must be within client CA's name's subtree,
         // please see [sun.security.x509.X500Name.isWithinSubtree()] for more information.
@@ -33,15 +34,15 @@ class LocalSigner(private val caKeyPair: KeyPair, private val caCertPath: Array<
                 arrayOf())
         val nodeCaCert = X509Utilities.createCertificate(
                 CertificateType.NODE_CA,
-                caCertPath[0],
-                caKeyPair,
+                signingCertPath[0],
+                signingKeyPair,
                 X500Principal(request.subject.encoded),
                 request.publicKey,
                 nameConstraints = nameConstraints)
-        return buildCertPath(nodeCaCert, *caCertPath)
+        return buildCertPath(nodeCaCert, *signingCertPath)
     }
 
-    override fun sign(data: ByteArray): DigitalSignatureWithCert {
-        return caKeyPair.sign(data).withCert(caCertPath.first())
+    override fun signBytes(data: ByteArray): DigitalSignatureWithCert {
+        return DigitalSignatureWithCert(signingCertPath[0], Crypto.doSign(signingKeyPair.private, data))
     }
 }

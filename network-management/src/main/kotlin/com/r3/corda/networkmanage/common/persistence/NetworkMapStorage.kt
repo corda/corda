@@ -1,9 +1,9 @@
 package com.r3.corda.networkmanage.common.persistence
 
+import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
+import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.SignedNetworkMap
 
 /**
  * Data access object interface for NetworkMap persistence layer
@@ -34,7 +34,7 @@ interface NetworkMapStorage {
      * Return the signed network parameters object which matches the given hash. The hash is that of the underlying
      * [NetworkParameters] object and not the `SignedData<NetworkParameters>` object that's returned.
      */
-    fun getSignedNetworkParameters(hash: SecureHash): SignedData<NetworkParameters>?
+    fun getSignedNetworkParameters(hash: SecureHash): SignedNetworkParameters?
 
     /**
      * Retrieve network map parameters.
