@@ -19,17 +19,17 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.singleIdentity
 import net.corda.testing.node.startFlow
+import net.corda.testing.singleIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class NotaryServiceTests {
     private lateinit var mockNet: MockNetwork
@@ -100,7 +100,6 @@ class NotaryServiceTests {
         assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
-    @Ignore("Only applies to deterministic signature schemes (e.g. EdDSA) and when deterministic metadata is attached (no timestamps or nonces)")
     @Test
     fun `should sign identical transaction multiple times (signing is idempotent)`() {
         val stx = run {
@@ -118,7 +117,13 @@ class NotaryServiceTests {
 
         mockNet.runNetwork()
 
-        assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
+        val sig1 = f1.resultFuture.getOrThrow().single()
+        assertEquals(sig1.by, notary.owningKey)
+        assertTrue(sig1.isValid(stx.id))
+
+        val sig2 = f2.resultFuture.getOrThrow().single()
+        assertEquals(sig2.by, notary.owningKey)
+        assertTrue(sig2.isValid(stx.id))
     }
 
     @Test
