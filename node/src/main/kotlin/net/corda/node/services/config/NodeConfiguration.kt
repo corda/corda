@@ -14,7 +14,7 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-val Int.MB: Long get() = (this as Long) * 1024 * 1024
+val Long.MB: Long get() = this * 1024 * 1024
 
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
@@ -49,11 +49,11 @@ interface NodeConfiguration : NodeSSLConfiguration {
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
-        val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
+        val defaultTransactionCacheSize: Long = 8L.MB + getAdditionalCacheMemory()
 
         // add 5% of any heapsize over 300MB to the default transaction cache size
         private fun getAdditionalCacheMemory(): Long {
-            return Math.max((Runtime.getRuntime().maxMemory() - 300.MB) / 20, 0)
+            return Math.max((Runtime.getRuntime().maxMemory() - 300L.MB) / 20, 0)
         }
     }
 }
