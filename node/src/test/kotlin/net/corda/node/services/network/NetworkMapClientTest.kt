@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
@@ -22,7 +21,6 @@ import org.junit.Test
 import java.io.IOException
 import java.net.URL
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class NetworkMapClientTest {
     @Rule
@@ -83,8 +81,8 @@ class NetworkMapClientTest {
     @Test
     fun `download NetworkParameter correctly`() {
         // The test server returns same network parameter for any hash.
-        val networkParameter = networkMapClient.getNetworkParameter(SecureHash.randomSHA256())?.verified()
-        assertNotNull(networkParameter)
+        val parametersHash = server.networkParameters.serialize().hash
+        val networkParameter = networkMapClient.getNetworkParameters(parametersHash).verified()
         assertEquals(server.networkParameters, networkParameter)
     }
 
