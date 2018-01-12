@@ -8,8 +8,8 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.node.User
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat

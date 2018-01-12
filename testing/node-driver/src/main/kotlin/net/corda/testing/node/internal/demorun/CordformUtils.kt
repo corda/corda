@@ -6,8 +6,8 @@ import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.testing.node.User
 
 fun CordformDefinition.node(configure: CordformNode.() -> Unit) {
     addNode { cordformNode -> cordformNode.configure() }
@@ -16,7 +16,7 @@ fun CordformDefinition.node(configure: CordformNode.() -> Unit) {
 fun CordformNode.name(name: CordaX500Name) = name(name.toString())
 
 fun CordformNode.rpcUsers(vararg users: User) {
-    rpcUsers = users.map { it.toMap() }
+    rpcUsers = users.map { it.toConfig().root().unwrapped() }
 }
 
 fun CordformNode.notary(notaryConfig: NotaryConfig) {

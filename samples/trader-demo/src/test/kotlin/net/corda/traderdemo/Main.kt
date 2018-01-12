@@ -4,10 +4,10 @@ import net.corda.core.internal.div
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.BOC_NAME
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.DUMMY_BANK_B_NAME
+import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow

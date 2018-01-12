@@ -31,7 +31,6 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -49,6 +48,7 @@ import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.setGlobalSerialization
@@ -74,6 +74,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import net.corda.nodeapi.internal.config.User as InternalUser
 
 class DriverDSLImpl(
         val portAllocation: PortAllocation,
@@ -127,8 +128,7 @@ class DriverDSLImpl(
             val jarPattern = jarNamePattern.toRegex()
             val jarFileUrl = urls.first { jarPattern.matches(it.path) }
             Paths.get(jarFileUrl.toURI()).toString()
-        }
-        catch(e: Exception) {
+        } catch (e: Exception) {
             log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
             throw e
         }
@@ -659,7 +659,7 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
-        private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toConfig().root().unwrapped())
+        private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
@@ -722,7 +722,7 @@ class DriverDSLImpl(
                     "name" to config.corda.myLegalName,
                     "visualvm.display.name" to "corda-${config.corda.myLegalName}",
                     "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
-                    "log4j2.debug" to if(debugPort != null) "true" else "false"
+                    "log4j2.debug" to if (debugPort != null) "true" else "false"
             )
 
             if (cordappPackages.isNotEmpty()) {
