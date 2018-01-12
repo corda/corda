@@ -144,7 +144,7 @@ expect a String. This flow is still able to communicate with parties that are ru
 the older flow.
 
 How do I deal with interface changes to inlined subflows?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Here is an example of an in-lined subflow:
 
 .. sourcecode:: kotlin
@@ -346,7 +346,7 @@ Although not strictly related to versioning, AMQP serialisation dictates that we
 Writing enums
 ~~~~~~~~~~~~~
 Elements cannot be added to enums in a new version of the code. Hence, enums are only a good fit for genuinely static
-data that will never change (e.g. days of the week). A ``Buy` or ``Sell`` flag is another. However, something like
+data that will never change (e.g. days of the week). A ``Buy`` or ``Sell`` flag is another. However, something like
 ``Trade Type`` or ``Currency Code`` will likely change. For those, it is preferable to choose another representation,
 such as a string.
 
