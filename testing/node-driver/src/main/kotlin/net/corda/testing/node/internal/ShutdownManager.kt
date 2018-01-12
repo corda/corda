@@ -41,14 +41,14 @@ class ShutdownManager(private val executorService: ExecutorService) {
             }
         }
 
-        val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(1.seconds) } }
+        val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(60.seconds) } }
         shutdowns.reversed().forEach {
             when (it) {
                 is Try.Success ->
                     try {
                         it.value()
                     } catch (t: Throwable) {
-                        log.warn("Exception while shutting down", t)
+                        log.warn("Exception while calling a shutdown action, this might create resource leaks", t)
                     }
                 is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
             }
