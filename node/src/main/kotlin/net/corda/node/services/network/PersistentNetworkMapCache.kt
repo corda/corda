@@ -22,6 +22,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -130,7 +131,7 @@ open class PersistentNetworkMapCache(
     override fun isValidatingNotary(party: Party): Boolean = party in validatingNotaries
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val nodes = database.transaction { queryByIdentityKey(session, party.owningKey) }
+        val nodes = getNodesByLegalIdentityKey(party.owningKey)
         if (nodes.size == 1 && nodes[0].isLegalIdentity(party)) {
             return PartyInfo.SingleNode(party, nodes[0].addresses)
         }
@@ -146,12 +147,15 @@ open class PersistentNetworkMapCache(
 
     override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = getNodesByLegalName(name).firstOrNull()
     override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(session, name) }
-    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
-            database.transaction { queryByIdentityKey(session, identityKey) }
+    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]
+
+    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024, 8, { key -> database.transaction { queryByIdentityKey(session, key) } })
 
     override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address) }
 
-    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = database.transaction { queryIdentityByLegalName(session, name) }
+    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = identityByLegalNameCache.get(name).orElse(null)
+
+    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(1024, 8, { name -> Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) }) })
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
@@ -231,6 +235,8 @@ open class PersistentNetworkMapCache(
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
+        // invalidate cache first - this node info is to be modified, so the cache entry can't be trusted anymore
+        invalidateCaches(nodeInfo)
         // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
         val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
         val nodeInfoEntry = generateMappedObject(nodeInfo)
@@ -241,6 +247,8 @@ open class PersistentNetworkMapCache(
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
+        // invalidate cache first - this node info is to be removed, so the cache entry can't be trusted anymore
+        invalidateCaches(nodeInfo)
         val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).single()
         session.remove(info)
     }
@@ -303,7 +311,19 @@ open class PersistentNetworkMapCache(
         )
     }
 
+    /** We are caching data we get from the db - if we modify the db, they need to be cleared out*/
+    private fun invalidateCaches(nodeInfo: NodeInfo) {
+        nodesByKeyCache.invalidateAll(nodeInfo.legalIdentities.map { it.owningKey })
+        identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
+    }
+
+    private fun invalidateCaches() {
+        nodesByKeyCache.invalidateAll()
+        identityByLegalNameCache.invalidateAll()
+    }
+
     override fun clearNetworkMapCache() {
+        invalidateCaches()
         database.transaction {
             val result = getAllInfos(session)
             for (nodeInfo in result) session.remove(nodeInfo)
