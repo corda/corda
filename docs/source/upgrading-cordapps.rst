@@ -32,7 +32,7 @@ This document will consider the following types of versioning:
 
 Flow versioning
 ---------------
-Any flow that initiaties other flows must be annotated with the ``@InitiatingFlow`` annotation, which is defined as:
+Any flow that initiates other flows must be annotated with the ``@InitiatingFlow`` annotation, which is defined as:
 
 .. sourcecode:: kotlin
 
@@ -108,7 +108,7 @@ Assumptions
 Process
 ^^^^^^^
 
-1. Update the flow and test the changes. Uncrement the flow version number in the ``InitiatingFlow`` annotation
+1. Update the flow and test the changes. Increment the flow version number in the ``InitiatingFlow`` annotation
 2. Ensure that all versions of the existing flow have finished running and there are no pending ``SchedulableFlows`` on
    any of the nodes on the business network
 3. Shut down all the nodes
@@ -143,7 +143,7 @@ This code shows a flow that in its first version expected to receive an Int, but
 expect a String. This flow is still able to communicate with parties that are running the older CorDapp containing
 the older flow.
 
-How do I deal with interface changes to inlined sub flows?
+How do I deal with interface changes to inlined subflows?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Here is an example of an in-lined subflow:
 
@@ -163,11 +163,11 @@ Here is an example of an in-lined subflow:
         // Omitted.
     }
 
-    // Note: No annotations. This is used as an inlined sub-flow.
+    // Note: No annotations. This is used as an inlined subflow.
     class FlowB(val recipient: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val message = "I'm an inlined sub-flow, so I inherit the @InitiatingFlow's session ID and type."
+            val message = "I'm an inlined subflow, so I inherit the @InitiatingFlow's session ID and type."
             initiateFlow(recipient).send(message)
         }
     }
@@ -202,7 +202,7 @@ before the updated flow classes are added to the node's plugins folder.
 Flows that don't create sessions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Flows which are not an ``InitiatingFlow`` or ``InitiatedBy`` flow, or inlined subflows that are not called from an
-``InitiatingFlow`` or ``InitiatedBy`` flow , can be updated without consideration of backwards-compatibility. Flows of
+``InitiatingFlow`` or ``InitiatedBy`` flow, can be updated without consideration of backwards-compatibility. Flows of
 this type include utility flows for querying the vault and flows for reaching out to external systems.
 
 Contract and state versioning
@@ -286,7 +286,7 @@ Capabilities of the contract upgrade flows
 
 Writing new states and contracts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* If a property is removed from a state, any references of it must be removed from the contract code. Otherwise, you
+* If a property is removed from a state, any references to it must be removed from the contract code. Otherwise, you
   will not be able to compile your contract code. It is generally not advisable to remove properties from states. Mark
   them as deprecated instead
 * When adding properties to a state, consider how the new properties will affect transaction validation involving this
@@ -309,8 +309,8 @@ Permissioning
 Logistics
 ^^^^^^^^^
 * All nodes need to run the contract upgrade authorisation flow
-* Only one node should to run the contract upgrade initiation flow. If multiple nodes run it for the same ``StateRef``,
-  a double-spend will occur for all but the first completed upgrade
+* Only one node should run the contract upgrade initiation flow. If multiple nodes run it for the same ``StateRef``, a
+  double-spend will occur for all but the first completed upgrade
 * The supplied upgrade flows upgrade one state object at a time
 
 Serialisation
