@@ -25,6 +25,7 @@ import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
+import java.io.Closeable
 import javax.security.auth.login.FailedLoginException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -41,10 +42,6 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
 
     init {
         manager = buildImpl(config)
-    }
-
-    override fun close() {
-        manager.destroy()
     }
 
     @Throws(FailedLoginException::class)
@@ -67,6 +64,10 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                     subjectId = SimplePrincipalCollection(principal, id.value),
                     manager = manager)
 
+    override fun close() {
+        manager.realms.filterIsInstance<Closeable>().forEach { it.close() }
+        manager.destroy()
+    }
 
     companion object {
 
@@ -240,13 +241,17 @@ private class InMemoryRealm(users: List<User>,
             authorizationInfoByUser[principals.primaryPrincipal as String]
 }
 
-private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm() {
+private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm(), Closeable {
 
     init {
         credentialsMatcher = buildCredentialMatcher(config.passwordEncryption)
         setPermissionsLookupEnabled(true)
         dataSource = HikariDataSource(HikariConfig(config.connection!!))
         permissionResolver = RPCPermissionResolver
+    }
+
+    override fun close() {
+        (dataSource as? Closeable)?.close()
     }
 }
 
