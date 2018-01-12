@@ -26,7 +26,6 @@ import kotlin.test.fail
 
 class SSHServerTest {
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
@@ -48,7 +47,6 @@ class SSHServerTest {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
@@ -68,8 +66,6 @@ class SSHServerTest {
         }
     }
 
-
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
@@ -93,7 +89,6 @@ class SSHServerTest {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
@@ -124,7 +119,6 @@ class SSHServerTest {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
