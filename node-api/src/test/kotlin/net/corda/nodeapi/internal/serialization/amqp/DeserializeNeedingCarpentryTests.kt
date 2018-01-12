@@ -27,7 +27,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         private const val VERBOSE = false
     }
 
-    private val sf1 = testDefaultFactory()
+    private val sf1 = testDefaultFactoryNoEvolution()
 
     // Deserialize with whitelisting on to check that `CordaSerializable` annotation present.
     private val sf2 = testDefaultFactoryWithWhitelist()

@@ -22,7 +22,7 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
     @Entity
     @Table(name = "dummy_deal_states")
     class PersistentDummyDealState(
-
+            /** parent attributes */
             @ElementCollection
             @Column(name = "participants")
             @CollectionTable(name = "dummy_deal_states_participants", joinColumns = arrayOf(

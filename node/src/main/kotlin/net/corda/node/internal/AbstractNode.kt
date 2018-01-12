@@ -68,6 +68,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
@@ -223,7 +224,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        retrieveNetworkParameters()
+        retrieveNetworkParameters(identityService.trustRoot)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
@@ -665,23 +666,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
-    private fun retrieveNetworkParameters() {
-        val networkParamsFile = configuration.baseDirectory.list { paths ->
-            paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().orElse(null)
-        }
+    private fun retrieveNetworkParameters(trustRoot: X509Certificate) {
+        val networkParamsFile = configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME
 
-        networkParameters = if (networkParamsFile != null) {
-            networkParamsFile.readAll().deserialize<SignedData<NetworkParameters>>().verified()
+        networkParameters = if (networkParamsFile.exists()) {
+            networkParamsFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
         } else {
             log.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
             val networkMapClient = checkNotNull(networkMapClient) {
                 "Node hasn't been configured to connect to a network map from which to get the network parameters"
             }
             val (networkMap, _) = networkMapClient.getNetworkMap()
-            val signedParams = checkNotNull(networkMapClient.getNetworkParameter(networkMap.networkParameterHash)) {
-                "Failed loading network parameters from network map server"
-            }
-            val verifiedParams = signedParams.verified()
+            val signedParams = networkMapClient.getNetworkParameters(networkMap.networkParameterHash)
+            val verifiedParams = signedParams.verifiedNetworkMapCert(trustRoot)
             signedParams.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
             verifiedParams
         }
