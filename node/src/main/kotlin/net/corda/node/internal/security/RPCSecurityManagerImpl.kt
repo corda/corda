@@ -65,7 +65,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                     manager = manager)
 
     override fun close() {
-        manager.realms.filterIsInstance<Closeable>().forEach { it.close() }
+        manager.realms?.filterIsInstance<Closeable>()?.forEach { it.close() }
         manager.destroy()
     }
 
