@@ -72,8 +72,6 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
             val actTx = tx.get()
             return actTx.second.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.first.size
         }
-
-
     }
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheSizeBytes))
@@ -98,6 +96,5 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
 
     @VisibleForTesting
     val transactions: Iterable<SignedTransaction>
-        get()
-        = txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList()
+        get() = txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList()
 }
