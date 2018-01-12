@@ -1,5 +1,5 @@
-Upgrading a CorDapp to a new version
-====================================
+Upgrading a CorDapp to a new platform version
+=============================================
 
 These notes provide instructions for upgrading your CorDapps from previous versions, starting with the upgrade from our
 first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelog_v1>`.
