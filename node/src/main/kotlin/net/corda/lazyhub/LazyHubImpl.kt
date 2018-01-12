@@ -12,7 +12,26 @@ import java.util.stream.Stream
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
-/** Create a new [MutableLazyHub] with no parent. */
+/**
+ * Create a new [MutableLazyHub] with no parent.
+ *
+ * Basic usage:
+ * * Add classes/factories/objects to the LazyHub using [MutableLazyHub.impl], [MutableLazyHub.factory] and [MutableLazyHub.obj]
+ * * Then ask it for a type using [LazyHub.get] and it will create (and cache) the object graph for you
+ * * You can use [LazyHub.getAll] to get all objects of a type, e.g. by convention pass in [Unit] to run side-effects
+ *
+ * How it works:
+ * * [LazyHub.get] finds the unique registered class/factory/object for the given type (or fails)
+ * * If it's an object, that object is returned
+ * * If it's a factory, it is executed with args obtained recursively from the same LazyHub
+ * * If it's a class, it is instantiated using a public constructor in the same way as a factory
+ *     * Of the public constructors that can be satisfied, the one that consumes the most args is chosen
+ *
+ * Advanced usage:
+ * * Use an array parameter to get one-or-more args of the component type, make it nullable for zero-or-more
+ * * If a LazyHub can't satisfy a type (or array param) and has a parent, it asks the parent
+ *     * Typically the root LazyHub in the hierarchy will manage all singletons of the process
+ */
 fun lazyHub(): MutableLazyHub = LazyHubImpl(null)
 
 private class SimpleProvider<T : Any>(override val obj: T) : Provider<T> {
