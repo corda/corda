@@ -34,12 +34,14 @@ Standalone database
 -------------------
 
 To run a node against a remote database modify node JDBC connection properties in `dataSourceProperties` entry
-and Hibernate properties in `database` entry - see `:ref:`dataSourceProperties`.
+and Hibernate properties in `database` entry - see :ref:`Node configuration <database_properties_ref>`.
+
+.. _sql_server_ref:
 
 SQL Azure and SQL Server
 ````````````````````````
 Corda supports SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8).
-The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'readCommitted'.
+The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'READ_COMMITTED'.
 The property ``database.schema`` is optional.
 Corda ships with Microsoft JDBC Driver 6.2 for SQLServer out-of-the-box.
 
@@ -47,36 +49,40 @@ Example node configuration for SQL Azure:
 
 .. sourcecode:: none
 
-dataSourceProperties {
-    dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
-    dataSourceProperties.dataSource.url = "jdbc:sqlserver://[DATABASE_SERVER].database.windows.net:1433;databaseName=[DATABASE];
-        encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
-    dataSourceProperties.dataSource.user = [USER]
-    dataSourceProperties.dataSource.password = [PASSWORD]
-}
-database {
-    transactionIsolationLevel = "readCommitted"
-    schema = [SCHEMA]
-}
+    dataSourceProperties {
+        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+        dataSourceProperties.dataSource.url = "jdbc:sqlserver://[DATABASE_SERVER].database.windows.net:1433;databaseName=[DATABASE];
+            encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+        dataSourceProperties.dataSource.user = [USER]
+        dataSourceProperties.dataSource.password = [PASSWORD]
+    }
+    database {
+        transactionIsolationLevel = READ_COMMITTED
+        schema = [SCHEMA]
+    }
+
+.. _postgres_ref:
 
 PostgreSQL
 ````````````````````````
-Corda supports PostgreSQL 9.6 database.
-The property ``database.schema`` is optional. The value of ``database.schema`` is automatically wrapped in double quotes
-to preserve case-sensitivity (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`).
+
+Corda supports PostgreSQL 9.6 database preliminarily.
+The property ``database.schema`` is optional. Currently only lowercase value is supported,
+please ensure your database setup uses lowercase schema names (Corda sends an unquoted schema name
+and PostgresSQL interprets the value as a lowercase one e.g. `AliceCorp` becomes `alicecorp`).
 Corda ships with PostgreSQL JDBC Driver 42.1.4 out-of-the-box.
 
 Example node configuration for PostgreSQL:
 
 .. sourcecode:: none
 
-dataSourceProperties = {
-    dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
-    dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/postgres"
-    dataSource.user = [USER]
-    dataSource.password = [PASSWORD]
-}
-database = {
-    transactionIsolationLevel = READ_COMMITTED
-    schema = [SCHEMA]
-}
+    dataSourceProperties = {
+        dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
+        dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/postgres"
+        dataSource.user = [USER]
+        dataSource.password = [PASSWORD]
+    }
+    database = {
+        transactionIsolationLevel = READ_COMMITTED
+        schema = [SCHEMA]
+    }

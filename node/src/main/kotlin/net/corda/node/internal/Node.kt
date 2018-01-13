@@ -265,6 +265,9 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
+        else if (databaseUrl != null) {
+            printBasicNodeInfo("Database connection url is", databaseUrl)
+        }
         return super.initialiseDatabasePersistence(schemaService, identityService, insideTransaction)
     }
 

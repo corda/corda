@@ -1,6 +1,8 @@
 Object serialization
 ====================
 
+.. contents::
+
 What is serialization (and deserialization)?
 --------------------------------------------
 
@@ -44,6 +46,8 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
    likely.
 
+.. _amqp_ref:
+
 AMQP
 ====
 
@@ -76,7 +80,7 @@ Finally, for the checkpointing of flows Corda will continue to use the existing 
 
 This separation of serialization schemes into different contexts allows us to use the most suitable framework for that context rather than
 attempting to force a one size fits all approach. Where ``Kryo`` is more suited to the serialization of a programs stack frames, being more flexible
-than our AMQP framework in what it can construct and serialize, that flexibility makes it exceptionally difficult to make secure. Conversly
+than our AMQP framework in what it can construct and serialize, that flexibility makes it exceptionally difficult to make secure. Conversely
 our AMQP framework allows us to concentrate on a robust a secure framework that can be reasoned about thus made safer with far fewer unforeseen
 security holes.
 
@@ -218,6 +222,8 @@ checked exceptions, or ``CordaRuntimeException``, for unchecked exceptions.  Any
 not conform to ``CordaThrowable`` will be converted to a ``CordaRuntimeException`` with the original exception type
 and other properties retained within it.
 
+.. _amqp_custom_types_ref:
+
 Custom Types
 ------------
 
@@ -282,22 +288,6 @@ serialised form
 
         val e2 = e.serialize().deserialize() // e2.c will be 20, not 100!!!
 
-.. warning:: Private properties in Kotlin classes render the class unserializable *unless* a public
-    getter is manually defined. For example:
-
-    .. container:: codeset
-
-        .. sourcecode:: kotlin
-
-            data class C(val a: Int, private val b: Int) {
-                // Without this C cannot be serialized
-                public fun getB() = b
-            }
-
-    .. note:: This is particularly relevant as IDE's can often point out where they believe a
-        property can be made private without knowing this can break Corda serialization. Should
-        this happen then a run time warning will be generated when the class fails to serialize
-
 Setter Instantiation
 ''''''''''''''''''''
 
@@ -329,6 +319,75 @@ For example:
             public void setB(int b) { this.b = b; }
             public void setC(int c) { this.c = c; }
         }
+
+Inaccessible Private Properties
+```````````````````````````````
+
+Whilst the Corda AMQP serialization framework supports private object properties without publicly
+accessible getter methods this development idiom is strongly discouraged.
+
+For example.
+
+    .. container:: codeset
+
+        Kotlin:
+
+        .. sourcecode:: kotlin
+
+            data class C(val a: Int, private val b: Int)
+
+        Java:
+
+        .. sourcecode:: Java
+
+            class C {
+                public Integer a;
+                private Integer b;
+
+                C(Integer a, Integer b) {
+                    this.a = a;
+                    this.b = b;
+                }
+            }
+
+When designing stateful objects is should be remembered that they are not, despite appearances, traditional
+programmatic constructs. They are signed over, transformed, serialised, and relationally mapped. As such,
+all elements should be publicly accessible by design
+
+.. warning:: IDEs will indiciate erroneously that properties can be given something other than public
+    visibility. Ignore this as whilst it will work, as discussed above there are many reasons why this isn't
+    a good idea and those are beyond the scope of the IDEs inference rules
+
+Providing a public getter, as per the following example, is acceptable
+
+    .. container:: codeset
+
+        Kotlin:
+
+        .. sourcecode:: kotlin
+
+            data class C(val a: Int, private val b: Int) {
+                public fun getB() = b
+            }
+
+        Java:
+
+        .. sourcecode:: Java
+
+            class C {
+                public Integer a;
+                private Integer b;
+
+                C(Integer a, Integer b) {
+                    this.a = a;
+                    this.b = b;
+                }
+
+                public Integer getB() {
+                    return b;
+                }
+            }
+
 
 Enums
 `````

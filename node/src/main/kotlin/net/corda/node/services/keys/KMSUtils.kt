@@ -36,13 +36,8 @@ fun freshCertificate(identityService: IdentityServiceInternal,
     require(issuerRole == CertRole.LEGAL_IDENTITY) { "Confidential identities can only be issued from well known identities, provided issuer ${issuer.name} has role $issuerRole" }
     val issuerCert = issuer.certificate
     val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days, issuerCert)
-    val ourCertificate = X509Utilities.createCertificate(
-            CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
-            issuerCert.subjectX500Principal,
-            issuerSigner,
-            issuer.name.x500Principal,
-            subjectPublicKey,
-            window)
+    val ourCertificate = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_LEGAL_IDENTITY, issuerCert.subjectX500Principal,
+            issuerSigner, issuer.name.x500Principal, subjectPublicKey, window)
     val ourCertPath = X509CertificateFactory().generateCertPath(listOf(ourCertificate) + issuer.certPath.certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
     identityService.justVerifyAndRegisterIdentity(anonymisedIdentity)

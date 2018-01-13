@@ -64,3 +64,13 @@ To enable remote debugging of the node, run the following from the terminal wind
 ``java -Dcapsule.jvm.args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" -jar corda.jar``
 
 This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
+
+Starting a node with JMX monitoring enabled
+-------------------------------------------
+To enable export of JMX metrics over HTTP via `Jolokia <https://jolokia.org/>`_, run the following from the terminal window:
+
+``java -Dcapsule.jvm.args="-javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7005" -jar corda.jar``
+
+This command line will start the node with JMX metrics accessible via HTTP on port 7005.
+
+See :ref:`Monitoring your node <jolokia_ref>` for further details.

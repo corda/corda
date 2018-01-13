@@ -145,6 +145,8 @@ which is then referenced within a custom flow:
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
 
+.. _database_migration_ref:
+
 Database Migration
 ==================
 
@@ -232,7 +234,7 @@ Usage:
 Configurations:
 
 - To enable migration at startup, set:
-	- database.runMigration = true   // false by default,
+	- ``database.runMigration = true``   // false by default,
 
 Command line arguments:
 

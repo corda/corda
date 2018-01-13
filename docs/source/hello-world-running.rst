@@ -25,14 +25,14 @@ service.
             notary = [validating : true]
             p2pPort 10002
             rpcPort 10003
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            cordapps = ["$corda_release_distribution:corda-finance:$corda_release_version"]
         }
         node {
             name "O=PartyA,L=London,C=GB"
             p2pPort 10005
             rpcPort 10006
             webPort 10007
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            cordapps = ["$corda_release_distribution:corda-finance:$corda_release_version"]
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL]]]
         }
         node {
@@ -41,7 +41,7 @@ service.
             rpcPort 10009
             webPort 10010
             sshdPort 10024
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            cordapps = ["$corda_release_distribution:corda-finance:$corda_release_version"]
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
     }

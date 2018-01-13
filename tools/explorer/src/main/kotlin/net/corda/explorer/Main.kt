@@ -65,10 +65,10 @@ class Main : App(MainView::class) {
         if (!isLoggedIn) {
             stage.hide()
             loginView.login()
-            addOptionalViews()
-            (find(primaryView) as MainView).initializeControls()
-            stage.show()
         }
+        addOptionalViews()
+        (find(primaryView) as MainView).initializeControls()
+        stage.show()
     }
 
     private fun addOptionalViews() {

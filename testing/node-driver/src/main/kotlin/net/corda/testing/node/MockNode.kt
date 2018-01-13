@@ -5,7 +5,6 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name

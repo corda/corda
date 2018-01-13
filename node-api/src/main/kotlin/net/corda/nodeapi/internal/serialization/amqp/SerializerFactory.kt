@@ -40,6 +40,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
 
     open val classCarpenter = ClassCarpenter(cl, whitelist)
+
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
@@ -381,3 +382,4 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         override fun toString(): String = "?"
     }
 }
+

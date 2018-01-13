@@ -18,6 +18,8 @@ an ongoing stream of updates from the node. More detail on how to use this is pr
 
 For a brief tutorial on how one can use the RPC API see :doc:`tutorial-clientrpc-api`.
 
+.. _rpc_security_mgmt_ref:
+
 RPC permissions
 ---------------
 If a node's owner needs to interact with their node via RPC (e.g. to read the contents of the node's storage), they
@@ -67,6 +69,8 @@ Fine grained permissions allow a user to invoke a specific RPC operation, or to 
 - to start a specific flow: ``StartFlow.<fully qualified flow name>`` e.g., ``StartFlow.net.corda.flows.ExampleFlow1``.
 - to invoke a RPC operation: ``InvokeRpc.<rpc method name>`` e.g., ``InvokeRpc.nodeInfo``.
 .. note:: Permission ``InvokeRpc.startFlow`` allows a user to initiate all flows.
+
+.. _authentication_ref:
 
 RPC security management
 -----------------------

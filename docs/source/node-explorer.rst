@@ -29,7 +29,7 @@ parties on the network or to exit cash (for itself only).
 
 When connected to a *Participant* node a user can only execute cash transaction commands to move cash to other parties on the network.
 
-The Demo Nodes can be started in one of two modes:
+The Demo Nodes can be started in one of three modes:
 
 1. Normal
 
@@ -60,14 +60,30 @@ The Demo Nodes can be started in one of two modes:
 
     ./gradlew tools:explorer:runSimulationNodes
 
+.. _flow_triage:
+
+3. Flow triage
+
+    Once again, building on the demonstration Corda network topology described above, this scenario mode triggers
+    an exception within a flow which can then be visualized using the "Flow Triage" panel within the Explorer.
+    The "Flow Triage" panel will be enhanced in the future to enable operators to take corrective actions upon flow failures
+    (eg. retry, terminate, amend and replay)
+
+**Windows:**
+
+    gradlew.bat tools:explorer:runFlowTriageNodes
+
+**Other:**
+
+    ./gradlew tools:explorer:runFlowTriageNodes
 
 .. note:: 5 Corda nodes will be created on the following port on localhost by default.
 
-   * Notary -> 20003            (Does not accept logins)
-   * Alice -> 20006
-   * Bob -> 20009
-   * UK Bank Plc -> 20012       (*Issuer node*)
-   * USA Bank Corp -> 20015     (*Issuer node*)
+   * Notary -> 20001            (Does not accept logins)
+   * Alice -> 20004
+   * Bob -> 20007
+   * UK Bank Plc -> 20010       (*Issuer node*)
+   * USA Bank Corp -> 20013     (*Issuer node*)
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
 Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.

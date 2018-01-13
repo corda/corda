@@ -1,8 +1,5 @@
 package net.corda.node.services.config
 
-import com.typesafe.config.*
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignatureScheme
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions

@@ -52,7 +52,7 @@ allprojects {
         systemProperties["attestation.home"] = "$buildDir/logs"
     }
 
-    group 'com.r3.corda.enterprise'
+    group 'com.r3.corda'
     version '1.0-SNAPSHOT'
 
     repositories {

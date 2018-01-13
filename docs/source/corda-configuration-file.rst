@@ -68,27 +68,23 @@ path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
-:database: Database configuration:
+.. _database_properties_ref:
 
-        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+:database:  This section is used to configure JDBC and Hibernate related properties:
+
+    :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
-        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+    :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+    :runMigration: Boolean on whether to run the database migration scripts. Defaults to true.
+
+    :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
+                 (the value is passed to Hibernate property 'hibernate.default_schema').
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
-
-:database:  This section is used to configure JDBC and Hibernate related properties:
-
-        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
-            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
-
-        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
-
-        :runMigration: Boolean on whether to run the database migration scripts. Defaults to true.
-
-        :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
-             (the value is passed to Hibernate property 'hibernate.hbm2ddl.auto').
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
@@ -195,6 +191,8 @@ path to the node's base directory.
 
 :exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
     Default Jolokia access url is http://127.0.0.1:7005/jolokia/
+
+.. _config_amqp_bridge:
 
 :useAMQPBridges: Optionally can be set to ``false`` to use Artemis CORE Bridges for peer-to-peer communications.
         Otherwise, defaults to ``true`` and the AMQP 1.0 protocol will be used for message transfer between nodes.

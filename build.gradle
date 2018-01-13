@@ -4,7 +4,9 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "3.0-ENT-snapshot"
+    ext.corda_release_version = "R3.CORDA-3.0-SNAPSHOT"    // "CORDA-3.0-SNAPSHOT" for Corda (Open Source)
+    ext.corda_release_distribution = "com.r3.corda"        // "net.corda" for Corda (Open Source)
+
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
@@ -154,7 +156,7 @@ allprojects {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
-            attributes('Corda-Vendor': 'Corda Enterprise Edition')
+            attributes('Corda-Vendor': 'R3 Corda Edition')
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
         }
     }
@@ -191,7 +193,7 @@ allprojects {
         }
     }
 
-    group 'com.r3.corda.enterprise'
+    group 'com.r3.corda'
     version "$corda_release_version"
 
     repositories {
@@ -301,7 +303,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     }
 }
 
-// User and key are commented out to prevent accidental pushes of Enterprise to public repos. DO NOT UNCOMMENT.
+// User and key are commented out to prevent accidental pushes of R3 Corda to public repos. DO NOT UNCOMMENT.
 bintrayConfig {
     // user = System.getenv('CORDA_BINTRAY_USER')
     // key = System.getenv('CORDA_BINTRAY_KEY')

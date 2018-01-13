@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.junit.Before
 import org.junit.Test
