@@ -20,10 +20,9 @@ import java.nio.file.Files
 import kotlin.test.assertEquals
 
 class BootTests {
-
     @Test
     fun `java deserialization is disabled`() {
-        driver {
+        driver(notarySpecs = emptyList()) {
             val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
             val future = startNode(rpcUsers = listOf(user)).getOrThrow().rpcClientToNode().
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
@@ -35,7 +34,7 @@ class BootTests {
     fun `double node start doesn't write into log file`() {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
+        driver(notarySpecs = emptyList(), systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()

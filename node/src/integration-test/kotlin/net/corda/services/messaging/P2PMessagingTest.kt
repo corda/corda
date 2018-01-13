@@ -44,7 +44,7 @@ class P2PMessagingTest {
     @Test
     fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
         startDriverWithDistributedService { distributedServiceNodes ->
-            val alice = startAlice()
+            val alice = startAlice().node
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
                 alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
@@ -77,7 +77,8 @@ class P2PMessagingTest {
     @Test
     fun `distributed service request retries are persisted across client node restarts`() {
         startDriverWithDistributedService { distributedServiceNodes ->
-            val alice = startAlice()
+            val startedAlice = startAlice()
+            val alice = startedAlice.node
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
                 alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
@@ -100,14 +101,15 @@ class P2PMessagingTest {
             // Wait until the first request is received
             crashingNodes.firstRequestReceived.await()
             // Stop alice's node after we ensured that the first request was delivered and ignored.
-            alice.dispose()
+            startedAlice.stop()
             val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
             assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
 
             crashingNodes.ignoreRequests = false
 
             // Restart the node and expect a response
-            val aliceRestarted = startAlice()
+            println("<$ALICE_NAME> starting again...")
+            val aliceRestarted = startAlice().node
             val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow()
             assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
             assertThat(response).isEqualTo(responseMessage)
@@ -120,9 +122,9 @@ class P2PMessagingTest {
         }
     }
 
-    private fun DriverDSL.startAlice(): StartedNode<Node> {
+    private fun DriverDSL.startAlice(): NodeHandle.InProcess {
         return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
-                .map { (it as NodeHandle.InProcess).node }
+                .map { (it as NodeHandle.InProcess) }
                 .getOrThrow()
     }
 

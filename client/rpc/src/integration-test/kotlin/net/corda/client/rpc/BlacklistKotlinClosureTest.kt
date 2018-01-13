@@ -28,7 +28,7 @@ class BlacklistKotlinClosureTest {
 
     @Test
     fun `closure sent via RPC`() {
-        driver(startNodesInProcess = true) {
+        driver(startNodesInProcess = true, notarySpecs = emptyList()) {
             val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(KryoException::class.java)

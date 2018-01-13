@@ -25,10 +25,16 @@ fun startReporter(shutdownManager: ShutdownManager, metricRegistry: MetricRegist
                 build().
                 start()
     }
-    shutdownManager.registerShutdown { jmxReporter.interrupt() }
+    shutdownManager.registerShutdown("jmxReporter") {
+        jmxReporter.interrupt()
+        jmxReporter.join()
+    }
     val consoleReporter = thread {
         ConsoleReporter.forRegistry(metricRegistry).build().start(1, TimeUnit.SECONDS)
     }
-    shutdownManager.registerShutdown { consoleReporter.interrupt() }
+    shutdownManager.registerShutdown("consoleReporter") {
+        consoleReporter.interrupt()
+        consoleReporter.join()
+    }
     return metricRegistry
 }

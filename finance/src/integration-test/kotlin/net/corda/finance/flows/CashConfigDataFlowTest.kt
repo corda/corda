@@ -11,7 +11,7 @@ import org.junit.Test
 class CashConfigDataFlowTest {
     @Test
     fun `issuable currencies are read in from node config`() {
-        driver {
+        driver(notarySpecs = emptyList()) {
             val node = startNode(customOverrides = mapOf("issuableCurrencies" to listOf("EUR", "USD"))).getOrThrow()
             val config = node.rpc.startFlow(::CashConfigDataFlow).returnValue.getOrThrow()
             assertThat(config.issuableCurrencies).containsExactly(EUR, USD)
