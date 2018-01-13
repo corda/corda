@@ -145,7 +145,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         // Also, at the moment we assume that once the CSR is approved it cannot be rejected.
         // What if we approved something by mistake.
         val duplicates = session.createQuery(query).resultList.filter {
-            it.status !=RequestStatus.REJECTED
+            it.status != RequestStatus.REJECTED
         }
 
         return Pair(legalName, if (duplicates.isEmpty()) null else "Duplicate legal name")
