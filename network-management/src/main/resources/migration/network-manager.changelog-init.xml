@@ -40,7 +40,6 @@
                 <constraints nullable="false"/>
             </column>
             <column name="certificate_path_bytes" type="BLOB"/>
-
             <column name="certificate_status" type="INT"/>
             <column name="public_key_hash" type="NVARCHAR(64)"/>
             <column name="certificate_signing_request" type="NVARCHAR(64)">
