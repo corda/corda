@@ -62,7 +62,7 @@ class BFTNotaryCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) {
-        DevIdentityGenerator.generateDistributedNotaryIdentity(
+        DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                 notaryNames.map { context.baseDirectory(it.toString()) },
                 clusterName,
                 minCorrectReplicas(clusterSize)
