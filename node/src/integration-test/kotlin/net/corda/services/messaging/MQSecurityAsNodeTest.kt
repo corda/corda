@@ -2,10 +2,15 @@ package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.exists
+import net.corda.core.internal.x500Name
+import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -90,20 +95,13 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                     javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").copyTo(trustStoreFile)
                 }
 
-                val caKeyStore = loadKeyStore(
-                        javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"),
-                        "cordacadevpass")
-
-                val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
-                val intermediateCA = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-
                 val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 // Set name constrain to the legal name.
                 val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
                 val clientCACert = X509Utilities.createCertificate(
                         CertificateType.INTERMEDIATE_CA,
-                        intermediateCA.certificate,
-                        intermediateCA.keyPair,
+                        DEV_INTERMEDIATE_CA.certificate,
+                        DEV_INTERMEDIATE_CA.keyPair,
                         legalName.x500Principal,
                         clientKeyPair.public,
                         nameConstraints = nameConstraints)
@@ -123,7 +121,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                         X509Utilities.CORDA_CLIENT_CA,
                         clientKeyPair.private,
                         keyPass,
-                        arrayOf(clientCACert, intermediateCA.certificate, rootCACert))
+                        arrayOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
                 clientCAKeystore.save(nodeKeystore, keyStorePassword)
 
                 val tlsKeystore = loadOrCreateKeyStore(sslKeystore, keyStorePassword)
@@ -131,7 +129,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                         X509Utilities.CORDA_CLIENT_TLS,
                         tlsKeyPair.private,
                         keyPass,
-                        arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert))
+                        arrayOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
                 tlsKeystore.save(sslKeystore, keyStorePassword)
             }
         }

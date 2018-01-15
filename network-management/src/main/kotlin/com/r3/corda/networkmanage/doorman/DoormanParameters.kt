@@ -53,10 +53,11 @@ data class DoormanConfig(val approveAll: Boolean = false,
                          val approveInterval: Long = NetworkManagementServerParameters.DEFAULT_APPROVE_INTERVAL.toMillis())
 
 data class NetworkMapConfig(val cacheTimeout: Long,
-        // TODO: Move signing to signing server.
+                        // TODO: Move signing to signing server.
                             val signInterval: Long = NetworkManagementServerParameters.DEFAULT_SIGN_INTERVAL.toMillis())
 
 enum class Mode {
+    // TODO CA_KEYGEN now also generates the nework map cert, so it should be renamed.
     DOORMAN, CA_KEYGEN, ROOT_KEYGEN
 }
 

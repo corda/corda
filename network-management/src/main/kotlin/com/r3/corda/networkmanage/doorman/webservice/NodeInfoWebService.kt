@@ -6,6 +6,7 @@ import com.google.common.cache.LoadingCache
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoWithSigned
+import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
@@ -15,7 +16,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException
@@ -77,9 +77,9 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     @GET
-    @Path("network-parameter/{netParamsHash}") // TODO Fix path to be /network-parameters
-    fun getNetworkParameters(@PathParam("netParamsHash") netParamsHash: String): Response {
-        val signedNetParams = networkMapStorage.getSignedNetworkParameters(SecureHash.parse(netParamsHash))
+    @Path("network-parameters/{hash}")
+    fun getNetworkParameters(@PathParam("hash") hash: String): Response {
+        val signedNetParams = networkMapStorage.getSignedNetworkParameters(SecureHash.parse(hash))
         return createResponse(signedNetParams)
     }
 

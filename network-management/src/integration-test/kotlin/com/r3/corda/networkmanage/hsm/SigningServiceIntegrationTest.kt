@@ -22,27 +22,25 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.CHARLIE_NAME
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.h2.tools.Server
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.util.*
 import javax.persistence.PersistenceException
 import kotlin.concurrent.scheduleAtFixedRate
-import kotlin.concurrent.thread
 
 class SigningServiceIntegrationTest {
     companion object {
-        val H2_TCP_PORT = "8092"
-        val HOST = "localhost"
-        val DB_NAME = "test_db"
+        private val HOST = "localhost"
+        private val DB_NAME = "test_db"
     }
 
     @Rule
@@ -92,7 +90,7 @@ class SigningServiceIntegrationTest {
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
 
         NetworkManagementServer().use { server ->
-            server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)
+            server.start(NetworkHostAndPort(HOST, 0), database, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.
             val config = createConfig().also {
@@ -131,51 +129,6 @@ class SigningServiceIntegrationTest {
         }
     }
 
-    /*
-     * Piece of code is purely for demo purposes and should not be considered as actual test (therefore it is ignored).
-     * Its purpose is to produce 3 CSRs and wait (polling Doorman) for external signature.
-     * The use of the jUnit testing framework was chosen due to the convenience reasons: mocking, tempFolder storage.
-     * It is meant to be run together with the [DemoMain.main] method, which executes HSM signing service.
-     * The split is done due to the limited console support while executing tests and inability to capture user's input there.
-     *
-     */
-    @Ignore
-    @Test
-    fun `DEMO - Create CSR and poll`() {
-        //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
-
-        NetworkManagementServer().use { server ->
-            server.start(NetworkHostAndPort(HOST, 0), database, networkMapServiceParameter = null, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), updateNetworkParameters = null)
-            thread(start = true, isDaemon = true) {
-                val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")
-                Server.createTcpServer(*h2ServerArgs).start()
-            }
-
-            // Start Corda network registration.
-            (1..3).map { num ->
-                thread(start = true) {
-                    // Start Corda network registration.
-                    val config = createConfig().also {
-                        doReturn(when (num) {
-                            1 -> ALICE_NAME
-                            2 -> BOB_NAME
-                            3 -> CHARLIE_NAME
-                            else -> throw IllegalArgumentException("Unrecognised option")
-                        }).whenever(it).myLegalName
-                        doReturn(URL("http://$HOST:${server.hostAndPort.port}")).whenever(it).compatibilityZoneURL
-                    }
-                    config.certificatesDirectory.createDirectories()
-                    loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-                        it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert)
-                        it.save(config.trustStoreFile, config.trustStorePassword)
-                    }
-                    NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
-                }
-            }.map { it.join() }
-        }
-    }
-
     private fun createConfig(): NodeConfiguration {
         return rigorousMock<NodeConfiguration>().also {
             doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
@@ -198,5 +151,3 @@ class SigningServiceIntegrationTest {
         return props
     }
 }
-
-internal fun makeNotInitialisingTestDatabaseProperties() = DatabaseConfig(runMigration = false)

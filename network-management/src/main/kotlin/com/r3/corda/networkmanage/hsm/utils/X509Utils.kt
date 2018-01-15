@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.hsm.utils
 
 import CryptoServerJCE.CryptoServerProvider
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -268,27 +267,14 @@ object X509Utilities {
         }
     }
 
-    /**
-     * Sign data with the given private key
-     */
-    fun signData(data: ByteArray,
-                 keyPair: KeyPair,
-                 provider: Provider,
-                 signatureAlgorithm: String = SIGNATURE_ALGORITHM): DigitalSignature.WithKey {
-        val signer = Signature.getInstance(signatureAlgorithm, provider)
-        signer.initSign(keyPair.private)
-        signer.update(data)
-        return DigitalSignature.WithKey(keyPair.public, signer.sign())
-    }
-
     fun verify(data: ByteArray,
-               signature: DigitalSignature,
+               signature: ByteArray,
                publicKey: PublicKey,
                signatureAlgorithm: String = SIGNATURE_ALGORITHM) {
         val verify = Signature.getInstance(signatureAlgorithm)
         verify.initVerify(publicKey)
         verify.update(data)
-        require(verify.verify(signature.bytes)) { "Signature didn't independently verify" }
+        require(verify.verify(signature)) { "Signature didn't independently verify" }
     }
 
     /**

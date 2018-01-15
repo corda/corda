@@ -10,7 +10,7 @@ class SerializeAndReturnSchemaTest {
     @Suppress("NOTHING_TO_INLINE")
     inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
-    val factory = testDefaultFactory()
+    val factory = testDefaultFactoryNoEvolution()
 
     // just a simple test to verify the internal test extension for serialize does
     // indeed give us the correct schema back. This is more useful in support of other

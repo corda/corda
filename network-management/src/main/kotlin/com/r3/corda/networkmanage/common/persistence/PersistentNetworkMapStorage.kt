@@ -1,17 +1,16 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.common.persistence.entity.*
+import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
+import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 /**
@@ -40,8 +39,8 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
         database.transaction {
             val networkMapEntity = NetworkMapEntity(
                     networkMap = signedNetworkMap.raw.bytes,
-                    signature = signedNetworkMap.signature.signatureBytes,
-                    certificate = signedNetworkMap.signature.by.encoded
+                    signature = signedNetworkMap.sig.bytes,
+                    certificate = signedNetworkMap.sig.by.encoded
             )
             session.save(networkMapEntity)
         }
@@ -49,10 +48,10 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
 
     // TODO The signing cannot occur here as it won't work with an HSM. The signed network parameters needs to be persisted
     // into the database.
-    override fun getSignedNetworkParameters(hash: SecureHash): SignedData<NetworkParameters>? {
+    override fun getSignedNetworkParameters(hash: SecureHash): SignedNetworkParameters? {
         val netParamsBytes = getNetworkParametersEntity(hash.toString())?.parametersBytes ?: return null
-        val sigWithCert = localSigner!!.sign(netParamsBytes)
-        return SignedData(SerializedBytes(netParamsBytes), DigitalSignature.WithKey(sigWithCert.by.publicKey, sigWithCert.signatureBytes))
+        val sigWithCert = localSigner!!.signBytes(netParamsBytes)
+        return SignedNetworkParameters(SerializedBytes(netParamsBytes), sigWithCert)
     }
 
     override fun getNodeInfoHashes(certificateStatus: CertificateStatus): List<SecureHash> {

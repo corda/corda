@@ -15,6 +15,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -60,15 +61,17 @@ class NodeRegistrationTest : IntegrationTest() {
     private val dbId = random63BitValue().toString()
 
     private lateinit var rootCaCert: X509Certificate
-    private lateinit var intermediateCa: CertificateAndKeyPair
+    private lateinit var csrCa: CertificateAndKeyPair
+    private lateinit var networkMapCa: CertificateAndKeyPair
 
     private var server: NetworkManagementServer? = null
 
     @Before
     fun init() {
-        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+        val (rootCa, doormanCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
-        this.intermediateCa = intermediateCa
+        this.csrCa = doormanCa
+        networkMapCa = createDevNetworkMapCa(rootCa)
     }
 
     @After
@@ -138,10 +141,15 @@ class NodeRegistrationTest : IntegrationTest() {
             start(
                     serverAddress,
                     configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)),
-                    LocalSigner(intermediateCa.keyPair, arrayOf(intermediateCa.certificate, rootCaCert)),
-                    networkParameters,
-                    networkParameters?.let { NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis) },
-                    DoormanConfig(approveAll = true, jiraConfig = null, approveInterval = timeoutMillis)
+                    LocalSigner(csrCa.keyPair, arrayOf(csrCa.certificate, rootCaCert)),
+                    DoormanConfig(approveAll = true, jiraConfig = null, approveInterval = timeoutMillis),
+                    networkParameters?.let {
+                        NetworkMapStartParams(
+                                LocalSigner(networkMapCa.keyPair, arrayOf(networkMapCa.certificate, rootCaCert)),
+                                networkParameters,
+                                NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis)
+                        )
+                    }
             )
         }
     }
