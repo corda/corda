@@ -8,6 +8,7 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.node.config.NodeConfigurator
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -149,6 +150,9 @@ interface ServiceHub : ServicesForResolution {
 
     /** The [NodeInfo] object corresponding to our own entry in the network map. */
     val myInfo: NodeInfo
+
+    /** a representation of the configuration of this node*/
+    val nodeConfig: NodeConfigurator
 
     /**
      * Return the singleton instance of the given Corda service type. This is a class that is annotated with
