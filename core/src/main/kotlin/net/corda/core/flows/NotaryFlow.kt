@@ -173,10 +173,9 @@ sealed class NotaryError {
         override fun toString() = cause.toString()
     }
 
-    /** Occurs when the notary service cannot connect to the internal data store. */
-    object ServiceUnavailable : NotaryError() {
-        override fun toString() = "Service unavailable, please try again later"
-    }
-
     object WrongNotary : NotaryError()
+
+    data class General(val cause: String): NotaryError() {
+        override fun toString() = cause
+    }
 }
