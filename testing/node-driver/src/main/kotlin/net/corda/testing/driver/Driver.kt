@@ -14,8 +14,8 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.node.User
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
