@@ -27,7 +27,8 @@ class ArgsParserTest {
                 justGenerateNodeInfo = false,
                 justRunDbMigration = false,
                 bootstrapRaftCluster = false,
-                generateDatabaseMigrationToFile = Pair(false, null)
+                generateDatabaseMigrationToFile = Pair(false, null),
+                justCreateMigrationForCorDapp = null
         ))
     }
 
