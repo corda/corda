@@ -23,10 +23,10 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
+import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.nodeapi.internal.network.NotaryInfo
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -313,6 +313,14 @@ open class PersistentNetworkMapCache(
 
     /** We are caching data we get from the db - if we modify the db, they need to be cleared out*/
     private fun invalidateCaches(nodeInfo: NodeInfo) {
+        // Yes, they can be null during initialisation, even though IntelliJ thinks otherwise
+        // https://medium.com/keepsafe-engineering/an-in-depth-look-at-kotlins-initializers-a0420fcbf546
+        @Suppress("SENSELESS_COMPARISON")
+        if (nodesByKeyCache == null || identityByLegalNameCache == null) {
+            // loading persisted network map during start-up: we don't have caches yet
+            return
+        }
+
         nodesByKeyCache.invalidateAll(nodeInfo.legalIdentities.map { it.owningKey })
         identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
     }
