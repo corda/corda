@@ -14,6 +14,8 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
+val Int.MB: Long get() = this * 1024L * 1024L
+
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
@@ -43,6 +45,17 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val useAMQPBridges: Boolean get() = true
+    val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
+
+    companion object {
+        // default to at least 8MB and a bit extra for larger heap sizes
+        val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
+
+        // add 5% of any heapsize over 300MB to the default transaction cache size
+        private fun getAdditionalCacheMemory(): Long {
+            return Math.max((Runtime.getRuntime().maxMemory() - 300.MB) / 20, 0)
+        }
+    }
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
@@ -118,7 +131,8 @@ data class NodeConfigurationImpl(
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
-        override val useAMQPBridges: Boolean = true
+        override val useAMQPBridges: Boolean = true,
+        override val transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize
         ) : NodeConfiguration {
 
     override val exportJMXto: String get() = "http"
