@@ -36,11 +36,11 @@ MN highlighted limitations in testability: Azure had confirmed support for geo r
 
 The design was noted to be dependent on a lot on external dependencies for replication, with R3's testing capability limited to Azure. Agent banks may want to use SAN across dark fiber sites, redundant switches etc. not available to R3.
 
-MN noted that databases are not yet officially supportedin Corda.
+MN noted that certain databases are not yet officially supported in Corda.
 
 ### [Near-term-target](./near-term-target.md), [Medium-term target](./medium-term-target.md)
 
-Outlining the hot-cold design, MN Highlighted importance of ensuring only one node is active at one time. MN argued for having a tested hot-cold solution as a ‘backstop’. MN confirmed the work involved was to develop DB/SAN exclusion checkers and test appropriately.
+Outlining the hot-cold design, MN highlighted importance of ensuring only one node is active at one time. MN argued for having a tested hot-cold solution as a ‘backstop’. MN confirmed the work involved was to develop DB/SAN exclusion checkers and test appropriately.
 
 JC queried whether unknowns exist for hot-cold. MN described limitations of Azure file replication.
 
