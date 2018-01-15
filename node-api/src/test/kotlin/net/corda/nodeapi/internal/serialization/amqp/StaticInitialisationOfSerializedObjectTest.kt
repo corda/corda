@@ -45,7 +45,7 @@ class StaticInitialisationOfSerializedObjectTest {
     }
 
     @Test
-    fun KotlinObjectWithCompanionObject() {
+    fun kotlinObjectWithCompanionObject() {
         data class D(val c: C)
 
         val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
@@ -104,7 +104,7 @@ class StaticInitialisationOfSerializedObjectTest {
         override val classCarpenter = ClassCarpenter(ClassLoader.getSystemClassLoader(), wl2)
     }
 
-    // This time have the serilization factory and the carpenter use different whitelists
+    // This time have the serialization factory and the carpenter use different whitelists
     @Test
     fun deserializeTest2() {
         data class D(val c: C2)

@@ -11,13 +11,14 @@ class DeserializeAndReturnEnvelopeTests {
     @Suppress("NOTHING_TO_INLINE")
     inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
+    val factory = testDefaultFactoryNoEvolution()
+
     @Test
     fun oneType() {
         data class A(val a: Int, val b: String)
 
         val a = A(10, "20")
 
-        val factory = testDefaultFactory()
         fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -33,7 +34,6 @@ class DeserializeAndReturnEnvelopeTests {
 
         val b = B(A(10, "20"), 30.0F)
 
-        val factory = testDefaultFactory()
         fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 

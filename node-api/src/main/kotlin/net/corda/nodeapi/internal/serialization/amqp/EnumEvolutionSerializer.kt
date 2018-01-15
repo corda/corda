@@ -106,7 +106,7 @@ class EnumEvolutionSerializer(
             // to the name as it exists. We want to test any new constants have been added to the end
             // of the enum class
             val serialisedOrds = ((schemas.schema.types.find { it.name == old.name } as RestrictedType).choices
-                    .associateBy ({ it.value.toInt() }, { conversions[it.name] }))
+                    .associateBy({ it.value.toInt() }, { conversions[it.name] }))
 
             if (ordinals.filterNot { serialisedOrds[it.value] == it.key }.isNotEmpty()) {
                 throw NotSerializableException("Constants have been reordered, additions must be appended to the end")

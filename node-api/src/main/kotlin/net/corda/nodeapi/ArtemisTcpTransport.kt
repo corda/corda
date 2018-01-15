@@ -53,7 +53,8 @@ class ArtemisTcpTransport {
                     // It does not use AMQP messages for its own messages e.g. topology and heartbeats.
                     // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications.
                     TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP",
-                    TransportConstants.USE_GLOBAL_WORKER_POOL_PROP_NAME to (nodeSerializationEnv != null)
+                    TransportConstants.USE_GLOBAL_WORKER_POOL_PROP_NAME to (nodeSerializationEnv != null),
+                    TransportConstants.REMOTING_THREADS_PROPNAME to (if (nodeSerializationEnv != null) -1 else 1)
             )
 
             if (config != null && enableSSL) {

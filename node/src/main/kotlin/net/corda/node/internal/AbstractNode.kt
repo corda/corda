@@ -12,7 +12,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -68,6 +67,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
@@ -171,11 +171,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private inline fun signNodeInfo(nodeInfo: NodeInfo, sign: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
-        // For now we assume the node has only one identity (excluding any composite ones)
-        val owningKey = nodeInfo.legalIdentities.single { it.owningKey !is CompositeKey }.owningKey
+        // For now we exclude any composite identities, see [SignedNodeInfo]
+        val owningKeys = nodeInfo.legalIdentities.map { it.owningKey }.filter { it !is CompositeKey }
         val serialised = nodeInfo.serialize()
-        val signature = sign(owningKey, serialised)
-        return SignedNodeInfo(serialised, listOf(signature))
+        val signatures = owningKeys.map { sign(it, serialised) }
+        return SignedNodeInfo(serialised, signatures)
     }
 
     open fun generateAndSaveNodeInfo(): NodeInfo {
@@ -213,7 +213,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val identityService = makeIdentityService(identity.certificate)
         lh.obj(identityService)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        retrieveNetworkParameters()
+        retrieveNetworkParameters(identityService.trustRoot)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             lh.obj(database)
@@ -221,7 +221,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             lh.obj(info)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
-            val transactionStorage = makeTransactionStorage(database)
+            val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(lh, keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
@@ -562,7 +562,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return tokenizableServices
     }
 
-    protected open fun makeTransactionStorage(database: CordaPersistence): WritableTransactionStorage = DBTransactionStorage()
+    protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
     private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
         VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService, flowLogicRefFactory)
@@ -646,23 +646,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
-    private fun retrieveNetworkParameters() {
-        val networkParamsFile = configuration.baseDirectory.list { paths ->
-            paths.filter { it.fileName.toString() == NETWORK_PARAMS_FILE_NAME }.findFirst().orElse(null)
-        }
+    private fun retrieveNetworkParameters(trustRoot: X509Certificate) {
+        val networkParamsFile = configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME
 
-        networkParameters = if (networkParamsFile != null) {
-            networkParamsFile.readAll().deserialize<SignedData<NetworkParameters>>().verified()
+        networkParameters = if (networkParamsFile.exists()) {
+            networkParamsFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
         } else {
             log.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
             val networkMapClient = checkNotNull(networkMapClient) {
                 "Node hasn't been configured to connect to a network map from which to get the network parameters"
             }
             val (networkMap, _) = networkMapClient.getNetworkMap()
-            val signedParams = checkNotNull(networkMapClient.getNetworkParameter(networkMap.networkParameterHash)) {
-                "Failed loading network parameters from network map server"
-            }
-            val verifiedParams = signedParams.verified()
+            val signedParams = networkMapClient.getNetworkParameters(networkMap.networkParameterHash)
+            val verifiedParams = signedParams.verifiedNetworkMapCert(trustRoot)
             signedParams.serialize().open().copyTo(configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
             verifiedParams
         }
