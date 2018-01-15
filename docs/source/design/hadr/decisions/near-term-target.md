@@ -27,15 +27,15 @@ Designing for high availability is a complex task which can only be delivered ov
 
 #### Advantages
 
-1. Flushes out lots of basic deployment issues that will be ofbenefit later.
+1. Flushes out lots of basic deployment issues that will be of benefit later.
 2. If stuff slips we at least have a backstop position with hot-cold.
-3. For now, the only DR story we have is essentially a continuationof this mode
+3. For now, the only DR story we have is essentially a continuation of this mode
 4. The intent of decisions such as using a loadbalancer is to minimise code changes
 
 #### Disadvantages
 
 1. Distracts from the work for more complete forms of HA.
-2. Involves creating a few components that are notmuch use later, for instance the mutual exclusion lock.
+2. Involves creating a few components that are not much use later, for instance the mutual exclusion lock.
 
 ## Recommendation and justification
 
