@@ -1,6 +1,8 @@
 package net.corda.webserver.api
 
-import net.corda.core.node.NodeInfo
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.utilities.NetworkHostAndPort
 import java.time.LocalDateTime
 import javax.ws.rs.GET
 import javax.ws.rs.Path
@@ -34,10 +36,59 @@ interface APIServer {
     fun status(): Response
 
     /**
-     * Report this node's configuration and identities.
+     * Report this node's addresses.
      */
     @GET
-    @Path("info")
+    @Path("addresses")
     @Produces(MediaType.APPLICATION_JSON)
-    fun info(): NodeInfo
+    fun addresses(): List<NetworkHostAndPort>
+
+    /**
+     * Report this node's legal identities.
+     */
+    @GET
+    @Path("identities")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun identities(): List<String>
+
+    /**
+     * Report this node's platform version.
+     */
+    @GET
+    @Path("platformversion")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun platformVersion(): Int
+
+    /**
+     * Report the peers on the network.
+     */
+    @GET
+    @Path("peers")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun peers(): List<String>
+
+    /**
+     * Report the notaries on the network.
+     */
+    @GET
+    @Path("notaries")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun notaries(): List<String>
+
+    /**
+     * Report this node's registered flows.
+     */
+    @GET
+    @Path("flows")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun flows(): List<String>
+
+    /**
+     * Report this node's vault states.
+     */
+    @GET
+    @Path("states")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun states(): List<StateAndRef<ContractState>>
+
 }
