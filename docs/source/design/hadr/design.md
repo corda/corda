@@ -69,13 +69,13 @@ Artemis, H2 database, Flow State Machine, P2P bridging. All storage is on the lo
 - The backup strategy is unclear.
 
 ## Requirements
-
+### Goals
   * A logical Corda node should continue to function in the event of an individual component failure or (e.g.) restart.
   * No loss, corruption or duplication of data on the ledger due to component outages
   * Ensure continuity of flows throughout any disruption
   * Support software upgrades in a live network
-* Non-goals (out of scope for this design document)
 
+### Goals (out of scope for this design document)
   * Be able to distribute a node over more than two datacenters.
   * Be able to distribute a node between datacenters that are very far apart latency-wise (unless you don't care about performance).
   * Be able to tolerate arbitrary byzantine failures within a node cluster.
@@ -162,7 +162,7 @@ Cleaner handling of disconnects from the external components (Artemis and the da
 
 - Faster failover as no manual intervention.
 - We can use Artemis replication protocol to replicate the message store.
-- The approach in integrated with preliminary steps for the float.
+- The approach is integrated with preliminary steps for the float.
 - Able to handle loss of network connectivity to the database from one node.
 - Extraction of Artemis server allows a more standard Artemis deployment.
 - Provides protection against resource leakage in Artemis or Node from affecting the other component.
