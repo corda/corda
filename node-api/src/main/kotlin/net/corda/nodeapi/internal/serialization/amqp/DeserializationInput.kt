@@ -54,7 +54,6 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T =
             deserialize(bytes, T::class.java)
 
-
     @Throws(NotSerializableException::class)
     inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
             deserializeAndReturnEnvelope(bytes, T::class.java)

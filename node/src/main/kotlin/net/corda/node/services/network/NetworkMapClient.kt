@@ -2,28 +2,26 @@ package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
+import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.checkOkResponse
 import net.corda.core.internal.openHttpConnection
+import net.corda.core.internal.responseAs
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.SignedNetworkMap
-import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import okhttp3.CacheControl
 import okhttp3.Headers
-import org.apache.commons.io.IOUtils
 import rx.Subscription
 import java.io.BufferedReader
 import java.io.Closeable
-import java.io.IOException
-import java.net.HttpURLConnection
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -40,42 +38,29 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/octet-stream")
             outputStream.use { signedNodeInfo.serialize().open().copyTo(it) }
-            if (responseCode != 200) {
-                throw IOException("Response Code $responseCode: ${IOUtils.toString(errorStream)}")
-            }
+            checkOkResponse()
         }
     }
 
     fun getNetworkMap(): NetworkMapResponse {
-        val conn = networkMapUrl.openHttpConnection()
-        val signedNetworkMap = conn.inputStream.use { it.readBytes() }.deserialize<SignedNetworkMap>()
-        val networkMap = signedNetworkMap.verified(trustedRoot)
-        val timeout = CacheControl.parse(Headers.of(conn.headerFields.filterKeys { it != null }.mapValues { it.value.first() })).maxAgeSeconds().seconds
+        val connection = networkMapUrl.openHttpConnection()
+        val signedNetworkMap = connection.responseAs<SignedDataWithCert<NetworkMap>>()
+        val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
+        val timeout = CacheControl.parse(Headers.of(connection.headerFields.filterKeys { it != null }.mapValues { it.value[0] })).maxAgeSeconds().seconds
         return NetworkMapResponse(networkMap, timeout)
     }
 
-    fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo? {
-        val conn = URL("$networkMapUrl/node-info/$nodeInfoHash").openHttpConnection()
-        return if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-            null
-        } else {
-            val signedNodeInfo = conn.inputStream.use { it.readBytes() }.deserialize<SignedNodeInfo>()
-            signedNodeInfo.verified()
-        }
+    fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo {
+        return URL("$networkMapUrl/node-info/$nodeInfoHash").openHttpConnection().responseAs<SignedNodeInfo>().verified()
     }
 
-    fun getNetworkParameter(networkParameterHash: SecureHash): SignedData<NetworkParameters>? {
-        val conn = URL("$networkMapUrl/network-parameter/$networkParameterHash").openHttpConnection()
-        return if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-            null
-        } else {
-            conn.inputStream.use { it.readBytes() }.deserialize()
-        }
+    fun getNetworkParameters(networkParameterHash: SecureHash): SignedDataWithCert<NetworkParameters> {
+        return URL("$networkMapUrl/network-parameters/$networkParameterHash").openHttpConnection().responseAs()
     }
 
     fun myPublicHostname(): String {
-        val conn = URL("$networkMapUrl/my-hostname").openHttpConnection()
-        return conn.inputStream.bufferedReader().use(BufferedReader::readLine)
+        val connection = URL("$networkMapUrl/my-hostname").openHttpConnection()
+        return connection.inputStream.bufferedReader().use(BufferedReader::readLine)
     }
 }
 

@@ -168,7 +168,7 @@ class X509UtilitiesTest {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(rootCa.certificate, intermediateCa, MEGA_CORP.name)
+        sslConfig.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
 
         // Load back server certificate
         val serverKeyStore = loadKeyStore(sslConfig.nodeKeystore, sslConfig.keyStorePassword)
@@ -203,7 +203,7 @@ class X509UtilitiesTest {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(rootCa.certificate, intermediateCa, MEGA_CORP.name)
+        sslConfig.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
         val keyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)

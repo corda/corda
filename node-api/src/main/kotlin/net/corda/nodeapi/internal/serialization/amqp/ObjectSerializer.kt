@@ -26,6 +26,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
 
+    fun getPropertySerializers() = propertySerializers
+
     private val typeName = nameForType(clazz)
 
     override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")

@@ -7,9 +7,6 @@ import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.loadKeyStore
 import java.security.PublicKey
 import java.time.Instant
 
@@ -32,17 +29,10 @@ val ALICE_NAME = CordaX500Name("Alice Corp", "Madrid", "ES")
 val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
 @JvmField
 val CHARLIE_NAME = CordaX500Name("Charlie Ltd", "Athens", "GR")
-val DEV_INTERMEDIATE_CA: CertificateAndKeyPair by lazy {
-    // TODO: Should be identity scheme
-    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-    caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-}
 
-val DEV_ROOT_CA: CertificateAndKeyPair by lazy {
-    // TODO: Should be identity scheme
-    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-    caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, "cordacadevkeypass")
-}
+val DEV_INTERMEDIATE_CA: CertificateAndKeyPair by lazy { net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA }
+
+val DEV_ROOT_CA: CertificateAndKeyPair by lazy { net.corda.nodeapi.internal.DEV_ROOT_CA }
 
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
 
