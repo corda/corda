@@ -41,9 +41,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, Pair<SignedNetworkMap?, NetworkParameters?>> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ ->
-                Pair(networkMapStorage.getCurrentNetworkMap()
-           , networkMapStorage.getCurrentNetworkParameters()) })
+            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getCurrentNetworkParameters()) })
 
     @POST
     @Path("publish")
