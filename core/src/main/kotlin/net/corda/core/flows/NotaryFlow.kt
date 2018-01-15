@@ -158,7 +158,7 @@ class NotaryFlow {
  */
 data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
 
-class NotaryException(val error: NotaryError) : FlowException("Error response from Notary - $error")
+class NotaryException(val error: NotaryError) : FlowException("Unable to notarise: $error")
 
 @CordaSerializable
 sealed class NotaryError {
@@ -166,11 +166,16 @@ sealed class NotaryError {
         override fun toString() = "One or more input states for transaction $txId have been used in another transaction"
     }
 
-    /** Thrown if the time specified in the [TimeWindow] command is outside the allowed tolerance. */
+    /** Occurs when time specified in the [TimeWindow] command is outside the allowed tolerance. */
     object TimeWindowInvalid : NotaryError()
 
     data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
+    }
+
+    /** Occurs when the notary service cannot connect to the internal data store. */
+    object ServiceUnavailable : NotaryError() {
+        override fun toString() = "Service unavailable, please try again later"
     }
 
     object WrongNotary : NotaryError()
