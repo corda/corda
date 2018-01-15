@@ -41,7 +41,7 @@ Designing for high availability is a complex task which can only be delivered ov
 
 ## Recommendation and justification
 
-Proceed with Option 2: Hot-warm as interim state.
+Proceed with Option 1: Hot-warm as interim state.
 
 ## Decision taken
 
