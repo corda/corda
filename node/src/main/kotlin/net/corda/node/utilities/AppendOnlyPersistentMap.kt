@@ -133,12 +133,14 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     }
 }
 
-class AppendOnlyPersistentMap<K, V, E, out EK>(toPersistentEntityKey: (K) -> EK,
-                                               fromPersistentEntity: (E) -> Pair<K, V>,
-                                               toPersistentEntity: (key: K, value: V) -> E,
-                                               persistentEntityClass: Class<E>,
-                                               cacheBound: Long = 1024
-) : AppendOnlyPersistentMapBase<K, V, E, EK>(toPersistentEntityKey,
+class AppendOnlyPersistentMap<K, V, E, out EK>(
+        toPersistentEntityKey: (K) -> EK,
+        fromPersistentEntity: (E) -> Pair<K, V>,
+        toPersistentEntity: (key: K, value: V) -> E,
+        persistentEntityClass: Class<E>,
+        cacheBound: Long = 1024
+) : AppendOnlyPersistentMapBase<K, V, E, EK>(
+        toPersistentEntityKey,
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
@@ -149,13 +151,15 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(toPersistentEntityKey: (K) -> EK,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) })
 }
 
-class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(toPersistentEntityKey: (K) -> EK,
-                                                          fromPersistentEntity: (E) -> Pair<K, V>,
-                                                          toPersistentEntity: (key: K, value: V) -> E,
-                                                          persistentEntityClass: Class<E>,
-                                                          maxWeight: Long,
-                                                          weighingFunc: (K, Optional<V>) -> Int
-) : AppendOnlyPersistentMapBase<K, V, E, EK>(toPersistentEntityKey,
+class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        toPersistentEntityKey: (K) -> EK,
+        fromPersistentEntity: (E) -> Pair<K, V>,
+        toPersistentEntity: (key: K, value: V) -> E,
+        persistentEntityClass: Class<E>,
+        maxWeight: Long,
+        weighingFunc: (K, Optional<V>) -> Int
+) : AppendOnlyPersistentMapBase<K, V, E, EK>(
+        toPersistentEntityKey,
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
