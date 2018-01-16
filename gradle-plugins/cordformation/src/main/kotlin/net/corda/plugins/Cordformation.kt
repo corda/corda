@@ -38,7 +38,7 @@ class Cordformation : Plugin<Project> {
         fun verifyAndGetRuntimeJar(project: Project, jarName: String): File {
             val releaseVersion = project.rootProject.ext<String>("corda_release_version")
             val maybeJar = project.configuration("runtime").filter {
-                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
+                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-r3-$releaseVersion.jar" in it.toString()
             }
             if (maybeJar.isEmpty) {
                 throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
