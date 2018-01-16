@@ -32,7 +32,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.DEV_ROOT_CA
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
 import org.bouncycastle.operator.ContentSigner

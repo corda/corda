@@ -12,7 +12,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver

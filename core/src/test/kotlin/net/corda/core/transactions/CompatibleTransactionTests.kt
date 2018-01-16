@@ -5,13 +5,9 @@ import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.*
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant

@@ -20,10 +20,10 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl

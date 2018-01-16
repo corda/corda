@@ -8,7 +8,7 @@ import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.testing.node.MockServices;
-import net.corda.testing.TestIdentity;
+import net.corda.testing.core.TestIdentity;
 import org.junit.Test;
 
 import java.security.PublicKey;

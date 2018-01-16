@@ -14,7 +14,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.internal.configureDatabase
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.internal.rigorousMock

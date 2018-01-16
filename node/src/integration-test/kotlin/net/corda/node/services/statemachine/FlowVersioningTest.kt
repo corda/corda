@@ -7,7 +7,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.startFlow
 import net.corda.testing.core.ALICE_NAME

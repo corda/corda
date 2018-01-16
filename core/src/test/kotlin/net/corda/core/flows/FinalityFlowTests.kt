@@ -7,10 +7,7 @@ import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.testing.*
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After

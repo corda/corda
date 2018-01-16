@@ -8,9 +8,9 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
