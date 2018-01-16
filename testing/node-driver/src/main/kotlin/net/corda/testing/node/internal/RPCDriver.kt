@@ -22,12 +22,12 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.testing.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -52,6 +52,7 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import net.corda.nodeapi.internal.config.User as InternalUser
 
 inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
         username: String = rpcTestUser.username,
@@ -433,7 +434,7 @@ data class RPCDriverDSL(
             minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
-        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)) , id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,

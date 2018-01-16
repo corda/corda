@@ -2,6 +2,7 @@ package net.corda.docs.java.tutorial.testdsl;
 
 import kotlin.Unit;
 import net.corda.core.contracts.PartyAndReference;
+import net.corda.core.contracts.TransactionVerificationException;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
@@ -43,7 +44,8 @@ public class CommercialPaperTest {
     // DOCEND 1
 
     // DOCSTART 2
-    @Test
+    // This example test will fail with this exception.
+    @Test(expected = IllegalStateException.class)
     public void simpleCP() {
         ICommercialPaperState inState = getPaper();
         ledger(ledgerServices, l -> {
@@ -58,7 +60,8 @@ public class CommercialPaperTest {
     // DOCEND 2
 
     // DOCSTART 3
-    @Test
+    // This example test will fail with this exception.
+    @Test(expected = TransactionVerificationException.ContractRejection.class)
     public void simpleCPMove() {
         ICommercialPaperState inState = getPaper();
         ledger(ledgerServices, l -> {

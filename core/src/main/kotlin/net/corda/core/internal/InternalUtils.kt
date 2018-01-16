@@ -242,10 +242,14 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 }
 
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
-
+inline fun <reified T> Stream<out T>.toTypedArray() = toTypedArray(T::class.java)
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
-inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
+fun <T> Stream<out T>.toTypedArray(componentType: Class<T>): Array<T> = toArray { size ->
+    uncheckedCast<Any, Array<T?>>(java.lang.reflect.Array.newInstance(componentType, size))
+}
 
+fun <T> Stream<out T?>.filterNotNull(): Stream<T> = uncheckedCast(filter(Objects::nonNull))
+fun <K, V> Stream<out Pair<K, V>>.toMap(): Map<K, V> = collect<LinkedHashMap<K, V>>(::LinkedHashMap, { m, (k, v) -> m.put(k, v) }, { m, t -> m.putAll(t) })
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */

@@ -20,10 +20,14 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.testing.*
+import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.TestIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
@@ -104,7 +108,6 @@ class AttachmentLoadingTests : IntegrationTest() {
         assertEquals(expected, actual)
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `test that attachments retrieved over the network are not used for code`() = withoutTestSerialization {
         driver {
@@ -117,7 +120,6 @@ class AttachmentLoadingTests : IntegrationTest() {
         Unit
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `tests that if the attachment is loaded on both sides already that a flow can run`() = withoutTestSerialization {
         driver {

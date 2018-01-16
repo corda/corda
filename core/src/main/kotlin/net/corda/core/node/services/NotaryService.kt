@@ -78,6 +78,9 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
                 log.warn("Notary conflicts for $txId: $conflicts")
                 throw notaryException(txId, e)
             }
+        } catch (e: Exception) {
+            log.error("Internal error", e)
+            throw NotaryException(NotaryError.General("Service unavailable, please try again later"))
         }
     }
 
