@@ -40,7 +40,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
                                                                              "InvokeRpc.attachmentExists",
                                                                              "InvokeRpc.openAttachment",
                                                                              "InvokeRpc.uploadAttachment",
-                                                                             "InvokeRpc.internalVerifiedTransactionsFeed"]]]
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                             "InvokeRpc.vaultQueryBy"]]]
 
     directory "./build/nodes"
     node {
@@ -55,6 +56,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         rpcPort 10006
+        webPort 10007
         cordapps = []
         rpcUsers = ext.rpcUsers
     }

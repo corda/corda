@@ -120,7 +120,7 @@ class AttachmentDemoFlow(private val otherSide: Party,
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)
+                .addOutputState(AttachmentContract.State(ourIdentity, attachId), ATTACHMENT_PROGRAM_ID)
                 .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
                 .addAttachment(attachId)
 
@@ -194,7 +194,7 @@ class AttachmentContract : Contract {
 
     object Command : TypeOnlyCommandData()
 
-    data class State(val hash: SecureHash.SHA256) : ContractState {
-        override val participants: List<AbstractParty> = emptyList()
+    data class State(val party: Party, val hash: SecureHash.SHA256) : ContractState {
+        override val participants: List<AbstractParty> = listOf(party)
     }
 }
