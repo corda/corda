@@ -174,8 +174,8 @@ networkMapConfig {
           validating: false
       }]
       minimumPlatformVersion = 1
-      maxMessageSize = 100
-      maxTransactionSize = 100
+      maxMessageSize = 10485760
+      maxTransactionSize = 40000
       
    Save the parameters to `network-parameters.conf`
 
