@@ -12,6 +12,7 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.services.NotaryIdentity
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
@@ -40,6 +41,9 @@ class BFTNonValidatingNotaryService(
         private val bftSMaRtConfig: BFTSMaRtConfiguration,
         cluster: BFTSMaRt.Cluster
 ) : NotaryService() {
+    @Suppress("unused")
+    constructor(services: ServiceHubInternal, notaryIdentity: NotaryIdentity, bftSMaRtConfig: BFTSMaRtConfiguration, cluster: BFTSMaRt.Cluster) : this(services, notaryIdentity.key, bftSMaRtConfig, cluster)
+
     companion object {
         private val log = contextLogger()
     }
