@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.node.internal.StartedNode;
-import net.corda.testing.TestConstants;
+import net.corda.testing.core.TestConstants;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;

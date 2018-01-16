@@ -11,6 +11,7 @@ import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.slf4j.LoggerFactory

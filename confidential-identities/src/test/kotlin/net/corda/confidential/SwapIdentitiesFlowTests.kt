@@ -3,6 +3,9 @@ package net.corda.confidential
 import net.corda.core.identity.*
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import net.corda.testing.node.startFlow

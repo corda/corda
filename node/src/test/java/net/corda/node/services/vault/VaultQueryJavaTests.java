@@ -46,9 +46,9 @@ import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
-import static net.corda.testing.TestConstants.BOC_NAME;
-import static net.corda.testing.TestConstants.CHARLIE_NAME;
-import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
+import static net.corda.testing.core.TestConstants.BOC_NAME;
+import static net.corda.testing.core.TestConstants.CHARLIE_NAME;
+import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;

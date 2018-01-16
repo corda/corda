@@ -28,7 +28,7 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
-import static net.corda.testing.TestConstants.ALICE_NAME;
+import static net.corda.testing.core.TestConstants.ALICE_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {

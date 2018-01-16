@@ -1,8 +1,8 @@
 package net.corda.node.services.network
 
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity

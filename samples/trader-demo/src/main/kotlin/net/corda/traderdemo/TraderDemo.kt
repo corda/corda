@@ -5,8 +5,8 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.finance.DOLLARS
-import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
 import kotlin.system.exitProcess
 
 /**

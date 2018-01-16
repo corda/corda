@@ -34,6 +34,7 @@ import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters

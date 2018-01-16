@@ -15,7 +15,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle

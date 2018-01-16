@@ -1,5 +1,7 @@
 package net.corda.testing
 
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

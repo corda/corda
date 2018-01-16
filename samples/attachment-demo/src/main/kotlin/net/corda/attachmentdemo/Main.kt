@@ -1,8 +1,8 @@
 package net.corda.attachmentdemo
 
 import net.corda.core.internal.div
-import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 

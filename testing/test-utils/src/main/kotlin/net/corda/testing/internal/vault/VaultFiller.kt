@@ -17,6 +17,7 @@ import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.CommodityContract
 import net.corda.testing.*
+import net.corda.testing.core.dummyCommand
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant

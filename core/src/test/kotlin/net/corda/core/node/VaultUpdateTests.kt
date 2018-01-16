@@ -5,7 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.TestIdentity
 import org.junit.Test
 import kotlin.test.assertEquals

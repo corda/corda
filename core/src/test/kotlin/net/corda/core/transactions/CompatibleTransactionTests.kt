@@ -8,7 +8,10 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.dummyCommand
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -288,7 +291,7 @@ class CompatibleTransactionTests {
     @Test
     fun `Command visibility tests`() {
         // 1st and 3rd commands require a signature from KEY_1.
-        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public),  dummyCommand(DUMMY_KEY_1.public))
+        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
         val componentGroups = listOf(
                 inputGroup,
                 outputGroup,
@@ -410,7 +413,7 @@ class CompatibleTransactionTests {
         val ftxConstructor = ::FilteredTransaction
 
         // 1st and 3rd commands require a signature from KEY_1.
-        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public),  dummyCommand(DUMMY_KEY_1.public))
+        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
         val componentGroups = listOf(
                 inputGroup,
                 outputGroup,

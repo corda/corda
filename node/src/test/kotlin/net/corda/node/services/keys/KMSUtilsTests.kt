@@ -4,6 +4,7 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.CertRole
 import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.bouncycastle.asn1.DEROctetString
