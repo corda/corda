@@ -5,9 +5,9 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.node.services.Permissions
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import org.junit.Ignore
 import org.junit.Test
 
