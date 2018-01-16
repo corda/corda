@@ -2,6 +2,7 @@ package net.corda.webserver.api
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.identity.Party
 import net.corda.core.utilities.NetworkHostAndPort
 import java.time.LocalDateTime
 import javax.ws.rs.GET
@@ -49,7 +50,7 @@ interface APIServer {
     @GET
     @Path("identities")
     @Produces(MediaType.APPLICATION_JSON)
-    fun identities(): List<String>
+    fun identities(): List<Party>
 
     /**
      * Report this node's platform version.
@@ -65,7 +66,7 @@ interface APIServer {
     @GET
     @Path("peers")
     @Produces(MediaType.APPLICATION_JSON)
-    fun peers(): List<String>
+    fun peers(): List<Party>
 
     /**
      * Report the notaries on the network.
@@ -73,7 +74,7 @@ interface APIServer {
     @GET
     @Path("notaries")
     @Produces(MediaType.APPLICATION_JSON)
-    fun notaries(): List<String>
+    fun notaries(): List<Party>
 
     /**
      * Report this node's registered flows.

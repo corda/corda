@@ -22,13 +22,13 @@ class APIServerImpl(val rpcOps: CordaRPCOps) : APIServer {
 
     override fun addresses() = rpcOps.nodeInfo().addresses
 
-    override fun identities() = rpcOps.nodeInfo().legalIdentities.map { it.name.toString() }
+    override fun identities() = rpcOps.nodeInfo().legalIdentities
 
     override fun platformVersion() = rpcOps.nodeInfo().platformVersion
 
-    override fun peers() = rpcOps.networkMapSnapshot().flatMap { it.legalIdentities }.map { it.name.toString() }
+    override fun peers() = rpcOps.networkMapSnapshot().flatMap { it.legalIdentities }
 
-    override fun notaries() = rpcOps.notaryIdentities().map { it.name.toString() }
+    override fun notaries() = rpcOps.notaryIdentities()
 
     override fun flows() = rpcOps.registeredFlows()
 
