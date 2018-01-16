@@ -5,15 +5,18 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.sha256
+import net.corda.core.internal.SignedDataWithCert
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.network.DigitalSignatureWithCert
-import org.bouncycastle.cert.X509CertificateHolder
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.NetworkParameters
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.Certificate
-import java.security.cert.X509Certificate
+
+// TODO These should be defined in node-api
+typealias SignedNetworkParameters = SignedDataWithCert<NetworkParameters>
+typealias SignedNetworkMap = SignedDataWithCert<NetworkMap>
 
 // TODO: replace this with Crypto.hash when its available.
 /**
@@ -39,14 +42,9 @@ fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Un
 
 class ShowHelpException(val parser: OptionParser, val errorMessage: String? = null) : Exception()
 
-// TODO Remove this as we already have InternalUtils.cert
-fun X509CertificateHolder.toX509Certificate(): X509Certificate = X509CertificateFactory().generateCertificate(encoded.inputStream())
-
 fun buildCertPath(vararg certificates: Certificate): CertPath = X509CertificateFactory().delegate.generateCertPath(certificates.asList())
 
 fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())
-
-fun DigitalSignature.WithKey.withCert(cert: X509Certificate): DigitalSignatureWithCert = DigitalSignatureWithCert(cert, bytes)
 
 private fun String.toCamelcase(): String {
     return if (contains('_') || contains('-')) {

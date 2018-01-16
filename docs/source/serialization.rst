@@ -56,7 +56,7 @@ was a compelling use case for the definition and development of a custom format 
 
     #.  A desire to have a schema describing what has been serialized along-side the actual data:
 
-        #.  To assist with versioning, both in terms of being able to interpret long ago archivEd data (e.g. trades from
+        #.  To assist with versioning, both in terms of being able to interpret long ago archived data (e.g. trades from
             a decade ago, long after the code has changed) and between differing code versions.
         #.  To make it easier to write user interfaces that can navigate the serialized form of data.
         #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted.

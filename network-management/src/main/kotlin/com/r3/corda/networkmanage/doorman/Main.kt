@@ -11,7 +11,10 @@ import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.MonitoringWebService
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_NETWORK_MAP_CERTIFICATE_NAME
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -34,6 +37,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -130,17 +134,16 @@ class NetworkManagementServer : Closeable {
 
     fun start(hostAndPort: NetworkHostAndPort,
               database: CordaPersistence,
-              signer: LocalSigner? = null,
-              updateNetworkParameters: NetworkParameters?,
-              networkMapServiceParameter: NetworkMapConfig?,
-              doormanServiceParameter: DoormanConfig?) {
-
+              doormanSigner: LocalSigner? = null,
+              doormanServiceParameter: DoormanConfig?,  // TODO Doorman config shouldn't be optional as the doorman is always required to run
+              startNetworkMap: NetworkMapStartParams?
+    ) {
         val services = mutableListOf<Any>()
         val serverStatus = NetworkManagementServerStatus()
 
         // TODO: move signing to signing server.
-        networkMapServiceParameter?.let { services += getNetworkMapService(it, database, signer, updateNetworkParameters) }
-        doormanServiceParameter?.let { services += getDoormanService(it, database, signer, serverStatus) }
+        startNetworkMap?.let { services += getNetworkMapService(it.config, database, it.signer, it.updateNetworkParameters) }
+        doormanServiceParameter?.let { services += getDoormanService(it, database, doormanSigner, serverStatus) }
 
         require(services.isNotEmpty()) { "No service created, please provide at least one service config." }
 
@@ -150,10 +153,12 @@ class NetworkManagementServer : Closeable {
         val webServer = NetworkManagementWebServer(hostAndPort, *services.toTypedArray())
         webServer.start()
 
-        doOnClose += { webServer.close() }
+        doOnClose += webServer::close
         this.hostAndPort = webServer.hostAndPort
     }
 }
+
+data class NetworkMapStartParams(val signer: LocalSigner?, val updateNetworkParameters: NetworkParameters?, val config: NetworkMapConfig)
 
 data class NetworkManagementServerStatus(var serverStartTime: Instant = Instant.now(), var lastRequestCheckTime: Instant? = null)
 
@@ -203,58 +208,77 @@ fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPriv
     println(loadKeyStore(rootStoreFile, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
 }
 
-fun generateCAKeyPair(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
-    println("Generating Intermediate CA keypair and certificate using root keystore $rootStoreFile.")
+fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
+    println("Generating intermediate and network map key pairs and certificates using root key store $rootStoreFile.")
     // Get password from console if not in config.
-    val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
-    val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root Private Key Password: ")
+    val rootKeystorePassword = rootKeystorePass ?: readPassword("Root key store password: ")
+    val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root private key password: ")
     val rootKeyStore = loadKeyStore(rootStoreFile, rootKeystorePassword)
 
-    val rootKeyAndCert = rootKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, rootPrivateKeyPassword)
+    val rootKeyPairAndCert = rootKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, rootPrivateKeyPassword)
 
-    val keystorePassword = keystorePass ?: readPassword("Keystore Password: ")
-    val caPrivateKeyPassword = caPrivateKeyPass ?: readPassword("CA Private Key Password: ")
+    val keyStorePassword = keystorePass ?: readPassword("Key store Password: ")
+    val privateKeyPassword = caPrivateKeyPass ?: readPassword("Private key Password: ")
     // Ensure folder exists.
     keystoreFile.parent.createDirectories()
-    val keyStore = loadOrCreateKeyStore(keystoreFile, keystorePassword)
+    val keyStore = loadOrCreateKeyStore(keystoreFile, keyStorePassword)
 
-    if (keyStore.containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA)) {
-        val oldKey = loadOrCreateKeyStore(keystoreFile, rootKeystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey
-        println("Key ${X509Utilities.CORDA_INTERMEDIATE_CA} already exists in keystore, process will now terminate.")
-        println(oldKey)
-        exitProcess(1)
+    fun storeCertIfAbsent(alias: String, certificateType: CertificateType, subject: X500Principal, signatureScheme: SignatureScheme) {
+        if (keyStore.containsAlias(alias)) {
+            println("$alias already exists in keystore:")
+            println(keyStore.getCertificate(alias))
+            return
+        }
+
+        val keyPair = Crypto.generateKeyPair(signatureScheme)
+        val cert = X509Utilities.createCertificate(
+                certificateType,
+                rootKeyPairAndCert.certificate,
+                rootKeyPairAndCert.keyPair,
+                subject,
+                keyPair.public
+        )
+        keyStore.addOrReplaceKey(
+                alias,
+                keyPair.private,
+                privateKeyPassword.toCharArray(),
+                arrayOf(cert, rootKeyPairAndCert.certificate)
+        )
+        keyStore.save(keystoreFile, keyStorePassword)
+
+        println("$certificateType key pair and certificate stored in $keystoreFile.")
+        println(cert)
     }
 
-    val intermediateKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val intermediateCert = X509Utilities.createCertificate(
+    storeCertIfAbsent(
+            DEFAULT_CSR_CERTIFICATE_NAME,
             CertificateType.INTERMEDIATE_CA,
-            rootKeyAndCert.certificate,
-            rootKeyAndCert.keyPair,
-            CordaX500Name(commonName = "Corda Intermediate CA", organisation = "R3 Ltd", organisationUnit = "Corda", locality = "London", country = "GB", state = null).x500Principal,
-            intermediateKeyPair.public
-    )
-    keyStore.addOrReplaceKey(
-            X509Utilities.CORDA_INTERMEDIATE_CA,
-            intermediateKeyPair.private,
-            caPrivateKeyPassword.toCharArray(),
-            arrayOf(intermediateCert, rootKeyAndCert.certificate)
-    )
-    keyStore.save(keystoreFile, keystorePassword)
-    println("Intermediate CA keypair and certificate stored in $keystoreFile.")
-    println(loadKeyStore(keystoreFile, keystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey)
+            X500Principal("CN=Corda Intermediate CA,OU=Corda,O=R3 Ltd,L=London,C=GB"),
+            X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+
+    storeCertIfAbsent(
+            DEFAULT_NETWORK_MAP_CERTIFICATE_NAME,
+            CertificateType.NETWORK_MAP,
+            X500Principal("CN=Corda Network Map,OU=Corda,O=R3 Ltd,L=London,C=GB"),
+            Crypto.EDDSA_ED25519_SHA512)
 }
 
 
-private fun buildLocalSigner(parameters: NetworkManagementServerParameters): LocalSigner? {
-    return parameters.keystorePath?.let {
-        // Get password from console if not in config.
-        val keystorePassword = parameters.keystorePassword ?: readPassword("Keystore Password: ")
-        val caPrivateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("CA Private Key Password: ")
-        val keystore = loadOrCreateKeyStore(parameters.keystorePath, keystorePassword)
-        val caKeyPair = keystore.getKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, caPrivateKeyPassword)
-        val caCertPath = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).map { it as X509Certificate }
-        LocalSigner(caKeyPair, caCertPath.toTypedArray())
+private fun buildLocalSigners(parameters: NetworkManagementServerParameters): Pair<LocalSigner, LocalSigner>? {
+    if (parameters.keystorePath == null) return null
+
+    // Get password from console if not in config.
+    val keyStorePassword = parameters.keystorePassword ?: readPassword("Key store password: ")
+    val privateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("Private key password: ")
+    val keyStore = loadOrCreateKeyStore(parameters.keystorePath, keyStorePassword)
+
+    val (doormanSigner, networkMapSigner) = listOf(DEFAULT_CSR_CERTIFICATE_NAME, DEFAULT_NETWORK_MAP_CERTIFICATE_NAME).map {
+        val keyPair = keyStore.getKeyPair(it, privateKeyPassword)
+        val certPath = keyStore.getCertificateChain(it).map { it as X509Certificate }
+        LocalSigner(keyPair, certPath.toTypedArray())
     }
+
+    return Pair(doormanSigner, networkMapSigner)
 }
 
 /**
@@ -278,7 +302,7 @@ fun main(args: Array<String>) {
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
                         rootKeystorePassword,
                         rootPrivateKeyPassword)
-                Mode.CA_KEYGEN -> generateCAKeyPair(
+                Mode.CA_KEYGEN -> generateSigningKeyPairs(
                         keystorePath ?: throw IllegalArgumentException("The 'keystorePath' parameter must be specified when generating keys!"),
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
                         rootKeystorePassword,
@@ -289,18 +313,24 @@ fun main(args: Array<String>) {
                     initialiseSerialization()
                     val database = configureDatabase(dataSourceProperties)
                     // TODO: move signing to signing server.
-                    val signer = buildLocalSigner(this)
+                    val localSigners = buildLocalSigners(this)
 
-                    if (signer != null) {
-                        println("Starting network management services with local signer.")
+                    if (localSigners != null) {
+                        println("Starting network management services with local signing")
                     }
 
                     val networkManagementServer = NetworkManagementServer()
-                    val networkParameter = updateNetworkParameters?.let {
-                        println("Parsing network parameter from '${it.fileName}'...")
+                    val networkParameters = updateNetworkParameters?.let {
+                        // TODO This check shouldn't be needed. Fix up the config design.
+                        requireNotNull(networkMapConfig) { "'networkMapConfig' config is required for applying network parameters" }
+                        println("Parsing network parameters from '${it.toAbsolutePath()}'...")
                         parseNetworkParametersFrom(it)
                     }
-                    networkManagementServer.start(NetworkHostAndPort(host, port), database, signer, networkParameter, networkMapConfig, doormanConfig)
+                    val networkMapStartParams = networkMapConfig?.let {
+                        NetworkMapStartParams(localSigners?.second, networkParameters, it)
+                    }
+
+                    networkManagementServer.start(NetworkHostAndPort(host, port), database, localSigners?.first, doormanConfig, networkMapStartParams)
 
                     Runtime.getRuntime().addShutdownHook(thread(start = false) {
                         networkManagementServer.close()

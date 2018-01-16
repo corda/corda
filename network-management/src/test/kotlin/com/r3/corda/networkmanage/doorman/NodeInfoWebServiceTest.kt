@@ -5,35 +5,33 @@ import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
-import com.r3.corda.networkmanage.common.utils.withCert
+import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
+import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import net.corda.core.crypto.SecureHash.Companion.randomSHA256
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.checkOkResponse
 import net.corda.core.internal.openHttpConnection
-import net.corda.core.serialization.deserialize
+import net.corda.core.internal.responseAs
+import net.corda.core.internal.signWithCert
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.createNodeInfoAndSigned
-import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.URL
-import java.nio.charset.Charset
 import java.security.cert.X509Certificate
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
@@ -44,15 +42,15 @@ class NodeInfoWebServiceTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var rootCaCert: X509Certificate
-    private lateinit var intermediateCa: CertificateAndKeyPair
+    private lateinit var networkMapCa: CertificateAndKeyPair
 
     private val testNetworkMapConfig = NetworkMapConfig(10.seconds.toMillis(), 10.seconds.toMillis())
 
     @Before
     fun init() {
-        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+        val (rootCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
-        this.intermediateCa = intermediateCa
+        networkMapCa = createDevNetworkMapCa(rootCa)
     }
 
     @Test
@@ -106,8 +104,7 @@ class NodeInfoWebServiceTest {
     @Test
     fun `get network map`() {
         val networkMap = NetworkMap(listOf(randomSHA256(), randomSHA256()), randomSHA256())
-        val serializedNetworkMap = networkMap.serialize()
-        val signedNetworkMap = SignedNetworkMap(serializedNetworkMap, intermediateCa.keyPair.sign(serializedNetworkMap).withCert(intermediateCa.certificate))
+        val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
 
         val networkMapStorage: NetworkMapStorage = mock {
             on { getCurrentNetworkMap() }.thenReturn(signedNetworkMap)
@@ -117,7 +114,7 @@ class NodeInfoWebServiceTest {
             it.start()
             val signedNetworkMapResponse = it.doGet<SignedNetworkMap>("")
             verify(networkMapStorage, times(1)).getCurrentNetworkMap()
-            assertEquals(signedNetworkMapResponse.verified(rootCaCert), networkMap)
+            assertEquals(signedNetworkMapResponse.verifiedNetworkMapCert(rootCaCert), networkMap)
         }
     }
 
@@ -136,33 +133,32 @@ class NodeInfoWebServiceTest {
             verify(nodeInfoStorage, times(1)).getNodeInfo(nodeInfoHash)
             assertEquals(nodeInfo, nodeInfoResponse.verified())
 
-            assertThatExceptionOfType(FileNotFoundException::class.java).isThrownBy {
-                it.doGet<SignedNodeInfo>("node-info/${randomSHA256()}")
-            }
+            assertThatExceptionOfType(IOException::class.java)
+                    .isThrownBy { it.doGet<SignedNodeInfo>("node-info/${randomSHA256()}") }
+                    .withMessageContaining("404")
         }
     }
 
     @Test
     fun `get network parameters`() {
-        val netParams = testNetworkParameters(emptyList())
-        val serializedNetParams = netParams.serialize()
-        val signedNetParams = SignedData(serializedNetParams, intermediateCa.keyPair.sign(serializedNetParams))
-        val netParamsHash = serializedNetParams.hash
+        val networkParameters = testNetworkParameters(emptyList())
+        val signedNetworkParameters = networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+        val networkParametersHash = signedNetworkParameters.raw.hash
 
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getSignedNetworkParameters(netParamsHash) }.thenReturn(signedNetParams)
+            on { getSignedNetworkParameters(networkParametersHash) }.thenReturn(signedNetworkParameters)
         }
 
         NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
-            val netParamsResponse = it.doGet<SignedData<NetworkParameters>>("network-parameter/$netParamsHash")
-            verify(networkMapStorage, times(1)).getSignedNetworkParameters(netParamsHash)
-            assertThat(netParamsResponse.verified()).isEqualTo(netParams)
-            assertThat(netParamsResponse.sig.by).isEqualTo(intermediateCa.keyPair.public)
+            val netParamsResponse = it.doGet<SignedNetworkParameters>("network-parameters/$networkParametersHash")
+            verify(networkMapStorage, times(1)).getSignedNetworkParameters(networkParametersHash)
+            assertThat(netParamsResponse.verified()).isEqualTo(networkParameters)
+            assertThat(netParamsResponse.sig.by).isEqualTo(networkMapCa.certificate)
 
-            assertThatExceptionOfType(FileNotFoundException::class.java).isThrownBy {
-                it.doGet<SignedData<NetworkParameters>>("network-parameter/${randomSHA256()}")
-            }
+            assertThatExceptionOfType(IOException::class.java)
+                    .isThrownBy { it.doGet<SignedNetworkParameters>("network-parameters/${randomSHA256()}") }
+                    .withMessageContaining("404")
         }
     }
 
@@ -173,15 +169,11 @@ class NodeInfoWebServiceTest {
             requestMethod = "POST"
             setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
             outputStream.write(payload)
-            if (responseCode != 200) {
-                throw IOException("Response Code $responseCode: ${IOUtils.toString(errorStream, Charset.defaultCharset())}")
-            }
-            inputStream.close()
+            checkOkResponse()
         }
     }
 
     private inline fun <reified T : Any> NetworkManagementWebServer.doGet(path: String): T {
-        val url = URL("http://$hostAndPort/network-map/$path")
-        return url.openHttpConnection().inputStream.use { it.readBytes().deserialize() }
+        return URL("http://$hostAndPort/network-map/$path").openHttpConnection().responseAs()
     }
 }

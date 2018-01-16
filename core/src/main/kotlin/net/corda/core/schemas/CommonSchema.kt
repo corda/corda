@@ -4,7 +4,9 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import org.hibernate.annotations.Type
 import java.util.*
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.MappedSuperclass
+import javax.persistence.Transient
 
 /**
  * JPA representation of the common schema entities

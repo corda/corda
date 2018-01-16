@@ -6,6 +6,9 @@ from previous releases. Please refer to :doc:`upgrade-notes` for detailed instru
 
 UNRELEASED
 ----------
+* JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
+  `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
+  See: DummyDealStateSchemaV1.PersistentDummyDealState
 
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
   `participants` collection need to be moved to the actual State class. This allows developers to properly specify

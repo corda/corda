@@ -4,6 +4,13 @@ Release notes
 Unreleased
 ----------
 
+* **Enum Class Evolution**
+  With the addition of AMQP serialization Corda now supports enum constant evolution.
+
+  That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
+  annotations applied, have older and newer instances of that enumeration be understood.
+
+
 R3 Corda 3.0 Developer Preview
 ------------------------------
 This Developer Preview takes us towards the launch of R3 Corda, R3's commercially supported enterprise blockchain platform.

@@ -51,7 +51,7 @@ correctly interoperate with each other. If the node is using the HTTP network ma
 download the signed network parameters, cache it in a ``network-parameters`` file and apply them on the node.
 
 .. warning:: If the ``network-parameters`` file is changed and no longer matches what the network map service is advertising
-then the node will automatically shutdown. Resolution to this is to delete the incorrect file and restart the node so
+  then the node will automatically shutdown. Resolution to this is to delete the incorrect file and restart the node so
   that the parameters can be downloaded again.
 
 .. note:: A future release will support the notion of network parameters changes.
@@ -63,15 +63,15 @@ also distributes the node info files to the node directories. More information c
 The current set of network parameters:
 
 :minimumPlatformVersion: The minimum platform version that the nodes must be running. Any node which is below this will
-                not start.
+        not start.
 :notaries: List of identity and validation type (either validating or non-validating) of the notaries which are permitted
-                in the compatibility zone.
+        in the compatibility zone.
 :maxMessageSize: Maximum allowed P2P message size sent over the wire in bytes. Any message larger than this will be
-                split up.
+        split up.
 :maxTransactionSize: Maximum permitted transaction size in bytes.
 :modifiedTime: The time when the network parameters were last modified by the compatibility zone operator.
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
-                parameters change.
+        parameters change.
 
 .. note:: ``maxTransactionSize`` is currently not enforced in the node, but will be in a later release.
 
