@@ -223,8 +223,6 @@ open class PersistentNetworkMapCache(
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
-        // invalidate cache first - this node info is to be modified, so the cache entry can't be trusted anymore
-        invalidateCaches(nodeInfo)
         // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
         val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
         val nodeInfoEntry = generateMappedObject(nodeInfo)
@@ -232,13 +230,17 @@ open class PersistentNetworkMapCache(
             nodeInfoEntry.id = info.first().id
         }
         session.merge(nodeInfoEntry)
+        // invalidate cache last - this way, we might serve up the wrong info for a short time, but it will get refreshed
+        // on the next load
+        invalidateCaches(nodeInfo)
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
-        // invalidate cache first - this node info is to be removed, so the cache entry can't be trusted anymore
-        invalidateCaches(nodeInfo)
         val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).single()
         session.remove(info)
+        // invalidate cache last - this way, we might serve up the wrong info for a short time, but it will get refreshed
+        // on the next load
+        invalidateCaches(nodeInfo)
     }
 
     private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
