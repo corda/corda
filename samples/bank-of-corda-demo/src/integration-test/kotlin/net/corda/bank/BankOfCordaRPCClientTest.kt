@@ -11,8 +11,10 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.*
 import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Test
