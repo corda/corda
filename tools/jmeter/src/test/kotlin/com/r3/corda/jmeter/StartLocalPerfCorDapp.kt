@@ -2,9 +2,9 @@ package com.r3.corda.jmeter
 
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
 import java.io.InputStreamReader

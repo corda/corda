@@ -12,16 +12,15 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import java.net.ConnectException
 import java.util.regex.Pattern
@@ -34,7 +33,6 @@ class SSHServerTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
@@ -56,7 +54,6 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
@@ -76,8 +73,6 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
-
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
@@ -101,7 +96,6 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
@@ -132,7 +126,6 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))

@@ -12,14 +12,15 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.getFreeLocalPorts
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
+import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -95,7 +96,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
                         "rpcAddress" to localPort[1].toString(),
-                        "rpcUsers" to rpcUsers.map { it.toMap() }
+                        "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }
                 ) + configOverrides
         )
 

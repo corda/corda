@@ -26,7 +26,7 @@ class NodeKeystoreCheckTest : IntegrationTest() {
 
     @Test
     fun `starting node in non-dev mode with no key store`() {
-        driver(startNodesInProcess = true) {
+        driver(startNodesInProcess = true, notarySpecs = emptyList()) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
             }.hasMessageContaining("Identity certificate not found")
@@ -35,7 +35,7 @@ class NodeKeystoreCheckTest : IntegrationTest() {
 
     @Test
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
-        driver(startNodesInProcess = true) {
+        driver(startNodesInProcess = true, notarySpecs = emptyList()) {
             // Create keystores
             val keystorePassword = "password"
             val config = object : SSLConfiguration {

@@ -1,5 +1,7 @@
 package net.corda.node.utilities
 
+import com.google.common.cache.LoadingCache
+import com.google.common.cache.Weigher
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.util.*
@@ -10,23 +12,18 @@ import java.util.*
  * behaviour is unpredictable! There is a best-effort check for double inserts, but this should *not* be relied on, so
  * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
  */
-class AppendOnlyPersistentMap<K, V, E, out EK>(
+abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
-        val persistentEntityClass: Class<E>,
-        cacheBound: Long = 1024
-) { //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
+        val persistentEntityClass: Class<E>
+) {
 
     private companion object {
         private val log = contextLogger()
     }
 
-    private val cache = NonInvalidatingCache<K, Optional<V>>(
-            bound = cacheBound,
-            concurrencyLevel = 8,
-            loadFunction = { key -> Optional.ofNullable(loadValue(key)) }
-    )
+    abstract protected val cache: LoadingCache<K, Optional<V>>
 
     /**
      * Returns the value associated with the key, first loading that value from the storage if necessary.
@@ -116,7 +113,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
         }
     }
 
-    private fun loadValue(key: K): V? {
+    protected fun loadValue(key: K): V? {
         val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
@@ -134,4 +131,46 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
         session.createQuery(deleteQuery).executeUpdate()
         cache.invalidateAll()
     }
+}
+
+class AppendOnlyPersistentMap<K, V, E, out EK>(
+        toPersistentEntityKey: (K) -> EK,
+        fromPersistentEntity: (E) -> Pair<K, V>,
+        toPersistentEntity: (key: K, value: V) -> E,
+        persistentEntityClass: Class<E>,
+        cacheBound: Long = 1024
+) : AppendOnlyPersistentMapBase<K, V, E, EK>(
+        toPersistentEntityKey,
+        fromPersistentEntity,
+        toPersistentEntity,
+        persistentEntityClass) {
+    //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
+    override val cache = NonInvalidatingCache<K, Optional<V>>(
+            bound = cacheBound,
+            concurrencyLevel = 8,
+            loadFunction = { key -> Optional.ofNullable(loadValue(key)) })
+}
+
+class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        toPersistentEntityKey: (K) -> EK,
+        fromPersistentEntity: (E) -> Pair<K, V>,
+        toPersistentEntity: (key: K, value: V) -> E,
+        persistentEntityClass: Class<E>,
+        maxWeight: Long,
+        weighingFunc: (K, Optional<V>) -> Int
+) : AppendOnlyPersistentMapBase<K, V, E, EK>(
+        toPersistentEntityKey,
+        fromPersistentEntity,
+        toPersistentEntity,
+        persistentEntityClass) {
+    override val cache = NonInvalidatingWeightBasedCache<K, Optional<V>>(
+            maxWeight = maxWeight,
+            concurrencyLevel = 8,
+            weigher = object : Weigher<K, Optional<V>> {
+                override fun weigh(key: K, value: Optional<V>): Int {
+                    return weighingFunc(key, value)
+                }
+            },
+            loadFunction = { key -> Optional.ofNullable(loadValue(key)) }
+    )
 }

@@ -24,11 +24,13 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATI
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.chooseIdentity
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException

@@ -13,7 +13,6 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -23,6 +22,8 @@ import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
+import net.corda.testing.node.internal.DummyClusterSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Ignore
@@ -41,18 +42,22 @@ class DistributedServiceTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
                 ALICE_NAME.toDatabaseSchemaName())
     }
-    private fun setup(testBlock: () -> Unit) {
+    private fun setup(compositeIdentity: Boolean = false, testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(
                 startFlow<CashIssueFlow>(),
                 startFlow<CashPaymentFlow>(),
                 invokeRpc(CordaRPCOps::nodeInfo),
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
-
         driver(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
-        {
+                notarySpecs = listOf(
+                        NotarySpec(
+                                DUMMY_NOTARY_NAME,
+                                rpcUsers = listOf(testUser),
+                                cluster = DummyClusterSpec(clusterSize = 3, compositeServiceIdentity = compositeIdentity))
+                )
+        ) {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
             notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as NodeHandle.OutOfProcess }
@@ -81,11 +86,60 @@ class DistributedServiceTests : IntegrationTest() {
         }
     }
 
+    // TODO This should be in RaftNotaryServiceTests
+    @Test
+    fun `cluster survives if a notary is killed`() {
+        setup {
+            // Issue 100 pounds, then pay ourselves 10x5 pounds
+            issueCash(100.POUNDS)
+
+            for (i in 1..10) {
+                paySelf(5.POUNDS)
+            }
+
+            // Now kill a notary node
+            with(notaryNodes[0].process) {
+                destroy()
+                waitFor()
+            }
+
+            // Pay ourselves another 20x5 pounds
+            for (i in 1..20) {
+                paySelf(5.POUNDS)
+            }
+
+            val notarisationsPerNotary = HashMap<Party, Int>()
+            notaryStateMachines.expectEvents(isStrict = false) {
+                replicate<Pair<Party, StateMachineUpdate>>(30) {
+                    expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
+                        update as StateMachineUpdate.Added
+                        notarisationsPerNotary.compute(notary) { _, number -> number?.plus(1) ?: 1 }
+                    }
+                }
+            }
+
+            println("Notarisation distribution: $notarisationsPerNotary")
+            require(notarisationsPerNotary.size == 3)
+        }
+    }
+
     // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
     // to handle distributed services
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
-    fun `requests are distributed evenly amongst the nodes`() = setup {
+    fun `requests are distributed evenly amongst the nodes`() {
+        setup {
+            checkRequestsDistributedEvenly()
+        }
+    }
+
+    @Test
+    fun `requests are distributed evenly amongst the nodes with a composite public key`() {
+        setup(true) {
+            checkRequestsDistributedEvenly()
+        }
+    }
+
+    private fun checkRequestsDistributedEvenly() {
         // Issue 100 pounds, then pay ourselves 50x2 pounds
         issueCash(100.POUNDS)
 
@@ -109,42 +163,6 @@ class DistributedServiceTests : IntegrationTest() {
         require(notarisationsPerNotary.size == 3)
         // We allow some leeway for artemis as it doesn't always produce perfect distribution
         require(notarisationsPerNotary.values.all { it > 10 })
-    }
-
-    // TODO This should be in RaftNotaryServiceTests
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
-    @Test
-    fun `cluster survives if a notary is killed`() = setup {
-        // Issue 100 pounds, then pay ourselves 10x5 pounds
-        issueCash(100.POUNDS)
-
-        for (i in 1..10) {
-            paySelf(5.POUNDS)
-        }
-
-        // Now kill a notary node
-        with(notaryNodes[0].process) {
-            destroy()
-            waitFor()
-        }
-
-        // Pay ourselves another 20x5 pounds
-        for (i in 1..20) {
-            paySelf(5.POUNDS)
-        }
-
-        val notarisationsPerNotary = HashMap<Party, Int>()
-        notaryStateMachines.expectEvents(isStrict = false) {
-            replicate<Pair<Party, StateMachineUpdate>>(30) {
-                expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
-                    update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary) { _, number -> number?.plus(1) ?: 1 }
-                }
-            }
-        }
-
-        println("Notarisation distribution: $notarisationsPerNotary")
-        require(notarisationsPerNotary.size == 3)
     }
 
     private fun issueCash(amount: Amount<Currency>) {
