@@ -198,7 +198,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     protected open fun configure(lh: MutableLazyHub) {
-        // TODO: Migrate classes and factories from start method.
+        lh.obj(configuration)
+        lh.obj(lh)
+        lh.impl(DBTransactionStorage::class)
     }
 
     open fun start(): StartedNode<AbstractNode> {
@@ -220,7 +222,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             lh.obj(info)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
-            val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
+            val transactionStorage = lh[WritableTransactionStorage::class]
             val nodeServices = makeServices(lh, keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
@@ -561,7 +563,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return tokenizableServices
     }
 
-    protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
     private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
         VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService, flowLogicRefFactory)

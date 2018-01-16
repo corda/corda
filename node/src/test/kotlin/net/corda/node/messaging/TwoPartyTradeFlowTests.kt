@@ -34,6 +34,8 @@ import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
+import net.corda.lazyhub.LazyHubFactory
+import net.corda.lazyhub.MutableLazyHub
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.api.IdentityServiceInternal
@@ -314,8 +316,17 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = { args ->
             object : MockNetwork.MockNode(args) {
                 // That constructs a recording tx storage
-                override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                    return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                private fun makeTransactionStorage(database: CordaPersistence, lhf: LazyHubFactory): RecordingTransactionStorage {
+                    val realStorage = lhf.child().let { lh ->
+                        lh.impl(DBTransactionStorage::class)
+                        lh[WritableTransactionStorage::class]
+                    }
+                    return RecordingTransactionStorage(database, realStorage)
+                }
+
+                override fun configure(lh: MutableLazyHub) {
+                    super.configure(lh)
+                    lh.factory(WritableTransactionStorage::class, this::makeTransactionStorage)
                 }
             }
         })
