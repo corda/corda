@@ -48,11 +48,11 @@ The following modules have a stable API we commit not to break in following rele
 * **Client RPC (net.corda.client.rpc)**: client RPC
 * **Client Jackson (net.corda.client.jackson)**: JSON support for client applications
 * **Test Utils (net.corda.testing.core)**: generic test utilities
-* **Node Driver (net.corda.testing.node, net.corda.testing.driver)**: test utilities to run nodes programmatically
+* **Test Node Driver (net.corda.testing.node, net.corda.testing.driver)**: test utilities to run nodes programmatically
 * **Http Test Utils (net.corda.testing.http)**: a small set of utilities for making HttpCalls, aimed at demos and tests.
 * **DSL Test Utils (net.corda.testing.dsl)**: a simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
 * **Dummy Contracts (net.corda.testing.contracts)**: dummy state and contracts for testing purposes
-* **Services (net.corda.testing.services)**: mock service implementations for testing purposes
+* **Mock Services (net.corda.testing.services)**: mock service implementations for testing purposes
 
 Corda incubating modules
 ------------------------
