@@ -198,8 +198,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
+    class TokenizableServices(vararg services: Any) {
+        val services = services.toMutableList()
+        fun add(service: Any) = services.add(service)
+    }
+
     protected open fun configure(lh: MutableLazyHub) {
-        // TODO: Migrate classes and factories from start method.
+        configuration.notary?.let {
+            lh.obj(it)
+            lh.factory(this::makeCoreNotaryService)
+        }
     }
 
     open fun start(): StartedNode<AbstractNode> {
@@ -223,7 +231,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(lh, keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
-            val notaryService = makeNotaryService(nodeServices, database)
+            lh.obj(nodeServices)
+            val notaryService = lh.getOrNull(NotaryService::class)
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
             val flowStarter = FlowStarterImpl(serverThread, smm, flowLogicRefFactory)
@@ -249,7 +258,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             lh.getAll(Unit::class) // Run side-effects.
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)
-            tokenizableServices = nodeServices + cordaServices + schedulerService
+            tokenizableServices = nodeServices.services + cordaServices + schedulerService
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
@@ -537,7 +546,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(lh: LazyHub, keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
+    private fun makeServices(lh: LazyHub, keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): TokenizableServices {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
@@ -554,12 +563,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 info,
                 networkMapCache)
         network = lh[MessagingService::class] // TODO: Retire the lateinit var.
-        val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
+        return TokenizableServices(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
-        return tokenizableServices
     }
 
     protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
@@ -623,18 +631,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeNotaryService(tokenizableServices: MutableList<Any>, database: CordaPersistence): NotaryService? {
-        return configuration.notary?.let {
-            makeCoreNotaryService(it, database).also {
-                tokenizableServices.add(it)
-                runOnStop += it::stop
-                installCoreFlow(NotaryFlow.Client::class, it::createServiceFlow)
-                log.info("Running core notary: ${it.javaClass.name}")
-                it.start()
-            }
-        }
-    }
-
     open protected fun checkNetworkMapIsInitialized() {
         if (!services.networkMapCache.loadDBSuccess) {
             // TODO: There should be a consistent approach to configuration error exceptions.
@@ -669,9 +665,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
+    private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence, tokenizableServices: TokenizableServices): NotaryService {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
-        return notaryConfig.run {
+        val notaryService = notaryConfig.run {
             if (raft != null) {
                 val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
                 (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
@@ -681,6 +677,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             } else {
                 (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
             }
+        }
+        return notaryService.also {
+            tokenizableServices.add(it)
+            runOnStop += it::stop
+            installCoreFlow(NotaryFlow.Client::class, it::createServiceFlow)
+            log.info("Running core notary: ${it.javaClass.name}")
+            it.start()
         }
     }
 
