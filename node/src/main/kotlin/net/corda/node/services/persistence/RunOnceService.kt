@@ -6,7 +6,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.hibernate.Session
-import java.text.SimpleDateFormat
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoField
@@ -37,7 +36,6 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     private val log = loggerFor<RunOnceService>()
     private val running = AtomicBoolean(false)
-    private val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
     init {
         if (waitInterval <= updateInterval) {
