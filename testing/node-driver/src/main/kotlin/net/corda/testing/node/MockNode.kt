@@ -5,7 +5,6 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -15,17 +14,15 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
-import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
+import net.corda.lazyhub.MutableLazyHub
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
@@ -294,9 +291,14 @@ open class MockNetwork(private val cordappPackages: List<String>,
                     }
         }
 
+        override fun configure(lh: MutableLazyHub) {
+            super.configure(lh)
+            lh.factory(this::makeMessagingService)
+        }
+
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+        private fun makeMessagingService(database: CordaPersistence): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -313,14 +315,6 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
         override fun makeKeyManagementService(identityService: IdentityServiceInternal, keyPairs: Set<KeyPair>): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
-        }
-
-        override fun startShell(rpcOps: CordaRPCOps) {
-            //No mock shell
-        }
-
-        override fun startMessagingService(rpcOps: RPCOps) {
-            // Nothing to do
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
