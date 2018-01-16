@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.MySQLConfiguration
 import java.security.PublicKey
 import java.util.*
 
@@ -12,14 +13,14 @@ import java.util.*
 abstract class MySQLNotaryService(
         final override val services: ServiceHubInternal,
         override val notaryIdentityKey: PublicKey,
-        dataSourceProperties: Properties,
+        configuration: MySQLConfiguration,
         /** Database table will be automatically created in dev mode */
         val devMode: Boolean) : TrustedAuthorityNotaryService() {
 
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = MySQLUniquenessProvider(
             services.monitoringService.metrics,
-            dataSourceProperties
+            configuration
     )
 
     override fun start() {
@@ -33,14 +34,14 @@ abstract class MySQLNotaryService(
 
 class MySQLNonValidatingNotaryService(services: ServiceHubInternal,
                                       notaryIdentityKey: PublicKey,
-                                      dataSourceProperties: Properties,
-                                      devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, dataSourceProperties, devMode) {
+                                      configuration: MySQLConfiguration,
+                                      devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, configuration, devMode) {
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this)
 }
 
 class MySQLValidatingNotaryService(services: ServiceHubInternal,
                                       notaryIdentityKey: PublicKey,
-                                      dataSourceProperties: Properties,
-                                      devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, dataSourceProperties, devMode) {
+                                      configuration: MySQLConfiguration,
+                                      devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, configuration, devMode) {
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ValidatingNotaryFlow(otherPartySession, this)
 }

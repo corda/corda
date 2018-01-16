@@ -14,9 +14,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.config.MySQLConfiguration
 import java.security.PublicKey
 import java.sql.BatchUpdateException
 import java.sql.Connection
+import java.sql.SQLTransientConnectionException
 import java.util.*
 
 /**
@@ -27,7 +29,7 @@ import java.util.*
  */
 class MySQLUniquenessProvider(
         metrics: MetricRegistry,
-        dataSourceProperties: Properties
+        configuration: MySQLConfiguration
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()
@@ -57,13 +59,29 @@ class MySQLUniquenessProvider(
      * This is a useful heath metric.
      */
     private val rollbackCounter = metrics.counter("$metricPrefix.Rollback")
+    /** Incremented when we can not obtain a DB connection. */
+    private val connectionExceptionCounter = metrics.counter("$metricPrefix.ConnectionException")
     /** Track double spend attempts. Note that this will also include notarisation retries. */
     private val conflictCounter = metrics.counter("$metricPrefix.Conflicts")
 
-    val dataSource = HikariDataSource(HikariConfig(dataSourceProperties))
+    val dataSource = HikariDataSource(HikariConfig(configuration.dataSource))
+    private val connectionRetries = configuration.connectionRetries
 
     private val connection: Connection
-        get() = dataSource.connection
+        get() = getConnection()
+
+    private fun getConnection(nRetries: Int = 0): Connection =
+            try {
+                dataSource.connection
+            } catch (e: SQLTransientConnectionException) {
+                if (nRetries == connectionRetries) {
+                    log.warn("Couldn't obtain connection with {} retries, giving up, {}", nRetries, e)
+                    throw e
+                }
+                log.warn("Connection exception, retrying", nRetries+1)
+                connectionExceptionCounter.inc()
+                getConnection(nRetries + 1)
+            }
 
     fun createTable() {
         log.debug("Attempting to create DB table if it does not yet exist: $createTableStatement")
