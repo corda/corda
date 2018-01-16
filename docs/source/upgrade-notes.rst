@@ -1,5 +1,5 @@
-Upgrading a CorDapp to a new version
-====================================
+Upgrading a CorDapp to a new platform version
+=============================================
 
 These notes provide instructions for upgrading your CorDapps from previous versions, starting with the upgrade from our
 first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelog_v1>`.
@@ -30,6 +30,26 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 
 UNRELEASED
 ----------
+
+* For existing contract ORM schemas that extend from `CommonSchemaV1.LinearState` or `CommonSchemaV1.FungibleState`,
+  you will need to explicitly map the `participants` collection to a database table. Previously this mapping was done in the
+  superclass, but that makes it impossible to properly configure the table name.
+  The required change is to add the ``override var participants: MutableSet<AbstractParty>? = null`` field to your class, and
+  add JPA mappings. For ex., see this example:
+
+.. sourcecode:: kotlin
+
+    @Entity
+    @Table(name = "cash_states_v2",
+            indexes = arrayOf(Index(name = "ccy_code_idx2", columnList = "ccy_code")))
+    class PersistentCashState(
+
+            @ElementCollection
+            @Column(name = "participants")
+            @CollectionTable(name="cash_states_v2_participants", joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+            override var participants: MutableSet<AbstractParty>? = null,
 
 Testing
 ~~~~~~~

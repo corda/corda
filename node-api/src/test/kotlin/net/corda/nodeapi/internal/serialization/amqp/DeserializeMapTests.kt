@@ -12,7 +12,7 @@ class DeserializeMapTests {
         private const val VERBOSE = false
     }
 
-    private val sf = testDefaultFactory()
+    private val sf = testDefaultFactoryNoEvolution()
 
     @Test
     fun mapTest() {

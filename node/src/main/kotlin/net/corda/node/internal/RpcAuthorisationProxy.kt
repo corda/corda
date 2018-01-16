@@ -19,7 +19,7 @@ import java.io.InputStream
 import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
-class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
+class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext) : CordaRPCOps {
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash = guard("uploadAttachmentWithMetadata") {
         implementation.uploadAttachmentWithMetadata(jar, uploader, filename)

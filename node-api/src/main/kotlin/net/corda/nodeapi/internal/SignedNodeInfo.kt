@@ -13,12 +13,14 @@ import java.security.SignatureException
  * A signed [NodeInfo] object containing a signature for each identity. The list of signatures is expected
  * to be in the same order as the identities.
  */
+// TODO Move this to net.corda.nodeapi.internal.network
 // TODO Add signatures for composite keys. The current thinking is to make sure there is a signature for each leaf key
 // that the node owns. This check can only be done by the network map server as it can check with the doorman if a node
 // is part of a composite identity. This of course further requires the doorman being able to issue CSRs for composite
 // public keys.
 @CordaSerializable
 class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<DigitalSignature>) {
+    // TODO Add root cert param (or TrustAnchor) to make sure all the identities belong to the same root
     fun verified(): NodeInfo {
         val nodeInfo = raw.deserialize()
         val identities = nodeInfo.legalIdentities.filterNot { it.owningKey is CompositeKey }

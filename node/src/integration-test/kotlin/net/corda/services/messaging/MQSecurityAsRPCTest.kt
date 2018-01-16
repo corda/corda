@@ -1,6 +1,6 @@
 package net.corda.services.messaging
 
-import net.corda.nodeapi.internal.config.User
+import net.corda.testing.node.User
 import org.junit.Test
 
 /**

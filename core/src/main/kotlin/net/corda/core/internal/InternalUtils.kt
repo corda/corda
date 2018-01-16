@@ -3,11 +3,14 @@
 package net.corda.core.internal
 
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import org.bouncycastle.asn1.x500.X500Name
@@ -27,6 +30,8 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.security.PrivateKey
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -237,10 +242,14 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 }
 
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
-
+inline fun <reified T> Stream<out T>.toTypedArray() = toTypedArray(T::class.java)
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
-inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
+fun <T> Stream<out T>.toTypedArray(componentType: Class<T>): Array<T> = toArray { size ->
+    uncheckedCast<Any, Array<T?>>(java.lang.reflect.Array.newInstance(componentType, size))
+}
 
+fun <T> Stream<out T?>.filterNotNull(): Stream<T> = uncheckedCast(filter(Objects::nonNull))
+fun <K, V> Stream<out Pair<K, V>>.toMap(): Map<K, V> = collect<LinkedHashMap<K, V>>(::LinkedHashMap, { m, (k, v) -> m.put(k, v) }, { m, t -> m.putAll(t) })
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
@@ -308,6 +317,19 @@ fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, seri
 val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
+
+fun HttpURLConnection.checkOkResponse() {
+    if (responseCode != 200) {
+        val message = errorStream.use { it.reader().readText() }
+        throw IOException("Response Code $responseCode: $message")
+    }
+}
+
+inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
+    checkOkResponse()
+    return inputStream.use { it.readBytes() }.deserialize()
+}
+
 /** Analogous to [Thread.join]. */
 fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
@@ -336,3 +358,9 @@ val CordaX500Name.x500Name: X500Name
 @VisibleForTesting
 val CordaX500Name.Companion.unspecifiedCountry
     get() = "ZZ"
+
+fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
+    val serialised = serialize()
+    val signature = Crypto.doSign(privateKey, serialised.bytes)
+    return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
+}

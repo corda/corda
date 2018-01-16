@@ -2,6 +2,7 @@ package net.corda.docs.tutorial.testdsl
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.days
@@ -53,7 +54,8 @@ class CommercialPaperTest {
     // DOCEND 1
 
     // DOCSTART 2
-    @Test
+    // This example test will fail with this exception.
+    @Test(expected = IllegalStateException::class)
     fun simpleCP() {
         val inState = getPaper()
         ledgerServices.ledger(DUMMY_NOTARY) {
@@ -67,7 +69,8 @@ class CommercialPaperTest {
     // DOCEND 2
 
     // DOCSTART 3
-    @Test
+    // This example test will fail with this exception.
+    @Test(expected = TransactionVerificationException.ContractRejection::class)
     fun simpleCPMove() {
         val inState = getPaper()
         ledgerServices.ledger(DUMMY_NOTARY) {

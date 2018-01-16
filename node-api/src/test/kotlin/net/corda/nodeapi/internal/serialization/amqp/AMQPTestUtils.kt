@@ -1,12 +1,12 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.codec.Data
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
-import java.io.NotSerializableException
 
 fun testDefaultFactory() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+fun testDefaultFactoryNoEvolution() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader(),
+        EvolutionSerializerGetterTesting())
 fun testDefaultFactoryWithWhitelist() = SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader())
 
 class TestSerializationOutput(

@@ -96,7 +96,7 @@ class EvolutionSerializer(
             old.fields.forEach {
                 val returnType = it.getTypeAsClass(factory.classloader)
                 oldArgs[it.name] = OldParam(
-                        returnType, idx++, PropertySerializer.make(it.name, null, returnType, factory))
+                        returnType, idx++, PropertySerializer.make(it.name, PublicPropertyReader(null), returnType, factory))
             }
 
             val readers = constructor.parameters.map {
@@ -128,5 +128,36 @@ class EvolutionSerializer(
 
         return construct(readers.map { it?.readProperty(obj, schemas, input) })
     }
+}
+
+/**
+ * Instances of this type are injected into a [SerializerFactory] at creation time to dictate the
+ * behaviour of evolution within that factory. Under normal circumstances this will simply
+ * be an object that returns an [EvolutionSerializer]. Of course, any implementation that
+ * extends this class can be written to invoke whatever behaviour is desired.
+ */
+abstract class EvolutionSerializerGetterBase {
+    abstract fun getEvolutionSerializer(
+            factory: SerializerFactory,
+            typeNotation: TypeNotation,
+            newSerializer: AMQPSerializer<Any>,
+            schemas: SerializationSchemas): AMQPSerializer<Any>
+}
+
+/**
+ * The normal use case for generating an [EvolutionSerializer]'s based on the differences
+ * between the received schema and the class as it exists now on the class path,
+ */
+class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
+    override fun getEvolutionSerializer(factory: SerializerFactory,
+                                        typeNotation: TypeNotation,
+                                        newSerializer: AMQPSerializer<Any>,
+                                        schemas: SerializationSchemas): AMQPSerializer<Any> =
+            factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
+                when (typeNotation) {
+                    is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
+                    is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                }
+            }
 }
 
