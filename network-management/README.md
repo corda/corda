@@ -149,8 +149,8 @@ networkMapConfig {
    they attempt to register. The trust store password is `trustpass`.
 
 ### 2. Start Doorman service for notary registration 
-   Start the network management server with the doorman service for initial bootstrapping. Network map service should be disabled at this point.  
-   Comment out network map config in the config file and start the server by running :
+   Start the network management server with the doorman service for initial bootstrapping. Network map service (`networkMapConfig`) should be **disabled** at this point.  
+   **Comment out** network map config in the config file and start the server by running :
    ```
    java -jar doorman-<version>.jar
    ```
