@@ -10,10 +10,10 @@ import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.nodeapi.internal.DevIdentityGenerator
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory

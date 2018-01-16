@@ -167,11 +167,7 @@ class InMemoryIdentityServiceTests {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public)
         val txKeyPair = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(
-                CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
-                issuer.certificate,
-                issuerKeyPair,
-                x500Name.x500Principal,
+        val txCert = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_LEGAL_IDENTITY, issuer.certificate, issuerKeyPair, x500Name.x500Principal,
                 txKeyPair.public)
         val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))

@@ -128,7 +128,8 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the jolokia monitoring agent JAR to the node/drivers directory
      */
     private fun installAgentJar() {
-        val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
+        // TODO: improve how we re-use existing declared external variables from root gradle.build
+        val jolokiaVersion = try { project.rootProject.ext<String>("jolokia_version") } catch (e: Exception) { "1.3.7" }
         val agentJar = project.configuration("runtime").files {
             (it.group == "org.jolokia") &&
                     (it.name == "jolokia-jvm") &&

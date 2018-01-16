@@ -47,7 +47,8 @@ sealed class ByteSequence : Comparable<ByteSequence> {
     fun open() = ByteArrayInputStream(_bytes, offset, size)
 
     /**
-     * Create a sub-sequence backed by the same array.
+     * Create a sub-sequence of this sequence.  A copy of the underlying array may be made, if a subclass overrides
+     * [bytes] to do so, as [OpaqueBytes] does.
      *
      * @param offset The offset within this sequence to start the new sequence.  Note: not the offset within the backing array.
      * @param size The size of the intended sub sequence.
@@ -55,7 +56,8 @@ sealed class ByteSequence : Comparable<ByteSequence> {
     fun subSequence(offset: Int, size: Int): ByteSequence {
         require(offset >= 0)
         require(offset + size <= this.size)
-        // Intentionally use bytes rather than _bytes, to mirror the copy-or-not behaviour of that property.
+        // Intentionally use bytes rather than _bytes, in case a subclass wants to prevent access to the original
+        // underlying array which could be revealed here (e.g. OpaqueBytes).
         return if (offset == 0 && size == this.size) this else of(bytes, this.offset + offset, size)
     }
 

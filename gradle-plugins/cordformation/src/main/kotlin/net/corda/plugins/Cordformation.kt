@@ -38,7 +38,7 @@ class Cordformation : Plugin<Project> {
         fun verifyAndGetRuntimeJar(project: Project, jarName: String): File {
             val releaseVersion = project.rootProject.ext<String>("corda_release_version")
             val maybeJar = project.configuration("runtime").filter {
-                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
+                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-r3-$releaseVersion.jar" in it.toString()
             }
             if (maybeJar.isEmpty) {
                 throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
@@ -55,7 +55,8 @@ class Cordformation : Plugin<Project> {
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
         Utils.createRuntimeConfiguration(CORDFORMATION_TYPE, project)
-        val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
+        // TODO: improve how we re-use existing declared external variables from root gradle.build
+        val jolokiaVersion = try { project.rootProject.ext<String>("jolokia_version") } catch (e: Exception) { "1.3.7" }
         project.dependencies.add(CORDFORMATION_TYPE, "org.jolokia:jolokia-jvm:$jolokiaVersion:agent")
     }
 }

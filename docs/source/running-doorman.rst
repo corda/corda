@@ -37,7 +37,7 @@ Allowed parameters are:
 
 :databaseProperties: database properties
 
-:dataSourceProperties: datasoruce properties
+:dataSourceProperties: datasource properties
 
 :jiraConfig: The Jira configuration
 

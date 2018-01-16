@@ -34,15 +34,43 @@ The Participant nodes are only able to spend cash (eg. move cash).
 
 **These Corda nodes will be created on the following port on localhost.**
 
-   * Notary -> 20003            (Does not accept logins)
-   * Alice -> 20006
-   * Bob -> 20009
-   * UK Bank Plc -> 20012       (*Issuer node*)
-   * USA Bank Corp -> 20015     (*Issuer node*)
+   * Notary -> 20001            (Does not accept logins)
+   * Alice -> 20004
+   * Bob -> 20007
+   * UK Bank Plc -> 20010       (*Issuer node*)
+   * USA Bank Corp -> 20013     (*Issuer node*)
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
-Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
+Explorer login credentials to the Participant nodes are defaulted to ``user1`` and ``test``.
 Please note you are not allowed to login to the notary.
+
+## Running Simulation Nodes
+
+Building on the demonstration Corda network topology described above, simulation mode performs continuous
+issue, move and exit cash operations across all participant nodes.
+
+**Windows:**
+
+    gradlew.bat tools:explorer:runSimulationNodes
+
+**Other:**
+
+    ./gradlew tools:explorer:runSimulationNodes
+
+## Running Flow Triage scenario
+
+Once again, building on the demonstration Corda network topology described above, this scenario mode triggers 
+an exception within a flow which can then be visualized using the "Flow Triage" panel within the Explorer.
+The "Flow Triage" panel will be enhanced in the future to enable operators to take corrective actions upon flow failures 
+(eg. retry, terminate, amend and replay)
+
+**Windows:**
+
+    gradlew.bat tools:explorer:runFlowTriageNodes
+
+**Other:**
+
+    ./gradlew tools:explorer:runFlowTriageNodes
 
 ## Business Network reference implementation
 

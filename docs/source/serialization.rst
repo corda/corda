@@ -46,6 +46,8 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
    likely.
 
+.. _amqp_ref:
+
 AMQP
 ====
 
@@ -219,6 +221,8 @@ All Corda exceptions that are expected to be serialized inherit from ``CordaThro
 checked exceptions, or ``CordaRuntimeException``, for unchecked exceptions.  Any ``Throwable`` that is serialized but does
 not conform to ``CordaThrowable`` will be converted to a ``CordaRuntimeException`` with the original exception type
 and other properties retained within it.
+
+.. _amqp_custom_types_ref:
 
 Custom Types
 ------------

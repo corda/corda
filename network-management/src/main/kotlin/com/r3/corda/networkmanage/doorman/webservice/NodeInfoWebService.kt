@@ -60,7 +60,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
                 is NetworkMapNotInitialisedException -> status(Response.Status.SERVICE_UNAVAILABLE).entity(e.message)
                 is InvalidPlatformVersionException -> status(Response.Status.BAD_REQUEST).entity(e.message)
                 is IllegalArgumentException, is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-            // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                 else -> throw e
             }
         }.build()

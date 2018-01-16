@@ -1,14 +1,8 @@
 Release notes
 =============
 
-Here are release notes for each snapshot release from M9 onwards.
-
 Unreleased
 ----------
-* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
-  hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
-  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
-  found at see :doc:`permissioning-certificate-specification`.
 
 * **Enum Class Evolution**
   With the addition of AMQP serialization Corda now supports enum constant evolution.
@@ -16,34 +10,162 @@ Unreleased
   That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
   annotations applied, have older and newer instances of that enumeration be understood.
 
-* **AMQP Enabled**:
-  AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This change
-  brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
-  users.
 
-  Details on the AMQP serialization framework can be found in the :doc:`serialization` document :ref:`here <amqp_ref>`.
-  This provides an introduction and overview of the framework whilst more specific details on object evolution as it relates to
-  serialization is similarly found in pages :doc:`serialization-default-evolution` and :doc:`serialization-enum-evolution`
-  respectively. Recommendations on how best to code CorDapps using your own :ref:`custom types <amqp_custom_types_ref>`.
+R3 Corda 3.0 Developer Preview
+------------------------------
+This Developer Preview takes us towards the launch of R3 Corda, R3's commercially supported enterprise blockchain platform.
+
+Whilst the recent major releases of **Corda** ("Open Source") - V1.0 and V2.0 - have focused on providing API stability and
+functionality, **R3 Corda** has been primarily focused on non-functional aspects of the platform: performance, scalability,
+robustness, security, configurability, manageability, supportability and upgradeability.
+
+Here is a summary of some of the key new features in this preview, many of which will also appear in the next open
+source release:
+
+- support for :ref:`Azure SQL and SQL Server 2017 <sql_server_ref>` databases.
+- integrated :ref:`database schema management <database_migration_ref>` tooling using `Liquibase <http://www.liquibase.org/>`_
+- completely re-designed :doc:`network-map` Service.
+- enabled :ref:`AMQP serialization <amqp_ref>` for peer to peer messaging, and vault transaction storage.
+- pluggable :ref:`user authentication <authentication_ref>` and :ref:`fine-grained access control <rpc_security_mgmt_ref>`.
+- re-designed Flow Framework manager in preparation for fully multi-threaded implementation.
+- improvements to the Doorman certificate issuance process (including integration with HSMs).
+- additional JMX metrics exported via :ref:`Jolokia for monitoring <jolokia_ref>` and pro-active alert management.
+- a secure, remotely accessible, :ref:`SSH server <ssh_server>` in the node with built-in authorization and permissioning to enable remote
+  node administration without requiring console access to the underlying operating system.
+- re-architected and re-designed Corda bridge management for secure P2P connectivity between participants.
+- enhanced Explorer tool with new :ref:`flow triage <flow_triage>` user interface panel to visualize all currently running flows.
+- preliminary implementation of Business Networks concept (a private sub group within a Corda Compatibility Zone).
+
+We also continue to make improvements in usability of our Test Framework APIs in preparation for declaring the test
+framework API stable (in addition to the already-stabilised core APIs).
+
+Significant changes implemented in reaching this Developer Preview include:
+
+* **AMQP**:
+  AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This
+  change brings a serialisation format that will allow us to deliver enhanced security and wire stability. It is a key
+  prerequisite to enabling different Corda node versions to coexist on the same network and to enable easier upgrades.
+
+  Details on the AMQP serialization framework can be found :ref:`here <amqp_ref>`. This provides an introduction and
+  overview of the framework whilst more specific details on object evolution as it relates to serialization is similarly
+  found in :doc:`serialization-default-evolution` and :doc:`serialization-enum-evolution` respectively.
 
   .. note:: This release delivers the bulk of our transition from Kryo serialisation to AMQP serialisation. This means that many of the restrictions
-    that were documented in previous versions of Corda are now enforced. (https://docs.corda.net/releases/release-V1.0/serialization.html).
+    that were documented in previous versions of Corda are now enforced.
 
-    In particular, you are advised to review the section titled "Custom Types". To aid with the transition, we have included support
-    in this release for default construction of objects and their instantiation through getters as well as objects with inaccessible
-    private fields but it is not guaranteed that this support will continue into future versions; the restrictions documented at the
-    link above are the canonical source.
+    In particular, you are advised to review the section titled :ref:`Custom Types <amqp_custom_types_ref>`.
+    To aid with the transition, we have included support in this release for default construction and instantiation of
+    objects with inaccessible private fields, but it is not guaranteed that this support will continue into future versions;
+    the restrictions documented at the link above are the canonical source.
 
-* **Custom Serializers**
+* **New Network Map Service**:
+  This release introduces the new network map architecture. The network map service has been completely redesigned and
+  implemented to enable future increased network scalability and redundancy, reduced runtime operational overhead,
+  support for multiple notaries, and administration of network compatibility zones (CZ) and business networks.
 
+  A Corda Compatibility Zone (CZ) is defined as a grouping of participants and services (notaries, oracles,
+  doorman, network map server) configured within an operational Corda network to be interoperable and compatible with
+  each other.
+
+  We introduce the concept of network parameters, which will be used in a future version of Corda to specify precisely
+  the set of constants (or ranges of constants) upon which a set of nodes need to agree in order to be assured of seamless
+  inter-operation. Additional security controls ensure that all network map data is now signed, thus reducing the power
+  of the network operator to tamper with the map.
+
+  This release also adds Hardware Security Module (HSM) support to the doorman service (certificate authority).
+  By integrating with external HSMs, we have further strengthened the security of issuing network certificates and
+  signing of network map related data.
+
+  Further information can be found in the :doc:`changelog` and :doc:`network-map` documentation.
+
+* **Third party database support**:
+  R3 Corda has been tested against Azure SQL and SQL Server 2017 databases (in addition to the existing default support
+  of H2 for development mode). This preview adds preliminary support for :ref:`PostgreSQL 9.6 <postgres_ref>`.
+  Support for Oracle 11g RC02 and Oracle 12c is currently under development. All required database settings can be
+  specified in the node configuration file. For configuration details see :doc:`node-database`.
+
+* **Integrated database migration tooling**:
+  We have adopted and integrated `Liquibase <http://www.liquibase.org/>`_ , an open source database-independent library
+  for tracking, managing and applying database schema changes in order to ease the evolution (creation and migration) of
+  CorDapp custom contract schemas and facilitate the operational administration of a Corda nodes database.
+  We provide tooling to export DDL and data (as SQL statements) to a file to be inspected and/or manually applied by a DBA.
+  Please see :ref:`database migration <database_migration_ref>` for further details.
+
+* **Pluggable user authentication and fine-grained access control**:
+  All RPC functions are now subject to permission checks (previously these only applied when starting flows).
+  We have also included experimental support for external user credentials data source and password encryption using the
+  `Apache Shiro <https://shiro.apache.org>`_ framework. Please see :ref:`RPC security management <rpc_security_mgmt_ref>` for further details.
+
+* **Preliminary preview of new bridge management functionality**:
+  The bridge manager component is responsible for dynamically establishing remote connectivity with participant nodes
+  in a Corda peer to peer network. A new Bridge manager has been designed and implemented to be used integrally
+  within a :ref:`Corda node <config_amqp_bridge>` or deployed (in the final R3 Corda 3.0 release) as a standalone component in DMZ operational deployments,
+  where security concerns require separation of infrastructure messaging subsystems.
+
+* **Preliminary preview of flow triage functionality**:
+  The explorer GUI was extended with a panel similar to the ``flow watch`` CRaSH shell command. It provides users with a view of all
+  flows currently executed on the node, with information about success/failure. The "Flow Triage" panel will be enhanced in the future
+  to enable operators to take corrective actions upon flow failures (eg. retry, terminate, amend and replay).
+
+* **Experimental preview of a new operational Corda network grouping concept: Business Networks**:
+  Business Networks are introduced as a way to partition the global population of nodes (a Compatibility Zone) into
+  independent, possibly overlapping, groups. A Business Network operator (BNO) will have control over which nodes will
+  be admitted into a Business Network. Some nodes may choose not to register themselves in the global Network Map, and
+  will therefore remain invisible to nodes outside of their Business Network. Further documentation will be forthcoming
+  by the final R3 Corda 3.0 release.
+
+  See the "Business Network reference implementation" prototype example in the Explorer tool (instructions in README.md).
+
+In addition to enhancements focused on non-functional capabilities, this release encompasses a number of functional
+improvements, including:
+
+* Doorman Service
+  In order to automate a node's network joining process, a new Doorman service has been introduced with this release.
+  The Doorman's main purpose is to restrict network access only to those nodes whose identity has been confirmed and their network joining request approved.
+  It issues node-level certificates which are then used by other nodes in the network to confirm a nodes identity and network permissions.
+  More information on Doorman and how to run it can be found in :doc:`running-doorman`.
+
+* Hardware Security Module (HSM) for Doorman
+  To allow for increased security, R3 Corda introduces HSM integration. Doorman certificates (together with their keys)
+  can now be stored on secured hardware constraining the way those certificates are accessed. Any usage of those certificates
+  (e.g. data signing or node-level certificate generation) falls into a restrictive process that is automatically audited
+  and can be configured to involve human-in-the-loop in order to prevent unauthorised access. The HSM integration is embodied
+  in our new Signing Service. More on this in :doc:`signing-service`.
+
+* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
+  hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
+  PKI solutions. In most cases it is managed transparently by Corda. A formal specification of the extension can be
+  found at see :doc:`permissioning-certificate-specification`.
+
+* Custom Serializers
   To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
   to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
-  serializers to operate on those types.
+  serializers to operate on those types. A good example of this is the SIMM valuation demo which has a number of such
+  serializers defined in the plugin/custom serializers package
 
-  A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
+Please refer to the :doc:`changelog` for detailed explanations of all new features.
 
-Release 2.0
-----------
+Finally, please note that although this developer preview has not yet been security audited, it is currently being subjected
+to a full external secure code review and penetration test.
+
+As per previous major releases, we have provided a comprehensive upgrade notes (:doc:`upgrade-notes`) to ease the upgrade
+of CorDapps to R3 Corda 3.0 Developer Preview. In line with our commitment to API stability, code level changes
+are fairly minimal, and mostly related to improvements to our nearly API stable test framework.
+
+From a build perspective, switching CorDapps built using Corda (the "Open Source" code) to R3 Corda is mostly effortless,
+and simply requires setting two gradle build file variables:
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = 'R3.CORDA-3.0.0-DEV-PREVIEW'
+  ext.corda_release_distribution = 'com.r3.corda'
+
+Please note this release is distributed under license and should not be used in a Production environment yet.
+
+We look forward to hearing your feedback on this Developer Preview.
+
+Corda 2.0
+---------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
 a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
 This was absent from version 1 but based on user feedback its re-introduction removes the need for complicated "isRelevant()" checks.
@@ -58,11 +180,11 @@ and via the versioning APIs.
 * **Observer Nodes**
 
 Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
-that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
+that entity simply run an Observer node they can simply receive a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
 
-Release 1.0
------------
+Corda 1.0
+---------
 Corda 1.0 is finally here!
 
 This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
@@ -166,253 +288,3 @@ We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of 
 Upgrading to this release is strongly recommended, and you will be safe in the knowledge that core APIs will no longer break.
 
 Thank you to all contributors for this release!
-
-Milestone 14
-------------
-
-This release continues with the goal to improve API stability and developer friendliness. There have also been more
-bug fixes and other improvements across the board.
-
-The CorDapp template repository has been replaced with a specific repository for
-`Java <https://github.com/corda/cordapp-template-java>`_ and `Kotlin <https://github.com/corda/cordapp-template-kotlin>`_
-to improve the experience of starting a new project and to simplify the build system.
-
-It is now possible to specify multiple IP addresses and legal identities for a single node, allowing node operators
-more flexibility in setting up nodes.
-
-A format has been introduced for CorDapp JARs that standardises the contents of CorDapps across nodes. This new format
-now requires CorDapps to contain their own external dependencies. This paves the way for significantly improved
-dependency management for CorDapps with the release of `Jigsaw (Java Modules) <http://openjdk.java.net/projects/jigsaw/>`_. For those using non-gradle build systems it is important
-to read :doc:`cordapp-build-systems` to learn more. Those using our ``cordformation`` plugin simply need to update
-to the latest version (``0.14.0``) to get the fixes.
-
-We've now begun the process of demarcating which classes are part of our public API and which ones are internal.
-Everything found in ``net.corda.core.internal`` and other packages in the ``net.corda`` namespace which has ``.internal`` in it are
-considered internal and not for public use. In a future release any CorDapp using these packages will fail to load, and
-when we migrate to Jigsaw these will not be exported.
-
-The transaction finalisation flow (``FinalityFlow``) has had hooks added for alternative implementations, for example in
-scenarios where no single participant in a transaction is aware of the well known identities of all parties.
-
-DemoBench has a fix for a rare but inconvenient crash that can occur when sharing your display across multiple devices,
-e.g. a projector while performing demonstrations in front of an audience.
-
-Guava types are being removed because Guava does not have backwards compatibility across versions, which has serious
-issues when multiple libraries depend on different versions of the library.
-
-The identity service API has been tweaked, primarily so anonymous identity registration now takes in
-AnonymousPartyAndPath rather than the individual components of the identity, as typically the caller will have
-an AnonymousPartyAndPath instance. See change log for further detail.
-
-Upgrading to this release is strongly recommended in order to keep up with the API changes, removal and additions.
-
-Milestone 13
-------------
-
-Following our first public beta in M12, this release continues the work on API stability and user friendliness. Apart
-from bug fixes and code refactoring, there are also significant improvements in the Vault Query and the
-Identity Service (for more detailed information about what has changed, see :doc:`changelog`).
-More specifically:
-
-The long awaited new **Vault Query** service makes its debut in this release and provides advanced vault query
-capabilities using criteria specifications (see ``QueryCriteria``), sorting, and pagination. Criteria specifications
-enable selective filtering with and/or composition using multiple operator primitives on standard attributes stored in
-Corda internal vault tables (eg. vault_states, vault_fungible_states, vault_linear_states), and also on custom contract
-state schemas defined by CorDapp developers when modelling new contract types. Custom queries are specifiable using a
-simple but sophisticated builder DSL (see ``QueryCriteriaUtils``). The new Vault Query service is usable by flows and by
-RPC clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former provides point-in-time
-snapshot queries whilst the later supplements the snapshot with dynamic streaming of updates.
-See :doc:`api-vault-query` for full details.
-
-We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
-to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
-to allow your node to handle new business processes. It also explains how you can use our contract and
-flow testing frameworks to massively reduce CorDapp development time.
-
-Certificate checks have been enabled for much of the identity service. These are part of the confidential (anonymous)
-identities work, and ensure that parties are actually who they claim to be by checking their certificate path back to
-the network trust root (certificate authority).
-
-To deal with anonymized keys, we've also implemented a deterministic key derivation function that combines logic
-from the HMAC-based Extract-and-Expand Key Derivation Function (HKDF) protocol and the BIP32 hardened
-parent-private-key -> child-private-key scheme. This function currently supports the following algorithms:
-ECDSA secp256K1, ECDSA secpR1 (NIST P-256) and EdDSA ed25519. We are now very close to fully supporting anonymous
-identities so as to increase privacy even against validating notaries.
-
-We have further tightened the set of objects which Corda will attempt to serialise from the stack during flow
-checkpointing. As flows are arbitrary code in which it is convenient to do many things, we ended up pulling in a lot of
-objects that didn't make sense to put in a checkpoint, such as ``Thread`` and ``Connection``. To minimize serialization
-cost and increase security by not allowing certain classes to be serialized, we now support class blacklisting
-that will return an ``IllegalStateException`` if such a class is encountered during a checkpoint. Blacklisting supports
-superclass and superinterface inheritance and always precedes ``@CordaSerializable`` annotation checking.
-
-We've also started working on improving user experience when searching, by adding a new RPC to support fuzzy matching
-of X.500 names.
-
-Milestone 12 - First Public Beta
---------------------------------
-
-One of our busiest releases, lots of changes that take us closer to API stability (for more detailed information about
-what has changed, see :doc:`changelog`). In this release we focused mainly on making developers' lives easier. Taking
-into account feedback from numerous training courses and meet-ups, we decided to add ``CollectSignaturesFlow`` which
-factors out a lot of code which CorDapp developers needed to write to get their transactions signed.
-The improvement is up to 150 fewer lines of code in each flow! To have your transaction signed by different parties, you
-need only now call a subflow which collects the parties' signatures for you.
-
-Additionally we introduced classpath scanning to wire-up flows automatically. Writing CorDapps has been made simpler by
-removing boiler-plate code that was previously required when registering flows. Writing services such as oracles has also been simplified.
-
-We made substantial RPC performance improvements (please note that this is separate to node performance, we are focusing
-on that area in future milestones):
-
-- 15-30k requests per second for a single client/server RPC connection.
-  * 1Kb requests, 1Kb responses, server and client on same machine, parallelism 8, measured on a Dell XPS 17(i7-6700HQ, 16Gb RAM)
-- The framework is now multithreaded on both client and server side.
-- All remaining bottlenecks are in the messaging layer.
-
-Security of the key management service has been improved by removing support for extracting private keys, in order that
-it can support use of a hardware security module (HSM) for key storage. Instead it exposes functionality for signing data
-(typically transactions). The service now also supports multiple signature schemes (not just EdDSA).
-
-We've added the beginnings of flow versioning. Nodes now reject flow requests if the initiating side is not using the same
-flow version. In a future milestone release will add the ability to support backwards compatibility.
-
-As with the previous few releases we have continued work extending identity support. There are major changes to the ``Party``
-class as part of confidential identities, and how parties and keys are stored in transaction state objects.
-See :doc:`changelog` for full details.
-
-Added new Byzantine fault tolerant (BFT) decentralised notary demo, based on the `BFT-SMaRT protocol <https://bft-smart.github.io/library/>`_
-For how to run the demo see: :ref:`notary-demo`
-
-We continued to work on tools that enable diagnostics on the node. The newest addition to Corda Shell is ``flow watch`` command which
-lets the administrator see all flows currently running with result or error information as well as who is the flow initiator.
-Here is the view from DemoBench:
-
-.. image:: resources/flowWatchCmd.png
-
-We also started work on the strategic wire format (not integrated).
-
-Milestone 11
-------------
-
-Special thank you to `Gary Rowe <https://github.com/gary-rowe>`_ for his contribution to Corda's Contracts DSL in M11.
-
-Work has continued on confidential identities, introducing code to enable the Java standard libraries to work with
-composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
-formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
-certificates to prove association between transaction keys and identity keys.
-
-The identity work will require changes to existing code and configurations, to replace party names with full X.500
-distinguished names (see RFC 1779 for details on the construction of distinguished names). Currently this is not
-enforced, however it will be in a later milestone.
-
-* "myLegalName" in node configurations will need to be replaced, for example "Bank A" is replaced with
-  "CN=Bank A,O=Bank A,L=London,C=GB". Obviously organisation, location and country ("O", "L" and "C" respectively)
-  must be given values which are appropriate to the node, do not just use these example values.
-* "networkMap" in node configurations must be updated to match any change to the legal name of the network map.
-* If you are using mock parties for testing, try to standardise on the ``DUMMY_NOTARY``, ``DUMMY_BANK_A``, etc. provided
-  in order to ensure consistency.
-
-We anticipate enforcing the use of distinguished names in node configurations from M12, and across the network from M13.
-
-We have increased the maximum message size that we can send to Corda over RPC from 100 KB to 10 MB.
-
-The Corda node now disables any use of ObjectInputStream to prevent Java deserialisation within flows. This is a security fix,
-and prevents the node from deserialising arbitrary objects.
-
-We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
-any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
-serialisation, etc. The node exposes the platform version it's on and we envision CorDapps will use this to be able to
-run on older versions of the platform to the one they were compiled against. Platform version borrows heavily from Android's
-API Level.
-
-We have revamped the DemoBench user interface. DemoBench will now also be installed as "Corda DemoBench" for both Windows
-and MacOSX. The original version was installed as just "DemoBench", and so will not be overwritten automatically by the
-new version.
-
-Milestone 10
-------------
-
-Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_,
-`Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions
-to Corda in M10.
-
-A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
-easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
-the node. The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can
-be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
-We have many enhancements planned over time including SSH access, more commands and better tab completion.
-
-The new "DemoBench" makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be
-bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following
-features:
-
- #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most
-    important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
- #. Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
- #. You can launch an Corda Explorer instance for each node at the click of a button. Credentials are handed to the Corda
-    Explorer so it starts out logged in already.
- #. Some basic statistics are shown about each node, informed via the RPC connection.
- #. Another button launches a database viewer in the system browser.
- #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
-
-Soft Locking is a new feature implemented in the vault to prevent a node constructing transactions that attempt to use the
-same input(s) simultaneously. Such transactions would result in naturally wasted effort when the notary rejects them as
-double spend attempts. Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two
-transactions attempt to spend the same fungible states.
-
-The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with
-currency reference data.
-
-We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached
-to the node which can handle loadbalanced verification requests.
-
-We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more
-clean and easy to manage code, which greatly increases our productivity.
-
-This release contains a large number of improvements, new features, library upgrades and bug fixes. For a full list of
-changes please see :doc:`changelog`.
-
-Milestone 9
------------
-
-This release focuses on improvements to resiliency of the core infrastructure, with highlights including a Byzantine
-fault tolerant (BFT) decentralised notary, based on the BFT-SMaRT protocol and isolating the web server from the
-Corda node.
-
-With thanks to open source contributor Thomas Schroeter for providing the BFT notary prototype, Corda can now resist
-malicious attacks by members of a distributed notary service. If your notary service cluster has seven members, two can
-become hacked or malicious simultaneously and the system continues unaffected! This work is still in development stage,
-and more features are coming in the next snapshot!
-
-The web server has been split out of the Corda node as part of our ongoing hardening of the node. We now provide a Jetty
-servlet container pre-configured to contact a Corda node as a backend service out of the box, which means individual
-webapps can have their REST APIs configured for the specific security environment of that app without affecting the
-others, and without exposing the sensitive core of the node to malicious Javascript.
-
-We have launched a global training programme, with two days of classes from the R3 team being hosted in London, New York
-and Singapore. R3 members get 5 free places and seats are going fast, so sign up today.
-
-We've started on support for confidential identities, based on the key randomisation techniques pioneered by the Bitcoin
-and Ethereum communities. Identities may be either anonymous when a transaction is a part of a chain of custody, or fully
-legally verified when a transaction is with a counterparty. Type safety is used to ensure the verification level of a
-party is always clear and avoid mistakes. Future work will add support for generating new identity keys and providing a
-certificate path to show ownership by the well known identity.
-
-There are even more privacy improvements when a non-validating notary is used; the Merkle tree algorithm is used to hide
-parts of the transaction that a non-validating notary doesn't need to see, whilst still allowing the decentralised
-notary service to sign the entire transaction.
-
-The serialisation API has been simplified and improved. Developers now only need to tag types that will be placed in
-smart contracts or sent between parties with a single annotation... and sometimes even that isn't necessary!
-
-Better permissioning in the cash CorDapp, to allow node users to be granted different permissions depending on whether
-they manage the issuance, movement or ledger exit of cash tokens.
-
-We've continued to improve error handling in flows, with information about errors being fed through to observing RPC
-clients.
-
-There have also been dozens of bug fixes, performance improvements and usability tweaks. Upgrading is definitely
-worthwhile and will only take a few minutes for most apps.
-
-For a full list of changes please see :doc:`changelog`.

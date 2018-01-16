@@ -8,7 +8,8 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.hibernate.Session
 import java.text.SimpleDateFormat
 import java.time.Duration
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.temporal.ChronoField
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,7 +48,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     @Entity
     @Table(name = TABLE)
-    class MutualExclusion(machineNameInit: String, pidInit: String) {
+    class MutualExclusion(machineNameInit: String, pidInit: String, timeStampInit: LocalDateTime) {
         @Column(name = ID, insertable = false, updatable = false)
         @Id
         val id: Char = 'X'
@@ -59,8 +60,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
         val pid = pidInit
 
         @Column(name = TIMESTAMP)
-        @Temporal(TemporalType.TIMESTAMP)
-        val timestamp: Date? = null
+        val timestamp = timeStampInit
     }
 
     fun start() {
@@ -130,7 +130,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
     }
 
     private fun updateTimestamp(session: Session, mutualExclusion: MutualExclusion): Boolean {
-        val minWaitTime = simpleDateFormat.format(Date(mutualExclusion.timestamp!!.time + waitInterval))
+        val minWaitTime = mutualExclusion.timestamp.plus(waitInterval, ChronoField.MILLI_OF_SECOND.baseUnit)
         val query = session.createNativeQuery("UPDATE $TABLE SET $MACHINE_NAME = :machineName, $TIMESTAMP = CURRENT_TIMESTAMP, $PID = :pid " +
                 "WHERE $ID = 'X' AND " +
 

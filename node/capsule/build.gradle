@@ -6,7 +6,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda Enterprise'
+description 'R3 Corda'
 
 configurations {
     runtimeArtifacts.extendsFrom runtime
@@ -28,7 +28,7 @@ targetCompatibility = 1.6
 
 task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.node.Corda'
-    archiveName "corda-enterprise-${corda_release_version}.jar"
+    archiveName "corda-r3-${corda_release_version}.jar"
     applicationSource = files(
             project(':node').configurations.runtime,
             project(':node').jar,

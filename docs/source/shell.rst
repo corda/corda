@@ -25,6 +25,8 @@ The shell via the local terminal
 In development mode, the shell will display in the node's terminal window. It may be disabled by passing the
 ``--no-local-shell`` flag when running the node.
 
+.. _ssh_server:
+
 The shell via SSH
 -----------------
 The shell is also accessible via SSH.

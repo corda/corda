@@ -17,6 +17,11 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
+import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.testing.*
+import net.corda.node.services.messaging.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.chooseIdentity
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSL

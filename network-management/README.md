@@ -33,7 +33,7 @@ java -jar capsule-hsm/build/libs/hsm-<version>.jar --config-file hsm.conf
 
 For a list of options the HSM signing server takes, run with the `--help` option:
 ```
-java -jar capsule-hsm/build/libs/hsm-3.0-<version>.jar --help
+java -jar capsule-hsm/build/libs/hsm-<version>.jar --help
 ```
 
 #Configuring network management service
