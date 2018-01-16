@@ -17,6 +17,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
@@ -35,7 +36,12 @@ import javax.persistence.*
  * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
-class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, SingletonSerializeAsToken() {
+class NodeAttachmentService(
+        metrics: MetricRegistry,
+        attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
+        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+) : AttachmentStorage, SingletonSerializeAsToken(
+) {
 
     companion object {
         private val log = contextLogger()
@@ -191,7 +197,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     // a problem somewhere else or this needs to be revisited.
 
     private val attachementContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<ByteArray>>(
-            maxWeight = 200 * 1024L * 1024L,
+            maxWeight = attachmentContentCacheSize,
             concurrencyLevel = 8,
             weigher = object : Weigher<SecureHash, Optional<ByteArray>> {
                 override fun weigh(key: SecureHash, value: Optional<ByteArray>): Int {
@@ -208,7 +214,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            1024,
+            attachmentCacheBound,
             8,
             { key -> Optional.ofNullable(createAttachment(key)) }
     )

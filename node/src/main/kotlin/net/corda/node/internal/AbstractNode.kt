@@ -540,7 +540,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeServices(lh: LazyHub, keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
-        attachments = NodeAttachmentService(metrics)
+        attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
