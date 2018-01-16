@@ -12,6 +12,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import java.security.PublicKey
+import java.time.Clock
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
@@ -26,6 +27,24 @@ abstract class NotaryService : SingletonSerializeAsToken() {
                 if (bft) append(".bft")
                 if (custom) append(".custom")
             }.toString()
+        }
+
+        /**
+         * Checks if the current instant provided by the clock falls within the specified time window.
+         *
+         * @throws NotaryException if current time is outside the specified time window. The exception contains
+         *                         the [NotaryError.TimeWindowInvalid] error.
+         */
+        @JvmStatic
+        @Throws(NotaryException::class)
+        fun validateTimeWindow(clock: Clock, timeWindow: TimeWindow?) {
+            if (timeWindow == null) return
+            val currentTime = clock.instant()
+            if (currentTime !in timeWindow) {
+                throw NotaryException(
+                        NotaryError.TimeWindowInvalid(currentTime, timeWindow)
+                )
+            }
         }
     }
 
@@ -52,14 +71,9 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     }
 
     protected open val log: Logger get() = staticLog
-    // TODO: specify the valid time window in config, and convert TimeWindowChecker to a utility method
-    protected abstract val timeWindowChecker: TimeWindowChecker
     protected abstract val uniquenessProvider: UniquenessProvider
 
-    fun validateTimeWindow(t: TimeWindow?) {
-        if (t != null && !timeWindowChecker.isValid(t))
-            throw NotaryException(NotaryError.TimeWindowInvalid)
-    }
+    fun validateTimeWindow(t: TimeWindow?) = NotaryService.validateTimeWindow(services.clock, t)
 
     /**
      * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
@@ -98,4 +112,7 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
         val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
+
+    @Deprecated("This property is no longer used") @Suppress("DEPRECATION")
+    protected open val timeWindowChecker: TimeWindowChecker get() = throw UnsupportedOperationException("No default implementation, need to override")
 }
