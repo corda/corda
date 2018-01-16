@@ -33,7 +33,6 @@ import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.collections.HashMap
 import kotlin.collections.HashSet
 
 class NetworkMapCacheImpl(
@@ -81,9 +80,6 @@ open class PersistentNetworkMapCache(
         private val logger = contextLogger()
     }
 
-    // TODO Cleanup registered and party nodes
-    protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
-    protected val partyNodes: MutableList<NodeInfo> get() = registeredNodes.map { it.value }.toMutableList()
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
@@ -96,12 +92,24 @@ open class PersistentNetworkMapCache(
     private var _loadDBSuccess: Boolean = false
     override val loadDBSuccess get() = _loadDBSuccess
 
+    fun start(): PersistentNetworkMapCache {
+        // if we find any network map information in the db, we are good to go - if not
+        // we have to wait for some being added
+        synchronized(_changed) {
+            val allNodes = database.transaction { getAllInfos(session) }
+            if (allNodes.isNotEmpty()) {
+                _loadDBSuccess = true
+            }
+            allNodes.forEach {
+                changePublisher.onNext(MapChange.Added(it.toNodeInfo()))
+            }
+            _registrationFuture.set(null)
+        }
+        return this
+    }
+
     override val notaryIdentities: List<Party> = notaries.map { it.identity }
     private val validatingNotaries = notaries.mapNotNullTo(HashSet()) { if (it.validating) it.identity else null }
-
-    init {
-        database.transaction { loadFromDB(session) }
-    }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -159,26 +167,24 @@ open class PersistentNetworkMapCache(
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
-            return DataFeed(partyNodes, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            val allInfos = database.transaction { getAllInfos(session) }.map { it.toNodeInfo() }
+            return DataFeed(allInfos, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
     override fun addNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
         synchronized(_changed) {
-            registeredNodes[node.legalIdentities.first().owningKey]?.let {
-                if (it.serial > node.serial) {
-                    logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
-                    return
-                }
-            }
-            val previousNode = registeredNodes.put(node.legalIdentities.first().owningKey, node) // TODO hack... we left the first one as special one
+            val previousNode = getNodesByLegalIdentityKey(node.legalIdentities.first().owningKey).firstOrNull()
             if (previousNode == null) {
                 logger.info("No previous node found")
                 database.transaction {
                     updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Added(node))
                 }
+            } else if (previousNode.serial > node.serial) {
+                logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
+                return
             } else if (previousNode != node) {
                 logger.info("Previous node was found as: $previousNode")
                 database.transaction {
@@ -197,7 +203,6 @@ open class PersistentNetworkMapCache(
     override fun removeNode(node: NodeInfo) {
         logger.info("Removing node with info: $node")
         synchronized(_changed) {
-            registeredNodes.remove(node.legalIdentities.first().owningKey)
             database.transaction {
                 removeInfoDB(session, node)
                 changePublisher.onNext(MapChange.Removed(node))
@@ -215,23 +220,6 @@ open class PersistentNetworkMapCache(
         val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
         return session.createQuery(criteria).resultList
-    }
-
-    /**
-     * Load NetworkMap data from the database if present. Node can start without having NetworkMapService configured.
-     */
-    private fun loadFromDB(session: Session) {
-        logger.info("Loading network map from database...")
-        val result = getAllInfos(session)
-        for (nodeInfo in result) {
-            try {
-                logger.info("Loaded node info: $nodeInfo")
-                val node = nodeInfo.toNodeInfo()
-                addNode(node)
-            } catch (e: Exception) {
-                logger.warn("Exception parsing network map from the database.", e)
-            }
-        }
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
@@ -313,14 +301,6 @@ open class PersistentNetworkMapCache(
 
     /** We are caching data we get from the db - if we modify the db, they need to be cleared out*/
     private fun invalidateCaches(nodeInfo: NodeInfo) {
-        // Yes, they can be null during initialisation, even though IntelliJ thinks otherwise
-        // https://medium.com/keepsafe-engineering/an-in-depth-look-at-kotlins-initializers-a0420fcbf546
-        @Suppress("SENSELESS_COMPARISON")
-        if (nodesByKeyCache == null || identityByLegalNameCache == null) {
-            // loading persisted network map during start-up: we don't have caches yet
-            return
-        }
-
         nodesByKeyCache.invalidateAll(nodeInfo.legalIdentities.map { it.owningKey })
         identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
     }

@@ -91,8 +91,6 @@ class NetworkMapCacheTest {
         assertEquals(aliceNode.info, bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).single())
     }
 
-
-
     @Test
     fun `remove node from cache`() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
