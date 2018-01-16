@@ -10,6 +10,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
@@ -173,7 +174,7 @@ class DBTransactionStorageTests {
 
     private fun newTransactionStorage() {
         database.transaction {
-            transactionStorage = DBTransactionStorage()
+            transactionStorage = DBTransactionStorage(NodeConfiguration.defaultTransactionCacheSize)
         }
     }
 

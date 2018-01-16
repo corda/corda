@@ -21,7 +21,6 @@ import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.config.User
 import net.corda.test.spring.springDriver
 import net.corda.testing.*
 import net.corda.testing.http.HttpApi
@@ -29,6 +28,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
