@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import java.security.SignatureException

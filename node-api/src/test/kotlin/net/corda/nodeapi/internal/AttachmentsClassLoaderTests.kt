@@ -19,6 +19,7 @@ import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.attachmentsClassLoaderEnabledPropertyName
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import net.corda.testing.*
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.services.MockAttachmentStorage

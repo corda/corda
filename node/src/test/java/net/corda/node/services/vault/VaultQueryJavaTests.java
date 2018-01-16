@@ -22,7 +22,7 @@ import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
-import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.TestIdentity;
 import net.corda.testing.internal.vault.DummyLinearContract;
 import net.corda.testing.internal.vault.VaultFiller;

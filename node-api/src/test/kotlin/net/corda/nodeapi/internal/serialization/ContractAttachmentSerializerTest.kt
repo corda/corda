@@ -3,8 +3,8 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.*
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat

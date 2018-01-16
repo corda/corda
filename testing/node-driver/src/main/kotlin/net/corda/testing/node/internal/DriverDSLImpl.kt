@@ -51,7 +51,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
-import net.corda.testing.setGlobalSerialization
+import net.corda.testing.core.setGlobalSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Observable

@@ -13,6 +13,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.*
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.NotarySpec
 import org.junit.Rule
 import org.junit.Test

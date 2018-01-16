@@ -8,6 +8,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant

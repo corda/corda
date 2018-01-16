@@ -22,6 +22,7 @@ import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.dsl.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices

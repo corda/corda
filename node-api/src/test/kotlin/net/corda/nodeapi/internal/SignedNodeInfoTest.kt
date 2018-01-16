@@ -3,7 +3,7 @@ package net.corda.nodeapi.internal
 import net.corda.core.crypto.Crypto
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.signWith
 import org.assertj.core.api.Assertions.assertThat
