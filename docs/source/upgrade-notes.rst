@@ -215,9 +215,9 @@ RPC Client
 
 * Missing API methods on the ``CordaRPCOps`` interface:
 
-  * ``verifiedTransactionsFeed()`` has been replaced by ``internalVerifiedTransactionsFeed()``
+  * ``verifiedTransactionsFeed`` has been replaced by ``internalVerifiedTransactionsFeed``
 
-  * ``verifiedTransactions()`` has been replaced by ``internalVerifiedTransactionsSnapshot()``
+  * ``verifiedTransactions`` has been replaced by ``internalVerifiedTransactionsSnapshot``
 
   * These changes are in preparation for the planned integration of Intel SGX™, which will encrypt the transactions
     feed. Apps that use this API will not work on encrypted ledgers. They should generally be modified to use the vault
@@ -238,8 +238,8 @@ release.
   * This is done by calling ``setCordappPackages``, an extension helper function in the ``net.corda.testing`` package,
     on the first line of your ``@Before`` method. This takes a variable number of ``String`` arguments which should be
     the package names of the CorDapps containing the contract verification code you wish to load
-  * You should unset CorDapp packages in your ``@After`` method by using ``unsetCordappPackages()`` after
-    ``stopNodes()``
+  * You should unset CorDapp packages in your ``@After`` method by using ``unsetCordappPackages`` after
+    ``stopNodes``
 
 * CorDapps must be explicitly registered in ``DriverDSL`` and ``RPCDriverDSL`` integration tests:
 
@@ -284,7 +284,7 @@ Core data structures
 
 * ``TransactionBuilder`` changes:
 
-  * Use convenience class ``StateAndContract`` instead of ``TransactionBuilder.withItems()`` for passing
+  * Use convenience class ``StateAndContract`` instead of ``TransactionBuilder.withItems`` for passing
     around a state and its contract.
 
 * Transaction builder DSL changes:
@@ -322,7 +322,7 @@ Identity
 * Party names are now ``CordaX500Name``, not ``X500Name``:
 
   * ``CordaX500Name`` specifies a predefined set of mandatory (organisation, locality, country) and optional fields
-    (commonName, organisationUnit, state) with validation checking
+    (common name, organisation unit, state) with validation checking
   * Use new builder ``CordaX500Name.build(X500Name(target))`` or explicitly define the X500Name parameters using the
     ``CordaX500Name`` constructors
 
@@ -339,7 +339,7 @@ Testing
 
 * Host and port changes:
 
-  * Use string helper function ``parseNetworkHostAndPort()`` to parse a URL on startup (e.g.
+  * Use string helper function ``parseNetworkHostAndPort`` to parse a URL on startup (e.g.
     ``val hostAndPort = args[0].parseNetworkHostAndPort()``)
 
 * Node driver parameter changes:
@@ -378,9 +378,9 @@ Node services (ServiceHub)
 
 * ``ServiceHub`` API changes:
 
-  * ``services.networkMapUpdates()`` becomes ``services.networkMapFeed()``
+  * ``services.networkMapUpdates`` becomes ``services.networkMapFeed``
 
-  * ``services.getCashBalances()`` becomes a helper method in the *finance* module contracts package
+  * ``services.getCashBalances`` becomes a helper method in the *finance* module contracts package
     (``net.corda.finance.contracts.getCashBalances``)
 
 Finance
