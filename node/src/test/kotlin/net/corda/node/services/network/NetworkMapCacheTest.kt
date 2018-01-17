@@ -6,7 +6,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.core.singleIdentityAndCert
 import net.corda.node.services.api.NetworkMapCacheInternal
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
