@@ -244,7 +244,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by))
+        val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by), true)
         require(otherSideSession.counterparty in signingWellKnownIdentities) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
         }
