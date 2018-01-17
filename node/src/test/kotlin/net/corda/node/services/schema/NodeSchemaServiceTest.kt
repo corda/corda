@@ -9,15 +9,19 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.schema.NodeSchemaService.NodeCoreV1
+import net.corda.node.services.schema.NodeSchemaService.NodeNotaryV1
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.MockNetwork
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.node.MockNetwork
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
+import org.junit.Ignore
 import org.junit.Test
 import javax.persistence.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NodeSchemaServiceTest {
@@ -30,7 +34,30 @@ class NodeSchemaServiceTest {
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
+        mockNet.stopNodes()
+    }
 
+    @Test
+    fun `check node runs with minimal core schema set`() {
+        val mockNet = MockNetwork(cordappPackages = emptyList())
+        val mockNode = mockNet.createNode()
+        val schemaService = mockNode.services.schemaService
+
+        // check against NodeCore schemas
+        assertTrue(schemaService.schemaOptions.containsKey(NodeCoreV1))
+        assertFalse(schemaService.schemaOptions.containsKey(NodeNotaryV1))
+        mockNet.stopNodes()
+    }
+
+    @Test
+    fun `check node runs inclusive of notary node schema set`() {
+        val mockNet = MockNetwork(cordappPackages = emptyList())
+        val mockNotaryNode = mockNet.notaryNodes.first()
+        val schemaService = mockNotaryNode.services.schemaService
+
+        // check against NodeCore + NodeNotary Schemas
+        assertTrue(schemaService.schemaOptions.containsKey(NodeCoreV1))
+        assertTrue(schemaService.schemaOptions.containsKey(NodeNotaryV1))
         mockNet.stopNodes()
     }
 
@@ -57,6 +84,34 @@ class NodeSchemaServiceTest {
             }
         }
         assertEquals<Set<*>>(expected, tables.toMutableSet().apply { retainAll(expected) })
+    }
+
+    @Ignore
+    @Test
+    fun `check node runs with minimal core schema set using driverDSL`() {
+        // TODO: driver limitation: cannot restrict CorDapps that get automatically created by default,
+        //       can ONLY specify additional ones using `extraCordappPackagesToScan` constructor argument.
+        driver(startNodesInProcess = true, notarySpecs = emptyList()) {
+            val node = startNode().getOrThrow()
+            val result = node.rpc.startFlow(::MappedSchemasFlow)
+            val mappedSchemas = result.returnValue.getOrThrow()
+            // check against NodeCore schemas
+            assertTrue(mappedSchemas.contains(NodeCoreV1.name))
+            assertFalse(mappedSchemas.contains(NodeNotaryV1.name))  // still gets loaded due TODO restriction
+        }
+
+    }
+
+    @Test
+    fun `check node runs inclusive of notary node schema set using driverDSL`() {
+        driver(startNodesInProcess = true) {
+            val notaryNode = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
+            val mappedSchemas = notaryNode.returnValue.getOrThrow()
+            // check against NodeCore + NodeNotary Schemas
+            assertTrue(mappedSchemas.contains(NodeCoreV1.name))
+            assertTrue(mappedSchemas.contains(NodeNotaryV1.name))
+        }
+
     }
 
     @StartableByRPC
