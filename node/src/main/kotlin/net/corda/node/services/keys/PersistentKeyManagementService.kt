@@ -17,6 +17,7 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 
+class InitialKeys(val keys: Set<KeyPair>)
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
  *
@@ -26,6 +27,8 @@ import javax.persistence.Lob
  */
 class PersistentKeyManagementService(val identityService: IdentityServiceInternal,
                                      initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
+    @Suppress("unused")
+    constructor(identityService: IdentityServiceInternal, initialKeys: InitialKeys) : this(identityService, initialKeys.keys)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
