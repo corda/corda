@@ -22,11 +22,14 @@ import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static net.corda.testing.node.NodeTestUtils.ledger;
 import static net.corda.testing.node.NodeTestUtils.transaction;
+import static net.corda.testing.core.TestConstants.ALICE_NAME;
+import static net.corda.testing.core.TestConstants.BOB_NAME;
+import static net.corda.testing.core.TestConstants.TEST_TX_TIME;
 
 public class CommercialPaperTest {
-    private static final TestIdentity ALICE = new TestIdentity(net.corda.testing.core.TestConstants.ALICE_NAME, 70L);
+    private static final TestIdentity ALICE = new TestIdentity(ALICE_NAME, 70L);
     private static final PublicKey BIG_CORP_PUBKEY = generateKeyPair().getPublic();
-    private static final TestIdentity BOB = new TestIdentity(net.corda.testing.core.TestConstants.BOB_NAME, 80L);
+    private static final TestIdentity BOB = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};
     private final MockServices ledgerServices = new MockServices(emptyList(), makeTestIdentityService(MEGA_CORP.getIdentity()));
@@ -37,7 +40,7 @@ public class CommercialPaperTest {
                 MEGA_CORP.ref(defaultRef),
                 MEGA_CORP.getParty(),
                 issuedBy(DOLLARS(1000), MEGA_CORP.ref(defaultRef)),
-                net.corda.testing.core.TestConstants.TEST_TX_TIME.plus(7, ChronoUnit.DAYS)
+                TEST_TX_TIME.plus(7, ChronoUnit.DAYS)
         );
     }
     // DOCEND 1
@@ -118,11 +121,11 @@ public class CommercialPaperTest {
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.tweak(tw -> {
                     tw.command(BIG_CORP_PUBKEY, new JavaCommercialPaper.Commands.Issue());
-                    tw.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+                    tw.timeWindow(TEST_TX_TIME);
                     return tw.failsWith("output states are issued by a command signer");
                 });
                 tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
-                tx.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+                tx.timeWindow(TEST_TX_TIME);
                 return tx.verifies();
             });
             return Unit.INSTANCE;
@@ -138,11 +141,11 @@ public class CommercialPaperTest {
             tx.attachments(JCP_PROGRAM_ID);
             tx.tweak(tw -> {
                 tw.command(BIG_CORP_PUBKEY, new JavaCommercialPaper.Commands.Issue());
-                tw.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+                tw.timeWindow(TEST_TX_TIME);
                 return tw.failsWith("output states are issued by a command signer");
             });
             tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
-            tx.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+            tx.timeWindow(TEST_TX_TIME);
             return tx.verifies();
         });
     }
@@ -165,7 +168,7 @@ public class CommercialPaperTest {
                 tx.output(JCP_PROGRAM_ID, "paper", getPaper());
                 tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
-                tx.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+                tx.timeWindow(TEST_TX_TIME);
                 return tx.verifies();
             });
 
@@ -201,7 +204,7 @@ public class CommercialPaperTest {
                 tx.output(Cash.PROGRAM_ID, "paper", getPaper());
                 tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
-                tx.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+                tx.timeWindow(TEST_TX_TIME);
                 return tx.verifies();
             });
 
@@ -247,7 +250,7 @@ public class CommercialPaperTest {
                 tx.output(Cash.PROGRAM_ID, "paper", getPaper());
                 tx.command(MEGA_CORP.getPublicKey(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
-                tx.timeWindow(net.corda.testing.core.TestConstants.TEST_TX_TIME);
+                tx.timeWindow(TEST_TX_TIME);
                 return tx.verifies();
             });
 
