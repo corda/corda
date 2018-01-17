@@ -31,7 +31,6 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -49,6 +48,7 @@ import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.setGlobalSerialization
@@ -74,6 +74,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import net.corda.nodeapi.internal.config.User as InternalUser
 
 class DriverDSLImpl(
         val portAllocation: PortAllocation,
@@ -127,8 +128,7 @@ class DriverDSLImpl(
             val jarPattern = jarNamePattern.toRegex()
             val jarFileUrl = urls.first { jarPattern.matches(it.path) }
             Paths.get(jarFileUrl.toURI()).toString()
-        }
-        catch(e: Exception) {
+        } catch (e: Exception) {
             log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
             throw e
         }
@@ -327,7 +327,7 @@ class DriverDSLImpl(
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
-        val protocol = if (handle.configuration.useHTTPS) "https://" else "http://"
+        val protocol = if (handle.useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
@@ -605,10 +605,14 @@ class DriverDSLImpl(
         val baseDirectory = config.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
         localNetworkMap?.nodeInfosCopier?.addConfig(baseDirectory)
+
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
             countObservables.remove(config.corda.myLegalName)
         }
+
+        val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
+
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config, cordappPackages)
             shutdownManager.registerShutdown(
@@ -622,7 +626,7 @@ class DriverDSLImpl(
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
-                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, node, thread, onNodeExit)
+                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, node, thread, onNodeExit)
                     }
                 }
             }
@@ -651,7 +655,7 @@ class DriverDSLImpl(
                         }
                         processDeathFuture.cancel(false)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
-                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, debugPort, process, onNodeExit)
+                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
                 }
             }
@@ -686,7 +690,7 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
-        private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toConfig().root().unwrapped())
+        private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
@@ -749,7 +753,7 @@ class DriverDSLImpl(
                     "name" to config.corda.myLegalName,
                     "visualvm.display.name" to "corda-${config.corda.myLegalName}",
                     "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
-                    "log4j2.debug" to if(debugPort != null) "true" else "false"
+                    "log4j2.debug" to if (debugPort != null) "true" else "false"
             )
 
             if (cordappPackages.isNotEmpty()) {

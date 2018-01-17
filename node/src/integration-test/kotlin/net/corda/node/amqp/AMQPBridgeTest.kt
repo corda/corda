@@ -3,18 +3,18 @@ package net.corda.node.amqp
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.toBase58String
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.*
 import net.corda.testing.internal.rigorousMock
@@ -50,7 +50,7 @@ class AMQPBridgeTest {
     @Test
     fun `test acked and nacked messages`() {
         // Create local queue
-        val sourceQueueName = "internal.peers." + BOB.publicKey.toBase58String()
+        val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
         val (artemisServer, artemisClient) = createArtemis(sourceQueueName)
 
         // Pre-populate local queue with 3 messages
@@ -130,11 +130,13 @@ class AMQPBridgeTest {
     @Test
     fun `Test legacy bridge still works`() {
         // Create local queue
-        val sourceQueueName = "internal.peers." + ALICE.publicKey.toBase58String()
+        val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
         val (artemisLegacyServer, artemisLegacyClient) = createLegacyArtemis(sourceQueueName)
 
 
         val (artemisServer, artemisClient) = createArtemis(null)
+        val inbox = ArtemisMessagingComponent.RemoteInboxAddress(BOB.party).queueName
+        artemisClient.started!!.session.createQueue(inbox, RoutingType.ANYCAST, inbox, true)
 
         val artemis = artemisLegacyClient.started!!
         for (i in 0 until 3) {
@@ -147,8 +149,7 @@ class AMQPBridgeTest {
             artemis.producer.send(sourceQueueName, artemisMessage)
         }
 
-
-        val subs = artemisClient.started!!.session.createConsumer(P2P_QUEUE)
+        val subs = artemisClient.started!!.session.createConsumer(inbox)
         for (i in 0 until 3) {
             val msg = subs.receive()
             val messageBody = ByteArray(msg.bodySize).apply { msg.bodyBuffer.readBytes(this) }
@@ -174,9 +175,9 @@ class AMQPBridgeTest {
             doReturn(true).whenever(it).useAMQPBridges
         }
         artemisConfig.configureWithDevSSLCertificate()
-        val networkMap = rigorousMock<NetworkMapCache>().also {
+        val networkMap = rigorousMock<NetworkMapCacheInternal>().also {
             doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
-            doReturn(listOf(NodeInfo(listOf(amqpAddress), listOf(BOB.identity), 1, 1L))).whenever(it).getNodesByLegalIdentityKey(any())
+            doReturn(listOf(NodeInfo(listOf(amqpAddress), listOf(BOB.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
         val userService = rigorousMock<RPCSecurityManager>()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
@@ -186,7 +187,7 @@ class AMQPBridgeTest {
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
-            artemis.session.createQueue(sourceQueueName, RoutingType.MULTICAST, sourceQueueName, true)
+            artemis.session.createQueue(sourceQueueName, RoutingType.ANYCAST, sourceQueueName, true)
         }
         return Pair(artemisServer, artemisClient)
     }
@@ -203,9 +204,9 @@ class AMQPBridgeTest {
             doReturn(ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0))).whenever(it).activeMQServer
         }
         artemisConfig.configureWithDevSSLCertificate()
-        val networkMap = rigorousMock<NetworkMapCache>().also {
+        val networkMap = rigorousMock<NetworkMapCacheInternal>().also {
             doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
-            doReturn(listOf(NodeInfo(listOf(artemisAddress), listOf(ALICE.identity), 1, 1L))).whenever(it).getNodesByLegalIdentityKey(any())
+            doReturn(listOf(NodeInfo(listOf(artemisAddress), listOf(ALICE.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
         val userService = rigorousMock<RPCSecurityManager>()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, null, networkMap, userService, MAX_MESSAGE_SIZE)
@@ -214,7 +215,7 @@ class AMQPBridgeTest {
         artemisClient.start()
         val artemis = artemisClient.started!!
         // Local queue for outgoing messages
-        artemis.session.createQueue(sourceQueueName, RoutingType.MULTICAST, sourceQueueName, true)
+        artemis.session.createQueue(sourceQueueName, RoutingType.ANYCAST, sourceQueueName, true)
         return Pair(artemisServer, artemisClient)
     }
 

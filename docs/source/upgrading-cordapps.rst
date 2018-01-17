@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Upgrading a CorDapp (outside of platform version upgrades)
 ==========================================================
 
@@ -127,17 +133,39 @@ The ``InitiatingFlow`` version number is included in the flow session handshake 
 the flow running on the other side. In particular, it has a ``flowVersion`` property which can be used to
 programmatically evolve flows across versions. For example:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    @Suspendable
-    override fun call() {
-        val otherFlowVersion = otherSession.getCounterpartyFlowInfo().flowVersion
-        val receivedString = if (otherFlowVersion == 1) {
-            receive<Int>(otherParty).unwrap { it.toString() }
-        } else {
-            receive<String>(otherParty).unwrap { it }
+    .. sourcecode:: kotlin
+
+        @Suspendable
+        override fun call() {
+            val otherFlowVersion = otherSession.getCounterpartyFlowInfo().flowVersion
+            val receivedString = if (otherFlowVersion == 1) {
+                otherSession.receive<Int>().unwrap { it.toString() }
+            } else {
+                otherSession.receive<String>().unwrap { it }
+            }
         }
-    }
+
+    .. sourcecode:: java
+
+        @Suspendable
+        @Override public Void call() throws FlowException {
+            int otherFlowVersion = otherSession.getCounterpartyFlowInfo().getFlowVersion();
+            String receivedString;
+
+            if (otherFlowVersion == 1) {
+                receivedString = otherSession.receive(Integer.class).unwrap(integer -> {
+                    return integer.toString();
+                });
+            } else {
+                receivedString = otherSession.receive(String.class).unwrap(string -> {
+                    return string;
+                });
+            }
+
+            return null;
+        }
 
 This code shows a flow that in its first version expected to receive an Int, but in subsequent versions was modified to
 expect a String. This flow is still able to communicate with parties that are running the older CorDapp containing
@@ -147,30 +175,73 @@ How do I deal with interface changes to inlined subflows?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Here is an example of an in-lined subflow:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    @StartableByRPC
-    @InitiatingFlow
-    class FlowA(val recipient: Party) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            subFlow(FlowB(recipient))
+    .. sourcecode:: kotlin
+
+        @StartableByRPC
+        @InitiatingFlow
+        class FlowA(val recipient: Party) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                subFlow(FlowB(recipient))
+            }
         }
-    }
 
-    @InitiatedBy(FlowA::class)
-    class FlowC(val otherSession: FlowSession) : FlowLogic() {
-        // Omitted.
-    }
-
-    // Note: No annotations. This is used as an inlined subflow.
-    class FlowB(val recipient: Party) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            val message = "I'm an inlined subflow, so I inherit the @InitiatingFlow's session ID and type."
-            initiateFlow(recipient).send(message)
+        @InitiatedBy(FlowA::class)
+        class FlowC(val otherSession: FlowSession) : FlowLogic() {
+            // Omitted.
         }
-    }
+
+        // Note: No annotations. This is used as an inlined subflow.
+        class FlowB(val recipient: Party) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val message = "I'm an inlined subflow, so I inherit the @InitiatingFlow's session ID and type."
+                initiateFlow(recipient).send(message)
+            }
+        }
+
+    .. sourcecode:: java
+
+        @StartableByRPC
+        @InitiatingFlow
+        class FlowA extends FlowLogic<Void> {
+            private final Party recipient;
+
+            public FlowA(Party recipient) {
+                this.recipient = recipient;
+            }
+
+            @Suspendable
+            @Override public Void call() throws FlowException {
+                subFlow(new FlowB(recipient));
+
+                return null;
+            }
+        }
+
+        @InitiatedBy(FlowA.class)
+        class FlowC extends FlowLogic<Void> {
+            // Omitted.
+        }
+
+        // Note: No annotations. This is used as an inlined subflow.
+        class FlowB extends FlowLogic<Void> {
+            private final Party recipient;
+
+            public FlowB(Party recipient) {
+                this.recipient = recipient;
+            }
+
+            @Suspendable
+            @Override public Void call() {
+                String message = "I'm an inlined subflow, so I inherit the @InitiatingFlow's session ID and type.";
+                initiateFlow(recipient).send(message);
+
+                return null;
+            }
+        }
 
 Inlined subflows are treated as being the flow that invoked them when initiating a new flow session with a counterparty.
 Suppose flow ``A`` calls inlined subflow B, which, in turn, initiates a session with a counterparty. The ``FlowLogic``
@@ -361,34 +432,138 @@ for details.
 For backwards compatible changes such as adding columns, the procedure for upgrading a state schema is to extend the
 existing object relational mapper. For example, we can update:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    object ObligationSchemaV1 : MappedSchema(Obligation::class.java, 1, listOf(ObligationEntity::class.java)) {
-        @Entity @Table(name = "obligations")
-        class ObligationEntity(obligation: Obligation) : PersistentState() {
-            @Column var currency: String = obligation.amount.token.toString()
-            @Column var amount: Long = obligation.amount.quantity
-            @Column @Lob var lender: ByteArray = obligation.lender.owningKey.encoded
-            @Column @Lob var borrower: ByteArray = obligation.borrower.owningKey.encoded
-            @Column var linear_id: String = obligation.linearId.id.toString()
+    .. sourcecode:: kotlin
+
+        object ObligationSchemaV1 : MappedSchema(Obligation::class.java, 1, listOf(ObligationEntity::class.java)) {
+            @Entity @Table(name = "obligations")
+            class ObligationEntity(obligation: Obligation) : PersistentState() {
+                @Column var currency: String = obligation.amount.token.toString()
+                @Column var amount: Long = obligation.amount.quantity
+                @Column @Lob var lender: ByteArray = obligation.lender.owningKey.encoded
+                @Column @Lob var borrower: ByteArray = obligation.borrower.owningKey.encoded
+                @Column var linear_id: String = obligation.linearId.id.toString()
+            }
         }
-    }
+
+    .. sourcecode:: java
+
+        public class ObligationSchemaV1 extends MappedSchema {
+            public IOUSchemaV1() {
+                super(Obligation.class, 1, ImmutableList.of(ObligationEntity.class));
+            }
+
+            @Entity
+            @Table(name = "obligations")
+            public static class ObligationEntity extends PersistentState {
+                @Column(name = "currency") private final String currency;
+                @Column(name = "amount") private final Long amount;
+                @Column(name = "lender") @Lob private final Byte[] lender;
+                @Column(name = "borrower") @Lob private final Byte[] borrower;
+                @Column(name = "linear_id") private final UUID linearId;
+
+
+                public ObligationEntity(String currency, Long amount, Byte[] lender, Byte[] borrower, UUID linearId) {
+                    this.currency = currency;
+                    this.amount = amount;
+                    this.lender = lender;
+                    this.borrower = borrower;
+                    this.linearId = linearId;
+                }
+
+                public String getCurrency() {
+                    return currency;
+                }
+
+                public Long getAmount() {
+                    return amount;
+                }
+
+                public ByteArray getLender() {
+                    return lender;
+                }
+
+                public ByteArray getBorrower() {
+                    return borrower;
+                }
+
+                public UUID getId() {
+                    return linearId;
+                }
+            }
+        }
 
 To:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    object ObligationSchemaV1 : MappedSchema(Obligation::class.java, 1, listOf(ObligationEntity::class.java)) {
-        @Entity @Table(name = "obligations")
-        class ObligationEntity(obligation: Obligation) : PersistentState() {
-            @Column var currency: String = obligation.amount.token.toString()
-            @Column var amount: Long = obligation.amount.quantity
-            @Column @Lob var lender: ByteArray = obligation.lender.owningKey.encoded
-            @Column @Lob var borrower: ByteArray = obligation.borrower.owningKey.encoded
-            @Column var linear_id: String = obligation.linearId.id.toString()
-            @Column var defaulted: Bool = obligation.amount.inDefault               // NEW COLUNM!
+    .. sourcecode:: kotlin
+
+        object ObligationSchemaV1 : MappedSchema(Obligation::class.java, 1, listOf(ObligationEntity::class.java)) {
+            @Entity @Table(name = "obligations")
+            class ObligationEntity(obligation: Obligation) : PersistentState() {
+                @Column var currency: String = obligation.amount.token.toString()
+                @Column var amount: Long = obligation.amount.quantity
+                @Column @Lob var lender: ByteArray = obligation.lender.owningKey.encoded
+                @Column @Lob var borrower: ByteArray = obligation.borrower.owningKey.encoded
+                @Column var linear_id: String = obligation.linearId.id.toString()
+                @Column var defaulted: Bool = obligation.amount.inDefault               // NEW COLUMN!
+            }
         }
-    }
+
+    .. sourcecode:: java
+
+        public class ObligationSchemaV1 extends MappedSchema {
+            public IOUSchemaV1() {
+                super(Obligation.class, 1, ImmutableList.of(ObligationEntity.class));
+            }
+
+            @Entity
+            @Table(name = "obligations")
+            public static class ObligationEntity extends PersistentState {
+                @Column(name = "currency") private final String currency;
+                @Column(name = "amount") private final Long amount;
+                @Column(name = "lender") @Lob private final Byte[] lender;
+                @Column(name = "borrower") @Lob private final Byte[] borrower;
+                @Column(name = "linear_id") private final UUID linearId;
+                @Column(name = "defaulted") private final Boolean defaulted;            // NEW COLUMN!
+
+
+                public ObligationEntity(String currency, Long amount, Byte[] lender, Byte[] borrower, UUID linearId, Boolean defaulted) {
+                    this.currency = currency;
+                    this.amount = amount;
+                    this.lender = lender;
+                    this.borrower = borrower;
+                    this.linearId = linearId;
+                    this.defaulted = defaulted;
+                }
+
+                public String getCurrency() {
+                    return currency;
+                }
+
+                public Long getAmount() {
+                    return amount;
+                }
+
+                public ByteArray getLender() {
+                    return lender;
+                }
+
+                public ByteArray getBorrower() {
+                    return borrower;
+                }
+
+                public UUID getId() {
+                    return linearId;
+                }
+
+                public Boolean isDefaulted() {
+                    return defaulted;
+                }
+            }
+        }
 
 Thus adding a new column with a default value.
 
@@ -397,21 +572,43 @@ used, as changes to the state are required. To make a backwards-incompatible cha
 because a property was removed from a state object), the procedure is to define another object relational mapper, then
 add it to the ``supportedSchemas`` property of your ``QueryableState``, like so:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(ExampleSchemaV1, ExampleSchemaV2)
+    .. sourcecode:: kotlin
+
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(ExampleSchemaV1, ExampleSchemaV2)
+
+    .. sourcecode:: java
+
+        @Override public Iterable<MappedSchema> supportedSchemas() {
+            return ImmutableList.of(new ExampleSchemaV1(), new ExampleSchemaV2());
+        }
 
 Then, in ``generateMappedObject``, add support for the new schema:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    override fun generateMappedObject(schema: MappedSchema): PersistentState {
-        return when (schema) {
-            is DummyLinearStateSchemaV1 -> // Omitted.
-            is DummyLinearStateSchemaV2 -> // Omitted.
-            else -> throw IllegalArgumentException("Unrecognised schema $schema")
+    .. sourcecode:: kotlin
+
+        override fun generateMappedObject(schema: MappedSchema): PersistentState {
+            return when (schema) {
+                is DummyLinearStateSchemaV1 -> // Omitted.
+                is DummyLinearStateSchemaV2 -> // Omitted.
+                else -> throw IllegalArgumentException("Unrecognised schema $schema")
+            }
         }
-    }
+
+    .. sourcecode:: java
+
+        @Override public PersistentState generateMappedObject(MappedSchema schema) {
+            if (schema instanceof DummyLinearStateSchemaV1) {
+                // Omitted.
+            } else if (schema instanceof DummyLinearStateSchemaV2) {
+                // Omitted.
+            } else {
+                throw new IllegalArgumentException("Unrecognised schema $schema");
+            }
+        }
 
 With this approach, whenever the state object is stored in the vault, a representation of it will be stored in two
 separate database tables where possible - one for each supported schema.
