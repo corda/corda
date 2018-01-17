@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.serialization.withTokenContext
 import net.corda.testing.*
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.node.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.*
@@ -55,7 +56,7 @@ class AttachmentsClassLoaderTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
+    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), MockCordappConfigProvider(), attachments)
     private val cordapp get() = cordappProvider.cordapps.first()
     private val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = cordappProvider.getAppContext(cordapp)

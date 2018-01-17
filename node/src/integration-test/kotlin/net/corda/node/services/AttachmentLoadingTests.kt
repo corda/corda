@@ -29,6 +29,7 @@ import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.node.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -42,7 +43,7 @@ class AttachmentLoadingTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
+    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), MockCordappConfigProvider(), attachments)
     private val cordapp get() = provider.cordapps.first()
     private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = provider.getAppContext(cordapp)

@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
+at CorDapp context creation time from a file source during runtime.
+
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
   `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
   See: DummyDealStateSchemaV1.PersistentDummyDealState

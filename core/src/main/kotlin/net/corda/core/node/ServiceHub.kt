@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
@@ -354,4 +355,9 @@ interface ServiceHub : ServicesForResolution {
      * @return A new [Connection]
      */
     fun jdbcSession(): Connection
+
+    /**
+     * See [CordappProvider.getAppContext]
+     */
+    fun getAppContext(): CordappContext = cordappProvider.getAppContext()
 }

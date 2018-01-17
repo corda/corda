@@ -26,6 +26,8 @@
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
+      <module name="cordapp-configuration_main" target="1.8" />
+      <module name="cordapp-configuration_test" target="1.8" />
       <module name="cordapp_integrationTest" target="1.8" />
       <module name="cordapp_main" target="1.8" />
       <module name="cordapp_test" target="1.8" />
