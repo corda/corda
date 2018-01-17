@@ -19,18 +19,16 @@ DOCUMENT MANAGEMENT
 
 #### Document Sign-off
 
-| Author            |      |
-| ----------------- | ---- |
-| Reviewer(s)       | TBD  |
-| Final approver(s) | TBD  |
+| Author            |            |
+| ----------------- | ---------- |
+| Reviewer(s)       | Mike Hearn |
+| Final approver(s) | Mike Hearn |
 
 #### Design Decisions
 
-| Description                              | Recommendation  | Approval*               |
-| ---------------------------------------- | --------------- | ----------------------- |
-| [Near-term solution](decisions/near-term.md) | Selected option | (Design Approval Board) |
-
-\* only required for formal Design Approval Board meetings.
+| Description                              | Recommendation                       | Approval*               |
+| ---------------------------------------- | ------------------------------------ | ----------------------- |
+| [Near-term solution](decisions/near-term.md) | Option C - Private JIRA installation | (Design Approval Board) |
 
 HIGH LEVEL DESIGN
 ---
@@ -86,10 +84,8 @@ Access to the JIRA instance will be over a VPN to the R3 (Ldn/NY) office network
 
 Note that a private installation of JIRA for 10 users (perpetual license) costs USD 10;  25 users costs USD 2,500.
 
-
-
 ## Final recommendation
 
-- Proceed to Technical Design stage
+- Proceed to DevOps implementation
 
-## TECHNICAL DESIGN
+## 
