@@ -91,7 +91,7 @@ open class MockServices private constructor(
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
-            val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+            val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, true)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, initialIdentity, moreKeys) {

@@ -4,6 +4,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.UniquenessException
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
@@ -29,7 +30,7 @@ class PersistentUniquenessProviderTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), NodeSchemaService(includeNotarySchemas = true))
     }
 
     @After
