@@ -17,7 +17,6 @@ import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.io.*
@@ -242,8 +241,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
-
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
 
         val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
