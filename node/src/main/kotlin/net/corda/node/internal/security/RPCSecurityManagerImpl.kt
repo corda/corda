@@ -3,10 +3,9 @@ package net.corda.node.internal.security
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.Cache
 import com.google.common.primitives.Ints
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.context.AuthServiceId
 import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.AuthDataSourceType
@@ -246,7 +245,7 @@ private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource
     init {
         credentialsMatcher = buildCredentialMatcher(config.passwordEncryption)
         setPermissionsLookupEnabled(true)
-        dataSource = HikariDataSource(HikariConfig(config.connection!!))
+        dataSource = DataSourceFactory.createDataSource(config.connection!!)
         permissionResolver = RPCPermissionResolver
     }
 
