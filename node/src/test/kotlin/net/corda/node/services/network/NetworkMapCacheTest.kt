@@ -6,11 +6,15 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.singleIdentityAndCert
+import net.corda.node.services.api.NetworkMapCacheInternal
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class NetworkMapCacheTest {
     private val mockNet = MockNetwork(emptyList())
@@ -60,6 +64,31 @@ class NetworkMapCacheTest {
 
         val actual = bobNode.database.transaction { bobCache.getPeerByLegalName(ALICE_NAME) }
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `caches get cleared on modification`() {
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
+        val expected = aliceNode.info.singleIdentity()
+
+        val actual = bobNode.database.transaction { bobCache.getPeerByLegalName(ALICE_NAME) }
+        assertEquals(expected, actual)
+        assertEquals(aliceNode.info, bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).single())
+
+        // remove alice
+        val bobCacheInternal = bobCache as NetworkMapCacheInternal
+        assertNotNull(bobCacheInternal)
+        bobCache.removeNode(aliceNode.info)
+
+        assertNull(bobCache.getPeerByLegalName(ALICE_NAME))
+        assertThat(bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).isEmpty())
+
+        bobCacheInternal.addNode(aliceNode.info)
+
+        assertEquals(aliceNode.info.singleIdentity(), bobCache.getPeerByLegalName(ALICE_NAME))
+        assertEquals(aliceNode.info, bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).single())
     }
 
     @Test
