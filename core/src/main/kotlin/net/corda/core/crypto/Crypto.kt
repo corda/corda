@@ -407,7 +407,7 @@ object Crypto {
      */
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(privateKey), privateKey, clearData)
+    fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray = doSign(findSignatureScheme(privateKey), privateKey, clearData)
 
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known schemeCodeName [String].

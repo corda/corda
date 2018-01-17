@@ -65,7 +65,7 @@ class EnumTests {
     @Suppress("NOTHING_TO_INLINE")
     inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
-    private val sf1 = testDefaultFactory()
+    private val sf1 = testDefaultFactoryNoEvolution()
 
     @Test
     fun serialiseSimpleTest() {

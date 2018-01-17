@@ -31,7 +31,6 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -49,6 +48,7 @@ import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.setGlobalSerialization
@@ -74,6 +74,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import net.corda.nodeapi.internal.config.User as InternalUser
 
 class DriverDSLImpl(
         val portAllocation: PortAllocation,
@@ -127,8 +128,7 @@ class DriverDSLImpl(
             val jarPattern = jarNamePattern.toRegex()
             val jarFileUrl = urls.first { jarPattern.matches(it.path) }
             Paths.get(jarFileUrl.toURI()).toString()
-        }
-        catch(e: Exception) {
+        } catch (e: Exception) {
             log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
             throw e
         }
@@ -267,7 +267,7 @@ class DriverDSLImpl(
             if (cordform.notary == null) continue
             val name = CordaX500Name.parse(cordform.name)
             val notaryConfig = ConfigFactory.parseMap(cordform.notary).parseAs<NotaryConfig>()
-            // We need to first group the nodes that form part of a cluser. We assume for simplicity that nodes of the
+            // We need to first group the nodes that form part of a cluster. We assume for simplicity that nodes of the
             // same cluster type and validating flag are part of the same cluster.
             if (notaryConfig.raft != null) {
                 val key = if (notaryConfig.validating) VALIDATING_RAFT else NON_VALIDATING_RAFT
@@ -282,10 +282,17 @@ class DriverDSLImpl(
         }
 
         clusterNodes.asMap().forEach { type, nodeNames ->
-            val identity = DevIdentityGenerator.generateDistributedNotaryIdentity(
-                    dirs = nodeNames.map { baseDirectory(it) },
-                    notaryName = type.clusterName
-            )
+            val identity = if (type == ClusterType.NON_VALIDATING_RAFT || type == ClusterType.VALIDATING_RAFT) {
+                DevIdentityGenerator.generateDistributedNotarySingularIdentity(
+                        dirs = nodeNames.map { baseDirectory(it) },
+                        notaryName = type.clusterName
+                )
+            } else {
+                DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
+                        dirs = nodeNames.map { baseDirectory(it) },
+                        notaryName = type.clusterName
+                )
+            }
             notaryInfos += NotaryInfo(identity, type.validating)
         }
 
@@ -382,13 +389,30 @@ class DriverDSLImpl(
     private fun startNotaryIdentityGeneration(): CordaFuture<List<NotaryInfo>> {
         return executorService.fork {
             notarySpecs.map { spec ->
-                val identity = if (spec.cluster == null) {
-                    DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name)
-                } else {
-                    DevIdentityGenerator.generateDistributedNotaryIdentity(
-                            dirs = generateNodeNames(spec).map { baseDirectory(it) },
-                            notaryName = spec.name
-                    )
+                val identity = when (spec.cluster) {
+                    null -> {
+                        DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name)
+                    }
+                    is ClusterSpec.Raft -> {
+                        DevIdentityGenerator.generateDistributedNotarySingularIdentity(
+                                dirs = generateNodeNames(spec).map { baseDirectory(it) },
+                                notaryName = spec.name
+                        )
+                    }
+                    is DummyClusterSpec -> {
+                        if (spec.cluster.compositeServiceIdentity) {
+                            DevIdentityGenerator.generateDistributedNotarySingularIdentity(
+                                    dirs = generateNodeNames(spec).map { baseDirectory(it) },
+                                    notaryName = spec.name
+                            )
+                        } else {
+                            DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
+                                    dirs = generateNodeNames(spec).map { baseDirectory(it) },
+                                    notaryName = spec.name
+                            )
+                        }
+                    }
+                    else -> throw UnsupportedOperationException("Cluster spec ${spec.cluster} not supported by Driver")
                 }
                 NotaryInfo(identity, spec.validating)
             }
@@ -433,9 +457,12 @@ class DriverDSLImpl(
 
     private fun startNotaries(localNetworkMap: LocalNetworkMap?): List<CordaFuture<List<NodeHandle>>> {
         return notarySpecs.map {
-            when {
-                it.cluster == null -> startSingleNotary(it, localNetworkMap)
-                it.cluster is ClusterSpec.Raft -> startRaftNotaryCluster(it, localNetworkMap)
+            when (it.cluster) {
+                null -> startSingleNotary(it, localNetworkMap)
+                is ClusterSpec.Raft,
+                // DummyCluster is used for testing the notary communication path, and it does not matter
+                // which underlying consensus algorithm is used, so we just stick to Raft
+                is DummyClusterSpec -> startRaftNotaryCluster(it, localNetworkMap)
                 else -> throw IllegalArgumentException("BFT-SMaRt not supported")
             }
         }
@@ -659,7 +686,7 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
-        private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toConfig().root().unwrapped())
+        private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
@@ -722,7 +749,7 @@ class DriverDSLImpl(
                     "name" to config.corda.myLegalName,
                     "visualvm.display.name" to "corda-${config.corda.myLegalName}",
                     "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
-                    "log4j2.debug" to if(debugPort != null) "true" else "false"
+                    "log4j2.debug" to if (debugPort != null) "true" else "false"
             )
 
             if (cordappPackages.isNotEmpty()) {

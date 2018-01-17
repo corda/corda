@@ -1,16 +1,12 @@
 package net.corda.nodeapi.internal.network
 
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.verify
 import net.corda.core.identity.Party
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import java.security.SignatureException
-import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import java.time.Instant
 
@@ -55,28 +51,8 @@ data class NetworkParameters(
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
 
-/**
- * A serialized [NetworkMap] and its signature and certificate. Enforces signature validity in order to deserialize the data
- * contained within.
- */
-@CordaSerializable
-class SignedNetworkMap(val raw: SerializedBytes<NetworkMap>, val signature: DigitalSignatureWithCert) {
-    /**
-     * Return the deserialized NetworkMap if the signature and certificate can be verified.
-     *
-     * @throws CertPathValidatorException if the certificate path is invalid.
-     * @throws SignatureException if the signature is invalid.
-     */
-    @Throws(SignatureException::class, CertPathValidatorException::class)
-    fun verified(trustedRoot: X509Certificate): NetworkMap {
-        signature.by.publicKey.verify(raw.bytes, signature)
-        // Assume network map cert is under the default trust root.
-        X509Utilities.validateCertificateChain(trustedRoot, signature.by, trustedRoot)
-        return raw.deserialize()
-    }
+fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
+    require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
+    X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
+    return verified()
 }
-
-// TODO: This class should reside in the [DigitalSignature] class.
-// TODO: Removing the val from signatureBytes causes serialisation issues
-/** A digital signature that identifies who the public key is owned by, and the certificate which provides prove of the identity */
-class DigitalSignatureWithCert(val by: X509Certificate, val signatureBytes: ByteArray) : DigitalSignature(signatureBytes)

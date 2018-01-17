@@ -31,7 +31,12 @@ public class ErrorMessageTests {
 
     @Test
     public void testJavaConstructorAnnotations() {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
+
         SerializationOutput ser = new SerializationOutput(factory1);
 
         Assertions.assertThatThrownBy(() -> ser.serialize(new C(1)))

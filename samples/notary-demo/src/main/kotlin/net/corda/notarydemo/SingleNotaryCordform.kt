@@ -4,9 +4,11 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.internal.config.User
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.demorun.*
-import net.corda.testing.*
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = SingleNotaryCordform().deployNodes()

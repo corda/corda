@@ -20,7 +20,6 @@ import net.corda.testing.dummyCommand
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.startFlow
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -29,7 +28,6 @@ import kotlin.test.assertFailsWith
 class RaftNotaryServiceTests {
     private val notaryName = CordaX500Name("RAFT Notary Service", "London", "GB")
 
-    @Ignore("Test has undeterministic capacity to hang, ignore till fixed")
     @Test
     fun `detect double spend`() {
         driver(

@@ -169,9 +169,11 @@ class SerializationOutputTests {
 
     private inline fun <reified T : Any> serdes(obj: T,
                                                 factory: SerializerFactory = SerializerFactory(
-                                                        AllWhitelist, ClassLoader.getSystemClassLoader()),
+                                                        AllWhitelist, ClassLoader.getSystemClassLoader(),
+                                                        EvolutionSerializerGetterTesting()),
                                                 freshDeserializationFactory: SerializerFactory = SerializerFactory(
-                                                        AllWhitelist, ClassLoader.getSystemClassLoader()),
+                                                        AllWhitelist, ClassLoader.getSystemClassLoader(),
+                                                        EvolutionSerializerGetterTesting()),
                                                 expectedEqual: Boolean = true,
                                                 expectDeserializedEqual: Boolean = true): T {
         val ser = SerializationOutput(factory)

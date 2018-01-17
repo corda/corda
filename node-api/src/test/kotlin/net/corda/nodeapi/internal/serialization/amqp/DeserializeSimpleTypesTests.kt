@@ -16,8 +16,8 @@ class DeserializeSimpleTypesTests {
         private const val VERBOSE = false
     }
 
-    val sf1 = testDefaultFactory()
-    val sf2 = testDefaultFactory()
+    val sf1 = testDefaultFactoryNoEvolution()
+    val sf2 = testDefaultFactoryNoEvolution()
 
     @Test
     fun testChar() {
