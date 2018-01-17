@@ -5,6 +5,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -14,14 +15,13 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.ALICE_NAME
@@ -71,30 +71,30 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `consume message from P2P queue`() {
-        assertConsumeAttackFails(P2P_QUEUE)
+        assertConsumeAttackFails("$P2P_PREFIX${alice.info.chooseIdentity().owningKey.toStringShort()}")
     }
 
     @Test
     fun `consume message from peer queue`() {
         val bobParty = startBobAndCommunicateWithAlice()
-        assertConsumeAttackFails("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
+        assertConsumeAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
     }
 
     @Test
     fun `send message to address of peer which has been communicated with`() {
         val bobParty = startBobAndCommunicateWithAlice()
-        assertSendAttackFails("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
+        assertSendAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
     }
 
     @Test
     fun `create queue for peer which has not been communicated with`() {
         val bob = startNode(BOB_NAME)
-        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
+        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toStringShort()}")
     }
 
     @Test
     fun `create queue for unknown peer`() {
-        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toBase58String()}"
+        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toStringShort()}"
         assertAllQueueCreationAttacksFail(invalidPeerQueue)
     }
 

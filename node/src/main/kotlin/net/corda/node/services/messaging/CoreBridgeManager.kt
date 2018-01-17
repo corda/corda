@@ -10,15 +10,17 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnector
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import org.apache.activemq.artemis.core.server.ActiveMQServer
+import org.apache.activemq.artemis.core.server.cluster.Transformer
 import org.apache.activemq.artemis.spi.core.remoting.*
 import org.apache.activemq.artemis.utils.ConfigurationHelper
 import java.time.Duration
@@ -46,7 +48,7 @@ internal class CoreBridgeManager(val config: NodeConfiguration, val activeMQServ
 
 
     /**
-     * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
+     * All nodes are expected to have a public facing address called p2p.inbound.$identity for receiving
      * messages from other nodes. When we want to send a message to a node we send it to our internal address/queue for it,
      * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
      * P2P address.
@@ -64,7 +66,6 @@ internal class CoreBridgeManager(val config: NodeConfiguration, val activeMQServ
         activeMQServer.deployBridge(BridgeConfiguration().apply {
             name = getBridgeName(queueName, target)
             this.queueName = queueName
-            forwardingAddress = P2P_QUEUE
             staticConnectors = listOf(target.toString())
             confirmationWindowSize = 100000 // a guess
             isUseDuplicateDetection = true // Enable the bridge's automatic deduplication logic
@@ -77,6 +78,7 @@ internal class CoreBridgeManager(val config: NodeConfiguration, val activeMQServ
             // our TLS certificate.
             user = PEER_USER
             password = PEER_USER
+            transformerClassName = InboxTopicTransformer::class.java.name
         })
     }
 
@@ -96,6 +98,13 @@ internal class CoreBridgeManager(val config: NodeConfiguration, val activeMQServ
         gatherAddresses(node).forEach {
             activeMQServer.destroyBridge(it.bridgeName)
         }
+    }
+}
+
+class InboxTopicTransformer : Transformer {
+    override fun transform(message: Message): Message {
+        message.address = translateLocalQueueToInboxAddress(message.address)
+        return message
     }
 }
 
