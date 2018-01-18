@@ -6,5 +6,5 @@ Quickstart
 
    getting-set-up
    tutorial-cordapp
-   Sample CorDapps <https://www.corda.net/samples/>
-   CLI-vs-IDE
+   Other CorDapps <https://www.corda.net/samples/>
+   Utilities <https://www.corda.net/utilities/>
