@@ -373,6 +373,8 @@ open class Node(configuration: NodeConfiguration,
         // In particular this prevents premature shutdown of the Database by AbstractNode whilst the serverThread is active
         super.stop()
 
+        shutdown = false
+
         log.info("Shutdown complete")
     }
 }
