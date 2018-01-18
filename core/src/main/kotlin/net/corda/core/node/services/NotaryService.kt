@@ -100,4 +100,5 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     }
 }
 
+/** The signing key of the notary. */
 class NotaryIdentity(val key: PublicKey)

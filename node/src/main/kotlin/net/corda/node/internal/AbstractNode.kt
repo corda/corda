@@ -200,21 +200,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected open fun configure(lh: MutableLazyHub) {
         lh.obj(configuration)
         lh.impl(MetricRegistry::class)
-        configuration.notary?.run {
-            lh.factory(this@AbstractNode::makeNotaryIdentity)
-            if (raft != null) {
-                lh.obj(raft)
-                lh.impl(RaftUniquenessProvider::class)
-                lh.impl(if (validating) RaftValidatingNotaryService::class else RaftNonValidatingNotaryService::class)
-            } else if (bftSMaRt != null) {
-                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
-                lh.obj(bftSMaRt)
-                lh.impl(DefaultBFTSMaRtCluster::class)
-                lh.impl(BFTNonValidatingNotaryService::class)
-            } else {
-                lh.impl(if (validating) ValidatingNotaryService::class else SimpleNotaryService::class)
-            }
-        }
+        configuration.notary?.configureNotary(lh)
     }
 
     open fun start(): StartedNode<AbstractNode> {
@@ -682,6 +668,24 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeNotaryIdentity(): NotaryIdentity {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return NotaryIdentity(notaryKey)
+    }
+
+    private fun NotaryConfig.configureNotary(lh: MutableLazyHub) {
+        lh.factory(this@AbstractNode::makeNotaryIdentity)
+        when {
+            raft != null -> {
+                lh.obj(raft)
+                lh.impl(RaftUniquenessProvider::class)
+                lh.impl(if (validating) RaftValidatingNotaryService::class else RaftNonValidatingNotaryService::class)
+            }
+            bftSMaRt != null -> {
+                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
+                lh.obj(bftSMaRt)
+                lh.impl(DefaultBFTSMaRtCluster::class)
+                lh.impl(BFTNonValidatingNotaryService::class)
+            }
+            else -> lh.impl(if (validating) ValidatingNotaryService::class else SimpleNotaryService::class)
+        }
     }
 
     class DefaultBFTSMaRtCluster : BFTSMaRt.Cluster {
