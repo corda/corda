@@ -63,26 +63,24 @@ object NodeInfoSchemaV1 : MappedSchema(
         }
     }
 
-    @Embeddable
-    data class PKHostAndPort(
-            val host: String? = null,
-            val port: Int? = null
-    ) : Serializable
-
     @Entity
     @Table(name = "node_info_hosts")
     data class DBHostAndPort(
-            @EmbeddedId
-            private val pk: PKHostAndPort
+            @Id
+            @GeneratedValue
+            @Column(name = "hosts_id")
+            var id: Int,
+            val host: String? = null,
+            val port: Int? = null
     ) {
         companion object {
             fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
-                    PKHostAndPort(hostAndPort.host, hostAndPort.port)
+                    0, hostAndPort.host, hostAndPort.port
             )
         }
 
         fun toHostAndPort(): NetworkHostAndPort {
-            return NetworkHostAndPort(this.pk.host!!, this.pk.port!!)
+            return NetworkHostAndPort(host!!, port!!)
         }
     }
 
