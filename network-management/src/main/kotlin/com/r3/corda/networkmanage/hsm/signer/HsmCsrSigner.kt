@@ -12,9 +12,9 @@ import com.r3.corda.networkmanage.hsm.utils.X509Utilities.retrieveCertificateAnd
  * Encapsulates certificate signing logic
  */
 class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
-                   private val caCertificateName: String,
-                   private val caPrivateKeyPass: String?,
-                   private val caParentCertificateName: String,
+                   private val intermediateCertAlias: String,
+                   private val intermediateCertPrivateKeyPass: String?,
+                   private val rootCertAlias: String,
                    private val validDays: Int,
                    private val authenticator: Authenticator) : CertificateSigningRequestSigner {
 
@@ -33,11 +33,14 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
             val keyStore = getAndInitializeKeyStore(provider)
             // This should be changed once we allow for more certificates in the chain. Preferably we should use
             // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
-            val caParentCertificate = keyStore.getCertificate(caParentCertificateName)
-            val caPrivateKeyPass = caPrivateKeyPass ?: authenticator.readPassword("CA Private Key Password: ")
-            val caCertAndKey = retrieveCertificateAndKeys(caCertificateName, caPrivateKeyPass, keyStore)
+            val rootCert = keyStore.getCertificate(rootCertAlias)
+            val intermediatePrivateKeyPass = intermediateCertPrivateKeyPass ?: authenticator.readPassword("CA Private Key Password: ")
+            val intermediateCertAndKey = retrieveCertificateAndKeys(intermediateCertAlias, intermediatePrivateKeyPass, keyStore)
             toSign.forEach {
-                it.certPath = buildCertPath(createClientCertificate(caCertAndKey, it.request, validDays, provider), caParentCertificate)
+                it.certPath = buildCertPath(
+                        createClientCertificate(intermediateCertAndKey, it.request, validDays, provider),
+                        intermediateCertAndKey.certificate,
+                        rootCert)
             }
             storage.store(toSign, signers)
             println("The following certificates have been signed by $signers:")
