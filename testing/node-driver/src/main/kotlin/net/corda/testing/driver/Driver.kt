@@ -17,7 +17,6 @@ import net.corda.node.services.config.VerifierType
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
