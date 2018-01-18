@@ -31,7 +31,7 @@ import net.corda.nodeapi.ArtemisConsumer
 import net.corda.nodeapi.ArtemisProducer
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.serialization.kryo.serializationProperty
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -196,7 +196,7 @@ class RPCClientProxyHandler(
                 TimeUnit.MILLISECONDS
         )
         sessionAndProducerPool.run {
-            it.session.createTemporaryQueue(clientAddress, ActiveMQDefaultConfiguration.getDefaultRoutingType(), clientAddress)
+            it.session.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
         }
         val sessionFactory = serverLocator.createSessionFactory()
         val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)

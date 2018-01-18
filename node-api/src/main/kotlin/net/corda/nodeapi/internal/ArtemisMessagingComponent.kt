@@ -1,11 +1,12 @@
 package net.corda.nodeapi.internal
 
+import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
 
 /**
@@ -23,7 +24,7 @@ class ArtemisMessagingComponent {
         const val PEER_USER = "SystemUsers/Peer"
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers." //TODO Come up with better name for common peers/services queue
-        const val P2P_QUEUE = "p2p.inbound"
+        const val P2P_PREFIX = "p2p.inbound."
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
     }
 
@@ -49,7 +50,7 @@ class ArtemisMessagingComponent {
     @CordaSerializable
     data class NodeAddress(override val queueName: String, override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         constructor(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort) :
-                this("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
+                this("$PEERS_PREFIX${peerIdentity.toStringShort()}", hostAndPort)
     }
 
     /**
@@ -62,6 +63,30 @@ class ArtemisMessagingComponent {
      * @param identity The service identity's owning key.
      */
     data class ServiceAddress(val identity: PublicKey) : ArtemisAddress, MessageRecipientGroup {
-        override val queueName: String = "$PEERS_PREFIX${identity.toBase58String()}"
+        override val queueName: String = "$PEERS_PREFIX${identity.toStringShort()}"
     }
+
+    /**
+     * [RemoteInboxAddress] implements [SingleMessageRecipient]. It represents the non-local address of a remote inbox.
+     * @param identity The Node public identity
+     */
+    data class RemoteInboxAddress(val identity: PublicKey) : ArtemisAddress, SingleMessageRecipient {
+        constructor(party: Party) : this(party.owningKey)
+
+        companion object {
+            /**
+             * When transferring a message from the local holding queue to the remote inbox queue
+             * this method provides a simple translation of the address string.
+             * The topics are distinct so that proper segregation of internal
+             * and external access permissions can be made.
+             */
+            fun translateLocalQueueToInboxAddress(address: String): String {
+                require(address.startsWith(PEERS_PREFIX)) { "Failed to map address: $address to a remote topic as it is not in the $PEERS_PREFIX namespace" }
+                return P2P_PREFIX + address.substring(PEERS_PREFIX.length)
+            }
+        }
+
+        override val queueName: String = "$P2P_PREFIX${identity.toStringShort()}"
+    }
+
 }
