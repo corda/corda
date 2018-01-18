@@ -17,12 +17,8 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.VaultServiceInternal
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -479,8 +475,7 @@ class NodeVaultService(
         }
     }
 
-    private fun getSession() = DatabaseTransactionManager.currentOrNew().session
-
+    private fun getSession() = contextDatabase.currentOrNew().session
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */
