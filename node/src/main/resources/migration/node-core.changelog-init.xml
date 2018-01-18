@@ -17,20 +17,6 @@
             <column name="uploader" type="NVARCHAR(255)"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-6">
-        <createTable tableName="node_bft_committed_states">
-            <column name="output_index" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="transaction_id" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="consuming_input_index" type="INT"/>
-            <column name="consuming_transaction_id" type="NVARCHAR(255)"/>
-            <column name="requesting_party_name" type="NVARCHAR(255)"/>
-            <column name="requesting_party_key" type="varbinary(255)"/>
-        </createTable>
-    </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-7">
         <createTable tableName="node_checkpoints">
             <column name="checkpoint_id" type="NVARCHAR(64)">
@@ -81,20 +67,6 @@
             <column name="pk_hash" type="NVARCHAR(130)"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-16">
-        <createTable tableName="node_notary_commit_log">
-            <column name="output_index" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="transaction_id" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="consuming_input_index" type="INT"/>
-            <column name="consuming_transaction_id" type="NVARCHAR(255)"/>
-            <column name="requesting_party_name" type="NVARCHAR(255)"/>
-            <column name="requesting_party_key" type="varbinary(255)"/>
-        </createTable>
-    </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-17">
         <createTable tableName="node_our_key_pairs">
             <column name="public_key_hash" type="NVARCHAR(130)">
@@ -102,15 +74,6 @@
             </column>
             <column name="private_key" type="blob"/>
             <column name="public_key" type="blob"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-18">
-        <createTable tableName="node_raft_committed_states">
-            <column name="id" type="NVARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="state_index" type="BIGINT"/>
-            <column name="state_value" type="blob"/>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-19">
@@ -156,10 +119,6 @@
     <changeSet author="R3.Corda" id="1511451595465-30">
         <addPrimaryKey columnNames="att_id" constraintName="node_attachments_pkey" tableName="node_attachments"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-31">
-        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_bft_committed_states_pkey"
-                       tableName="node_bft_committed_states"/>
-    </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-32">
         <addPrimaryKey columnNames="checkpoint_id" constraintName="node_checkpoints_pkey" tableName="node_checkpoints"/>
     </changeSet>
@@ -181,17 +140,9 @@
         <addPrimaryKey columnNames="name" constraintName="node_named_identities_pkey"
                        tableName="node_named_identities"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-41">
-        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_notary_commit_log_pkey"
-                       tableName="node_notary_commit_log"/>
-    </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-42">
         <addPrimaryKey columnNames="public_key_hash" constraintName="node_our_key_pairs_pkey"
                        tableName="node_our_key_pairs"/>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-43">
-        <addPrimaryKey columnNames="id" constraintName="node_raft_comm_states_pkey"
-                       tableName="node_raft_committed_states"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-44">
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_scheduled_states_pkey"
