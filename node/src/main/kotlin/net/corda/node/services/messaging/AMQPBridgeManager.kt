@@ -12,8 +12,8 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.AMQPBridgeManager.AMQPBridge.Companion.getBridgeName
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -132,7 +132,8 @@ internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: 
                     properties[key.toString()] = value
                 }
                 log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
-                val sendableMessage = amqpClient.createMessage(data, P2P_QUEUE,
+                val peerInbox = translateLocalQueueToInboxAddress(queueName)
+                val sendableMessage = amqpClient.createMessage(data, peerInbox,
                         legalNames.first().toString(),
                         properties)
                 sendableMessage.onComplete.then {
