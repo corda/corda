@@ -3,8 +3,6 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
@@ -188,6 +186,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like
             // a code smell.
             val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
+            persistentNetworkMapCache.start()
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
             val signedNodeInfo = signNodeInfo(info) { publicKey, serialised ->
                 val privateKey = keyPairs.single { it.public == publicKey }.private
@@ -206,7 +205,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
-        val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+        val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val lh = lazyHub()
         configure(lh)
@@ -217,7 +216,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             lh.obj(database)
-            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
+            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             lh.obj(info)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
@@ -611,9 +610,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         if (props.isNotEmpty()) {
             val database = configureDatabase(props, configuration.database, identityService, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            database.transaction {
-                log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
-            }
+            logVendorString(database, log)
             runOnStop += database::close
             return database.transaction {
                 insideTransaction(database)
@@ -817,6 +814,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 }
 
+@VisibleForTesting
+internal fun logVendorString(database: CordaPersistence, log: Logger) {
+    database.transaction {
+        log.info("Connected to ${connection.metaData.databaseProductName} database.")
+    }
+}
+
 internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
     override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
         return serverThread.fetchFrom { smm.startFlow(logic, context) }
@@ -839,7 +843,7 @@ class ConfigurationException(message: String) : CordaException(message)
  */
 internal class NetworkMapCacheEmptyException : Exception()
 
-fun configureDatabase(dataSourceProperties: Properties,
+fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       identityService: IdentityService,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
@@ -848,8 +852,7 @@ fun configureDatabase(dataSourceProperties: Properties,
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
-    val config = HikariConfig(dataSourceProperties)
-    val dataSource = HikariDataSource(config)
+    val dataSource = DataSourceFactory.createDataSource(hikariProperties)
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }

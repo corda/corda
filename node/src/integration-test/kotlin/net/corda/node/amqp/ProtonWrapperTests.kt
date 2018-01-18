@@ -13,11 +13,13 @@ import net.corda.node.internal.protonwrapper.messages.MessageStatus
 import net.corda.node.internal.protonwrapper.netty.AMQPClient
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.*
@@ -48,7 +50,7 @@ class ProtonWrapperTests {
             amqpServer.start()
             val receiveSubs = amqpServer.onReceive.subscribe {
                 assertEquals(BOB_NAME.toString(), it.sourceLegalName)
-                assertEquals("p2p.inbound", it.topic)
+                assertEquals(P2P_PREFIX + "Test", it.topic)
                 assertEquals("Test", String(it.payload))
                 it.complete(true)
             }
@@ -64,7 +66,7 @@ class ProtonWrapperTests {
                 assertEquals(true, clientConnect.connected)
                 assertEquals(ALICE_NAME, CordaX500Name.build(clientConnect.remoteCert!!.subjectX500Principal))
                 val msg = amqpClient.createMessage("Test".toByteArray(),
-                        "p2p.inbound",
+                        P2P_PREFIX + "Test",
                         ALICE_NAME.toString(),
                         emptyMap())
                 amqpClient.write(msg)
@@ -151,8 +153,8 @@ class ProtonWrapperTests {
         assertEquals(true, clientConnected.get().connected)
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
-        val sendAddress = "p2p.inbound"
-        artemis.session.createQueue(sendAddress, RoutingType.MULTICAST, "queue", true)
+        val sendAddress = P2P_PREFIX + "Test"
+        artemis.session.createQueue(sendAddress, RoutingType.ANYCAST, "queue", true)
         val consumer = artemis.session.createConsumer("queue")
         val testData = "Test".toByteArray()
         val testProperty = mutableMapOf<Any?, Any?>()
@@ -230,7 +232,7 @@ class ProtonWrapperTests {
         }
         artemisConfig.configureWithDevSSLCertificate()
 
-        val networkMap = rigorousMock<NetworkMapCache>().also {
+        val networkMap = rigorousMock<NetworkMapCacheInternal>().also {
             doReturn(never<NetworkMapCache.MapChange>()).whenever(it).changed
         }
         val userService = rigorousMock<RPCSecurityManager>()

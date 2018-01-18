@@ -17,8 +17,6 @@ import java.util.*
 val Int.MB: Long get() = this * 1024L * 1024L
 
 interface NodeConfiguration : NodeSSLConfiguration {
-    // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
-    // TODO: Remove this so we don't accidentally use this identity in the code?
     val myLegalName: CordaX500Name
     val emailAddress: String
     val exportJMXto: String
@@ -34,8 +32,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
-    // TODO Remove as this is only used by the driver
-    val useHTTPS: Boolean
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
     val messagingServerAddress: NetworkHostAndPort?
@@ -120,7 +116,6 @@ data class NodeConfigurationImpl(
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
         override val messageRedeliveryDelaySeconds: Int = 30,
-        override val useHTTPS: Boolean,
         override val p2pAddress: NetworkHostAndPort,
         override val rpcAddress: NetworkHostAndPort?,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.

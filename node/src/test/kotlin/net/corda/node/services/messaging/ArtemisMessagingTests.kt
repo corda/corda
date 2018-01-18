@@ -78,7 +78,7 @@ class ArtemisMessagingTests {
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()).start(), rigorousMock())
     }
 
     @After
@@ -173,6 +173,7 @@ class ArtemisMessagingTests {
                     MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                     server,
                     identity.public,
+                    null,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     maxMessageSize = maxMessageSize).apply {

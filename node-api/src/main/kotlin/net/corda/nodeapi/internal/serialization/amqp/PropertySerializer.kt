@@ -1,69 +1,8 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
-import java.lang.reflect.Method
 import java.lang.reflect.Type
-import java.lang.reflect.Field
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaGetter
-import kotlin.reflect.jvm.kotlinProperty
-
-abstract class PropertyReader {
-    abstract fun read(obj: Any?): Any?
-    abstract fun isNullable(): Boolean
-}
-
-class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
-    init {
-        readMethod?.isAccessible = true
-    }
-
-    private fun Method.returnsNullable(): Boolean {
-        try {
-            val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
-            return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
-        } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
-            // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
-            // TODO: Revisit this when Kotlin issue is fixed.
-
-            loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
-            return true
-        }
-    }
-
-    override fun read(obj: Any?): Any? {
-        return readMethod!!.invoke(obj)
-    }
-
-    override fun isNullable(): Boolean = readMethod?.returnsNullable() ?: false
-}
-
-class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader() {
-    init {
-        loggerFor<PropertySerializer>().warn("Create property Serializer for private property '${field.name}' not "
-                + "exposed by a getter on class '$parentType'\n"
-                + "\tNOTE: This behaviour will be deprecated at some point in the future and a getter required")
-    }
-
-    override fun read(obj: Any?): Any? {
-        field.isAccessible = true
-        val rtn = field.get(obj)
-        field.isAccessible = false
-        return rtn
-    }
-
-    override fun isNullable() = try {
-        field.kotlinProperty?.returnType?.isMarkedNullable ?: false
-    } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
-        // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
-        // TODO: Revisit this when Kotlin issue is fixed.
-        loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
-        true
-    }
-}
-
 
 /**
  * Base class for serialization of a property of an object.
@@ -106,13 +45,13 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
 
     companion object {
         fun make(name: String, readMethod: PropertyReader, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
-            if (SerializerFactory.isPrimitive(resolvedType)) {
-                return when (resolvedType) {
+            return if (SerializerFactory.isPrimitive(resolvedType)) {
+                when (resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
                     else -> AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
                 }
             } else {
-                return DescribedTypePropertySerializer(name, readMethod, resolvedType) { factory.get(null, resolvedType) }
+                DescribedTypePropertySerializer(name, readMethod, resolvedType) { factory.get(null, resolvedType) }
             }
         }
     }
