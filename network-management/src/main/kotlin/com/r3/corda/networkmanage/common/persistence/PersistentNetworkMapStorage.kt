@@ -3,9 +3,9 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.common.persistence.entity.*
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
-import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -16,7 +16,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 /**
  * Database implementation of the [NetworkMapStorage] interface
  */
-class PersistentNetworkMapStorage(private val database: CordaPersistence, private val localSigner: LocalSigner?) : NetworkMapStorage {
+class PersistentNetworkMapStorage(private val database: CordaPersistence) : NetworkMapStorage {
     override fun getCurrentNetworkMap(): SignedNetworkMap? {
         return database.transaction {
             getCurrentNetworkMapEntity()?.let {
@@ -26,11 +26,11 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
         }
     }
 
-    override fun getCurrentNetworkParameters(): NetworkParameters? {
+    override fun getCurrentSignedNetworkParameters(): SignedNetworkParameters? {
         return database.transaction {
             getCurrentNetworkMapEntity()?.let {
                 val netParamsHash = it.networkMap.deserialize<NetworkMap>().networkParameterHash
-                getNetworkParametersEntity(netParamsHash.toString())?.networkParameters()
+                getSignedNetworkParameters(netParamsHash)
             }
         }
     }
@@ -46,12 +46,8 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
         }
     }
 
-    // TODO The signing cannot occur here as it won't work with an HSM. The signed network parameters needs to be persisted
-    // into the database.
     override fun getSignedNetworkParameters(hash: SecureHash): SignedNetworkParameters? {
-        val netParamsBytes = getNetworkParametersEntity(hash.toString())?.parametersBytes ?: return null
-        val sigWithCert = localSigner!!.signBytes(netParamsBytes)
-        return SignedNetworkParameters(SerializedBytes(netParamsBytes), sigWithCert)
+        return getNetworkParametersEntity(hash.toString())?.signedParameters()
     }
 
     override fun getNodeInfoHashes(certificateStatus: CertificateStatus): List<SecureHash> {
@@ -69,31 +65,32 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence, privat
         }
     }
 
-    override fun saveNetworkParameters(networkParameters: NetworkParameters): SecureHash {
+    override fun saveNetworkParameters(networkParameters: NetworkParameters, sig: DigitalSignatureWithCert?): SecureHash {
         return database.transaction {
             val bytes = networkParameters.serialize().bytes
             val hash = bytes.sha256()
-            session.save(NetworkParametersEntity(
+            session.saveOrUpdate(NetworkParametersEntity(
                     parametersBytes = bytes,
-                    parametersHash = hash.toString()
+                    parametersHash = hash.toString(),
+                    signature = sig?.bytes,
+                    certificate = sig?.by?.encoded
             ))
             hash
         }
     }
 
-    override fun getLatestNetworkParameters(): NetworkParameters = getLatestNetworkParametersEntity().networkParameters()
+    override fun getLatestUnsignedNetworkParameters(): NetworkParameters = getLatestNetworkParametersEntity().networkParameters()
 
     private fun getLatestNetworkParametersEntity(): NetworkParametersEntity {
         return database.transaction {
             val builder = session.criteriaBuilder
             val query = builder.createQuery(NetworkParametersEntity::class.java).run {
-                // TODO a limit of 1 since we only need the first result
                 from(NetworkParametersEntity::class.java).run {
-                    orderBy(builder.desc(get<String>(NetworkParametersEntity::version.name)))
+                    orderBy(builder.desc(get<String>(NetworkParametersEntity::created.name)))
                 }
             }
-            // We just want the last signed entry
-            session.createQuery(query).resultList.first()
+            // We just want the last entry
+            session.createQuery(query).setMaxResults(1).resultList.singleOrNull() ?: throw IllegalArgumentException("No network parameters found in network map storage")
         }
     }
 

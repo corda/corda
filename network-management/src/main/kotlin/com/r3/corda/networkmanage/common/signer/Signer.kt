@@ -9,7 +9,7 @@ import net.corda.core.serialization.serialize
  */
 interface Signer {
     /**
-     * Signs given bytes. The signing key selction strategy is left to the implementing class.
+     * Signs given bytes. The signing key selection strategy is left to the implementing class.
      * @return [DigitalSignatureWithCert] that encapsulates the signature and the certificate path used in the signing process.
      * @throws [AuthenticationException] if fails authentication
      */

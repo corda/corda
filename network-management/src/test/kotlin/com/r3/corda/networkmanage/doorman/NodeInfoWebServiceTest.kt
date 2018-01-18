@@ -56,7 +56,7 @@ class NodeInfoWebServiceTest {
     @Test
     fun `submit nodeInfo`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentNetworkParameters() }.thenReturn(testNetworkParameters(emptyList()))
+            on { getCurrentSignedNetworkParameters() }.thenReturn(testNetworkParameters(emptyList()).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"))
@@ -72,7 +72,7 @@ class NodeInfoWebServiceTest {
     @Test
     fun `submit old nodeInfo`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentNetworkParameters() }.thenReturn(testNetworkParameters(emptyList(), minimumPlatformVersion = 2))
+            on { getCurrentSignedNetworkParameters() }.thenReturn(testNetworkParameters(emptyList(), minimumPlatformVersion = 2).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
@@ -88,7 +88,7 @@ class NodeInfoWebServiceTest {
     @Test
     fun `submit nodeInfo when no network parameters`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentNetworkParameters() }.thenReturn(null)
+            on { getCurrentSignedNetworkParameters() }.thenReturn(null)
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
@@ -155,7 +155,6 @@ class NodeInfoWebServiceTest {
             verify(networkMapStorage, times(1)).getSignedNetworkParameters(networkParametersHash)
             assertThat(netParamsResponse.verified()).isEqualTo(networkParameters)
             assertThat(netParamsResponse.sig.by).isEqualTo(networkMapCa.certificate)
-
             assertThatExceptionOfType(IOException::class.java)
                     .isThrownBy { it.doGet<SignedNetworkParameters>("network-parameters/${randomSHA256()}") }
                     .withMessageContaining("404")

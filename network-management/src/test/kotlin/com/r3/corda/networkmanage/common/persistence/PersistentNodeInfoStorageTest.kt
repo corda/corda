@@ -6,9 +6,7 @@ import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -33,7 +31,6 @@ class PersistentNodeInfoStorageTest : TestBase() {
     private lateinit var requestStorage: CertificationRequestStorage
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
     private lateinit var persistence: CordaPersistence
-
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
 

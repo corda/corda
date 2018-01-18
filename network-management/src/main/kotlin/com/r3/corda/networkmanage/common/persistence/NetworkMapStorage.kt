@@ -3,6 +3,7 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.network.NetworkParameters
 
 /**
@@ -31,26 +32,28 @@ interface NetworkMapStorage {
     fun saveNetworkMap(signedNetworkMap: SignedNetworkMap)
 
     /**
-     * Return the signed network parameters object which matches the given hash. The hash is that of the underlying
-     * [NetworkParameters] object and not the `SignedData<NetworkParameters>` object that's returned.
+     * Retrieve the signed with certificate network parameters by their hash. The hash is that of the underlying
+     * [NetworkParameters] object and not the `SignedWithCert<NetworkParameters>` object that's returned.
+     * @return signed network parameters corresponding to the given hash or null if it does not exist (parameters don't exist or they haven't been signed yet)
      */
     fun getSignedNetworkParameters(hash: SecureHash): SignedNetworkParameters?
 
     /**
      * Retrieve network map parameters.
-     * @return current network map parameters or null if they don't exist
+     * @return signed current network map parameters or null if they don't exist
      */
-    fun getCurrentNetworkParameters(): NetworkParameters?
+    fun getCurrentSignedNetworkParameters(): SignedNetworkParameters?
 
     /**
-     *  Persists given network parameters.
-     *  @return hash corresponding to newly create network parameters entry
+     *  Persists given network parameters with signature if provided.
+     *  @return hash corresponding to newly created network parameters entry
      */
-    fun saveNetworkParameters(networkParameters: NetworkParameters): SecureHash
+    fun saveNetworkParameters(networkParameters: NetworkParameters, sig: DigitalSignatureWithCert?): SecureHash
 
     /**
      * Retrieves the latest (i.e. most recently inserted) network parameters
+     * Note that they may not have been signed up yet.
      * @return latest network parameters
      */
-    fun getLatestNetworkParameters(): NetworkParameters
+    fun getLatestUnsignedNetworkParameters(): NetworkParameters
 }

@@ -52,14 +52,15 @@ class NetworkManagementServer : Closeable {
     }
 
     private fun getNetworkMapService(config: NetworkMapConfig, database: CordaPersistence, signer: LocalSigner?, updateNetworkParameters: NetworkParameters?): NodeInfoWebService {
-        val networkMapStorage = PersistentNetworkMapStorage(database, signer)
+        val networkMapStorage = PersistentNetworkMapStorage(database)
         val nodeInfoStorage = PersistentNodeInfoStorage(database)
+        val localNetworkMapSigner = if (signer != null) NetworkMapSigner(networkMapStorage, signer) else null
 
         updateNetworkParameters?.let {
             // Persisting new network parameters
-            val currentNetworkParameters = networkMapStorage.getCurrentNetworkParameters()
+            val currentNetworkParameters = networkMapStorage.getCurrentSignedNetworkParameters()
             if (currentNetworkParameters == null) {
-                networkMapStorage.saveNetworkParameters(it)
+                localNetworkMapSigner?.signNetworkParameters(it) ?: networkMapStorage.saveNetworkParameters(it, null)
             } else {
                 throw UnsupportedOperationException("Network parameters already exist. Updating them via the file config is not supported yet.")
             }
@@ -67,21 +68,19 @@ class NetworkManagementServer : Closeable {
 
         // This call will fail if parameter is null in DB.
         try {
-            val latestParameter = networkMapStorage.getLatestNetworkParameters()
+            val latestParameter = networkMapStorage.getLatestUnsignedNetworkParameters()
             logger.info("Starting network map service with network parameters : $latestParameter")
         } catch (e: NoSuchElementException) {
             logger.error("No network parameter found, please upload new network parameter before starting network map service. The server will now exit.")
             exitProcess(-1)
         }
 
-        val networkMapSigner = if (signer != null) NetworkMapSigner(networkMapStorage, signer) else null
-
         // Thread sign network map in case of change (i.e. a new node info has been added or a node info has been removed).
-        if (networkMapSigner != null) {
+        if (localNetworkMapSigner != null) {
             val scheduledExecutor = Executors.newScheduledThreadPool(1)
             val signingThread = Runnable {
                 try {
-                    networkMapSigner.signNetworkMap()
+                    localNetworkMapSigner.signNetworkMap()
                 } catch (e: Exception) {
                     // Log the error and carry on.
                     logger.error("Error encountered when processing node info changes.", e)
@@ -141,7 +140,6 @@ class NetworkManagementServer : Closeable {
         val services = mutableListOf<Any>()
         val serverStatus = NetworkManagementServerStatus()
 
-        // TODO: move signing to signing server.
         startNetworkMap?.let { services += getNetworkMapService(it.config, database, it.signer, it.updateNetworkParameters) }
         doormanServiceParameter?.let { services += getDoormanService(it, database, doormanSigner, serverStatus) }
 

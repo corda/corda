@@ -7,6 +7,7 @@ import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoWithSigned
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
+import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
@@ -41,7 +42,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, Pair<SignedNetworkMap?, NetworkParameters?>> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getCurrentNetworkParameters()) })
+            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getCurrentSignedNetworkParameters()?.verified()) })
 
     @POST
     @Path("publish")

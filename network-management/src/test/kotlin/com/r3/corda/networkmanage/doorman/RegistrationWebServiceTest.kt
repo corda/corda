@@ -41,9 +41,9 @@ import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
 class RegistrationWebServiceTest : TestBase() {
+    private lateinit var webServer: NetworkManagementWebServer
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
-    private lateinit var webServer: NetworkManagementWebServer
 
     @Before
     fun init() {
