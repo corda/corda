@@ -46,7 +46,7 @@ Message queues
 The node makes use of various queues for its operation. The more important ones are described below. Others are used
 for maintenance and other minor purposes.
 
-:``p2p.inbound``:
+:``p2p.inbound.$identity``:
    The node listens for messages sent from other peer nodes on this queue. Only clients who are authenticated to be
    nodes on the same network are given permission to send. Messages which are routed internally are also sent to this
    queue (e.g. two flows on the same node communicating with each other).
@@ -54,7 +54,7 @@ for maintenance and other minor purposes.
 :``internal.peers.$identity``:
    These are a set of private queues only available to the node which it uses to route messages destined to other peers.
    The queue name ends in the base 58 encoding of the peer's identity key. There is at most one queue per peer. The broker
-   creates a bridge from this queue to the peer's ``p2p.inbound`` queue, using the network map service to lookup the
+           creates a bridge from this queue to the peer's ``p2p.inbound.$identity`` queue, using the network map service to lookup the
    peer's network address.
 
 :``internal.services.$identity``:
@@ -86,7 +86,7 @@ Clients attempting to connect to the node's broker fall in one of four groups:
 #. Anyone connecting with the username ``SystemUsers/Peer`` is treated as a peer on the same Corda network as the node. Their
    TLS root CA must be the same as the node's root CA - the root CA is the doorman of the network and having the same root CA
    implies we've been let in by the same doorman. If they are part of the same network then they are only given permission
-   to send to our ``p2p.inbound`` queue, otherwise they are rejected.
+   to send to our ``p2p.inbound.$identity`` queue, otherwise they are rejected.
 
 #. Every other username is treated as a RPC user and authenticated against the node's list of valid RPC users. If that
    is successful then they are only given sufficient permission to perform RPC, otherwise they are rejected.

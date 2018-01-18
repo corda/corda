@@ -7,15 +7,15 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
-import java.util.concurrent.*
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import java.util.concurrent.TimeUnit
 
 class VerifierMessagingClient(config: SSLConfiguration, serverAddress: NetworkHostAndPort, metrics: MetricRegistry, private val maxMessageSize: Int) : SingletonSerializeAsToken() {
     companion object {
@@ -40,7 +40,7 @@ class VerifierMessagingClient(config: SSLConfiguration, serverAddress: NetworkHo
             val queueQuery = session.queueQuery(SimpleString(queueName))
             if (!queueQuery.isExists) {
                 log.info("Create fresh queue $queueName bound on same address")
-                session.createQueue(queueName, RoutingType.MULTICAST, queueName, true)
+                session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
             }
         }
         createQueueIfAbsent(VERIFICATION_REQUESTS_QUEUE_NAME)

@@ -17,6 +17,7 @@ import net.corda.node.services.config.VerifierType
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
@@ -41,6 +42,7 @@ sealed class NodeHandle {
     abstract val rpc: CordaRPCOps
     abstract val configuration: NodeConfiguration
     abstract val webAddress: NetworkHostAndPort
+    abstract val useHTTPS: Boolean
 
     /**
      * Stops the referenced node.
@@ -52,6 +54,7 @@ sealed class NodeHandle {
             override val rpc: CordaRPCOps,
             override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
+            override val useHTTPS: Boolean,
             val debugPort: Int?,
             val process: Process,
             private val onStopCallback: () -> Unit
@@ -70,6 +73,7 @@ sealed class NodeHandle {
             override val rpc: CordaRPCOps,
             override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
+            override val useHTTPS: Boolean,
             val node: StartedNode<Node>,
             val nodeThread: Thread,
             private val onStopCallback: () -> Unit

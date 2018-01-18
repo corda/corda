@@ -9,6 +9,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.internal.DataSourceFactory
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
@@ -22,8 +23,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.sql.DriverManager
 import java.sql.Statement
+import java.util.*
+import javax.sql.DataSource
 import kotlin.test.assertFailsWith
 
 /*
@@ -268,8 +270,9 @@ private class UsersDB : AutoCloseable {
         }
     }
 
+    private val dataSource: DataSource
     inline private fun session(statement: (Statement) -> Unit) {
-        DriverManager.getConnection(jdbcUrl).use {
+        dataSource.connection.use {
             it.autoCommit = false
             it.createStatement().use(statement)
             it.commit()
@@ -281,7 +284,10 @@ private class UsersDB : AutoCloseable {
                 roleAndPermissions: List<RoleAndPermissions> = emptyList()) {
 
         jdbcUrl = "jdbc:h2:mem:${name};DB_CLOSE_DELAY=-1"
-
+        dataSource = DataSourceFactory.createDataSource(Properties().apply {
+            put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+            put("dataSource.url", jdbcUrl)
+        }, false)
         session {
             it.execute(DB_CREATE_SCHEMA)
         }
@@ -295,7 +301,7 @@ private class UsersDB : AutoCloseable {
     }
 
     override fun close() {
-        DriverManager.getConnection(jdbcUrl).use {
+        dataSource.connection.use {
             it.createStatement().use {
                 it.execute("DROP ALL OBJECTS")
             }
