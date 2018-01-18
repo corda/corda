@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -15,6 +16,7 @@ import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 
+// TODO Clean up these tests, they were written with old network map design in place.
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
@@ -58,6 +60,19 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             val res = netCache.getNodeByAddress(alice.info.addresses[0])
             assertEquals(alice.info, res)
         }
+    }
+
+    // This test has to be done as normal node not mock, because MockNodes don't have addresses.
+    @Test
+    fun `insert two node infos with the same host and port`() {
+        val aliceNode = startNode(ALICE_NAME)
+        val charliePartyCert = getTestPartyAndCertificate(CHARLIE_NAME, generateKeyPair().public)
+        val aliceCache = aliceNode.services.networkMapCache
+        aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(charliePartyCert)))
+        val res = aliceNode.database.transaction {
+            aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
+        }
+        assertEquals(2, res.size)
     }
 
     @Test

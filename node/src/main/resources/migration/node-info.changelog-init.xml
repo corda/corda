@@ -67,4 +67,17 @@
                                  constraintName="FK__info_hosts__infos"
                                  referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
     </changeSet>
+    <changeSet author="R3.Corda" id="remove_host_port_pk">
+        <delete tableName="node_infos"/>
+        <delete tableName="node_link_nodeinfo_party"/>
+        <delete tableName="node_info_hosts"/>
+        <delete tableName="node_info_party_cert"/>
+        <dropPrimaryKey tableName="node_info_hosts" constraintName="node_info_hosts_pkey"/>
+        <addColumn tableName="node_info_hosts">
+            <column name="hosts_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addPrimaryKey columnNames="hosts_id" constraintName="node_info_hosts_pkey_id" tableName="node_info_hosts"/>
+    </changeSet>
 </databaseChangeLog>

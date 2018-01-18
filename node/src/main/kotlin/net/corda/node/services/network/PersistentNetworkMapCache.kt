@@ -279,13 +279,13 @@ open class PersistentNetworkMapCache(
 
     private fun queryByAddress(session: Session, hostAndPort: NetworkHostAndPort): NodeInfo? {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.host = :host AND a.port = :port",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
+        query.setMaxResults(1)
         val result = query.resultList
-        return if (result.isEmpty()) null
-        else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
+        return result.map { it.toNodeInfo() }.singleOrNull()
     }
 
     /** Object Relational Mapping support. */
