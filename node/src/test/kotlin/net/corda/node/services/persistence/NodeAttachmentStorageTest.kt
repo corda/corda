@@ -81,6 +81,44 @@ class NodeAttachmentStorageTest {
     }
 
     @Test
+    fun `missing is not cached`() {
+        val (testJar, expectedHash) = makeTestJar()
+        val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
+
+        database.transaction {
+            val storage = NodeAttachmentService(MetricRegistry())
+            val id = testJar.read { storage.importAttachment(it) }
+            assertEquals(expectedHash, id)
+
+
+            assertNull(storage.openAttachment(hashB))
+            val stream = storage.openAttachment(expectedHash)!!.openAsJAR()
+            val e1 = stream.nextJarEntry!!
+            assertEquals("test1.txt", e1.name)
+            assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "This is some useful content")
+            val e2 = stream.nextJarEntry!!
+            assertEquals("test2.txt", e2.name)
+            assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "Some more useful content")
+
+            stream.close()
+
+            val idB = jarB.read { storage.importAttachment(it) }
+            assertEquals(hashB, idB)
+
+            storage.openAttachment(id)!!.openAsJAR().use {
+                it.nextJarEntry
+                it.readBytes()
+            }
+
+            storage.openAttachment(idB)!!.openAsJAR().use {
+                it.nextJarEntry
+                it.readBytes()
+            }
+        }
+    }
+
+
+    @Test
     fun `metadata can be used to search`() {
         val (jarA, _) = makeTestJar()
         val (jarB, hashB) = makeTestJar(listOf(Pair("file","content")))
