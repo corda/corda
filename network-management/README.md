@@ -179,7 +179,7 @@ networkMapConfig {
       
    Save the parameters to `network-parameters.conf`
 
-### 5. Load initial network parameters file for network map service
+### 6. Load initial network parameters file for network map service
 A network parameters file is required to start the network map service for the first time. The initial network parameters file can be loaded using the `--update-network-parameters` flag.
 We can now restart the network management server with both doorman and network map service.  
 ```
