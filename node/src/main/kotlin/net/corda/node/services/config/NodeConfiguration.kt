@@ -71,7 +71,7 @@ data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
                         val custom: Boolean = false,
-                        val mysql: Properties? = null
+                        val mysql: MySQLConfiguration? = null
 ) {
     init {
         require(raft == null || bftSMaRt == null || !custom || mysql == null) {
@@ -79,6 +79,15 @@ data class NotaryConfig(val validating: Boolean,
         }
     }
     val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
+}
+
+data class MySQLConfiguration(
+        val dataSource: Properties,
+        val connectionRetries: Int = 0
+) {
+    init {
+        require(connectionRetries >= 0) { "connectionRetries cannot be negative" }
+    }
 }
 
 data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)

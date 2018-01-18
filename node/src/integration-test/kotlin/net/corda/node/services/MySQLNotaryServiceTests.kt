@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.config.MySQLConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -135,7 +136,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                         legalName = notaryName,
                         entropyRoot = BigInteger.valueOf(60L),
                         configOverrides = {
-                            val notaryConfig = NotaryConfig(validating = false, mysql = dataStoreProperties)
+                            val notaryConfig = NotaryConfig(validating = false, mysql = MySQLConfiguration(dataStoreProperties))
                             doReturn(notaryConfig).whenever(it).notary
                         }
                 )
