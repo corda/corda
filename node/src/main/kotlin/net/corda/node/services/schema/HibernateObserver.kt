@@ -10,8 +10,8 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.SchemaService
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.contextTransaction
 import org.hibernate.FlushMode
 import rx.Observable
 
@@ -54,7 +54,7 @@ class HibernateObserver private constructor(private val config: HibernateConfigu
     internal fun persistStatesWithSchema(statesAndRefs: List<ContractStateAndRef>, schema: MappedSchema) {
         val sessionFactory = config.sessionFactoryForSchemas(setOf(schema))
         val session = sessionFactory.withOptions().
-                connection(DatabaseTransactionManager.current().connection).
+                connection(contextTransaction.connection).
                 flushMode(FlushMode.MANUAL).
                 openSession()
         session.use { thisSession ->

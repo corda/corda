@@ -16,9 +16,7 @@ import java.io.Closeable
 import java.util.*
 
 class ObservablesTests {
-
-    private fun isInDatabaseTransaction(): Boolean = (DatabaseTransactionManager.currentOrNull() != null)
-
+    private fun isInDatabaseTransaction() = contextTransactionOrNull != null
     private val toBeClosed = mutableListOf<Closeable>()
 
     private fun createDatabase(): CordaPersistence {
@@ -168,7 +166,7 @@ class ObservablesTests {
         observableWithDbTx.first().subscribe { undelayedEvent.set(it to isInDatabaseTransaction()) }
 
         fun observeSecondEvent(event: Int, future: SettableFuture<Pair<Int, UUID?>>) {
-            future.set(event to if (isInDatabaseTransaction()) DatabaseTransactionManager.transactionId else null)
+            future.set(event to if (isInDatabaseTransaction()) contextTransaction.id else null)
         }
 
         observableWithDbTx.skip(1).first().subscribe { observeSecondEvent(it, delayedEventFromSecondObserver) }
