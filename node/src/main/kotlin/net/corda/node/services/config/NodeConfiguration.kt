@@ -45,9 +45,9 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val useAMQPBridges: Boolean get() = true
-    val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
-    val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
-    val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
+    val transactionCacheSizeBytes: Long
+    val attachmentContentCacheSizeBytes: Long
+    val attachmentCacheBound: Long
 
 
     companion object {
