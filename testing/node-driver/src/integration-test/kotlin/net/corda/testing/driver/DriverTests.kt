@@ -41,8 +41,17 @@ class DriverTests {
     }
 
     @Test
-    fun `simple node startup and shutdown`() {
-        val handle = driver {
+    fun `simple in-process node startup and shutdown`() {
+        val handle = driver(startNodesInProcess = true, notarySpecs = emptyList()) {
+            val node = startNode(providedName = DUMMY_REGULATOR_NAME)
+            nodeMustBeUp(node)
+        }
+        nodeMustBeDown(handle)
+    }
+
+    @Test
+    fun `simple out-of-process node startup and shutdown`() {
+        val handle = driver(startNodesInProcess = false, notarySpecs = emptyList()) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME)
             nodeMustBeUp(node)
         }
@@ -67,7 +76,7 @@ class DriverTests {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
+        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree, notarySpecs = emptyList()) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -79,7 +88,7 @@ class DriverTests {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
+        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()), notarySpecs = emptyList()) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }

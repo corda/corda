@@ -65,7 +65,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
     fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {
         val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val process = startApplication(handle, debugPort, clazz)
-        driverDSL.shutdownManager.registerProcessShutdown(process)
+        driverDSL.shutdownManager.registerProcessShutdown("spring boot ($clazz)", process)
         val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, handle.webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process, checkUrl) }
     }

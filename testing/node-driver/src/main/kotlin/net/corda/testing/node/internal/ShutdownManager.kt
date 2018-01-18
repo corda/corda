@@ -3,7 +3,10 @@ package net.corda.testing.node.internal
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.utilities.*
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -11,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class ShutdownManager(private val executorService: ExecutorService) {
     private class State {
-        val registeredShutdowns = ArrayList<CordaFuture<() -> Unit>>()
+        val registeredShutdowns = ArrayList<Pair<String, CordaFuture<() -> Unit>>>()
         var isShutdown = false
     }
 
@@ -34,38 +37,43 @@ class ShutdownManager(private val executorService: ExecutorService) {
     fun shutdown() {
         val shutdownActionFutures = state.locked {
             if (isShutdown) {
-                emptyList<CordaFuture<() -> Unit>>()
+                emptyList<Pair<String, CordaFuture<() -> Unit>>>()
             } else {
                 isShutdown = true
                 registeredShutdowns
             }
         }
 
-        val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(60.seconds) } }
-        shutdowns.reversed().forEach {
-            when (it) {
+        val shutdowns = shutdownActionFutures.map { (description, future) ->
+            if (!future.isDone) {
+                log.info("Waiting for shutdown task $description ...")
+            }
+            Pair(description, Try.on { future.getOrThrow() })
+        }
+        shutdowns.reversed().forEach { (description, result) ->
+            when (result) {
                 is Try.Success ->
                     try {
-                        it.value()
+                        result.value()
                     } catch (t: Throwable) {
-                        log.warn("Exception while calling a shutdown action, this might create resource leaks", t)
+                        log.warn("Exception while executing a shutdown task $description", t)
                     }
-                is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
+                is Try.Failure -> log.warn("Disregarding exception thrown while waiting for shutdown task $description", result.exception)
             }
         }
     }
 
-    fun registerShutdown(shutdown: CordaFuture<() -> Unit>) {
+    fun registerShutdown(description: String, shutdown: CordaFuture<() -> Unit>) {
         state.locked {
             require(!isShutdown)
-            registeredShutdowns += shutdown
+            registeredShutdowns += Pair(description, shutdown)
         }
     }
 
-    fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
+    fun registerShutdown(description: String, shutdown: () -> Unit) = registerShutdown(description, doneFuture(shutdown))
 
-    fun registerProcessShutdown(process: Process) {
-        registerShutdown {
+    fun registerProcessShutdown(description: String, process: Process) {
+        registerShutdown(description) {
             process.destroy()
             /** Wait 5 seconds, then [Process.destroyForcibly] */
             val finishedFuture = executorService.submit {
@@ -94,8 +102,9 @@ class ShutdownManager(private val executorService: ExecutorService) {
             state.locked {
                 registeredShutdowns.subList(start, end).listIterator(end - start).run {
                     while (hasPrevious()) {
-                        previous().getOrThrow().invoke()
-                        set(doneFuture {}) // Don't break other followers by doing a remove.
+                        val (description, future) = previous()
+                        future.getOrThrow().invoke()
+                        set(Pair(description, doneFuture {})) // Don't break other followers by doing a remove.
                     }
                 }
             }

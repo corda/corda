@@ -24,7 +24,7 @@ fun startTightLoopInjector(
 ) {
     ShutdownManager.run {
         val executor = Executors.newFixedThreadPool(parallelism)
-        registerShutdown { executor.shutdown() }
+        registerShutdown("executor", executor::shutdown)
         val remainingLatch = CountDownLatch(numberOfInjections)
         val queuedCount = AtomicInteger(0)
         val lock = ReentrantLock()
@@ -49,7 +49,10 @@ fun startTightLoopInjector(
                 }
             }
         }
-        registerShutdown { injector.interrupt() }
+        registerShutdown("injector") {
+            injector.interrupt()
+            injector.join()
+        }
         remainingLatch.await()
         injector.join()
     }
@@ -69,9 +72,9 @@ fun startPublishingFixedRateInjector(
     val workDurationTimer = metricRegistry.timer(workDurationMetricName)
     ShutdownManager.run {
         val executor = Executors.newSingleThreadScheduledExecutor()
-        registerShutdown { executor.shutdown() }
+        registerShutdown("executor", executor::shutdown)
         val workExecutor = Executors.newFixedThreadPool(parallelism)
-        registerShutdown { workExecutor.shutdown() }
+        registerShutdown("workExecutor", workExecutor::shutdown)
         val timings = Collections.synchronizedList(ArrayList<Long>())
         for (i in 1..parallelism) {
             workExecutor.submit {
@@ -99,7 +102,7 @@ fun startPublishingFixedRateInjector(
                 1,
                 TimeUnit.SECONDS
         )
-        registerShutdown {
+        registerShutdown("injector") {
             injector.cancel(true)
         }
         Thread.sleep(overallDuration.toMillis())

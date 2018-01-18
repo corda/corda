@@ -190,19 +190,17 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
         val server = ActiveMQServerImpl(artemisConfig, securityManager)
         log.info("Starting verification requestor Artemis server with base dir $baseDir")
         server.start()
-        driverDSL.shutdownManager.registerShutdown(doneFuture {
-            server.stop()
-        })
+        driverDSL.shutdownManager.registerShutdown("ActiveMQServerImpl", server::stop)
         val locator = ActiveMQClient.createServerLocatorWithoutHA().apply {
             isUseGlobalPools = nodeSerializationEnv != null
         }
         val transport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfig)
         val sessionFactory = locator.createSessionFactory(transport)
         val session = sessionFactory.createSession()
-        driverDSL.shutdownManager.registerShutdown(doneFuture {
+        driverDSL.shutdownManager.registerShutdown("session + sessionFactory") {
             session.stop()
             sessionFactory.close()
-        })
+        }
         val producer = session.createProducer(VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME)
 
         val consumer = session.createConsumer(responseAddress)
@@ -243,7 +241,7 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
         writeConfig(baseDirectory, configFilename, config)
         Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
         val process = ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
-        driverDSL.shutdownManager.registerProcessShutdown(process)
+        driverDSL.shutdownManager.registerProcessShutdown("Verifier", process)
         return doneFuture(VerifierHandle(process))
     }
 

@@ -25,12 +25,11 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class SSHServerTest {
-
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(notarySpecs = emptyList()) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             node.getOrThrow()
 
@@ -51,7 +50,7 @@ class SSHServerTest {
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(notarySpecs = emptyList()) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -70,7 +69,7 @@ class SSHServerTest {
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(notarySpecs = emptyList()) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -93,7 +92,7 @@ class SSHServerTest {
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(notarySpecs = emptyList()) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -123,7 +122,7 @@ class SSHServerTest {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(notarySpecs = emptyList()) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -163,7 +162,7 @@ class SSHServerTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class FlowICannotRun(val otherParty: Party) : FlowLogic<String>() {
+    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
 
