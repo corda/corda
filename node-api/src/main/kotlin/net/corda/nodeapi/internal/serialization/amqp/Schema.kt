@@ -446,11 +446,12 @@ private fun fingerprintForObject(
         offset: Int = 0): Hasher {
     // Hash the class + properties + interfaces
     val name = type.asClass()?.name ?: throw NotSerializableException("Expected only Class or ParameterizedType but found $type")
-    propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory).getters
+    propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)
+            .serializationOrder
             .fold(hasher.putUnencodedChars(name)) { orig, prop ->
-                fingerprintForType(prop.resolvedType, type, alreadySeen, orig, factory, offset+4)
-                        .putUnencodedChars(prop.name)
-                        .putUnencodedChars(if (prop.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
+                fingerprintForType(prop.getter.resolvedType, type, alreadySeen, orig, factory, offset+4)
+                        .putUnencodedChars(prop.getter.name)
+                        .putUnencodedChars(if (prop.getter.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
             }
     interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory, offset+4) }
     return hasher
