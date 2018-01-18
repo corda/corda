@@ -205,7 +205,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
-        val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+        val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val lh = lazyHub()
         configure(lh)
