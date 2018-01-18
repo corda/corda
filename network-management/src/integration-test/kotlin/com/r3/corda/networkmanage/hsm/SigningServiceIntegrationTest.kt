@@ -90,7 +90,12 @@ class SigningServiceIntegrationTest {
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
 
         NetworkManagementServer().use { server ->
-            server.start(NetworkHostAndPort(HOST, 0), database, doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null), startNetworkMap = null)
+            server.start(
+                    hostAndPort = NetworkHostAndPort(HOST, 0),
+                    database = database,
+                    csrCertPathAndKey = null,
+                    doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null),
+                    startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.
             val config = createConfig().also {

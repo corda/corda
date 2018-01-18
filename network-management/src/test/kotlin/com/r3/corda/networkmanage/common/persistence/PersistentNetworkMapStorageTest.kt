@@ -65,7 +65,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
 
         // then
         val persistedSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
-        val persistedSignedParameters = networkMapStorage.getCurrentSignedNetworkParameters()
+        val persistedSignedParameters = networkMapStorage.getNetworkParametersOfNetworkMap()
 
         assertEquals(networkParameters, persistedSignedParameters?.verifiedNetworkMapCert(rootCaCert))
         assertEquals(parametersSignature, persistedSignedParameters?.sig)
@@ -84,13 +84,13 @@ class PersistentNetworkMapStorageTest : TestBase() {
         networkMapStorage.saveNetworkParameters(params2, null)
 
         // when
-        val latest = networkMapStorage.getLatestUnsignedNetworkParameters()
+        val latest = networkMapStorage.getLatestNetworkParameters()?.minimumPlatformVersion
         // then
-        assertEquals(2, latest.minimumPlatformVersion)
+        assertEquals(2, latest)
     }
 
     @Test
-    fun `getCurrentNetworkParameters returns current network map parameters`() {
+    fun `getNetworkParametersOfNetworkMap returns current network map parameters`() {
         // given
         // Create network parameters
         val testParameters1 = testNetworkParameters(emptyList())
@@ -107,7 +107,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         networkMapStorage.saveNetworkParameters(testParameters2, testParameters2.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig)
 
         // when
-        val result = networkMapStorage.getCurrentSignedNetworkParameters()?.verifiedNetworkMapCert(rootCaCert)
+        val result = networkMapStorage.getNetworkParametersOfNetworkMap()?.verifiedNetworkMapCert(rootCaCert)
 
         // then
         assertEquals(1, result?.minimumPlatformVersion)

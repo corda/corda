@@ -39,10 +39,9 @@ interface NetworkMapStorage {
     fun getSignedNetworkParameters(hash: SecureHash): SignedNetworkParameters?
 
     /**
-     * Retrieve network map parameters.
-     * @return signed current network map parameters or null if they don't exist
+     * Retrieve the network parameters of the current network map, or null if there's no network map.
      */
-    fun getCurrentSignedNetworkParameters(): SignedNetworkParameters?
+    fun getNetworkParametersOfNetworkMap(): SignedNetworkParameters?
 
     /**
      *  Persists given network parameters with signature if provided.
@@ -55,5 +54,5 @@ interface NetworkMapStorage {
      * Note that they may not have been signed up yet.
      * @return latest network parameters
      */
-    fun getLatestUnsignedNetworkParameters(): NetworkParameters
+    fun getLatestNetworkParameters(): NetworkParameters?
 }

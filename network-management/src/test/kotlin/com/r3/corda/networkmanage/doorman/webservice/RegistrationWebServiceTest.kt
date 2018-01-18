@@ -1,11 +1,11 @@
-package com.r3.corda.networkmanage.doorman
+package com.r3.corda.networkmanage.doorman.webservice
 
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.utils.buildCertPath
+import com.r3.corda.networkmanage.doorman.NetworkManagementWebServer
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
-import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name

@@ -1,4 +1,4 @@
-package com.r3.corda.networkmanage.doorman
+package com.r3.corda.networkmanage.doorman.webservice
 
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.times
@@ -7,7 +7,8 @@ import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
-import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
+import com.r3.corda.networkmanage.doorman.NetworkManagementWebServer
+import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import net.corda.core.crypto.SecureHash.Companion.randomSHA256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.checkOkResponse
@@ -36,7 +37,7 @@ import java.security.cert.X509Certificate
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
-class NodeInfoWebServiceTest {
+class NetworkMapWebServiceTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -56,12 +57,12 @@ class NodeInfoWebServiceTest {
     @Test
     fun `submit nodeInfo`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentSignedNetworkParameters() }.thenReturn(testNetworkParameters(emptyList()).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
+            on { getNetworkParametersOfNetworkMap() }.thenReturn(testNetworkParameters(emptyList()).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"))
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
             // Post node info and signature to doorman, this should pass without any exception.
@@ -72,12 +73,12 @@ class NodeInfoWebServiceTest {
     @Test
     fun `submit old nodeInfo`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentSignedNetworkParameters() }.thenReturn(testNetworkParameters(emptyList(), minimumPlatformVersion = 2).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
+            on { getNetworkParametersOfNetworkMap() }.thenReturn(testNetworkParameters(emptyList(), minimumPlatformVersion = 2).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
             assertThatThrownBy { it.doPost("publish", nodeInfoAndSignature) }
@@ -88,12 +89,12 @@ class NodeInfoWebServiceTest {
     @Test
     fun `submit nodeInfo when no network parameters`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentSignedNetworkParameters() }.thenReturn(null)
+            on { getNetworkParametersOfNetworkMap() }.thenReturn(null)
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
             assertThatThrownBy { it.doPost("publish", nodeInfoAndSignature) }
@@ -110,7 +111,7 @@ class NodeInfoWebServiceTest {
             on { getCurrentNetworkMap() }.thenReturn(signedNetworkMap)
         }
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val signedNetworkMapResponse = it.doGet<SignedNetworkMap>("")
             verify(networkMapStorage, times(1)).getCurrentNetworkMap()
@@ -127,7 +128,7 @@ class NodeInfoWebServiceTest {
             on { getNodeInfo(nodeInfoHash) }.thenReturn(signedNodeInfo)
         }
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock(), testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(nodeInfoStorage, mock(), testNetworkMapConfig)).use {
             it.start()
             val nodeInfoResponse = it.doGet<SignedNodeInfo>("node-info/$nodeInfoHash")
             verify(nodeInfoStorage, times(1)).getNodeInfo(nodeInfoHash)
@@ -149,7 +150,7 @@ class NodeInfoWebServiceTest {
             on { getSignedNetworkParameters(networkParametersHash) }.thenReturn(signedNetworkParameters)
         }
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val netParamsResponse = it.doGet<SignedNetworkParameters>("network-parameters/$networkParametersHash")
             verify(networkMapStorage, times(1)).getSignedNetworkParameters(networkParametersHash)

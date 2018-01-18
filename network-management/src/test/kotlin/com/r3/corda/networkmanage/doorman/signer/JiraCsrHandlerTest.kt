@@ -14,25 +14,26 @@ import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnit
+import org.mockito.junit.MockitoRule
 import java.security.cert.CertPath
 
 class JiraCsrHandlerTest {
 
     @Rule
     @JvmField
-    val mockitoRule = MockitoJUnit.rule()
+    val mockitoRule: MockitoRule = MockitoJUnit.rule()
 
     @Mock
-    lateinit var jiraClient: JiraClient
+    private lateinit var jiraClient: JiraClient
 
     @Mock
-    lateinit var certificationRequestStorage: CertificationRequestStorage
+    private lateinit var certificationRequestStorage: CertificationRequestStorage
 
     @Mock
-    lateinit var defaultCsrHandler: DefaultCsrHandler
+    private lateinit var defaultCsrHandler: DefaultCsrHandler
 
     @Mock
-    var certPath: CertPath = mock()
+    private val certPath: CertPath = mock()
 
     private lateinit var jiraCsrHandler: JiraCsrHandler
     private val requestId = "id"
