@@ -244,7 +244,9 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by))
+        // We set `ignoreUnrecognisedParties` to `true` in `groupPublicKeysByWellKnownParty`. This is because we don't 
+        // need to recognise all keys, but just the initiator's.
+        val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by), true)
         require(otherSideSession.counterparty in signingWellKnownIdentities) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
         }
