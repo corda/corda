@@ -12,7 +12,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -635,9 +634,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         if (props.isNotEmpty()) {
             val database = configureDatabase(props, configuration.database, identityService, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            database.transaction {
-                log.info("Connected to ${connection.metaData.databaseProductName} database.")
-            }
+            logVendorString(database, log)
             runOnStop += database::close
             return database.transaction {
                 insideTransaction(database)
@@ -846,6 +843,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 }
 
+@VisibleForTesting
+internal fun logVendorString(database: CordaPersistence, log: Logger) {
+    database.transaction {
+        log.info("Connected to ${connection.metaData.databaseProductName} database.")
+    }
+}
+
 internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
     override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
         return serverThread.fetchFrom { smm.startFlow(logic, context) }
@@ -868,7 +872,7 @@ class ConfigurationException(message: String) : CordaException(message)
  */
 internal class NetworkMapCacheEmptyException : Exception()
 
-fun configureDatabase(dataSourceProperties: Properties,
+fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       identityService: IdentityService,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
@@ -877,12 +881,10 @@ fun configureDatabase(dataSourceProperties: Properties,
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
-    val config = HikariConfig(dataSourceProperties)
-    val dataSource = HikariDataSource(config)
-
+    val dataSource = DataSourceFactory.createDataSource(hikariProperties)
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
 
-    val jdbcUrl = config.dataSourceProperties.getProperty("url", "")
+    val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
 
     if (databaseConfig.runMigration) {
         SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig).runMigration()

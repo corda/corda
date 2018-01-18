@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.persistence
 
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.contextLogger
 import rx.Observable
 import rx.Subscriber
 import rx.subjects.UnicastSubject
@@ -46,6 +47,10 @@ class CordaPersistence(
         val jdbcUrl: String,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
 ) : Closeable {
+    companion object {
+        private val log = contextLogger()
+    }
+
     val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
 
@@ -59,9 +64,7 @@ class CordaPersistence(
         DatabaseTransactionManager(this)
         // Check not in read-only mode.
         transaction {
-            dataSource.connection.use {
-                check(!it.metaData.isReadOnly) { "Database should not be readonly." }
-            }
+            check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
         }
     }
 
@@ -97,7 +100,7 @@ class CordaPersistence(
      */
     fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T {
         DatabaseTransactionManager.dataSource = this
-        return transaction(isolationLevel, 3, statement)
+        return transaction(isolationLevel, 2, statement)
     }
 
     /**
@@ -106,17 +109,22 @@ class CordaPersistence(
      */
     fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
 
-    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
+    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
         val outer = DatabaseTransactionManager.currentOrNull()
         return if (outer != null) {
             outer.statement()
         } else {
-            inTopLevelTransaction(isolationLevel, repetitionAttempts, statement)
+            inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, statement)
         }
     }
 
-    private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
-        var repetitions = 0
+    private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
+        var recoverableFailureCount = 0
+        fun <T> quietly(task: () -> T) = try {
+            task()
+        } catch (t: Throwable) {
+            log.warn("Cleanup task failed:", t)
+        }
         while (true) {
             val transaction = DatabaseTransactionManager.currentOrNew(isolationLevel)
             try {
@@ -124,16 +132,14 @@ class CordaPersistence(
                 transaction.commit()
                 return answer
             } catch (e: SQLException) {
-                transaction.rollback()
-                repetitions++
-                if (repetitions >= repetitionAttempts) {
-                    throw e
-                }
+                quietly(transaction::rollback)
+                if (++recoverableFailureCount > recoverableFailureTolerance) throw e
+                log.warn("Caught failure, will retry:", e)
             } catch (e: Throwable) {
-                transaction.rollback()
+                quietly(transaction::rollback)
                 throw e
             } finally {
-                transaction.close()
+                quietly(transaction::close)
             }
         }
     }
