@@ -172,11 +172,11 @@ path to the node's base directory.
 :useAMQPBridges: Optionally can be set to ``false`` to use Artemis CORE Bridges for peer-to-peer communications.
         Otherwise, defaults to ``true`` and the AMQP 1.0 protocol will be used for message transfer between nodes.
 
-:transactionCacheSizeBytes: Optionally specify how much memory should be used for caching of ledger transactions in memory.
+:transactionCacheSizeMegaBytes: Optionally specify how much memory should be used for caching of ledger transactions in memory.
             Otherwise defaults to 8MB plus 5% of all heap memory above 300MB.
 
-:attachmentContentCacheSizeBytes: Optionally specify how much memory should be used to cache attachment contents in memory.
+:attachmentContentCacheSizeMegaBytes: Optionally specify how much memory should be used to cache attachment contents in memory.
             Otherwise defaults to 10MB
 
-:attachmentCacheBound: Optionall specify how many attachments should be cached locally. Note that this includes only the key and
+:attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
             metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.

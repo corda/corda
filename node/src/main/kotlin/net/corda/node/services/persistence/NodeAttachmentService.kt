@@ -18,9 +18,11 @@ import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.mbToByte
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
+import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.io.*
@@ -37,7 +39,7 @@ import javax.persistence.*
 @ThreadSafe
 class NodeAttachmentService(
         metrics: MetricRegistry,
-        attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
+        attachmentContentCacheSize: Int = NodeConfiguration.defaultAttachmentContentCacheSize,
         attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
 ) : AttachmentStorage, SingletonSerializeAsToken(
 ) {
@@ -195,9 +197,9 @@ class NodeAttachmentService(
     // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
     // a problem somewhere else or this needs to be revisited.
 
-    private val attachementContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<ByteArray>>(
-            maxWeight = attachmentContentCacheSize,
-            concurrencyLevel = 8,
+    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<ByteArray>>(
+            maxWeight = attachmentContentCacheSize.mbToByte(),
+            concurrencyLevel = defaultCordaCacheConcurrencyLevel,
             weigher = object : Weigher<SecureHash, Optional<ByteArray>> {
                 override fun weigh(key: SecureHash, value: Optional<ByteArray>): Int {
                     return key.size + if (value.isPresent) value.get().size else 0
@@ -214,17 +216,17 @@ class NodeAttachmentService(
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
             attachmentCacheBound,
-            8,
+            defaultCordaCacheConcurrencyLevel,
             { key -> Optional.ofNullable(createAttachment(key)) }
     )
 
     private fun createAttachment(key: SecureHash): Attachment? {
-        val content = attachementContentCache.get(key)
+        val content = attachmentContentCache.get(key)
         if (content.isPresent) {
             return AttachmentImpl(
                     key,
                     {
-                        attachementContentCache
+                        attachmentContentCache
                                 .get(key)
                                 .orElseThrow {
                                     IllegalArgumentException("No attachement impl should have been created for non existent content")
@@ -233,7 +235,7 @@ class NodeAttachmentService(
                     checkAttachmentsOnLoad)
         }
         // if no attachement has been found, we don't want to cache that - it might arrive later
-        attachementContentCache.invalidate(key)
+        attachmentContentCache.invalidate(key)
         return null
     }
 
