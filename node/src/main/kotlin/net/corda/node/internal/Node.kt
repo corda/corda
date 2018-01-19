@@ -133,7 +133,7 @@ open class Node(configuration: NodeConfiguration,
     //
     // The primary work done by the server thread is execution of flow logics, and related
     // serialisation/deserialisation work.
-    override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
+    override lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     private var messageBroker: ArtemisMessagingServer? = null
 
@@ -296,6 +296,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun start(): StartedNode<Node> {
+        serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
         initialiseSerialization()
         val started: StartedNode<Node> = uncheckedCast(super.start())
         nodeReadyFuture.thenMatch({
@@ -371,6 +372,8 @@ open class Node(configuration: NodeConfiguration,
         // So now simply call the parent to stop everything in reverse order.
         // In particular this prevents premature shutdown of the Database by AbstractNode whilst the serverThread is active
         super.stop()
+
+        shutdown = false
 
         log.info("Shutdown complete")
     }
