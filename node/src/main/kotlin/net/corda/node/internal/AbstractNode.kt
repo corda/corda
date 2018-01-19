@@ -24,6 +24,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.lazyhub.LazyHub
@@ -38,7 +39,6 @@ import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
-import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -198,7 +198,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     protected open fun configure(lh: MutableLazyHub) {
-        // TODO: Migrate classes and factories from start method.
+        lh.obj(configuration)
+        lh.impl(MetricRegistry::class)
+        configuration.notary?.configureNotary(lh)
     }
 
     open fun start(): StartedNode<AbstractNode> {
@@ -222,7 +224,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(lh, keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
-            val notaryService = makeNotaryService(nodeServices, database)
+            lh.obj(_services)
+            val notaryService = lh.getOrNull(NotaryService::class)?.also { startNotaryService(nodeServices, it) }
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
             val flowStarter = FlowStarterImpl(serverThread, smm, flowLogicRefFactory)
@@ -538,7 +541,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      */
     private fun makeServices(lh: LazyHub, keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        val metrics = MetricRegistry()
+        val metrics = lh[MetricRegistry::class]
         attachments = NodeAttachmentService(metrics)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
@@ -620,16 +623,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeNotaryService(tokenizableServices: MutableList<Any>, database: CordaPersistence): NotaryService? {
-        return configuration.notary?.let {
-            makeCoreNotaryService(it, database).also {
-                tokenizableServices.add(it)
-                runOnStop += it::stop
-                installCoreFlow(NotaryFlow.Client::class, it::createServiceFlow)
-                log.info("Running core notary: ${it.javaClass.name}")
-                it.start()
-            }
-        }
+    private fun startNotaryService(tokenizableServices: MutableList<Any>, notary: NotaryService) {
+        tokenizableServices.add(notary)
+        runOnStop += notary::stop
+        installCoreFlow(NotaryFlow.Client::class, notary::createServiceFlow)
+        log.info("Running core notary: ${notary.javaClass.name}")
+        notary.start()
     }
 
     open protected fun checkNetworkMapIsInitialized() {
@@ -666,26 +665,36 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
+    private fun makeNotaryIdentity(): NotaryIdentity {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
-        return notaryConfig.run {
-            if (raft != null) {
-                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
-                (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
-            } else if (bftSMaRt != null) {
-                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
-                BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
-            } else {
-                (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
+        return NotaryIdentity(notaryKey)
+    }
+
+    private fun NotaryConfig.configureNotary(lh: MutableLazyHub) {
+        lh.factory(this@AbstractNode::makeNotaryIdentity)
+        when {
+            raft != null -> {
+                lh.obj(raft)
+                lh.impl(RaftUniquenessProvider::class)
+                lh.impl(if (validating) RaftValidatingNotaryService::class else RaftNonValidatingNotaryService::class)
             }
+            bftSMaRt != null -> {
+                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
+                lh.obj(bftSMaRt)
+                lh.impl(DefaultBFTSMaRtCluster::class)
+                lh.impl(BFTNonValidatingNotaryService::class)
+            }
+            else -> lh.impl(if (validating) ValidatingNotaryService::class else SimpleNotaryService::class)
         }
     }
 
-    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
-        return object : BFTSMaRt.Cluster {
-            override fun waitUntilAllReplicasHaveInitialized() {
-                log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
-            }
+    class DefaultBFTSMaRtCluster : BFTSMaRt.Cluster {
+        companion object {
+            private val log = contextLogger()
+        }
+
+        override fun waitUntilAllReplicasHaveInitialized() {
+            log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
         }
     }
 

@@ -99,3 +99,6 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
 }
+
+/** The signing key of the notary. */
+class NotaryIdentity(val key: PublicKey)
