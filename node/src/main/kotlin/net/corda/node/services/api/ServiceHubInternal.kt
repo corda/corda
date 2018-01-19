@@ -29,6 +29,10 @@ interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
 
     fun getNodeByHash(nodeHash: SecureHash): NodeInfo?
 
+    /** Find nodes from the [PublicKey] toShortString representation.
+     * This is used for Artemis bridge lookup process. */
+    fun getNodesByOwningKeyIndex(identityKeyIndex: String): List<NodeInfo>
+
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
 

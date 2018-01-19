@@ -40,6 +40,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
@@ -166,11 +167,14 @@ open class Node(configuration: NodeConfiguration,
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
         }
+        require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
+        val serviceIdentity: PublicKey? = if (info.legalIdentities.size == 1) null else info.legalIdentities[1].owningKey
         return P2PMessagingClient(
                 configuration,
                 versionInfo,
                 serverAddress,
                 info.legalIdentities[0].owningKey,
+                serviceIdentity,
                 serverThread,
                 database,
                 advertisedAddress,

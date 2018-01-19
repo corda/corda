@@ -19,7 +19,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
@@ -54,21 +53,28 @@ import javax.persistence.Lob
  * invoke methods on the provided implementation. There is more documentation on this in the docsite and the
  * CordaRPCClient class.
  *
- * @param serverAddress The address of the broker instance to connect to (might be running in the same process).
- * @param myIdentity The public key to be used as the ArtemisMQ address and queue name for the node.
- * @param nodeExecutor An executor to run received message tasks upon.
- * @param advertisedAddress The node address for inbound connections, advertised to the network map service and peers.
- * If not provided, will default to [serverAddress].
+ * @param config The configuration of the node, which is used for controlling the message redelivery options.
+ * @param versionInfo All messages from the node carry the version info and received messages are checked against this for compatibility.
+ * @param serverAddress The host and port of the Artemis broker.
+ * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
+ * It is also used to construct the myAddress field, which is ultimately advertised in the network map.
+ * @param serviceIdentity An optional second identity if the node is also part of a group address, for example a notary.
+ * @param nodeExecutor The received messages are marshalled onto the server executor to prevent Netty buffers leaking during fiber suspends.
+ * @param database The nodes database, which is used to deduplicate messages.
+ * @param advertisedAddress The externally advertised version of the Artemis broker address used to construct myAddress and included
+ * in the network map data.
+ * @param maxMessageSize A bound applied to the message size.
  */
 @ThreadSafe
 class P2PMessagingClient(config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
                          serverAddress: NetworkHostAndPort,
                          private val myIdentity: PublicKey,
+                         private val serviceIdentity: PublicKey?,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                          private val database: CordaPersistence,
                          advertisedAddress: NetworkHostAndPort = serverAddress,
-                         private val maxMessageSize: Int
+                         maxMessageSize: Int
 ) : SingletonSerializeAsToken(), MessagingService {
     companion object {
         private val log = contextLogger()
@@ -126,6 +132,7 @@ class P2PMessagingClient(config: NodeConfiguration,
     private class InnerState {
         var running = false
         var p2pConsumer: ClientConsumer? = null
+        var serviceConsumer: ClientConsumer? = null
     }
 
     private val messagesToRedeliver = database.transaction {
@@ -181,8 +188,20 @@ class P2PMessagingClient(config: NodeConfiguration,
     fun start() {
         state.locked {
             val session = artemis.start().session
+            val inbox = RemoteInboxAddress(myIdentity).queueName
             // Create a queue, consumer and producer for handling P2P network messages.
-            p2pConsumer = session.createConsumer(P2P_QUEUE)
+            createQueueIfAbsent(inbox)
+            p2pConsumer = session.createConsumer(inbox)
+            if (serviceIdentity != null) {
+                val serviceAddress = RemoteInboxAddress(serviceIdentity).queueName
+                createQueueIfAbsent(serviceAddress)
+                val serviceHandler = session.createConsumer(serviceAddress)
+                serviceHandler.setMessageHandler { msg ->
+                    val message: ReceivedMessage? = artemisToCordaMessage(msg)
+                    if (message != null)
+                        deliver(msg, message)
+                }
+            }
         }
 
         resumeMessageRedelivery()
@@ -331,6 +350,13 @@ class P2PMessagingClient(config: NodeConfiguration,
                 // Ignore it: this can happen if the server has gone away before we do.
             }
             p2pConsumer = null
+            val s = serviceConsumer
+            try {
+                s?.close()
+            } catch (e: ActiveMQObjectClosedException) {
+                // Ignore it: this can happen if the server has gone away before we do.
+            }
+            serviceConsumer = null
             prevRunning
         }
         if (running && !nodeExecutor.isOnThread) {
@@ -430,7 +456,7 @@ class P2PMessagingClient(config: NodeConfiguration,
     private fun getMQAddress(target: MessageRecipients): String {
         return if (target == myAddress) {
             // If we are sending to ourselves then route the message directly to our P2P queue.
-            P2P_QUEUE
+            RemoteInboxAddress(myIdentity).queueName
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
@@ -447,7 +473,7 @@ class P2PMessagingClient(config: NodeConfiguration,
             val queueQuery = session.queueQuery(SimpleString(queueName))
             if (!queueQuery.isExists) {
                 log.info("Create fresh queue $queueName bound on same address")
-                session.createQueue(queueName, RoutingType.MULTICAST, queueName, true)
+                session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
             }
         }
     }
