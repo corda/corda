@@ -1,7 +1,7 @@
 Building a Corda VM from the AWS Marketplace
 ============================================
 
-To help you design, build and test applications on Corda, called CorDapps, a Corda network AMI can be deployed from the `AWS Marketplace <https://aws.amazon.com/marketplace/pp/B077PG9SP5>`_ Instructions on running Corda nodes can be found `here <https://docs.corda.net/deploying-a-node.html>`_
+To help you design, build and test applications on Corda, called CorDapps, a Corda network AMI can be deployed from the `AWS Marketplace <https://aws.amazon.com/marketplace/pp/B077PG9SP5>`_. Instructions on running Corda nodes can be found `here <https://docs.corda.net/deploying-a-node.html>`_.
 
 This Corda network offering builds a pre-configured network of Corda nodes as Ubuntu virtual machines (VM). The network consists of a Notary node and three Corda nodes using version 1 of Corda. The following guide will also show you how to load one of four `Corda Sample apps <https://www.corda.net/samples>`_ which demonstrates the basic principles of Corda. When you are ready to go further with developing on Corda and start making contributions to the project head over to the `Corda.net <https://www.corda.net/>`_.
 
@@ -45,7 +45,7 @@ cd into the Corda sample you would like to run. For example:
 
     cd cordapp-example/
 
-Follow instructions for the specific sample at https://www.corda.net/samples/ to build and run the Corda sample
+Follow instructions for the specific sample at https://www.corda.net/samples to build and run the Corda sample
 For example: with cordapp-example (IOU app) the following commands would be run:
 
 .. sourcecode:: shell
@@ -65,6 +65,8 @@ Next Steps
 ----------
 Now you have built a Corda network and used a basic Corda Cordapp do go and visit the `dedicated Corda website <https://www.corda.net>`_
 
-You can build and run any other Corda samples or your own custom CorDapp here.
+Additional support is available on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ and the `Corda Slack channel <https://slack.corda.net/>`_.
+
+You can build and run any other `Corda samples <https://www.corda.net/samples>`_ or your own custom CorDapp here.
 
 Or to join the growing Corda community and get straight into the Corda open source codebase, head over to the `Github Corda repo <https://www.github.com/corda>`_
