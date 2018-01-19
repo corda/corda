@@ -128,15 +128,16 @@ class HibernateConfiguration(
     class NodeDatabaseConnectionProvider : ConnectionProvider {
         override fun closeConnection(conn: Connection) {
             conn.autoCommit = false
-            val tx = DatabaseTransactionManager.current()
-            tx.commit()
-            tx.close()
+            contextTransaction.run {
+                commit()
+                close()
+            }
         }
 
         override fun supportsAggressiveRelease(): Boolean = true
 
         override fun getConnection(): Connection {
-            return DatabaseTransactionManager.newTransaction().connection
+            return contextDatabase.newTransaction().connection
         }
 
         override fun <T : Any?> unwrap(unwrapType: Class<T>): T {
