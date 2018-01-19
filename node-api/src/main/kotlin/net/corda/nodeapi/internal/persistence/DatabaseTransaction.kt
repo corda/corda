@@ -15,7 +15,7 @@ val contextTransaction get() = contextTransactionOrNull ?: error("Was expecting 
 
 class DatabaseTransaction(
         isolation: Int,
-        private val outerTransaction: DatabaseTransaction?,
+        val outerTransaction: DatabaseTransaction?,
         val database: CordaPersistence
 ) {
     val id: UUID = UUID.randomUUID()
