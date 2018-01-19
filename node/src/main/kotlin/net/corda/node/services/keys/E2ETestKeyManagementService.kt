@@ -27,6 +27,9 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class E2ETestKeyManagementService(val identityService: IdentityServiceInternal,
                                   initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
+    @Suppress("unused")
+    constructor(identityService: IdentityServiceInternal, initialKeys: InitialKeys) : this(identityService, initialKeys.keys)
+
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
     }

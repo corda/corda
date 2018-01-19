@@ -27,7 +27,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -297,6 +296,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
         override fun configure(lh: MutableLazyHub) {
             super.configure(lh)
             lh.factory(this::makeMessagingService)
+            lh.impl(KeyManagementService::class, E2ETestKeyManagementService::class)
         }
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
@@ -314,10 +314,6 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
             network = messagingServiceSpy
-        }
-
-        override fun makeKeyManagementService(identityService: IdentityServiceInternal, keyPairs: Set<KeyPair>): KeyManagementService {
-            return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine

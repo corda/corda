@@ -9,6 +9,7 @@ import net.corda.core.serialization.*
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -24,6 +25,8 @@ fun TxCacheValue.toSignedTx() = SignedTransaction(this.first, this.second)
 fun SignedTransaction.toTxCacheValue() = TxCacheValue(this.txBits, this.sigs)
 
 class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, SingletonSerializeAsToken() {
+    @Suppress("unused")
+    constructor(configuration: NodeConfiguration) : this(configuration.transactionCacheSizeBytes)
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
