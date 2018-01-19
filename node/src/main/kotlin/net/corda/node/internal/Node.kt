@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -15,10 +14,8 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.lazyhub.MutableLazyHub
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.SchemaService
@@ -27,7 +24,6 @@ import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
@@ -138,27 +134,16 @@ open class Node(configuration: NodeConfiguration,
     private var messageBroker: ArtemisMessagingServer? = null
 
     private var shutdownHook: ShutdownHook? = null
-    override fun configure(lh: MutableLazyHub) {
-        super.configure(lh)
+
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
-        lh.obj(configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers))
-        lh.impl(RPCSecurityManagerImpl::class)
-        configuration.messagingServerAddress?.also {
-            lh.obj(MessagingServerAddress(it))
-        } ?: run {
-            lh.factory(this::makeLocalMessageBroker)
-        }
-        lh.factory(this::makeMessagingService)
-        // Side-effects:
-        lh.factory(this::startMessagingService)
-        lh.factory(this::startShell)
-    }
+        val securityManagerConfig = configuration.security?.authService ?:
+            SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-    class MessagingServerAddress(val address: NetworkHostAndPort)
+        securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 
-    private fun makeMessagingService(database: CordaPersistence, info: NodeInfo, messagingServerAddress: MessagingServerAddress): MessagingService {
-        val serverAddress = messagingServerAddress.address
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
@@ -181,10 +166,10 @@ open class Node(configuration: NodeConfiguration,
                 networkParameters.maxMessageSize)
     }
 
-    private fun makeLocalMessageBroker(securityManager: RPCSecurityManager): MessagingServerAddress {
+    private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
             messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
-            return MessagingServerAddress(NetworkHostAndPort("localhost", p2pAddress.port))
+            return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
@@ -232,7 +217,7 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    private fun startMessagingService(rpcOps: RPCOps, securityManager: RPCSecurityManager) {
+    override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
             runOnStop += this::stop
@@ -251,10 +236,6 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::stop
             start()
         }
-    }
-
-    private fun startShell(rpcOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
-        InteractiveShell.startShell(configuration, rpcOps, securityManager, identityService, database)
     }
 
     /**
