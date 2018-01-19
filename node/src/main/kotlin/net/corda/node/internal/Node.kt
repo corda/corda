@@ -6,7 +6,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -16,12 +15,10 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.lazyhub.MutableLazyHub
 import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.SchemaService
@@ -31,7 +28,6 @@ import net.corda.node.services.config.VerifierType
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
@@ -145,16 +141,20 @@ open class Node(configuration: NodeConfiguration,
 
     private var shutdownHook: ShutdownHook? = null
 
-    class MessagingServerAddress(val address: NetworkHostAndPort)
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+        // Construct security manager reading users data either from the 'security' config section
+        // if present or from rpcUsers list if the former is missing from config.
+        val securityManagerConfig = configuration.security?.authService ?:
+        SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-    private fun makeMessagingService(database: CordaPersistence, info: NodeInfo, messagingServerAddress: MessagingServerAddress, rpcServerAddresses: BrokerAddresses): MessagingService {
+        securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 
-        val serverAddress = messagingServerAddress.address
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
+        val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
         val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-
-        rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, rpcServerAddresses.admin, networkParameters.maxMessageSize)
+        rpcMessagingClient = RPCMessagingClient(configuration, rpcServerAddresses.admin, networkParameters.maxMessageSize)
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
@@ -173,7 +173,7 @@ open class Node(configuration: NodeConfiguration,
                 networkParameters.maxMessageSize)
     }
 
-    private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses {
+    private fun startLocalRpcBroker(): BrokerAddresses {
 
         with(configuration) {
             require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
@@ -189,10 +189,10 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    private fun makeLocalMessageBroker(securityManager: RPCSecurityManager): MessagingServerAddress {
+    private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
             messageBroker = ArtemisMessagingServer(this, p2pAddress.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
-            return MessagingServerAddress(NetworkHostAndPort("localhost", p2pAddress.port))
+            return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
@@ -249,7 +249,7 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    private fun startMessagingService(rpcOps: RPCOps, securityManager: RPCSecurityManager) {
+    override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
             runOnStop += this::close
@@ -272,10 +272,6 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::stop
             start()
         }
-    }
-
-    private fun startShell(rpcOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
-        InteractiveShell.startShell(configuration, rpcOps, securityManager, identityService, database)
     }
 
     /**
@@ -399,28 +395,28 @@ open class Node(configuration: NodeConfiguration,
         log.info("Shutdown complete")
     }
 
-    override fun configure(lh: MutableLazyHub) {
-
-        super.configure(lh)
-        // Construct security manager reading users data either from the 'security' config section
-        // if present or from rpcUsers list if the former is missing from config.
-        lh.obj(configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers))
-        lh.impl(RPCSecurityManagerImpl::class)
-        configuration.messagingServerAddress?.also {
-            lh.obj(MessagingServerAddress(it))
-        } ?: run {
-            lh.factory(this::makeLocalMessageBroker)
-        }
-        lh.factory(this::makeMessagingService)
-
-        if (configuration.rpcOptions.standAloneBroker) {
-            lh.obj(BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress))
-        } else {
-            lh.factory(this::startLocalRpcBroker)
-        }
-
-        // Side-effects:
-        lh.factory(this::startMessagingService)
-        lh.factory(this::startShell)
-    }
+//    override fun configure(lh: MutableLazyHub) {
+//
+//        super.configure(lh)
+//        // Construct security manager reading users data either from the 'security' config section
+//        // if present or from rpcUsers list if the former is missing from config.
+//        lh.obj(configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers))
+//        lh.impl(RPCSecurityManagerImpl::class)
+//        configuration.messagingServerAddress?.also {
+//            lh.obj(MessagingServerAddress(it))
+//        } ?: run {
+//            lh.factory(this::makeLocalMessageBroker)
+//        }
+//        lh.factory(this::makeMessagingService)
+//
+//        if (configuration.rpcOptions.standAloneBroker) {
+//            lh.obj(BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress))
+//        } else {
+//            lh.factory(this::startLocalRpcBroker)
+//        }
+//
+//        // Side-effects:
+//        lh.factory(this::startMessagingService)
+//        lh.factory(this::startShell)
+//    }
 }
