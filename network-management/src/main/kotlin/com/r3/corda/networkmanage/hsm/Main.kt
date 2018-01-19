@@ -141,7 +141,8 @@ private fun startNetworkingMapSigningPolling(networkMapStorage: NetworkMapStorag
 
 private fun processError(exception: Exception) {
     val processed = mapCryptoServerException(exception)
-    System.err.println("An error occurred: ${processed.message}")
+    System.err.println("An error occurred:")
+    processed.printStackTrace()
 }
 
 private fun confirmedSign(selectedItems: List<ApprovedCertificateRequestData>): Boolean {
