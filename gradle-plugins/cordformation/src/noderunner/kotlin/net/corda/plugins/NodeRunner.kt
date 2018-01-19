@@ -47,7 +47,6 @@ fun main(args: Array<String>) {
     println("Finished starting nodes")
 
 
-
 }
 
 private abstract class JarType(private val jarName: String) {
@@ -128,10 +127,18 @@ private abstract class Launcher(
 private fun getLauncherBasedOnOsAndEnvironment(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>): Launcher {
     when (os) {
         OS.LINUX -> {
-            return LinuxLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs)
+            return if (shouldUseScreen(args)) {
+                UnixScreenLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs);
+            } else {
+                LinuxLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs);
+            }
         }
         OS.MACOS -> {
-            return OsXLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs)
+            return if (shouldUseScreen(args)) {
+                UnixScreenLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs);
+            } else {
+                OSXTabbingLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs)
+            }
         }
         OS.WINDOWS -> {
             return WindowsLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs)
@@ -150,7 +157,7 @@ private class HeadlessLauncher(jarName: String, dir: File, debugPort: Int?, moni
 
 }
 
-private class OsXLauncher(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
+private class OSXTabbingLauncher(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
     : Launcher(jarName, dir, debugPort, monitoringPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
     override fun toProcess(dir: File): RunningProcess {
         val processCommand = listOf("osascript", "-e", """
@@ -162,9 +169,22 @@ private class OsXLauncher(jarName: String, dir: File, debugPort: Int?, monitorin
             do script "bash -c 'cd \"$dir\" ; \"${javaCommand.joinToString("""\" \"""")}\" && exit'" in selected tab of the front window
             end tell
         """)
-        print("Sleeping for 500 millis to allow OSX terminal to catch up")
-        Thread.sleep(500)
+        print("Sleeping for 1000 millis to allow OSX terminal to catch up")
+        Thread.sleep(1000)
         return RunningProcess(ProcessBuilder(processCommand).directory(dir).start(), processCommand.joinToString(" "));
+    }
+}
+
+private class UnixScreenLauncher(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
+    : Launcher(jarName, dir, debugPort, monitoringPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
+    override fun toProcess(dir: File): RunningProcess {
+        val commandString = """
+                        cd "${dir.absolutePath}"
+                        screen -dmS "${nodeName}" sh -c '${javaCommand.joinToString(" ")}'
+                        echo started ${nodeName}
+                    """
+        val processBuilder = ProcessBuilder("sh", "-c", commandString).directory(dir)
+        return RunningProcess(processBuilder.start(), processBuilder.command().joinToString(" "))
     }
 }
 
@@ -176,17 +196,6 @@ private class LinuxLauncher(jarName: String, dir: File, debugPort: Int?, monitor
                 if (isTmux()) {
                     val processBuilder = ProcessBuilder(listOf("tmux", "new-window", "-n", "\"$nodeName\"", "${unixCommand()}; [ $? -eq 0 -o $? -eq 143 ] || sh"))
                             .directory(dir)
-                    processBuilder.start() to processBuilder.command().joinToString(" ")
-                } else if (shouldUseScreen(args)) {
-                    val tempFile = File.createTempFile("cordaScreen", ".sh")
-                    tempFile.deleteOnExit()
-                    val commandString = """
-                        cd "${dir.absolutePath}"
-                        screen -dmS "${nodeName}" sh -c '${javaCommand.joinToString(" ")}'
-                        echo started ${nodeName}
-                    """
-                    tempFile.writeBytes(commandString.toByteArray())
-                    val processBuilder = ProcessBuilder("sh", tempFile.absolutePath.toString()).directory(dir)
                     processBuilder.start() to processBuilder.command().joinToString(" ")
                 } else {
                     val processBuilder = ProcessBuilder(listOf("xterm", "-T", "\"$nodeName\"", "-e", "${unixCommand()}; [ $? -eq 0 -o $? -eq 143 ] || sh")).directory(dir)
@@ -210,10 +219,13 @@ private fun quotedFormOf(text: String) = "'${text.replace("'", "'\\''")}'" // Su
 private fun isTmux() = System.getenv("TMUX")?.isNotEmpty() ?: false
 
 private fun shouldUseScreen(args: List<String>): Boolean {
-    val process = ProcessBuilder("which", "screen").start()
-    process.waitFor()
-    return (process.inputStream.reader(Charsets.UTF_8).readLines().size) == 1 && args.contains(SCREEN_FLAG)
+    if (hasScreen == null) {
+        val process = ProcessBuilder("which", "screen").start()
+        process.waitFor()
+        hasScreen = (process.inputStream.reader(Charsets.UTF_8).readLines().size) == 1
+    }
+    return hasScreen!! && args.contains(SCREEN_FLAG)
 }
 
-
+var hasScreen: Boolean? = null;
 private data class RunningProcess(val process: Process, val commandLine: String)
