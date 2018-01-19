@@ -76,7 +76,6 @@ class NodeConfigurationImplTest {
             dataSourceProperties = makeTestDataSourceProperties(ALICE_NAME.organisation),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
-            useHTTPS = false,
             p2pAddress = NetworkHostAndPort("localhost", 0),
             rpcAddress = NetworkHostAndPort("localhost", 1),
             messagingServerAddress = null,

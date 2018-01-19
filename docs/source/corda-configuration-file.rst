@@ -43,7 +43,6 @@ Simple Notary configuration file.
     notary : {
         validating : false
     }
-    useHTTPS : false
     devMode : true
     compatibilityZoneURL : "https://cz.corda.net"
 
@@ -135,10 +134,6 @@ path to the node's base directory.
     :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
 
     Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
-
-:useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private
-    key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled
-    then unencrypted HTTP traffic to the node's **webAddress** port is not supported.
 
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:

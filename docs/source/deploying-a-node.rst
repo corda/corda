@@ -46,7 +46,6 @@ handling, and ensures the Corda service is run at boot.
       myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
       keyStorePassword : "cordacadevpass"
       trustStorePassword : "trustpass"
-      useHTTPS : false
       devMode : false
       rpcUsers=[
           {
@@ -217,7 +216,6 @@ at boot, and means the Corda service stays running with no users connected to th
         keyStorePassword : "cordacadevpass"
         trustStorePassword : "trustpass"
         extraAdvertisedServiceIds: [ "" ]
-        useHTTPS : false
         devMode : false
         rpcUsers=[
             {
