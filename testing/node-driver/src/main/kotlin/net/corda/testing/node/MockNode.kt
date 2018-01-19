@@ -62,7 +62,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-    return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
+    return (network as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
 }
 
 /** Helper builder for configuring a [MockNetwork] from Java. */
@@ -172,29 +172,32 @@ open class MockNetwork(private val cordappPackages: List<String>,
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode> get() {
-        return when (notaryNodes.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryNodes[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryNode: StartedNode<MockNode>
+        get() {
+            return when (notaryNodes.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryNodes[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentity: Party get() {
-        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentity: Party
+        get() {
+            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
-        return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentityAndCert: PartyAndCertificate
+        get() {
+            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
