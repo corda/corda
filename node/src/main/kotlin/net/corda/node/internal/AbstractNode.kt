@@ -217,7 +217,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             lh.obj(info)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
-            val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeMegaBytes.mbToByte())
+            val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(lh, keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
@@ -536,7 +536,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeServices(lh: LazyHub, keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, database: CordaPersistence, info: NodeInfo, identityService: IdentityServiceInternal, networkMapCache: NetworkMapCacheInternal): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
-        attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeMegaBytes, configuration.attachmentCacheBound)
+        attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(

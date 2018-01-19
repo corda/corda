@@ -14,8 +14,8 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-fun Int.mbToByte(): Long = this * 1024L * 1024L
-fun Long.byteToMb(): Int = (this / (1024 * 1024)).toInt()
+
+val Int.MB: Long get() = this * 1024L * 1024L
 
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
@@ -42,21 +42,21 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val useAMQPBridges: Boolean get() = true
-    val transactionCacheSizeMegaBytes: Int get() = defaultTransactionCacheSize
-    val attachmentContentCacheSizeMegaBytes: Int get() = defaultAttachmentContentCacheSize
+    val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
+    val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
 
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
-        val defaultTransactionCacheSize: Int = 8 + getAdditionalCacheMemory()
+        val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
 
         // add 5% of any heapsize over 300MB to the default transaction cache size
-        private fun getAdditionalCacheMemory(): Int {
-            return Math.max((Runtime.getRuntime().maxMemory().byteToMb() - 300) / 20, 0)
+        private fun getAdditionalCacheMemory(): Long {
+            return Math.max((Runtime.getRuntime().maxMemory() - 300.MB) / 20, 0)
         }
 
-        val defaultAttachmentContentCacheSize: Int = 10
+        val defaultAttachmentContentCacheSize: Long = 10.MB
         val defaultAttachmentCacheBound = 1024L
     }
 }
@@ -134,12 +134,17 @@ data class NodeConfigurationImpl(
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
         override val useAMQPBridges: Boolean = true,
-        override val transactionCacheSizeMegaBytes: Int = NodeConfiguration.defaultTransactionCacheSize,
-        override val attachmentContentCacheSizeMegaBytes: Int = NodeConfiguration.defaultAttachmentContentCacheSize,
+        private val transactionCacheSizeMegaBytes: Int? = null,
+        private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
         ) : NodeConfiguration {
 
     override val exportJMXto: String get() = "http"
+    override val transactionCacheSizeBytes: Long
+        get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
+    override val attachmentContentCacheSizeBytes: Long
+        get() = attachmentContentCacheSizeMegaBytes?.MB ?: super.attachmentContentCacheSizeBytes
+
 
     init {
         // This is a sanity feature do not remove.
