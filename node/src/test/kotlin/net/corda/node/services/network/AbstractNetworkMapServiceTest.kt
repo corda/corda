@@ -5,6 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.internal.ServiceInfo
@@ -129,6 +130,28 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         assertThat(alice.fetchMap()).containsOnly(Added(mapServiceNode), Added(alice))
     }
 
+    // The MockNode already registers with the network map and so we if want to force another registration we have to
+    // use a serial value higher than the current time, hence the use of MAX_VALUE.
+
+    @Test
+    fun `register node with same address as previously registered node`() {
+        val address = NetworkHostAndPort("localhost", 1001)
+        val aliceResponse = alice.registration(ADD, nodeAddresses = listOf(address), serial = Long.MAX_VALUE)
+        assertThat(aliceResponse.getOrThrow().error).isNull()
+        val bob = mockNet.createNode(mapServiceNode.network.myAddress, nodeFactory = nodeFactory, legalName = BOB.name)
+        val bobResponse = bob.registration(ADD, nodeAddresses = listOf(address), serial = Long.MAX_VALUE)
+        assertThat(bobResponse.getOrThrow().error).isEqualTo("Address already taken!")
+    }
+
+    @Test
+    fun `node can re-register using same address`() {
+        val address = NetworkHostAndPort("localhost", 1001)
+        val response1 = alice.registration(ADD, nodeAddresses = listOf(address), serial = Long.MAX_VALUE-1)
+        assertThat(response1.getOrThrow().error).isNull()
+        val response2 = alice.registration(ADD, nodeAddresses = listOf(address, NetworkHostAndPort("localhost", 1002)), serial = Long.MAX_VALUE)
+        assertThat(response2.getOrThrow().error).isNull()
+    }
+
     @Test
     fun `subscribed while new node registers`() {
         val updates = alice.subscribe()
@@ -213,7 +236,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private var lastSerial = Long.MIN_VALUE
 
     private fun StartedNode<*>.registration(addOrRemove: AddOrRemove,
-                                      serial: Long? = null): CordaFuture<RegistrationResponse> {
+                                            nodeAddresses: List<NetworkHostAndPort> = emptyList(),
+                                            serial: Long? = null): CordaFuture<RegistrationResponse> {
         val distinctSerial = if (serial == null) {
             ++lastSerial
         } else {
@@ -221,7 +245,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
             serial
         }
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val nodeRegistration = NodeRegistration(info, distinctSerial, addOrRemove, expires)
+        val nodeRegistration = NodeRegistration(info.copy(addresses = nodeAddresses), distinctSerial, addOrRemove, expires)
         val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, info.chooseIdentity().owningKey), network.myAddress)
         val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()

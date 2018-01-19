@@ -260,6 +260,12 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
             return RegistrationResponse("Minimum platform version requirement not met: $minimumPlatformVersion")
         }
 
+        val entryWithSameAddress = nodeRegistrations.entries.find { it.key != identity && it.value.reg.node.addresses.any { it in node.addresses } }
+        if (entryWithSameAddress != null) {
+            logger.warn("Registration from $node contains address of existing node $entryWithSameAddress")
+            return RegistrationResponse("Address already taken!")
+        }
+
         // Update the current value atomically, so that if multiple updates come
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
