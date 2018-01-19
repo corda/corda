@@ -354,4 +354,13 @@ interface ServiceHub : ServicesForResolution {
      * @return A new [Connection]
      */
     fun jdbcSession(): Connection
+
+    /**
+     * Allows the registration of a callback to inform services when corda is shutting down.
+     *
+     * The intent is to allow the cleaning up of resources - e.g. releasing ports.
+     *
+     * You should not rely on this to clean up executing flows - that's what quasar is for.
+     */
+    fun addRunOnStop(runOnStop: () -> Any?)
 }
