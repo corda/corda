@@ -37,11 +37,11 @@ class TraderDemoTest {
             ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
             nodeA.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-                val client = CordaRPCClient(it.internals.configuration.rpcAddress!!)
+                val client = CordaRPCClient(it.internals.configuration.rpcOptions.address!!)
                 client.start(demoUser.username, demoUser.password).proxy
             }
             val nodeBankRpc = let {
-                val client = CordaRPCClient(bankNode.internals.configuration.rpcAddress!!)
+                val client = CordaRPCClient(bankNode.internals.configuration.rpcOptions.address!!)
                 client.start(bankUser.username, bankUser.password).proxy
             }
 

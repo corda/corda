@@ -14,6 +14,7 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -32,7 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger
 data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHandles: CordaFuture<List<NodeHandle>>)
 
 @DoNotImplement
-sealed class NodeHandle {
+sealed class NodeHandle : AutoCloseable {
+
     abstract val nodeInfo: NodeInfo
     /**
      * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one
@@ -47,6 +49,8 @@ sealed class NodeHandle {
      * Stops the referenced node.
      */
     abstract fun stop()
+
+    override fun close() = stop()
 
     data class OutOfProcess(
             override val nodeInfo: NodeInfo,
@@ -87,7 +91,8 @@ sealed class NodeHandle {
         }
     }
 
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
+    @JvmOverloads
+    fun rpcClientToNode(sslConfiguration: SSLConfiguration? = null): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
 }
 
 data class WebserverHandle(

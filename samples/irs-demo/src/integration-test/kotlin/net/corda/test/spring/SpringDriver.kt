@@ -110,7 +110,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
                 arguments = listOf(
                         "--base-directory", handle.configuration.baseDirectory.toString(),
                         "--server.port=${handle.webAddress.port}",
-                        "--corda.host=${handle.configuration.rpcAddress}",
+                        "--corda.host=${handle.configuration.rpcOptions.address}",
                         "--corda.user=${handle.configuration.rpcUsers.first().username}",
                         "--corda.password=${handle.configuration.rpcUsers.first().password}"
                 ),

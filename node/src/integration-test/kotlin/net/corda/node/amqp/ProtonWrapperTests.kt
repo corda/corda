@@ -13,6 +13,8 @@ import net.corda.node.internal.protonwrapper.messages.MessageStatus
 import net.corda.node.internal.protonwrapper.netty.AMQPClient
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.internal.startBlocking
+import net.corda.node.internal.stopBlocking
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
@@ -167,7 +169,7 @@ class ProtonWrapperTests {
         assertArrayEquals(testData, ByteArray(received.bodySize).apply { received.bodyBuffer.readBytes(this) })
         amqpClient.stop()
         artemisClient.stop()
-        server.stop()
+        server.stopBlocking()
     }
 
     @Test
@@ -226,6 +228,7 @@ class ProtonWrapperTests {
             doReturn(CHARLIE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(true).whenever(it).useAMQPBridges
@@ -236,9 +239,9 @@ class ProtonWrapperTests {
             doReturn(never<NetworkMapCache.MapChange>()).whenever(it).changed
         }
         val userService = rigorousMock<RPCSecurityManager>()
-        val server = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val server = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, userService, MAX_MESSAGE_SIZE)
         val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), MAX_MESSAGE_SIZE)
-        server.start()
+        server.startBlocking()
         client.start()
         return Pair(server, client)
     }

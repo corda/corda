@@ -6,6 +6,7 @@ import net.corda.verifier.Verifier
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.reflect.KVisibility
 import kotlin.reflect.full.declaredMemberProperties
 
 class ExampleConfigTest {
@@ -16,8 +17,8 @@ class ExampleConfigTest {
             val configFileResource = ExampleConfigTest::class.java.classLoader.getResource(it)
             val config = loadConfig(Paths.get(configFileResource.toURI()))
             // Force the config fields as they are resolved lazily
-            config.javaClass.kotlin.declaredMemberProperties.forEach { member ->
-                member.get(config)
+            config.javaClass.kotlin.declaredMemberProperties.filter { field -> field.visibility != KVisibility.PRIVATE }.forEach { field ->
+                field.get(config)
             }
         }
     }

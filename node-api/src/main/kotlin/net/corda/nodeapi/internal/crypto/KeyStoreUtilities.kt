@@ -3,6 +3,7 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.core.internal.read
 import net.corda.core.internal.write
@@ -30,6 +31,7 @@ fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStor
         keyStoreFilePath.read { keyStore.load(it, pass) }
     } else {
         keyStore.load(null, pass)
+        keyStoreFilePath.parent.createDirectories()
         keyStoreFilePath.write { keyStore.store(it, pass) }
     }
     return keyStore

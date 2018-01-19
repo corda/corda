@@ -10,6 +10,8 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.internal.startBlocking
+import net.corda.node.internal.stopBlocking
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
@@ -124,7 +126,7 @@ class AMQPBridgeTest {
 
         amqpServer.stop()
         artemisClient.stop()
-        artemisServer.stop()
+        artemisServer.stopBlocking()
     }
 
     @Test
@@ -158,18 +160,19 @@ class AMQPBridgeTest {
         }
 
         artemisClient.stop()
-        artemisServer.stop()
+        artemisServer.stopBlocking()
         artemisLegacyClient.stop()
-        artemisLegacyServer.stop()
-
+        artemisLegacyServer.stopBlocking()
     }
 
     private fun createArtemis(sourceQueueName: String?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(true).whenever(it).useAMQPBridges
@@ -180,9 +183,9 @@ class AMQPBridgeTest {
             doReturn(listOf(NodeInfo(listOf(amqpAddress), listOf(BOB.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
         val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, userService, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
-        artemisServer.start()
+        artemisServer.startBlocking()
         artemisClient.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -198,6 +201,7 @@ class AMQPBridgeTest {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(false).whenever(it).useAMQPBridges
@@ -209,9 +213,9 @@ class AMQPBridgeTest {
             doReturn(listOf(NodeInfo(listOf(artemisAddress), listOf(ALICE.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
         val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, networkMap, userService, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress2, MAX_MESSAGE_SIZE)
-        artemisServer.start()
+        artemisServer.startBlocking()
         artemisClient.start()
         val artemis = artemisClient.started!!
         // Local queue for outgoing messages

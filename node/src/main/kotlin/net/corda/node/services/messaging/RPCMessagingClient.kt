@@ -5,14 +5,15 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.getX509Certificate
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 
-class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort, private val maxMessageSize: Int) : SingletonSerializeAsToken() {
+class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort, maxMessageSize: Int) : SingletonSerializeAsToken(), AutoCloseable {
+
     private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     private var rpcServer: RPCServer? = null
 
@@ -30,4 +31,6 @@ class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: Ne
         rpcServer?.close()
         artemis.stop()
     }
+
+    override fun close() = stop()
 }

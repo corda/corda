@@ -53,7 +53,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 
