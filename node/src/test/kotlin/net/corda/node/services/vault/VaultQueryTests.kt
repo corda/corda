@@ -745,24 +745,18 @@ class VaultQueryTests {
             // DOCEND VaultQueryExample22
 
             assertThat(results.otherResults).hasSize(15)
-            /** CHF */
-            assertThat(results.otherResults[0]).isEqualTo(50000L)
-            assertThat(results.otherResults[1]).isEqualTo(10274L)
-            assertThat(results.otherResults[2]).isEqualTo(9481L)
-            assertThat(results.otherResults[3]).isEqualTo(10000.0)
-            assertThat(results.otherResults[4]).isEqualTo("CHF")
-            /** GBP */
-            assertThat(results.otherResults[5]).isEqualTo(40000L)
-            assertThat(results.otherResults[6]).isEqualTo(10343L)
-            assertThat(results.otherResults[7]).isEqualTo(9351L)
-            assertThat(results.otherResults[8]).isEqualTo(10000.0)
-            assertThat(results.otherResults[9]).isEqualTo("GBP")
-            /** USD */
-            assertThat(results.otherResults[10]).isEqualTo(60000L)
-            assertThat(results.otherResults[11]).isEqualTo(11298L)
-            assertThat(results.otherResults[12]).isEqualTo(8702L)
-            assertThat(results.otherResults[13]).isEqualTo(10000.0)
-            assertThat(results.otherResults[14]).isEqualTo("USD")
+            // the order of rows not guaranteed, a row has format 'NUM, NUM, NUM, CURRENCY_CODE'
+            val actualRows = mapOf(results.otherResults[4] as String to results.otherResults.subList(0,4),
+                    results.otherResults[9] as String to results.otherResults.subList(5,9),
+                    results.otherResults[14] as String to results.otherResults.subList(10,14))
+
+            val expectedRows = mapOf("CHF" to listOf(50000L, 10274L, 9481L, 10000.0),
+                    "GBP" to listOf(40000L, 10343L, 9351L, 10000.0),
+                    "USD" to listOf(60000L, 11298L, 8702L, 10000.0))
+
+            assertThat(expectedRows["CHF"]).isEqualTo(actualRows["CHF"])
+            assertThat(expectedRows["GBP"]).isEqualTo(actualRows["GBP"])
+            assertThat(expectedRows["USD"]).isEqualTo(actualRows["USD"])
         }
     }
 
@@ -1454,12 +1448,14 @@ class VaultQueryTests {
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
 
             assertThat(results.otherResults).hasSize(6)
-            assertThat(results.otherResults[0]).isEqualTo(110000L)
-            assertThat(results.otherResults[1]).isEqualTo("CHF")
-            assertThat(results.otherResults[2]).isEqualTo(70000L)
-            assertThat(results.otherResults[3]).isEqualTo("GBP")
-            assertThat(results.otherResults[4]).isEqualTo(30000L)
-            assertThat(results.otherResults[5]).isEqualTo("USD")
+            // the order of rows not guaranteed
+            val actualTotals = mapOf(results.otherResults[1] as String to results.otherResults[0] as Long,
+                    results.otherResults[3] as String to results.otherResults[2] as Long,
+                    results.otherResults[5] as String to results.otherResults[4] as Long)
+            val expectedTotals = mapOf("CHF" to 110000L, "GBP" to 70000L, "USD" to 30000L)
+            assertThat(expectedTotals["CHF"]).isEqualTo(actualTotals["CHF"])
+            assertThat(expectedTotals["GBP"]).isEqualTo(actualTotals["GBP"])
+            assertThat(expectedTotals["USD"]).isEqualTo(actualTotals["USD"])
         }
     }
 
