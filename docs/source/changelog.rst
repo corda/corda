@@ -4,11 +4,19 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
+.. _changelog_v2:
+
+Release 2.0
+-----------
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
+
+* ``FlowLogic`` now has a static method called ``sleep`` which can be used in certain circumstances to help with resolving
+  contention over states in flows.  This should be used in place of any other sleep primitive since these are not compatible
+  with flows and their use will be prevented at some point in the future.  Pay attention to the warnings and limitations
+  described in the documentation for this method.  This helps resolve a bug in ``Cash`` coin selection.
+  A new static property `currentTopLevel` returns the top most `FlowLogic` instance, or null if not in a flow.
 
 .. _changelog_v1:
 

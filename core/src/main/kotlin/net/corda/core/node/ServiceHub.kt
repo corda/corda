@@ -48,6 +48,26 @@ interface ServicesForResolution {
 }
 
 /**
+ * Controls whether the transaction is sent to the vault at all, and if so whether states have to be relevant
+ * or not in order to be recorded. Used in [ServiceHub.recordTransactions]
+ */
+enum class StatesToRecord {
+    /** The received transaction is not sent to the vault at all. This is used within transaction resolution. */
+    NONE,
+    /**
+     * All states that can be seen in the transaction will be recorded by the vault, even if none of the identities
+     * on this node are a participant or owner.
+     */
+    ALL_VISIBLE,
+    /**
+     * Only states that involve one of our public keys will be stored in the vault. This is the default. A public
+     * key is involved (relevant) if it's in the [OwnableState.owner] field, or appears in the [ContractState.participants]
+     * collection. This is usually equivalent to "can I change the contents of this state by signing a transaction".
+     */
+    ONLY_RELEVANT
+}
+
+/**
  * A service hub is the starting point for most operations you can do inside the node. You are provided with one
  * when a class annotated with [CordaService] is constructed, and you have access to one inside flows. Most RPCs
  * simply forward to the services found here after some access checking.
@@ -129,7 +149,9 @@ interface ServiceHub : ServicesForResolution {
      * @param txs The transactions to record.
      * @param notifyVault indicate if the vault should be notified for the update.
      */
-    fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>)
+    fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+        recordTransactions(if (notifyVault) StatesToRecord.ONLY_RELEVANT else StatesToRecord.NONE, txs)
+    }
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
@@ -141,10 +163,20 @@ interface ServiceHub : ServicesForResolution {
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
+     * further processing if [statesToRecord] is not [StatesToRecord.NONE].
+     * This is expected to be run within a database transaction.
+     *
+     * @param txs The transactions to record.
+     * @param statesToRecord how the vault should treat the output states of the transaction.
+     */
+    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
+
+    /**
+     * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
-        recordTransactions(true, first, *remaining)
+        recordTransactions(listOf(first, *remaining))
     }
 
     /**
@@ -152,7 +184,7 @@ interface ServiceHub : ServicesForResolution {
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        recordTransactions(true, txs)
+        recordTransactions(StatesToRecord.ONLY_RELEVANT, txs)
     }
 
     /**

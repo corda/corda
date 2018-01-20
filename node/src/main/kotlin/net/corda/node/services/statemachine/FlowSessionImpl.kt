@@ -8,10 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.utilities.UntrustworthyData
 
-class FlowSessionImpl(
-        override val counterparty: Party
-) : FlowSession() {
-
+class FlowSessionImpl(override val counterparty: Party) : FlowSession() {
     internal lateinit var stateMachine: FlowStateMachine<*>
     internal lateinit var sessionFlow: FlowLogic<*>
 
@@ -39,5 +36,7 @@ class FlowSessionImpl(
     override fun send(payload: Any) {
         return stateMachine.send(counterparty, payload, sessionFlow)
     }
+
+    override fun toString() = "Flow session with $counterparty"
 }
 

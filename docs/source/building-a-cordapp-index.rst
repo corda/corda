@@ -6,6 +6,8 @@ CorDapps
 
    cordapp-overview
    writing-a-cordapp
+   upgrade-notes
+   upgrading-cordapps
    cordapp-build-systems
    building-against-master
    api-index

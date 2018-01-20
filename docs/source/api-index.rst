@@ -9,6 +9,7 @@ This section describes the APIs that are available for the development of CorDap
    api-states
    api-persistence
    api-contracts
+   api-contract-constraints
    api-vault-query
    api-transactions
    api-flows

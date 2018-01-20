@@ -77,7 +77,7 @@ We can picture this transaction as follows:
 Defining IOUContract
 --------------------
 Let's write a contract that enforces these constraints. We'll do this by modifying either ``TemplateContract.java`` or
-``App.kt`` and updating ``TemplateContract`` to define an ``IOUContract``:
+``StatesAndContracts.kt`` and updating ``TemplateContract`` to define an ``IOUContract``:
 
 .. container:: codeset
 

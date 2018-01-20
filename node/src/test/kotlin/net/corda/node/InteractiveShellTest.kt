@@ -83,5 +83,5 @@ class InteractiveShellTest {
     @Test
     fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
 
-    class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> by mock()
-        }
+    class DummyFSM(override val logic: FlowA) : FlowStateMachine<Any?> by mock()
+}

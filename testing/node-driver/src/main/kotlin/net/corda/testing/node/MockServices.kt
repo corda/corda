@@ -7,6 +7,9 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
@@ -88,7 +91,7 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
          * Makes database and mock services appropriate for unit tests.
          *
          * @param customSchemas a set of schemas being used by [NodeSchemaService]
-         * @param keys a lis of [KeyPair] instances to be used by [MockServices]. Defualts to [MEGA_CORP_KEY]
+         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
          * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
          *
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
@@ -108,12 +111,12 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
                     override val identityService: IdentityService = database.transaction { identityServiceRef }
                     override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
-                    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+                    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         for (stx in txs) {
                             validatedTransactions.addTransaction(stx)
                         }
                         // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                        (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
+                        (vaultService as NodeVaultService).notifyAll(statesToRecord, txs.map { it.tx })
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()
@@ -129,7 +132,7 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
 
     val key: KeyPair get() = keys.first()
 
-    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
         }

@@ -5,6 +5,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.StatesToRecord
 import net.corda.core.utilities.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
@@ -84,12 +85,11 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
-                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+                override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                     }
-                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
+                    (vaultService as NodeVaultService).notifyAll(statesToRecord, txs.map { it.tx })
                 }
                 override fun jdbcSession() = database.createSession()
             }

@@ -1044,6 +1044,7 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   @co.paralleluniverse.fibers.Suspendable public abstract Object call()
   public final void checkFlowPermission(String, Map)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.Nullable public final net.corda.core.flows.FlowStackSnapshot flowStackSnapshot()
+  @org.jetbrains.annotations.Nullable public static final net.corda.core.flows.FlowLogic getCurrentTopLevel()
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowInfo getFlowInfo(net.corda.core.identity.Party)
   @org.jetbrains.annotations.NotNull public final org.slf4j.Logger getLogger()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party getOurIdentity()
@@ -1059,9 +1060,15 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable public void send(net.corda.core.identity.Party, Object)
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, net.corda.core.identity.Party, Object)
   public final void setStateMachine(net.corda.core.internal.FlowStateMachine)
+  @co.paralleluniverse.fibers.Suspendable @kotlin.jvm.JvmStatic public static final void sleep(java.time.Duration)
   @co.paralleluniverse.fibers.Suspendable public Object subFlow(net.corda.core.flows.FlowLogic)
   @org.jetbrains.annotations.Nullable public final net.corda.core.messaging.DataFeed track()
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction waitForLedgerCommit(net.corda.core.crypto.SecureHash)
+  public static final net.corda.core.flows.FlowLogic$Companion Companion
+##
+public static final class net.corda.core.flows.FlowLogic$Companion extends java.lang.Object
+  @org.jetbrains.annotations.Nullable public final net.corda.core.flows.FlowLogic getCurrentTopLevel()
+  @co.paralleluniverse.fibers.Suspendable @kotlin.jvm.JvmStatic public final void sleep(java.time.Duration)
 ##
 public interface net.corda.core.flows.FlowLogicRef
 ##
@@ -1178,6 +1185,7 @@ public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda
 public final class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, boolean)
+  public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction call()
 ##
 public @interface net.corda.core.flows.SchedulableFlow
@@ -1521,6 +1529,7 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @org.jetbrains.annotations.NotNull public abstract java.sql.Connection jdbcSession()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   public abstract void recordTransactions(Iterable)
+  public abstract void recordTransactions(net.corda.core.node.StatesToRecord, Iterable)
   public abstract void recordTransactions(boolean, Iterable)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder, Iterable)
@@ -1532,6 +1541,11 @@ public interface net.corda.core.node.ServicesForResolution
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.cordapp.CordappProvider getCordappProvider()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.IdentityService getIdentityService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
+##
+public final class net.corda.core.node.StatesToRecord extends java.lang.Enum
+  protected <init>(String, int)
+  public static net.corda.core.node.StatesToRecord valueOf(String)
+  public static net.corda.core.node.StatesToRecord[] values()
 ##
 public interface net.corda.core.node.services.AttachmentStorage
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream)

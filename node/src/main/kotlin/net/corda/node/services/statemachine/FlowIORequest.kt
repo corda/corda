@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.SecureHash
+import java.time.Instant
 
 interface FlowIORequest {
     // This is used to identify where we suspended, in case of message mismatch errors and other things where we
@@ -44,6 +45,11 @@ data class SendOnly(override val session: FlowSessionInternal, override val mess
 }
 
 data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachineImpl<*>) : WaitingRequest {
+    @Transient
+    override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
+}
+
+data class Sleep(val until: Instant, val fiber: FlowStateMachineImpl<*>) : FlowIORequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }

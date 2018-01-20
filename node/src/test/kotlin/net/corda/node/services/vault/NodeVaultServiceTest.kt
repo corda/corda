@@ -1,15 +1,14 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.transactions.NotaryChangeWireTransaction
@@ -99,10 +98,10 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             val originalVault = vaultService
             val services2 = object : MockServices() {
                 override val vaultService: NodeVaultService get() = originalVault as NodeVaultService
-                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+                override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
-                        vaultService.notify(stx.tx)
+                        vaultService.notify(statesToRecord, stx.tx)
                     }
                 }
             }
@@ -510,14 +509,14 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         }.toWireTransaction(services)
         val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
 
-        database.transaction { service.notify(issueTx) }
+        database.transaction { service.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
             val moveTx = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
                 Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
             }.toWireTransaction(services)
-            service.notify(moveTx)
+            service.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
         }
         val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
 
@@ -554,7 +553,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
 
         database.transaction {
-            service.notifyAll(listOf(issueStx.tx, changeNotaryTx))
+            service.notifyAll(StatesToRecord.ONLY_RELEVANT, listOf(issueStx.tx, changeNotaryTx))
         }
 
         // Move cash
@@ -565,7 +564,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         }
 
         database.transaction {
-            service.notify(moveTx)
+            service.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
         }
 
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(initialCashState), null)
@@ -574,5 +573,33 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         val observedUpdates = vaultSubscriber.onNextEvents
         assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedNotaryChangeUpdate, expectedMoveUpdate))
+    }
+
+    @Test
+    fun observerMode() {
+        fun countCash(): Long {
+            return database.transaction {
+                vaultService.queryBy(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(), PageSpecification(1)).totalStatesAvailable
+            }
+        }
+        val currentCashStates = countCash()
+
+        // Send some minimalist dummy transaction.
+        val txb = TransactionBuilder(DUMMY_NOTARY)
+        txb.addOutputState(Cash.State(MEGA_CORP.ref(0), 100.DOLLARS, MINI_CORP), Cash::class.java.name)
+        txb.addCommand(Cash.Commands.Move(), MEGA_CORP_PUBKEY)
+        val wtx = txb.toWireTransaction(services)
+        database.transaction {
+            (vaultService as NodeVaultService).notify(StatesToRecord.ONLY_RELEVANT, wtx)
+        }
+
+        // Check that it was ignored as irrelevant.
+        assertEquals(currentCashStates, countCash())
+
+        // Now try again and check it was accepted.
+        database.transaction {
+            (vaultService as NodeVaultService).notify(StatesToRecord.ALL_VISIBLE, wtx)
+        }
+        assertEquals(currentCashStates + 1, countCash())
     }
 }

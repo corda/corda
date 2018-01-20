@@ -11,4 +11,5 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 class MissingContractAttachments(val states: List<TransactionState<ContractState>>)
-    : Exception("Cannot find contract attachments for ${states.map { it.contract }.distinct() }")
+    : Exception("Cannot find contract attachments for ${states.map { it.contract }.distinct()}. " +
+        "See https://docs.corda.net/api-contract-constraints.html#debugging")

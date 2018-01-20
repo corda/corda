@@ -1,12 +1,12 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -34,8 +34,9 @@ class CashSelectionH2Impl : CashSelection {
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states
-    private val MAX_RETRIES = 5
+    private val MAX_RETRIES = 8
     private val RETRY_SLEEP = 100
+    private val RETRY_CAP = 2000
     private val spendLock: ReentrantLock = ReentrantLock()
 
     /**
@@ -73,78 +74,84 @@ class CashSelectionH2Impl : CashSelection {
         //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
 
         for (retryCount in 1..MAX_RETRIES) {
-
-            spendLock.withLock {
-                val statement = services.jdbcSession().createStatement()
-                try {
-                    statement.execute("CALL SET(@t, CAST(0 AS BIGINT));")
-
-                    // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
-                    // the softLockReserve update will detect whether we try to lock states locked by others
-                    val selectJoin = """
-                    SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
-                    FROM vault_states AS vs, contract_cash_states AS ccs
-                    WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
-                    AND vs.state_status = 0
-                    AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}
-                    AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
-                    """ +
-                            (if (notary != null)
-                                " AND vs.notary_name = '${notary.name}'" else "") +
-                            (if (onlyFromIssuerParties.isNotEmpty())
-                                " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
-                            (if (withIssuerRefs.isNotEmpty())
-                                " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
-
-                    // Retrieve spendable state refs
-                    val rs = statement.executeQuery(selectJoin)
+            if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, issuerKeysStr, withIssuerRefs, issuerRefsStr, stateAndRefs)) {
+                log.warn("Coin selection failed on attempt $retryCount")
+                // TODO: revisit the back off strategy for contended spending.
+                if (retryCount != MAX_RETRIES) {
                     stateAndRefs.clear()
-                    log.debug(selectJoin)
-                    var totalPennies = 0L
-                    while (rs.next()) {
-                        val txHash = SecureHash.parse(rs.getString(1))
-                        val index = rs.getInt(2)
-                        val stateRef = StateRef(txHash, index)
-                        val state = rs.getBytes(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
-                        val pennies = rs.getLong(4)
-                        totalPennies = rs.getLong(5)
-                        val rowLockId = rs.getString(6)
-                        stateAndRefs.add(StateAndRef(state, stateRef))
-                        log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
-                    }
-
-                    if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
-                        // we should have a minimum number of states to satisfy our selection `amount` criteria
-                        log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
-
-                        // With the current single threaded state machine available states are guaranteed to lock.
-                        // TODO However, we will have to revisit these methods in the future multi-threaded.
-                        services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
-                        return stateAndRefs
-                    }
-                    log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
-                    // retry as more states may become available
-                } catch (e: SQLException) {
-                    log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]
-                        $e.
-                    """)
-                } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
-                    stateAndRefs.clear()
-                    log.warn(e.message)
-                    // retry only if there are locked states that may become available again (or consumed with change)
-                } finally {
-                    statement.close()
+                    val durationMillis = (minOf(RETRY_SLEEP.shl(retryCount), RETRY_CAP / 2) * (1.0 + Math.random())).toInt()
+                    FlowLogic.sleep(durationMillis.millis)
+                } else {
+                    log.warn("Insufficient spendable states identified for $amount")
                 }
-            }
-
-            log.warn("Coin selection failed on attempt $retryCount")
-            // TODO: revisit the back off strategy for contended spending.
-            if (retryCount != MAX_RETRIES) {
-                Strand.sleep(RETRY_SLEEP * retryCount.toLong())
+            } else {
+                break
             }
         }
-
-        log.warn("Insufficient spendable states identified for $amount")
         return stateAndRefs
+    }
+
+    private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, issuerKeysStr: String, withIssuerRefs: Set<OpaqueBytes>, issuerRefsStr: String, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
+        spendLock.withLock {
+            val statement = services.jdbcSession().createStatement()
+            try {
+                statement.execute("CALL SET(@t, CAST(0 AS BIGINT));")
+
+                // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
+                // the softLockReserve update will detect whether we try to lock states locked by others
+                val selectJoin = """
+                        SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
+                        FROM vault_states AS vs, contract_cash_states AS ccs
+                        WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
+                        AND vs.state_status = 0
+                        AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}
+                        AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
+                        """ +
+                        (if (notary != null)
+                            " AND vs.notary_name = '${notary.name}'" else "") +
+                        (if (onlyFromIssuerParties.isNotEmpty())
+                            " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
+                        (if (withIssuerRefs.isNotEmpty())
+                            " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
+
+                // Retrieve spendable state refs
+                val rs = statement.executeQuery(selectJoin)
+                log.debug(selectJoin)
+                var totalPennies = 0L
+                while (rs.next()) {
+                    val txHash = SecureHash.parse(rs.getString(1))
+                    val index = rs.getInt(2)
+                    val stateRef = StateRef(txHash, index)
+                    val state = rs.getBytes(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
+                    val pennies = rs.getLong(4)
+                    totalPennies = rs.getLong(5)
+                    val rowLockId = rs.getString(6)
+                    stateAndRefs.add(StateAndRef(state, stateRef))
+                    log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
+                }
+
+                if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
+                    // we should have a minimum number of states to satisfy our selection `amount` criteria
+                    log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
+
+                    // With the current single threaded state machine available states are guaranteed to lock.
+                    // TODO However, we will have to revisit these methods in the future multi-threaded.
+                    services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
+                    return true
+                }
+                log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
+                // retry as more states may become available
+            } catch (e: SQLException) {
+                log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]
+                            $e.
+                        """)
+            } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
+                log.warn(e.message)
+                // retry only if there are locked states that may become available again (or consumed with change)
+            } finally {
+                statement.close()
+            }
+        }
+        return false
     }
 }
