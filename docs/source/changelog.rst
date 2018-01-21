@@ -148,6 +148,9 @@ UNRELEASED
   However, assuming a clean reset of the artemis data and that the nodes are consistent versions,
   data persisted via the AMQP serializer will be forward compatible.
 
+* The ability for CordaServices to register callbacks so they can be notified of shutdown and clean up resource such as
+  open ports.
+
 .. _changelog_v1:
 
 Release 1.0
