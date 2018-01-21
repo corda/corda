@@ -37,6 +37,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
+import java.io.InputStream
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.time.Instant
@@ -219,8 +220,14 @@ class RPCClientProxyHandler(
         val replyId = InvocationId.newInstance()
         callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
-            val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
-            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, replyId, sessionId, externalTrace, impersonatedActor)
+
+            val request = if(arguments != null && arguments.size == 1 && arguments[0] is InputStream) {
+                RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, kotlin.ByteArray(0), replyId, sessionId, externalTrace, impersonatedActor, arguments[0] as InputStream)
+            } else {
+                val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
+                RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, replyId, sessionId, externalTrace, impersonatedActor)
+            }
+
             val replyFuture = SettableFuture.create<Any>()
             sessionAndProducerPool.run {
                 val message = it.session.createMessage(false)

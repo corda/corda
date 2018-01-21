@@ -17,8 +17,7 @@ import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import java.io.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -108,22 +107,30 @@ class AttachmentTests {
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
-        val id = aliceNode.database.transaction {
+        val contentHash = aliceNode.database.transaction {
             aliceNode.attachments.importAttachment(ByteArrayInputStream(attachment))
         }
 
-        // Corrupt its store.
-        val corruptBytes = "arggghhhh".toByteArray()
-        System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
-
-        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment)
         aliceNode.database.transaction {
+            // Corrupt its store.
+            val corruptBytes = "arggghhhh".toByteArray()
+            System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
+
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(NodeAttachmentService.DBAttachment::class.java)
+            val root = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
+            criteriaQuery.select(root)
+            criteriaQuery.where(criteriaBuilder.equal(root.get<String>(NodeAttachmentService.DBAttachment::contentHash.name), contentHash.toString()))
+            val query = session.createQuery(criteriaQuery)
+
+            val corruptAttachment = query.singleResult
+            corruptAttachment.content = session.lobHelper.createBlob(ByteArrayInputStream(attachment), -1)
             session.update(corruptAttachment)
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         mockNet.runNetwork()
-        val bobFlow = bobNode.startAttachmentFlow(setOf(id), alice)
+        val bobFlow = bobNode.startAttachmentFlow(setOf(contentHash), alice)
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { bobFlow.resultFuture.getOrThrow() }
     }

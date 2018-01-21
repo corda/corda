@@ -24,6 +24,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -179,15 +180,24 @@ class NodeAttachmentStorageTest {
         val (testJar,_) = makeTestJar()
         val id = database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
-            val id = testJar.read { storage.importAttachment(it) }
+            val contentHash = testJar.read { storage.importAttachment(it) }
 
             // Corrupt the file in the store.
             val bytes = testJar.readAll()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(NodeAttachmentService.DBAttachment::class.java)
+            val root = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
+            criteriaQuery.select(root)
+            criteriaQuery.where(criteriaBuilder.equal(root.get<String>(NodeAttachmentService.DBAttachment::contentHash.name), contentHash.toString()))
+            val query = session.createQuery(criteriaQuery)
+
+            val corruptAttachment = query.singleResult
+            corruptAttachment.content = session.lobHelper.createBlob(ByteArrayInputStream(bytes), -1)
             session.merge(corruptAttachment)
-            id
+            contentHash
         }
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
