@@ -45,3 +45,5 @@ class NonInvalidatingWeightBasedCache<K, V> private constructor(
         }
     }
 }
+
+val defaultCordaCacheConcurrencyLevel: Int = 8

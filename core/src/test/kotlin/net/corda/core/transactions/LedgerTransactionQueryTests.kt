@@ -8,8 +8,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before

@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.core
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.client.rpc.internal.KryoClientSerializationScheme

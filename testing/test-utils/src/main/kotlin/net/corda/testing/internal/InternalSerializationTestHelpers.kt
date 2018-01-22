@@ -2,7 +2,7 @@ package net.corda.testing.internal
 
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.internal._inheritableContextSerializationEnv
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 
 /**
  * For example your test class uses [SerializationEnvironmentRule] but you want to turn it off for one method.

@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal
 
-import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -35,7 +35,7 @@ fun SSLConfiguration.createDevKeyStores(rootCert: X509Certificate, intermediateC
 
 fun SSLConfiguration.createSslKeyStore(nodeCaCert: X509Certificate, nodeCaKeyPair: KeyPair, legalName: CordaX500Name, intermediateCa: CertificateAndKeyPair, rootCert: X509Certificate) {
 
-    val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)
 
     loadOrCreateKeyStore(sslKeystore, keyStorePassword).apply {
@@ -61,7 +61,7 @@ fun SSLConfiguration.createNodeKeyStore(nodeCaCert: X509Certificate, nodeCaKeyPa
 }
 
 fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair()
+    val keyPair = generateKeyPair()
     val cert = X509Utilities.createCertificate(
             CertificateType.NETWORK_MAP,
             rootCa.certificate,
@@ -75,17 +75,18 @@ fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Certific
  * Create a dev node CA cert, as a sub-cert of the given [intermediateCa], and matching key pair using the given
  * [CordaX500Name] as the cert subject.
  */
-fun createDevNodeCa(intermediateCa: CertificateAndKeyPair, legalName: CordaX500Name): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+fun createDevNodeCa(intermediateCa: CertificateAndKeyPair,
+                    legalName: CordaX500Name,
+                    nodeKeyPair: KeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): CertificateAndKeyPair {
     val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
     val cert = X509Utilities.createCertificate(
             CertificateType.NODE_CA,
             intermediateCa.certificate,
             intermediateCa.keyPair,
             legalName.x500Principal,
-            keyPair.public,
+            nodeKeyPair.public,
             nameConstraints = nameConstraints)
-    return CertificateAndKeyPair(cert, keyPair)
+    return CertificateAndKeyPair(cert, nodeKeyPair)
 }
 
 val DEV_INTERMEDIATE_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_INTERMEDIATE_CA)

@@ -13,8 +13,8 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.NotarySpec
 import net.corda.testing.node.MockNodeParameters

@@ -1,7 +1,7 @@
 package net.corda.test.node
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.internal.NodeBasedTest
 import org.junit.Test
 

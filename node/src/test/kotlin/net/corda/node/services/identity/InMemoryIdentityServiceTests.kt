@@ -10,7 +10,7 @@ import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.*
+import net.corda.testing.core.*
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
