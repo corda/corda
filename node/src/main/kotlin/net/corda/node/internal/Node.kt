@@ -394,29 +394,4 @@ open class Node(configuration: NodeConfiguration,
 
         log.info("Shutdown complete")
     }
-
-//    override fun configure(lh: MutableLazyHub) {
-//
-//        super.configure(lh)
-//        // Construct security manager reading users data either from the 'security' config section
-//        // if present or from rpcUsers list if the former is missing from config.
-//        lh.obj(configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers))
-//        lh.impl(RPCSecurityManagerImpl::class)
-//        configuration.messagingServerAddress?.also {
-//            lh.obj(MessagingServerAddress(it))
-//        } ?: run {
-//            lh.factory(this::makeLocalMessageBroker)
-//        }
-//        lh.factory(this::makeMessagingService)
-//
-//        if (configuration.rpcOptions.standAloneBroker) {
-//            lh.obj(BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress))
-//        } else {
-//            lh.factory(this::startLocalRpcBroker)
-//        }
-//
-//        // Side-effects:
-//        lh.factory(this::startMessagingService)
-//        lh.factory(this::startShell)
-//    }
 }
