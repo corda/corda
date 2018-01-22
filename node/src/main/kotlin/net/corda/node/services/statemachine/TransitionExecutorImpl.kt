@@ -5,7 +5,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.contextDatabase
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.security.SecureRandom
 
 /**
@@ -31,12 +32,12 @@ class TransitionExecutorImpl(
             transition: TransitionResult,
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
-        DatabaseTransactionManager.dataSource = database
+        contextDatabase = database
         for (action in transition.actions) {
             try {
                 actionExecutor.executeAction(fiber, action)
             } catch (exception: Throwable) {
-                DatabaseTransactionManager.currentOrNull()?.close()
+                contextTransactionOrNull?.close()
                 if (transition.newState.checkpoint.errorState is ErrorState.Errored) {
                     // If we errored while transitioning to an error state then we cannot record the additional
                     // error as that may result in an infinite loop, e.g. error propagation fails -> record error -> propagate fails again.

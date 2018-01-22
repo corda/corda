@@ -5,7 +5,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.slf4j.LoggerFactory
@@ -43,7 +42,7 @@ class DBCheckpointStorage : CheckpointStorage {
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
         val root = delete.from(DBCheckpoint::class.java)

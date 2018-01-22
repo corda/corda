@@ -1,6 +1,8 @@
 Glossary
 ========
 
+AMQP
+    The serialisation mechanism used within Corda for everything except flow checkpoints and RPC.
 Artemis
     The message queuing middleware used within Corda
 Attachment
@@ -30,7 +32,7 @@ Gradle
 Kotlin
     The language used to code Corda. Fully compatible with any JVM language, including (obviously) Java.
 Kryo
-    The serialisation mechanism used within Corda - which is subject to change in a future release.
+    The serialisation mechanism used within Corda for flow checkpoints and RPC.
 Input
     In Corda terms, an input state is one that is used and consumed within a transaction. Once consumed, it cannot be re-used.
 JVM

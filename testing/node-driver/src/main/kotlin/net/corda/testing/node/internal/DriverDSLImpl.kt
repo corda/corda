@@ -330,7 +330,7 @@ class DriverDSLImpl(
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
-        val protocol = if (handle.configuration.useHTTPS) "https://" else "http://"
+        val protocol = if (handle.useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
@@ -604,10 +604,14 @@ class DriverDSLImpl(
         val baseDirectory = config.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
         localNetworkMap?.nodeInfosCopier?.addConfig(baseDirectory)
+
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
             countObservables.remove(config.corda.myLegalName)
         }
+
+        val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
+
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config, cordappPackages)
             shutdownManager.registerShutdown(
@@ -621,7 +625,7 @@ class DriverDSLImpl(
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
-                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, node, thread, onNodeExit)
+                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, node, thread, onNodeExit)
                     }
                 }
             }
@@ -650,7 +654,7 @@ class DriverDSLImpl(
                         }
                         processDeathFuture.cancel(false)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
-                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, debugPort, process, onNodeExit)
+                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
                 }
             }

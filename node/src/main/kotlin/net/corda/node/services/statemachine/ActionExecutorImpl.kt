@@ -10,7 +10,9 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.contextDatabase
+import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -163,24 +165,24 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeCreateTransaction() {
-        if (DatabaseTransactionManager.currentOrNull() != null) {
+        if (contextTransactionOrNull != null) {
             throw IllegalStateException("Refusing to create a second transaction")
         }
-        DatabaseTransactionManager.newTransaction()
+        contextDatabase.newTransaction()
     }
 
     @Suspendable
     private fun executeRollbackTransaction() {
-        DatabaseTransactionManager.currentOrNull()?.close()
+        contextTransactionOrNull?.close()
     }
 
     @Suspendable
     private fun executeCommitTransaction() {
         try {
-            DatabaseTransactionManager.current().commit()
+            contextTransaction.commit()
         } finally {
-            DatabaseTransactionManager.current().close()
-            DatabaseTransactionManager.setThreadLocalTx(null)
+            contextTransaction.close()
+            contextTransactionOrNull = null
         }
     }
 

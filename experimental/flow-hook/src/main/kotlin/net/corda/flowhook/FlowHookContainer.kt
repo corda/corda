@@ -2,7 +2,7 @@ package net.corda.flowhook
 
 import co.paralleluniverse.fibers.Fiber
 import net.corda.node.services.statemachine.Event
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.sql.Connection
 
 @Suppress("UNUSED")
@@ -156,7 +156,7 @@ object FlowHookContainer {
 
     private fun currentTransactionOrThread(): Any {
         return try {
-            DatabaseTransactionManager.currentOrNull()
+            contextTransactionOrNull
         } catch (exception: IllegalStateException) {
             null
         } ?: Thread.currentThread()
