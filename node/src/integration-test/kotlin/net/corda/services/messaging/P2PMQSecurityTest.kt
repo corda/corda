@@ -5,8 +5,8 @@ import net.corda.core.crypto.toStringShort
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.testing.BOB_NAME
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.chooseIdentity
 import org.junit.Test
 
 /**
