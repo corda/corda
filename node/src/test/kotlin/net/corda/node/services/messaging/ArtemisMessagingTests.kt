@@ -72,6 +72,7 @@ class ArtemisMessagingTests {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(5).whenever(it).messageRedeliveryDelaySeconds

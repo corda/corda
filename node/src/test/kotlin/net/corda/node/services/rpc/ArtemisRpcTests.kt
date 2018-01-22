@@ -20,13 +20,11 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.setGlobalSerialization
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
