@@ -8,16 +8,35 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.testing.core.getTestPartyAndCertificate
+import net.corda.nodeapi.internal.createDevNodeCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.testing.core.DEV_INTERMEDIATE_CA
+import net.corda.testing.core.DEV_ROOT_CA
+import java.security.KeyPair
 import java.security.PrivateKey
+import java.security.cert.X509Certificate
 
-class TestNodeInfoBuilder {
+class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKeyPair, X509Certificate> = DEV_INTERMEDIATE_CA to DEV_ROOT_CA.certificate) {
     private val identitiesAndPrivateKeys = ArrayList<Pair<PartyAndCertificate, PrivateKey>>()
 
-    fun addIdentity(name: CordaX500Name): Pair<PartyAndCertificate, PrivateKey> {
+    fun addIdentity(name: CordaX500Name, nodeKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): Pair<PartyAndCertificate, PrivateKey> {
+        val nodeCertificateAndKeyPair = createDevNodeCa(intermediateAndRoot.first, name, nodeKeyPair)
         val identityKeyPair = Crypto.generateKeyPair()
-        val identity = getTestPartyAndCertificate(name, identityKeyPair.public)
-        return Pair(identity, identityKeyPair.private).also {
+        val identityCert = X509Utilities.createCertificate(
+                CertificateType.LEGAL_IDENTITY,
+                nodeCertificateAndKeyPair.certificate,
+                nodeCertificateAndKeyPair.keyPair,
+                nodeCertificateAndKeyPair.certificate.subjectX500Principal,
+                identityKeyPair.public)
+        val certPath = X509CertificateFactory()
+                .generateCertPath(identityCert,
+                        nodeCertificateAndKeyPair.certificate,
+                        intermediateAndRoot.first.certificate,
+                        intermediateAndRoot.second)
+        return Pair(PartyAndCertificate(certPath), identityKeyPair.private).also {
             identitiesAndPrivateKeys += it
         }
     }

@@ -2,6 +2,7 @@ package net.corda.testing.internal
 
 import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
@@ -15,6 +16,7 @@ import org.mockito.Mockito
 import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
 import java.nio.file.Files
+import java.security.KeyPair
 import java.util.*
 import javax.security.auth.x500.X500Principal
 
@@ -102,11 +104,12 @@ fun createDevIntermediateCaCertPath(
  */
 fun createDevNodeCaCertPath(
         legalName: CordaX500Name,
+        nodeKeyPair: KeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME),
         rootCaName: X500Principal = defaultRootCaName,
         intermediateCaName: X500Principal = defaultIntermediateCaName
 ): Triple<CertificateAndKeyPair, CertificateAndKeyPair, CertificateAndKeyPair> {
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath(rootCaName, intermediateCaName)
-    val nodeCa = createDevNodeCa(intermediateCa, legalName)
+    val nodeCa = createDevNodeCa(intermediateCa, legalName, nodeKeyPair)
     return Triple(rootCa, intermediateCa, nodeCa)
 }
 
