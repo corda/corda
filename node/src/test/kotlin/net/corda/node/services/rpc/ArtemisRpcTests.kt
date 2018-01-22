@@ -18,6 +18,7 @@ import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.setGlobalSerialization
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -26,6 +27,7 @@ import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.BeforeClass
+import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,15 +41,9 @@ class ArtemisRpcTests {
     private val users = listOf(user)
     private val securityManager = RPCSecurityManagerImpl.fromUserList(AuthServiceId("test"), users)
 
-    companion object {
-
-        @JvmStatic
-        @BeforeClass
-        fun setup() {
-
-            setGlobalSerialization(true)
-        }
-    }
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
 
     @Test
     fun rpc_with_ssl_enabled() {
