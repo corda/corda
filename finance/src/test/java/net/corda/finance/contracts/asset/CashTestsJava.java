@@ -5,9 +5,9 @@ import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.node.services.api.IdentityServiceInternal;
-import net.corda.testing.DummyCommandData;
-import net.corda.testing.SerializationEnvironmentRule;
-import net.corda.testing.TestIdentity;
+import net.corda.testing.core.DummyCommandData;
+import net.corda.testing.core.SerializationEnvironmentRule;
+import net.corda.testing.core.TestIdentity;
 import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,7 +17,7 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.testing.node.NodeTestUtils.transaction;
 import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
-import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
+import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static org.mockito.Mockito.doReturn;
 
 /**

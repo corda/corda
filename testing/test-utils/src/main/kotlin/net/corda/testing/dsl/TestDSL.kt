@@ -15,7 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
-import net.corda.testing.dummyCommand
+import net.corda.testing.core.dummyCommand
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*

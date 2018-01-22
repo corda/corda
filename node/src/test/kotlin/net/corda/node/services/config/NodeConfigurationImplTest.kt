@@ -1,7 +1,7 @@
 package net.corda.node.services.config
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test

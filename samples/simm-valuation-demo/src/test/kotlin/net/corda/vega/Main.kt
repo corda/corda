@@ -1,7 +1,9 @@
 package net.corda.vega
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_BANK_C_NAME
 import net.corda.testing.driver.driver
 
 /**

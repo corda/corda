@@ -161,6 +161,7 @@ class InMemoryMessagingNetwork internal constructor(
 
         handleEndpointMap.clear()
         messageReceiveQueues.clear()
+        timer.cancel()
     }
 
     @CordaSerializable

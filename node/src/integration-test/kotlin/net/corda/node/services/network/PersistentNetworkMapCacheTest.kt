@@ -7,7 +7,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.node.internal.NodeBasedTest
 import org.junit.Before
 import org.junit.Test

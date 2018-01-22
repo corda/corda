@@ -13,7 +13,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.x500Name
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.*

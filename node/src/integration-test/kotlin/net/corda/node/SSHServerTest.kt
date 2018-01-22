@@ -12,12 +12,11 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
-import org.junit.Ignore
 import org.junit.Test
 import java.net.ConnectException
 import java.util.regex.Pattern

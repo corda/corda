@@ -2,7 +2,7 @@ package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Tenor
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test

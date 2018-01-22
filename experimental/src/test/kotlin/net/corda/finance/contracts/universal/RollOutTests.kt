@@ -1,7 +1,7 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.Frequency
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
