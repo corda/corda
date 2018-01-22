@@ -65,8 +65,7 @@ data class JiraConfig(
         val address: String,
         val projectCode: String,
         val username: String,
-        val password: String,
-        val doneTransitionCode: Int
+        val password: String
 )
 
 /**

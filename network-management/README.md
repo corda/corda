@@ -65,13 +65,15 @@ The doorman service can use JIRA to manage the certificate signing request appro
          projectCode = "TD"
          username = "username"
          password = "password"
-         doneTransitionCode = 41
        }
        .
        .
        .
    }
    ```
+#### JIRA project configuration
+* The JIRA project should setup as "Business Project" with "Task" workflow.
+* Custom text field input "Request ID", and "Reject Reason" should be created in JIRA, doorman will exit with error without these custom fields.
   
 ### Auto approval 
   When `approveAll` is set to `true`, the doorman will approve all requests on receive. (*This should only be enabled in a test environment)
@@ -118,7 +120,6 @@ doormanConfig {
     projectCode = "TD"
     username = "username"
     password = "password"
-    doneTransitionCode = 41
   }
 }
 

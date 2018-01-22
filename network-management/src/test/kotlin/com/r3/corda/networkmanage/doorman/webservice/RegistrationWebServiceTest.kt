@@ -100,7 +100,7 @@ class RegistrationWebServiceTest : TestBase() {
                     CertificateResponse.Ready(it)
                 } ?: CertificateResponse.NotReady
             }
-            on { processApprovedRequests() }.then {
+            on { processRequests() }.then {
                 val request = X509Utilities.createCertificateSigningRequest(subject, "my@mail.com", keyPair)
                 certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
                     val tlsCert = X509Utilities.createCertificate(
@@ -118,7 +118,7 @@ class RegistrationWebServiceTest : TestBase() {
         startSigningServer(requestProcessor)
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
 
-        requestProcessor.processApprovedRequests()
+        requestProcessor.processRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
         verify(requestProcessor, times(2)).getResponse(any())
@@ -141,7 +141,7 @@ class RegistrationWebServiceTest : TestBase() {
                     CertificateResponse.Ready(it)
                 } ?: CertificateResponse.NotReady
             }
-            on { processApprovedRequests() }.then {
+            on { processRequests() }.then {
                 val request = X509Utilities.createCertificateSigningRequest(
                         CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB").x500Principal,
                         "my@mail.com",
@@ -165,7 +165,7 @@ class RegistrationWebServiceTest : TestBase() {
 
         startSigningServer(storage)
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
-        storage.processApprovedRequests()
+        storage.processRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
         verify(storage, times(2)).getResponse(any())

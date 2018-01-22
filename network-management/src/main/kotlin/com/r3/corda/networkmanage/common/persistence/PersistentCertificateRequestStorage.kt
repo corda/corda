@@ -93,7 +93,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         }
     }
 
-    override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String) {
+    override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String?) {
         database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = findRequest(requestId)
             request ?: throw IllegalArgumentException("Error when rejecting request with id: $requestId. Request does not exist.")

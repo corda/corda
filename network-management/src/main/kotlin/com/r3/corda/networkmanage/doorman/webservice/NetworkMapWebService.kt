@@ -86,7 +86,6 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     @GET
     @Path("my-ip")
     fun myIp(@Context request: HttpServletRequest): Response {
-        // TODO: Verify this returns IP correctly.
         return ok(request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}").build()
     }
 

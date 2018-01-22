@@ -18,24 +18,22 @@ import javax.security.auth.x500.X500Principal
 
 interface CsrHandler {
     fun saveRequest(rawRequest: PKCS10CertificationRequest): String
-    fun createTickets()
-    fun processApprovedRequests()
+    fun processRequests()
     fun getResponse(requestId: String): CertificateResponse
 }
 
 class DefaultCsrHandler(private val storage: CertificationRequestStorage,
                         private val csrCertPathAndKey: CertPathAndKey?) : CsrHandler {
 
-    override fun processApprovedRequests() {
+    override fun processRequests() {
         if (csrCertPathAndKey == null) return
         storage.getRequests(RequestStatus.APPROVED).forEach {
             val nodeCertPath = createSignedNodeCertificate(it.request, csrCertPathAndKey)
-            // Since Doorman is deployed in the auto-signing mode, we use DOORMAN_SIGNATURE as the signer.
+            // Since Doorman is deployed in the auto-signing mode (i.e. signer != null),
+            // we use DOORMAN_SIGNATURE as the signer.
             storage.putCertificatePath(it.requestId, nodeCertPath, listOf(DOORMAN_SIGNATURE))
         }
     }
-
-    override fun createTickets() {}
 
     override fun saveRequest(rawRequest: PKCS10CertificationRequest): String = storage.saveRequest(rawRequest)
 

@@ -91,7 +91,7 @@ class NetworkManagementServer : Closeable {
         val jiraConfig = config.jiraConfig
         val requestProcessor = if (jiraConfig != null) {
             val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
-            val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
+            val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode)
             JiraCsrHandler(jiraClient, requestService, DefaultCsrHandler(requestService, csrCertPathAndKey))
         } else {
             DefaultCsrHandler(requestService, csrCertPathAndKey)
@@ -101,10 +101,8 @@ class NetworkManagementServer : Closeable {
         val approvalThread = Runnable {
             try {
                 serverStatus.lastRequestCheckTime = Instant.now()
-                // Create tickets for requests which don't have one yet.
-                requestProcessor.createTickets()
                 // Process Jira approved tickets.
-                requestProcessor.processApprovedRequests()
+                requestProcessor.processRequests()
             } catch (e: Exception) {
                 // Log the error and carry on.
                 logger.error("Error encountered when approving request.", e)

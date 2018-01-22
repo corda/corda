@@ -59,7 +59,7 @@ interface CertificationRequestStorage {
      * @param rejectedBy authority (its identifier) rejecting this request.
      * @param rejectReason brief description of the rejection reason
      */
-    fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String)
+    fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String?)
 
     /**
      * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.SIGNED].

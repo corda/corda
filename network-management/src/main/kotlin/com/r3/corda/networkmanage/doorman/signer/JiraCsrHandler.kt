@@ -4,7 +4,9 @@ import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
+import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.JiraClient
+import com.r3.corda.networkmanage.doorman.RejectedRequest
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -29,21 +31,34 @@ class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: Ce
         }
     }
 
-    override fun processApprovedRequests() {
+    override fun processRequests() {
+        createTickets()
+        val (approvedRequests, rejectedRequests) = updateRequestStatus()
+        delegate.processRequests()
+        updateJiraTickets(approvedRequests, rejectedRequests)
+    }
+
+    private fun updateRequestStatus(): Pair<List<ApprovedRequest>, List<RejectedRequest>> {
+        // Update local request statuses.
         val approvedRequest = jiraClient.getApprovedRequests()
         approvedRequest.forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
-        delegate.processApprovedRequests()
+        val rejectedRequest = jiraClient.getRejectedRequests()
+        rejectedRequest.forEach { (id, rejectedBy, reason) -> storage.rejectRequest(id, rejectedBy, reason) }
+        return Pair(approvedRequest, rejectedRequest)
+    }
 
-        val signedRequests = approvedRequest.mapNotNull { (id, _) ->
-            val request = storage.getRequest(id)
-
-            if (request != null && request.status == RequestStatus.SIGNED) {
-                request.certData?.certPath?.let { certs -> id to certs }
-            } else {
-                null
-            }
-        }.toMap()
+    private fun updateJiraTickets(approvedRequest: List<ApprovedRequest>, rejectedRequest: List<RejectedRequest>) {
+        // Reconfirm request status and update jira status
+        val signedRequests = approvedRequest.mapNotNull { storage.getRequest(it.requestId) }
+                .filter { it.status == RequestStatus.SIGNED && it.certData != null }
+                .associateBy { it.requestId }
+                .mapValues { it.value.certData!!.certPath }
         jiraClient.updateSignedRequests(signedRequests)
+
+        val rejectedRequestIDs = rejectedRequest.mapNotNull { storage.getRequest(it.requestId) }
+                .filter { it.status == RequestStatus.REJECTED }
+                .map { it.requestId }
+        jiraClient.updateRejectedRequests(rejectedRequestIDs)
     }
 
     /**
@@ -52,13 +67,13 @@ class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: Ce
      * Usually requests are expected to move to the [RequestStatus.TICKET_CREATED] state immediately,
      * they might be left in the [RequestStatus.NEW] state if Jira is down.
      */
-    override fun createTickets() {
-        try {
-            for (signingRequest in storage.getRequests(RequestStatus.NEW)) {
-                createTicket(signingRequest)
+    private fun createTickets() {
+        storage.getRequests(RequestStatus.NEW).forEach {
+            try {
+                createTicket(it)
+            } catch (e: Exception) {
+                log.warn("There were errors while creating Jira tickets for request '${it.requestId}'", e)
             }
-        } catch (e: Exception) {
-            log.warn("There were errors while creating Jira tickets", e)
         }
     }
 

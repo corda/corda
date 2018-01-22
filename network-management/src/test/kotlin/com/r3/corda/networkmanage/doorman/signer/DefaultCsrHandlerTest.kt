@@ -62,7 +62,7 @@ class DefaultCsrHandlerTest : TestBase() {
         val csrCertPathAndKey = CertPathAndKey(listOf(csrCa.certificate, rootCa.certificate), csrCa.keyPair.private)
         val requestProcessor = DefaultCsrHandler(requestStorage, csrCertPathAndKey)
 
-        requestProcessor.processApprovedRequests()
+        requestProcessor.processRequests()
 
         val certPathCapture = argumentCaptor<CertPath>()
 

@@ -1,12 +1,12 @@
 package com.r3.corda.networkmanage.doorman.signer
 
 import com.nhaarman.mockito_kotlin.*
-import com.r3.corda.networkmanage.common.persistence.CertificateResponse
-import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
-import com.r3.corda.networkmanage.common.persistence.RequestStatus
+import com.r3.corda.networkmanage.common.persistence.*
+import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.JiraClient
+import com.r3.corda.networkmanage.doorman.RejectedRequest
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.junit.Before
@@ -16,9 +16,9 @@ import org.mockito.Mock
 import org.mockito.junit.MockitoJUnit
 import org.mockito.junit.MockitoRule
 import java.security.cert.CertPath
+import kotlin.test.assertEquals
 
 class JiraCsrHandlerTest {
-
     @Rule
     @JvmField
     val mockitoRule: MockitoRule = MockitoJUnit.rule()
@@ -80,9 +80,67 @@ class JiraCsrHandlerTest {
         whenever(certificationRequestStorage.getRequests(RequestStatus.NEW)).thenReturn(listOf(csr))
 
         // Test
-        jiraCsrHandler.createTickets()
+        jiraCsrHandler.processRequests()
 
         verify(jiraClient).createRequestTicket(requestId, csr.request)
         verify(certificationRequestStorage).markRequestTicketCreated(requestId)
+    }
+
+    @Test
+    fun `sync tickets status`() {
+        val id1 = SecureHash.randomSHA256().toString()
+        val id2 = SecureHash.randomSHA256().toString()
+        val csr1 = CertificateSigningRequest(id1, "name1", RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
+        val csr2 = CertificateSigningRequest(id2, "name2", RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
+
+        val requests = mutableMapOf(id1 to csr1, id2 to csr2)
+
+        // Mocking storage behaviour.
+        whenever(certificationRequestStorage.getRequests(RequestStatus.NEW)).thenReturn(requests.values.filter { it.status == RequestStatus.NEW })
+        whenever(certificationRequestStorage.getRequest(any())).thenAnswer { requests[it.getArgument(0)] }
+        whenever(certificationRequestStorage.approveRequest(any(), any())).then {
+            val id = it.getArgument<String>(0)
+            if (requests[id]?.status == RequestStatus.NEW) {
+                requests[id] = requests[id]!!.copy(status = RequestStatus.APPROVED, modifiedBy = listOf(it.getArgument(1)))
+            }
+            null
+        }
+        whenever(certificationRequestStorage.rejectRequest(any(), any(), any())).then {
+            val id = it.getArgument<String>(0)
+            requests[id] = requests[id]!!.copy(status = RequestStatus.REJECTED, modifiedBy = listOf(it.getArgument(1)), remark = it.getArgument(2))
+            null
+        }
+
+        // Status change from jira.
+        whenever(jiraClient.getApprovedRequests()).thenReturn(listOf(ApprovedRequest(id1, "Me")))
+        whenever(jiraClient.getRejectedRequests()).thenReturn(listOf(RejectedRequest(id2, "Me", "Test reject")))
+
+        // Test.
+        jiraCsrHandler.processRequests()
+
+        verify(jiraClient).createRequestTicket(id1, csr1.request)
+        verify(jiraClient).createRequestTicket(id2, csr2.request)
+
+        verify(certificationRequestStorage).markRequestTicketCreated(id1)
+        verify(certificationRequestStorage).markRequestTicketCreated(id2)
+
+        // Verify request has the correct status in DB.
+        assertEquals(RequestStatus.APPROVED, requests[id1]!!.status)
+        assertEquals(RequestStatus.REJECTED, requests[id2]!!.status)
+
+        // Verify jira client get the correct call.
+        verify(jiraClient).updateRejectedRequests(listOf(id2))
+        verify(jiraClient).updateSignedRequests(emptyMap())
+
+        // Sign request 1
+        val certPath = mock<CertPath>()
+        val certData = CertificateData("", CertificateStatus.VALID, certPath)
+        requests[id1] = requests[id1]!!.copy(status = RequestStatus.SIGNED, certData = certData)
+
+        // Process request again.
+        jiraCsrHandler.processRequests()
+
+        // Update signed request should be called.
+        verify(jiraClient).updateSignedRequests(mapOf(id1 to certPath))
     }
 }
