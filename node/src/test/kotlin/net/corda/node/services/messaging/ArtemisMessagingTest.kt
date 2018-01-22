@@ -174,7 +174,7 @@ class ArtemisMessagingTest {
                     server,
                     identity.public,
                     null,
-                    ServiceAffinityExecutor("ArtemisMessagingTests", 1),
+                    ServiceAffinityExecutor("ArtemisMessagingTest", 1),
                     database,
                     maxMessageSize = maxMessageSize).apply {
                 config.configureWithDevSSLCertificate()

@@ -332,7 +332,7 @@ task generateApi(type: net.corda.plugins.GenerateApi){
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)
 if(System.getenv('CORDA_DOCS_ONLY_BUILD') != null) {
-    logger.info("Tests are disabled due to presence of envvar CORDA_DOCS_ONLY_BUILD")
+    logger.info("Test are disabled due to presence of envvar CORDA_DOCS_ONLY_BUILD")
 
     allprojects {
         test {

@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Tests governing the CandidateMethod
+ * Test governing the CandidateMethod
  */
 public class CandidateMethodTest {
 

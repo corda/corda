@@ -83,10 +83,10 @@ for schemas (any class that extends the ``MappedSchema`` interface) in the `plug
 
 For testing purposes it is necessary to manually register the packages containing custom schemas as follows:
 
-- Tests using ``MockNetwork`` and ``MockNode`` must explicitly register packages using the `cordappPackages` parameter of ``MockNetwork``
-- Tests using ``MockServices`` must explicitly register packages using the `cordappPackages` parameter of the ``MockServices`` `makeTestDatabaseAndMockServices()` helper method.
+- Test using ``MockNetwork`` and ``MockNode`` must explicitly register packages using the `cordappPackages` parameter of ``MockNetwork``
+- Test using ``MockServices`` must explicitly register packages using the `cordappPackages` parameter of the ``MockServices`` `makeTestDatabaseAndMockServices()` helper method.
 
-.. note:: Tests using the `DriverDSL` will automatically register your custom schemas if they are in the same project structure as the driver call.
+.. note:: Test using the `DriverDSL` will automatically register your custom schemas if they are in the same project structure as the driver call.
 
 Object relational mapping
 -------------------------

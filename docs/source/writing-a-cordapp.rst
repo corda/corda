@@ -91,8 +91,8 @@ Here is the structure of the ``src`` directory for the ``cordapp`` module:
     │   └── java
     │       └── com
     │           └── template
-    │               ├── ContractTests.java
-    │               ├── FlowTests.java
+    │               ├── ContractTest.java
+    │               ├── FlowTest.java
     │               └── NodeDriver.java
     └── integrationTest
         └── java

@@ -71,7 +71,7 @@ fun main(args: Array<String>) {
 }
 
 private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
-    runLoadTests(loadTestConfiguration, listOf(
+    runLoadTest(loadTestConfiguration, listOf(
             selfIssueTest to LoadTest.RunParameters(
                     parallelism = 100,
                     generateCount = 10000,
@@ -132,7 +132,7 @@ private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
 }
 
 private fun runStabilityTest(loadTestConfiguration: LoadTestConfiguration) {
-    runLoadTests(loadTestConfiguration, listOf(
+    runLoadTest(loadTestConfiguration, listOf(
             // Self issue cash. This is a pre test step to make sure vault have enough cash to work with.
             StabilityTest.selfIssueTest(100) to LoadTest.RunParameters(
                     parallelism = loadTestConfiguration.parallelism,

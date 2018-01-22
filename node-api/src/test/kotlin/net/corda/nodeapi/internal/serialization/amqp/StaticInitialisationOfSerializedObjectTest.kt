@@ -73,7 +73,7 @@ class StaticInitialisationOfSerializedObjectTest {
     fun deserializeTest() {
         data class D(val c: C2)
 
-        val path = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest")
+        val path = EvolvabilityTest::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest")
         val f = File(path.toURI())
 
         // Original version of the class for the serialised version of this class
@@ -109,7 +109,7 @@ class StaticInitialisationOfSerializedObjectTest {
     fun deserializeTest2() {
         data class D(val c: C2)
 
-        val path = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest2")
+        val path = EvolvabilityTest::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest2")
         val f = File(path.toURI())
 
         // Original version of the class for the serialised version of this class

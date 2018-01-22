@@ -21,9 +21,9 @@ import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static org.mockito.Mockito.doReturn;
 
 /**
- * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL
+ * This is an incomplete Java replica of CashTest.kt to show how to use the Java test DSL
  */
-public class CashTestsJava {
+public class CashTestJava {
     private static final Party DUMMY_NOTARY = new TestIdentity(DUMMY_NOTARY_NAME, 20L).getParty();
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private static final TestIdentity MINI_CORP = new TestIdentity(new CordaX500Name("MiniCorp", "London", "GB"));
