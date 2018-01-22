@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.doorman.signer
 
 import com.nhaarman.mockito_kotlin.*
+import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.JiraClient
@@ -18,7 +19,7 @@ import org.mockito.junit.MockitoRule
 import java.security.cert.CertPath
 import kotlin.test.assertEquals
 
-class JiraCsrHandlerTest {
+class JiraCsrHandlerTest : TestBase() {
     @Rule
     @JvmField
     val mockitoRule: MockitoRule = MockitoJUnit.rule()
@@ -76,7 +77,11 @@ class JiraCsrHandlerTest {
 
     @Test
     fun `create tickets`() {
-        val csr = CertificateSigningRequest(requestId, "name", RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
+        val csr = certificateSigningRequest(
+                requestId = requestId,
+                legalName = "name",
+                status = RequestStatus.NEW,
+                request = pkcS10CertificationRequest)
         whenever(certificationRequestStorage.getRequests(RequestStatus.NEW)).thenReturn(listOf(csr))
 
         // Test
@@ -90,8 +95,8 @@ class JiraCsrHandlerTest {
     fun `sync tickets status`() {
         val id1 = SecureHash.randomSHA256().toString()
         val id2 = SecureHash.randomSHA256().toString()
-        val csr1 = CertificateSigningRequest(id1, "name1", RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
-        val csr2 = CertificateSigningRequest(id2, "name2", RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
+        val csr1 = CertificateSigningRequest(id1, "name1", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
+        val csr2 = CertificateSigningRequest(id2, "name2", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
 
         val requests = mutableMapOf(id1 to csr1, id2 to csr2)
 
@@ -134,7 +139,7 @@ class JiraCsrHandlerTest {
 
         // Sign request 1
         val certPath = mock<CertPath>()
-        val certData = CertificateData("", CertificateStatus.VALID, certPath)
+        val certData = CertificateData(CertificateStatus.VALID, certPath)
         requests[id1] = requests[id1]!!.copy(status = RequestStatus.SIGNED, certData = certData)
 
         // Process request again.

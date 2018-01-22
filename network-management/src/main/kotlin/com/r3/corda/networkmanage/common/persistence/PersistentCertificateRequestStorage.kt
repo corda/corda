@@ -3,6 +3,7 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateDataEntity
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import com.r3.corda.networkmanage.common.utils.hashString
+import net.corda.core.crypto.Crypto.toSupportedPublicKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -26,14 +27,12 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
                 builder.and(requestIdEq, statusEq)
             }
             request ?: throw IllegalArgumentException("Cannot retrieve 'APPROVED' certificate signing request for request id: $requestId")
-            val publicKeyHash = certificates.certificates.first().publicKey.hashString()
             val certificateSigningRequest = request.copy(
                     modifiedBy = signedBy,
                     modifiedAt = Instant.now(),
                     status = RequestStatus.SIGNED)
             session.merge(certificateSigningRequest)
             val certificateDataEntity = CertificateDataEntity(
-                    publicKeyHash = publicKeyHash,
                     certificateStatus = CertificateStatus.VALID,
                     certificatePathBytes = certificates.encoded,
                     certificateSigningRequest = certificateSigningRequest)
@@ -48,6 +47,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             session.save(CertificateSigningRequestEntity(
                     requestId = requestId,
                     legalName = legalName,
+                    publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
                     requestBytes = request.encoded,
                     remark = rejectReason,
                     modifiedBy = emptyList(),
@@ -134,7 +134,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             return Pair(request.subject.toString(), "Name validation failed: ${e.message}")
         }
 
-        val query = session.criteriaBuilder.run {
+        val duplicateNameQuery = session.criteriaBuilder.run {
             val criteriaQuery = createQuery(CertificateSigningRequestEntity::class.java)
             criteriaQuery.from(CertificateSigningRequestEntity::class.java).run {
                 criteriaQuery.where(equal(get<String>(CertificateSigningRequestEntity::legalName.name), legalName))
@@ -144,10 +144,27 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         // TODO consider scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
         // Also, at the moment we assume that once the CSR is approved it cannot be rejected.
         // What if we approved something by mistake.
-        val duplicates = session.createQuery(query).resultList.filter {
+        val nameDuplicates = session.createQuery(duplicateNameQuery).resultList.filter {
             it.status != RequestStatus.REJECTED
         }
 
-        return Pair(legalName, if (duplicates.isEmpty()) null else "Duplicate legal name")
+        if (nameDuplicates.isNotEmpty()) {
+            return Pair(legalName, "Duplicate legal name")
+        }
+
+        val publicKey = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString()
+        val duplicatePkQuery = session.criteriaBuilder.run {
+            val criteriaQuery = createQuery(CertificateSigningRequestEntity::class.java)
+            criteriaQuery.from(CertificateSigningRequestEntity::class.java).run {
+                criteriaQuery.where(equal(get<String>(CertificateSigningRequestEntity::publicKeyHash.name), publicKey))
+            }
+        }
+
+        //TODO Consider following scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
+        val pkDuplicates = session.createQuery(duplicatePkQuery).resultList.filter {
+            it.status != RequestStatus.REJECTED
+        }
+
+        return Pair(legalName, if (pkDuplicates.isEmpty()) null else "Duplicate public key")
     }
 }

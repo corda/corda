@@ -1,12 +1,14 @@
 package com.r3.corda.networkmanage.common.persistence
 
+import net.corda.core.crypto.SecureHash
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.CertPath
 
-data class CertificateData(val publicKeyHash: String, val certStatus: CertificateStatus, val certPath: CertPath)
+data class CertificateData(val certStatus: CertificateStatus, val certPath: CertPath)
 
 data class CertificateSigningRequest(val requestId: String,
                                      val legalName: String,
+                                     val publicKeyHash: SecureHash,
                                      val status: RequestStatus,
                                      val request: PKCS10CertificationRequest,
                                      val remark: String?,

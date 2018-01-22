@@ -4,6 +4,7 @@ import com.r3.corda.networkmanage.common.persistence.CertificateData
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
+import net.corda.core.crypto.SecureHash
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.envers.Audited
 import java.security.cert.CertPath
@@ -12,7 +13,7 @@ import java.time.Instant
 import javax.persistence.*
 
 @Entity
-@Table(name = "certificate_signing_request")
+@Table(name = "certificate_signing_request", indexes = arrayOf(Index(name = "IDX_PUB_KEY_HASH", columnList = "public_key_hash")))
 class CertificateSigningRequestEntity(
         @Id
         @Column(name = "request_id", length = 64)
@@ -21,6 +22,9 @@ class CertificateSigningRequestEntity(
         // TODO: Store X500Name with a proper schema.
         @Column(name = "legal_name", length = 256, nullable = false)
         val legalName: String,
+
+        @Column(name = "public_key_hash", length = 64)
+        val publicKeyHash: String,
 
         @Audited
         @Column(name = "status", nullable = false)
@@ -50,6 +54,7 @@ class CertificateSigningRequestEntity(
     fun toCertificateSigningRequest() = CertificateSigningRequest(
             requestId = requestId,
             legalName = legalName,
+            publicKeyHash = SecureHash.parse(publicKeyHash),
             status = status,
             request = request(),
             remark = remark,
@@ -59,6 +64,7 @@ class CertificateSigningRequestEntity(
 
     fun copy(requestId: String = this.requestId,
              legalName: String = this.legalName,
+             publicKeyHash: String = this.publicKeyHash,
              status: RequestStatus = this.status,
              modifiedBy: List<String> = this.modifiedBy,
              modifiedAt: Instant = this.modifiedAt,
@@ -69,6 +75,7 @@ class CertificateSigningRequestEntity(
         return CertificateSigningRequestEntity(
                 requestId = requestId,
                 legalName = legalName,
+                publicKeyHash = publicKeyHash,
                 status = status,
                 modifiedAt = modifiedAt,
                 modifiedBy = modifiedBy,
@@ -82,15 +89,12 @@ class CertificateSigningRequestEntity(
 }
 
 @Entity
-@Table(name = "certificate_data", indexes = arrayOf(Index(name = "IDX_PUB_KEY_HASH", columnList = "public_key_hash")))
+@Table(name = "certificate_data")
 class CertificateDataEntity(
 
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         val id: Long? = null,
-
-        @Column(name = "public_key_hash", length = 64)
-        val publicKeyHash: String,
 
         @Column(name = "certificate_status")
         val certificateStatus: CertificateStatus,
@@ -105,7 +109,6 @@ class CertificateDataEntity(
 ) {
     fun toCertificateData(): CertificateData {
         return CertificateData(
-                publicKeyHash = publicKeyHash,
                 certStatus = certificateStatus,
                 certPath = toCertificatePath()
         )

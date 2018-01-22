@@ -5,13 +5,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.signWithCert
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -50,7 +48,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
     fun `saveNetworkMap and saveNetworkParameters create current network map and parameters`() {
         // given
         // Create node info.
-        val signedNodeInfo = createValidSignedNodeInfo("Test")
+        val (signedNodeInfo) = createValidSignedNodeInfo("Test", requestStorage)
         val nodeInfoHash = nodeInfoStorage.putNodeInfo(signedNodeInfo)
 
         val networkParameters = testNetworkParameters(emptyList())
@@ -117,8 +115,8 @@ class PersistentNetworkMapStorageTest : TestBase() {
     fun `getValidNodeInfoHashes returns only valid and signed node info hashes`() {
         // given
         // Create node infos.
-        val signedNodeInfoA = createValidSignedNodeInfo("TestA")
-        val signedNodeInfoB = createValidSignedNodeInfo("TestB")
+        val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage)
+        val (signedNodeInfoB) = createValidSignedNodeInfo("TestB", requestStorage)
 
         // Put signed node info data
         val nodeInfoHashA = nodeInfoStorage.putNodeInfo(signedNodeInfoA)
@@ -138,16 +136,5 @@ class PersistentNetworkMapStorageTest : TestBase() {
 
         // then
         assertThat(validNodeInfoHash).containsOnly(nodeInfoHashA, nodeInfoHashB)
-    }
-
-    private fun createValidSignedNodeInfo(organisation: String): NodeInfoWithSigned {
-        val nodeInfoBuilder = TestNodeInfoBuilder()
-        val requestId = requestStorage.saveRequest(createRequest(organisation).first)
-        requestStorage.markRequestTicketCreated(requestId)
-        requestStorage.approveRequest(requestId, "TestUser")
-        val (identity) = nodeInfoBuilder.addIdentity(CordaX500Name(organisation, "London", "GB"))
-        val nodeCaCertPath = X509CertificateFactory().generateCertPath(identity.certPath.certificates.drop(1))
-        requestStorage.putCertificatePath(requestId, nodeCaCertPath, emptyList())
-        return NodeInfoWithSigned(nodeInfoBuilder.buildWithSigned().second)
     }
 }

@@ -19,6 +19,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.KeyPair
+import java.security.cert.CertPath
 import java.util.*
 import javax.security.auth.x500.X500Principal
 import kotlin.test.*
@@ -69,7 +70,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `sign request`() {
-        val (csr, _) = createRequest("LegalName")
+        val (csr, nodeKeyPair) = createRequest("LegalName")
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // New request should equals to 1.
@@ -86,11 +87,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         // Sign certificate
         storage.putCertificatePath(
                 requestId,
-                JcaPKCS10CertificationRequest(csr).run {
-                    // TODO We need a utility in InternalUtils for converting X500Name -> CordaX500Name
-                    val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
-                    buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
-                },
+                generateSignedCertPath(csr, nodeKeyPair),
                 listOf(DOORMAN_SIGNATURE)
         )
         // Check request is ready
@@ -99,31 +96,49 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `sign request ignores subsequent sign requests`() {
-        val (csr, _) = createRequest("LegalName")
+        val (csr, nodeKeyPair) = createRequest("LegalName")
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // Store certificate to DB.
         storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
+        // Sign certificate
         storage.putCertificatePath(
                 requestId,
-                JcaPKCS10CertificationRequest(csr).run {
-                    val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
-                    buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
-                },
+                generateSignedCertPath(csr, nodeKeyPair),
                 listOf(DOORMAN_SIGNATURE)
         )
-        // Sign certificate
         // When subsequent signature requested
         assertFailsWith(IllegalArgumentException::class) {
             storage.putCertificatePath(
                     requestId,
-                    JcaPKCS10CertificationRequest(csr).run {
-                        val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
-                        buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
-                    },
+                    generateSignedCertPath(csr, nodeKeyPair),
                     listOf(DOORMAN_SIGNATURE))
         }
+    }
+
+    @Test
+    fun `sign request rejects requests with the same public key`() {
+        val (csr, nodeKeyPair) = createRequest("LegalName")
+        // Add request to DB.
+        val requestId = storage.saveRequest(csr)
+        // Store certificate to DB.
+        storage.markRequestTicketCreated(requestId)
+        storage.approveRequest(requestId, DOORMAN_SIGNATURE)
+        // Sign certificate
+        storage.putCertificatePath(
+                requestId,
+                generateSignedCertPath(csr, nodeKeyPair),
+                listOf(DOORMAN_SIGNATURE)
+        )
+        // Sign certificate
+        // When request with the same public key is requested
+        val (newCsr, _) = createRequest("NewLegalName", nodeKeyPair)
+        val duplicateRequestId = storage.saveRequest(newCsr)
+        assertThat(storage.getRequests(RequestStatus.NEW)).isEmpty()
+        val duplicateRequest = storage.getRequest(duplicateRequestId)
+        assertThat(duplicateRequest!!.status).isEqualTo(RequestStatus.REJECTED)
+        assertThat(duplicateRequest.remark).isEqualTo("Duplicate public key")
     }
 
     @Test
@@ -159,18 +174,14 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `request with the same legal name as a previously signed request`() {
-        val csr = createRequest("BankA").first
+        val (csr, nodeKeyPair) = createRequest("BankA")
         val requestId = storage.saveRequest(csr)
         storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Sign certificate
         storage.putCertificatePath(
                 requestId,
-                JcaPKCS10CertificationRequest(csr).run {
-                    // TODO We need a utility in InternalUtils for converting X500Name -> CordaX500Name
-                    val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)))
-                    buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
-                },
+                generateSignedCertPath(csr, nodeKeyPair),
                 listOf(DOORMAN_SIGNATURE)
         )
         val rejectedRequestId = storage.saveRequest(createRequest("BankA").first)
@@ -215,6 +226,14 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         }
     }
 
+    private fun generateSignedCertPath(csr: PKCS10CertificationRequest, keyPair: KeyPair): CertPath {
+        return JcaPKCS10CertificationRequest(csr).run {
+            // TODO We need a utility in InternalUtils for converting X500Name -> CordaX500Name
+            val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)), keyPair)
+            buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
+        }
+    }
+
     private fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
         val props = Properties()
         props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
@@ -225,8 +244,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
     }
 }
 
-internal fun createRequest(organisation: String): Pair<PKCS10CertificationRequest, KeyPair> {
-    val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+internal fun createRequest(organisation: String, keyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): Pair<PKCS10CertificationRequest, KeyPair> {
     val request = X509Utilities.createCertificateSigningRequest(X500Principal("O=$organisation,L=London,C=GB"), "my@mail.com", keyPair)
     return Pair(request, keyPair)
 }
