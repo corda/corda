@@ -262,12 +262,11 @@ class Node(private val project: Project) : CordformNode() {
     /**
      * Appends installed config file with properties from an optional file.
      */
-    private fun appendOptionalConfig() {
-
+    private fun appendOptionalConfig(confFile: File) {
         val optionalConfig: File? = when {
             project.findProperty(configFileProperty) != null -> //provided by -PconfigFile command line property when running Gradle task
                 File(project.findProperty(configFileProperty) as String)
-            config.hasPath(configFileProperty) -> project.file(config.getString(configFileProperty))
+            config.hasPath(configFileProperty) -> File(config.getString(configFileProperty))
             else -> null
         }
 
