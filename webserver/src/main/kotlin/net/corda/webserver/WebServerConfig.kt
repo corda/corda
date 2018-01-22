@@ -35,4 +35,3 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
             config.getConfig("security.authService.dataSource.users")
         }.parseAs<List<User>>().first()
 }
-
