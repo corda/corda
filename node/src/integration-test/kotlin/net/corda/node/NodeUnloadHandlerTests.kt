@@ -3,6 +3,7 @@ package net.corda.node
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.DUMMY_BANK_A_NAME
@@ -31,7 +32,7 @@ class NodeUnloadHandlerTests {
     class RunOnStopTestService(serviceHub: ServiceHub) : SingletonSerializeAsToken() {
 
         companion object {
-            private val log = loggerFor<RunOnStopTestService>()
+            private val log = contextLogger()
         }
 
         init {
