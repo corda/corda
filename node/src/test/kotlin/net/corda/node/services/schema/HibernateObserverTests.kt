@@ -14,7 +14,6 @@ import net.corda.core.schemas.QueryableState
 import net.corda.node.services.api.SchemaService
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.contracts.DummyContract
@@ -71,11 +70,11 @@ class HibernateObserverTests {
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
-            val parentRowCountResult = DatabaseTransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()
+            val parentRowCountResult = connection.prepareStatement("select count(*) from Parents").executeQuery()
             parentRowCountResult.next()
             val parentRows = parentRowCountResult.getInt(1)
             parentRowCountResult.close()
-            val childrenRowCountResult = DatabaseTransactionManager.current().connection.prepareStatement("select count(*) from Children").executeQuery()
+            val childrenRowCountResult = connection.prepareStatement("select count(*) from Children").executeQuery()
             childrenRowCountResult.next()
             val childrenRows = childrenRowCountResult.getInt(1)
             childrenRowCountResult.close()
