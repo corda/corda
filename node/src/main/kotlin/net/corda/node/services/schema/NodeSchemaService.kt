@@ -63,16 +63,6 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
         override val migrationResource = "node-notary.changelog-master"
     }
 
-    // Entities used by a Notary
-    object NodeNotary
-
-    object NodeNotaryV1 : MappedSchema(schemaFamily = NodeNotary.javaClass, version = 1,
-            mappedTypes = listOf(PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
-                    RaftUniquenessProvider.RaftState::class.java,
-                    BFTNonValidatingNotaryService.PersistedCommittedState::class.java
-            ))
-
     // Required schemas are those used by internal Corda services
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaOptions()),
