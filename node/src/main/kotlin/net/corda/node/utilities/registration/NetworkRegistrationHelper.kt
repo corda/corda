@@ -6,14 +6,15 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.nodeapi.internal.crypto.x509
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.cert.X509Certificate
@@ -22,7 +23,10 @@ import java.security.cert.X509Certificate
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
  * needed.
  */
-class NetworkRegistrationHelper(private val config: NodeConfiguration, private val certService: NetworkRegistrationService) {
+class NetworkRegistrationHelper(private val config: NodeConfiguration,
+                                private val certService: NetworkRegistrationService,
+                                networkRootTrustStorePath: Path,
+                                networkRootTruststorePassword: String) {
     private companion object {
         val pollInterval = 10.seconds
         const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -31,20 +35,16 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private val requestIdStore = config.certificatesDirectory / "certificate-request-id.txt"
     // TODO: Use different password for private key.
     private val privateKeyPassword = config.keyStorePassword
+    private val rootTrustStore: X509KeyStore
     private val rootCert: X509Certificate
 
     init {
-        require(config.trustStoreFile.exists()) {
-            "${config.trustStoreFile} does not exist. This file must contain the root CA cert of your compatibility zone. " +
+        require(networkRootTrustStorePath.exists()) {
+            "$networkRootTrustStorePath does not exist. This file must contain the root CA cert of your compatibility zone. " +
                     "Please contact your CZ operator."
         }
-        val rootCert = config.loadTrustStore().internal.getCertificate(CORDA_ROOT_CA)
-        require(rootCert != null) {
-            "${config.trustStoreFile} does not contain a certificate with the key $CORDA_ROOT_CA." +
-                    "This file must contain the root CA cert of your compatibility zone. " +
-                    "Please contact your CZ operator."
-        }
-        this.rootCert = rootCert.x509
+        rootTrustStore = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTruststorePassword)
+        rootCert = rootTrustStore.getCertificate(CORDA_ROOT_CA)
     }
 
     /**
@@ -109,7 +109,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             throw CertificateRequestException("Received node CA cert has invalid role: $nodeCaCertRole")
         }
 
-        println("Checking root of the  certificate path is what we expect.")
+        // Validate certificate chain returned from the doorman with the root cert obtained via out-of-band process, to prevent MITM attack on doorman server.
         X509Utilities.validateCertificateChain(rootCert, certificates)
 
         println("Certificate signing request approved, storing private key with the certificate chain.")
@@ -118,6 +118,14 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         nodeKeyStore.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
         nodeKeyStore.save()
         println("Node private key and certificate stored in ${config.nodeKeystore}.")
+
+        // Save root certificates to trust store.
+        config.loadTrustStore(createNew = true).update {
+            println("Generating trust store for corda node.")
+            // Assumes certificate chain always starts with client certificate and end with root certificate.
+            setCertificate(CORDA_ROOT_CA, certificates.last())
+        }
+        println("Node trust store stored in ${config.trustStoreFile}.")
 
         config.loadSslKeyStore(createNew = true).update {
             println("Generating SSL certificate for node messaging service.")

@@ -33,6 +33,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
@@ -237,13 +238,17 @@ class DriverDSLImpl(
         ))
 
         config.corda.certificatesDirectory.createDirectories()
-        config.corda.loadTrustStore(createNew = true).update {
+        // Create network root truststore.
+        val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
+        // The network truststore will be provided by the network operator via out-of-band communication.
+        val rootTruststorePassword = "corda-root-password"
+        X509KeyStore.fromFile(rootTruststorePath, rootTruststorePassword, createNew = true).update {
             setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
         }
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
+                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), rootTruststorePath, rootTruststorePassword).buildKeystore()
                 config
             }
         } else {
@@ -479,8 +484,8 @@ class DriverDSLImpl(
             when (it.cluster) {
                 null -> startSingleNotary(it, localNetworkMap)
                 is ClusterSpec.Raft,
-                // DummyCluster is used for testing the notary communication path, and it does not matter
-                // which underlying consensus algorithm is used, so we just stick to Raft
+                    // DummyCluster is used for testing the notary communication path, and it does not matter
+                    // which underlying consensus algorithm is used, so we just stick to Raft
                 is DummyClusterSpec -> startRaftNotaryCluster(it, localNetworkMap)
                 else -> throw IllegalArgumentException("BFT-SMaRt not supported")
             }
