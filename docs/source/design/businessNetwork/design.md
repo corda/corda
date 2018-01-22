@@ -103,6 +103,11 @@ The following requirements are addressed as follows:
 
 ## Design Decisions
 
+| Description                              | Recommendation  | Approval               |
+| ---------------------------------------- | --------------- | ----------------------- |
+| [TLS vs. Membership](decisions/tlsVsMembership.md) | Proceed with Membership | Mike Hearn |
+| [BN membership: Node vs. CorDapp](decisions/nodeVsCorDapp.md) | TBD | TBD |
+
 * Per [New Network Map](https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/127710793/New+Network+Map):
    * R3 will serve a file containing NetworkParameters to all members of the Corda Connect Compatibility Zone, made publicly available via CDN. 
      *NetworkParameters are only served by the network map and cannot be overwritten by BNOs*.
