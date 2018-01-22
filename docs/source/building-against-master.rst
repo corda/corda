@@ -26,10 +26,10 @@ To work against the Master branch, proceed as follows:
   This step is not necessary when using a stable releases, as the stable releases are published online
 
   .. warning:: If you do modify your local Corda repository after having published it to Maven local, then you must
-re-publish it to Maven local for the local installation to reflect the changes you have made.
+     re-publish it to Maven local for the local installation to reflect the changes you have made.
 
   .. warning:: As the Corda repository evolves on a daily basis, two clones of the Master branch at different points in
-time may differ. If you are using a Master release and need help debugging an error, then please let us know the
+     time may differ. If you are using a Master release and need help debugging an error, then please let us know the
      **commit** you are working from. This will help us ascertain the issue.
 
 4. Update the ``ext.corda_release_version`` property in your CorDapp's root ``build.gradle`` file to match the version
