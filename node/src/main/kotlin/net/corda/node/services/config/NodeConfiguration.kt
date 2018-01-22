@@ -45,7 +45,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
-    val useAMQPBridges: Boolean get() = true
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
@@ -137,7 +136,6 @@ data class NodeConfigurationImpl(
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
-        override val useAMQPBridges: Boolean = true,
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
