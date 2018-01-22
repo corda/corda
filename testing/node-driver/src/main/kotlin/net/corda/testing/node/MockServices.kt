@@ -58,7 +58,6 @@ open class MockServices private constructor(
         private val moreKeys: Array<out KeyPair>
 ) : ServiceHub, StateLoader by validatedTransactions {
 
-
     companion object {
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
@@ -160,7 +159,7 @@ open class MockServices private constructor(
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 
-    override fun addRunOnStop(runOnStop: () -> Any?) = throw UnsupportedOperationException()
+    override fun registerUnloadHandler(runOnStop: () -> Unit) = throw UnsupportedOperationException()
 }
 
 class MockKeyManagementService(val identityService: IdentityServiceInternal,

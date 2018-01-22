@@ -812,9 +812,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
 
-        // allows services to register callbacks to be informed when the node stop method is called
-        override fun addRunOnStop(callback: () -> Any?) {
-            runOnStop += callback
+        // allows services to register handlers to be informed when the node stop method is called
+        override fun registerUnloadHandler(handler: () -> Unit) {
+            runOnStop += handler
         }
     }
 }

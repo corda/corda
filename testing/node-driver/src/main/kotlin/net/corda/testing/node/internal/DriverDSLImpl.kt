@@ -57,6 +57,7 @@ import okhttp3.Request
 import rx.Observable
 import rx.observables.ConnectableObservable
 import rx.schedulers.Schedulers
+import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
@@ -888,6 +889,9 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
+        if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
+            throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
+        }
         driverDsl.start()
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {

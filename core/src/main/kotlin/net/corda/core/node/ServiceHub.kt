@@ -356,11 +356,17 @@ interface ServiceHub : ServicesForResolution {
     fun jdbcSession(): Connection
 
     /**
-     * Allows the registration of a callback to inform services when corda is shutting down.
+     * Allows the registration of a callback that may inform services when the app is shutting down.
      *
      * The intent is to allow the cleaning up of resources - e.g. releasing ports.
      *
      * You should not rely on this to clean up executing flows - that's what quasar is for.
+     *
+     * Please note that the shutdown handler is not guaranteed to be called. In production the node process may crash,
+     * be killed by the operating system and other forms of fatal termination may occur that result in this code never
+     * running. So you should use this functionality only for unit/integration testing or for code that can optimise
+     * this shutdown e.g. by cleaning up things that would otherwise trigger a slow recovery process next time the
+     * node starts.
      */
-    fun addRunOnStop(runOnStop: () -> Any?)
+    fun registerUnloadHandler(runOnStop: () -> Unit)
 }
