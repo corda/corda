@@ -1,7 +1,7 @@
 package net.corda.core.internal
 
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.AfterClass

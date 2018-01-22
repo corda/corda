@@ -9,7 +9,7 @@ import net.corda.finance.utils.CityDatabase
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.*
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties

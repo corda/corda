@@ -10,10 +10,10 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.DUMMY_NOTARY_NAME
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat

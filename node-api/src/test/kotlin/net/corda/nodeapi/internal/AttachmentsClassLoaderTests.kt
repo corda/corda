@@ -14,7 +14,9 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.DummyContractBackdoor
 import net.corda.nodeapi.internal.serialization.AttachmentsClassLoaderEnabledKey
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils

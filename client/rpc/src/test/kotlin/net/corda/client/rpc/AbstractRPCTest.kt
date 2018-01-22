@@ -5,7 +5,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcTestUser

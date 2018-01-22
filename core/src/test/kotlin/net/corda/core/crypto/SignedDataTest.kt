@@ -2,7 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

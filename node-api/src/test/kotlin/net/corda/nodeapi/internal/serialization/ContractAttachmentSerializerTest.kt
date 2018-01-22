@@ -3,9 +3,9 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.internal.AttachmentStorageKey
 import net.corda.core.serialization.*
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.services.MockAttachmentStorage
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals

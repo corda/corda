@@ -16,7 +16,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.chooseIdentity
 import java.util.*
 
 @CordaSerializable

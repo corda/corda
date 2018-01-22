@@ -8,9 +8,10 @@ import java.nio.file.Path
 object ProcessUtilities {
     inline fun <reified C : Any> startJavaProcess(
             arguments: List<String>,
-            jdwpPort: Int? = null
+            jdwpPort: Int? = null,
+            extraJvmArguments: List<String> = emptyList()
     ): Process {
-        return startJavaProcessImpl(C::class.java.name, arguments, defaultClassPath, jdwpPort, emptyList(), null, null, null)
+        return startJavaProcessImpl(C::class.java.name, arguments, defaultClassPath, jdwpPort, extraJvmArguments, null, null, null)
     }
 
     fun startCordaProcess(

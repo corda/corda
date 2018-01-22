@@ -4,7 +4,7 @@ import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.nodeapi.internal.serialization.kryo.CordaClosureBlacklistSerializer;
 import net.corda.nodeapi.internal.serialization.kryo.KryoSerializationSchemeKt;
 import org.junit.Before;
