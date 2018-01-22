@@ -42,7 +42,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 
-    lateinit var env: SerializationEnvironment
+    private lateinit var env: SerializationEnvironment
+
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())
         return object : Statement() {
