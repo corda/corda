@@ -233,7 +233,11 @@ data class TestLedgerDSLInterpreter private constructor(
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
         if (fillTransaction) fillTransaction(transactionBuilder)
         // Create the WireTransaction
-        val wireTransaction = transactionInterpreter.toWireTransaction()
+        val wireTransaction = try {
+            transactionInterpreter.toWireTransaction()
+        } catch (e: IllegalStateException) {
+            throw IllegalStateException("A transaction-DSL block that is part of a test ledger must return a valid transaction.", e)
+        }
         // Record the output states
         transactionInterpreter.labelToIndexMap.forEach { label, index ->
             if (label in labelToOutputStateAndRefs) {
