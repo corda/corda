@@ -50,6 +50,9 @@ sealed class NodeHandle : AutoCloseable {
      */
     abstract fun stop()
 
+    /**
+     * Closes and stops the node.
+     */
     override fun close() = stop()
 
     data class OutOfProcess(
@@ -91,6 +94,11 @@ sealed class NodeHandle : AutoCloseable {
         }
     }
 
+    /**
+     * Connects to node through RPC.
+     *
+     * @param sslConfiguration specifies SSL options.
+     */
     @JvmOverloads
     fun rpcClientToNode(sslConfiguration: SSLConfiguration? = null): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
 }

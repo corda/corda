@@ -38,7 +38,12 @@ Simple Notary configuration file.
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
     p2pAddress : "localhost:12345"
-    rpcAddress : "localhost:12346"
+    rpcSettings = {
+        useSsl = false
+        standAloneBroker = false
+        address : "my-corda-node:10003"
+        adminAddress : "my-corda-node:10004"
+    }
     webAddress : "localhost:12347"
     notary : {
         validating : false
@@ -87,7 +92,21 @@ path to the node's base directory.
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
 
-:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
+:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of ``rpcSettings`` block.
+
+:rpcSettings: Options for the RPC server.
+
+        :useSsl: (optional) boolean, indicates whether node should require clients to use SSL for RPC connections, defaults to ``false``.
+        :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaults to ``false``.
+        :address: (optional) host and port for RPC server binding, if any.
+        :adminAddress: (optional) host and port for RPC admin binding (only required when ``useSsl`` is ``false``).
+        :ssl: (optional) SSL settings for the RPC server.
+
+                :keyStorePassword: password for key store.
+                :trustStorePassword: password for trust store.
+                :certificatesDirectory: directory in which stores will be searched, unless absolute paths are provided.
+                :sslKeystore: absolute path to ssl key store, defaults to ``certificatesDirectory / "sslkeystore.jks"``.
+                :trustStoreFile: absolute path to trust store, defaults to ``certificatesDirectory / "truststore.jks"``.
 
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.
