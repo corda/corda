@@ -12,7 +12,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * Test of the [Amount] class.
+ * Tests of the [Amount] class.
  */
 class AmountTest {
     @Test

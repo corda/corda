@@ -81,7 +81,7 @@ class InMemoryMessagingTest {
     }
 
     /**
-     * Test that unhandled messages in the received queue are skipped and the next message processed, rather than
+     * Tests that unhandled messages in the received queue are skipped and the next message processed, rather than
      * causing processing to return null as if there was no message.
      */
     @Test

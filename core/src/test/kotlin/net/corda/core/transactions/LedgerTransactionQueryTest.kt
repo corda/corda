@@ -205,7 +205,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Filtered Input Test`() {
+    fun `Filtered Input Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterInputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -215,7 +215,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Filtered InRef Test`() {
+    fun `Filtered InRef Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterInRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -227,7 +227,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Filtered Output Test`() {
+    fun `Filtered Output Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterOutputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -237,7 +237,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Filtered OutRef Test`() {
+    fun `Filtered OutRef Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterOutRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -251,7 +251,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Filtered Commands Test`() {
+    fun `Filtered Commands Tests`() {
         val ltx = makeDummyTransaction()
         val intCmds1 = ltx.filterCommands(Commands.Cmd1::class.java, Predicate { it.id.rem(2) == 0 })
         assertEquals(3, intCmds1.size)
@@ -261,7 +261,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Find Input Test`() {
+    fun `Find Input Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findInput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.getInput(8), intState)
@@ -270,7 +270,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Find InRef Test`() {
+    fun `Find InRef Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findInRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.inRef(8), intState)
@@ -279,7 +279,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Find Output Test`() {
+    fun `Find Output Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findOutput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.getOutput(8), intState)
@@ -288,7 +288,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Find OutRef Test`() {
+    fun `Find OutRef Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findOutRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.outRef(8), intState)
@@ -297,7 +297,7 @@ class LedgerTransactionQueryTest {
     }
 
     @Test
-    fun `Find Commands Test`() {
+    fun `Find Commands Tests`() {
         val ltx = makeDummyTransaction()
         val intCmd1 = ltx.findCommand(Commands.Cmd1::class.java, Predicate { it.id == 2 })
         assertEquals(ltx.getCommand(4), intCmd1)

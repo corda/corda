@@ -65,7 +65,7 @@ inline fun <reified E : Any> expect(
 ): ExpectCompose<E> = expect(match = { event == it }, expectClosure = expectClosure)
 
 /**
- * Test that events arrive in the specified order.
+ * Tests that events arrive in the specified order.
  *
  * @param expectations The pieces of DSL that should run sequentially when events arrive.
  */
@@ -74,21 +74,21 @@ fun <E> sequence(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
 fun <E> sequence(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Sequential(expectations)
 
 /**
- * Test that events arrive in unspecified order.
+ * Tests that events arrive in unspecified order.
  *
  * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
  */
 fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
 
 /**
- * Test that events arrive in unspecified order.
+ * Tests that events arrive in unspecified order.
  *
  * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
  */
 fun <E> parallel(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Parallel(expectations)
 
 /**
- * Test that N events of the same type arrive
+ * Tests that N events of the same type arrive
  *
  * @param number The number of events expected.
  * @param expectation The piece of DSL to run on each event, with the index of the event passed in.

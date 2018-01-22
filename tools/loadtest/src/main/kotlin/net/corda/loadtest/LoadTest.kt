@@ -159,7 +159,7 @@ data class Nodes(
 /**
  * Runs the given [LoadTest]s using the given configuration.
  */
-fun runLoadTest(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest<*, *>, LoadTest.RunParameters>>) {
+fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest<*, *>, LoadTest.RunParameters>>) {
     val seed = configuration.seed ?: Random().nextLong()
     log.info("Using seed $seed")
     val random = SplittableRandom(seed)

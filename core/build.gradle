@@ -146,7 +146,7 @@ task integrationTest(type: Test) {
 }
 
 task smokeTestJar(type: Jar) {
-    classifier 'smokeTest'
+    classifier 'smokeTests'
     from sourceSets.smokeTest.output
 }
 

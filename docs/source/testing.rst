@@ -1,7 +1,7 @@
 Testing Corda
 =============
 
-Automated Test
+Automated Tests
 ---------------
 
 Corda has a maintained suite of tests that any contributing developers must maintain and add to if new code has been added.

@@ -19,7 +19,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Test for the version 2 dummy contract, to cover ensuring upgrade transactions are built correctly.
+ * Tests for the version 2 dummy contract, to cover ensuring upgrade transactions are built correctly.
  */
 class DummyContractV2Test {
     private companion object {

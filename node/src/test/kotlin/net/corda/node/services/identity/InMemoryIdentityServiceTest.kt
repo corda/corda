@@ -18,7 +18,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 /**
- * Test for the in memory identity service.
+ * Tests for the in memory identity service.
  */
 class InMemoryIdentityServiceTest {
     private companion object {

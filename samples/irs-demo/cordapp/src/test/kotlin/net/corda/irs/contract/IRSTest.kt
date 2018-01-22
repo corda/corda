@@ -299,7 +299,7 @@ class IRSTest {
      */
     @Test
     fun generateIRS() {
-        // Test aren't allowed to return things
+        // Tests aren't allowed to return things
         generateIRSTxn(1)
     }
 

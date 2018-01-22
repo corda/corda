@@ -67,7 +67,7 @@ class AttachmentsClassLoaderTest {
 
     // These ClassLoaders work together to load 'AnotherDummyContract' in a disposable way, such that even though
     // the class may be on the unit test class path (due to default IDE settings, etc), it won't be loaded into the
-    // regular app classloader but rather than ClassLoaderForTest. This helps keep our environment clean and
+    // regular app classloader but rather than ClassLoaderForTests. This helps keep our environment clean and
     // ensures we have precise control over where it's loaded.
     object FilteringClassLoader : ClassLoader() {
         @Throws(ClassNotFoundException::class)
@@ -79,10 +79,10 @@ class AttachmentsClassLoaderTest {
         }
     }
 
-    class ClassLoaderForTest : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
+    class ClassLoaderForTests : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
     @Test
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {
-        ClassLoaderForTest().use { child ->
+        ClassLoaderForTests().use { child ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
             val contract = contractClass.newInstance() as Contract
 
@@ -177,7 +177,7 @@ class AttachmentsClassLoaderTest {
     }
 
     private fun createContract2Cash(): Contract {
-        ClassLoaderForTest().use { cl ->
+        ClassLoaderForTests().use { cl ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, cl)
             return contractClass.newInstance() as Contract
         }
@@ -293,7 +293,7 @@ class AttachmentsClassLoaderTest {
     @Test
     fun `test deserialize of WireTransaction where contract cannot be found`() {
         kryoSpecific("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
-            ClassLoaderForTest().use { child ->
+            ClassLoaderForTests().use { child ->
                 val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
                 val contract = contractClass.newInstance() as DummyContractBackdoor
                 val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
@@ -325,7 +325,7 @@ class AttachmentsClassLoaderTest {
 
     @Test
     fun `test loading a class from attachment during deserialization`() {
-        ClassLoaderForTest().use { child ->
+        ClassLoaderForTests().use { child ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
             val contract = contractClass.newInstance() as DummyContractBackdoor
             val outboundContext = SerializationFactory.defaultFactory.defaultContext.withClassLoader(child)
@@ -347,7 +347,7 @@ class AttachmentsClassLoaderTest {
 
     @Test
     fun `test loading a class with attachment missing during deserialization`() {
-        ClassLoaderForTest().use { child ->
+        ClassLoaderForTests().use { child ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
             val contract = contractClass.newInstance() as DummyContractBackdoor
             val attachmentRef = SecureHash.randomSHA256()
