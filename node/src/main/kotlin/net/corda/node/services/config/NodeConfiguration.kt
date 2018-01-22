@@ -208,7 +208,7 @@ enum class CertChainPolicyType {
     RootMustMatch,
     LeafMustMatch,
     MustContainOneOf,
-    UsernameMuchMatch
+    UsernameMustMatch
 }
 
 data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
@@ -219,7 +219,7 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
                 CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
                 CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
                 CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
-                CertChainPolicyType.UsernameMuchMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
+                CertChainPolicyType.UsernameMustMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
             }
         }
 }

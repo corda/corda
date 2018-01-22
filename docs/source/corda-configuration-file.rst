@@ -92,7 +92,7 @@ path to the node's base directory.
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
 
-:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of ``rpcSettings`` block.
+:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 
 :rpcSettings: Options for the RPC server.
 

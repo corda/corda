@@ -6,11 +6,11 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-* Separated our pre-existing Artemis broker into a RPC broker and a P2P broker.
+* Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
 
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
 
-* Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, default to ``null``.
+* Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, defaulted to ``null``.
 
 * Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce username == CN condition on RPC SSL certificates.
 

@@ -33,7 +33,6 @@ fun SSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
 fun SSLConfiguration.createDevKeyStores(rootCert: X509Certificate, intermediateCa: CertificateAndKeyPair, nodeCaCert: X509Certificate, nodeCaKeyPair: KeyPair, legalName: CordaX500Name) {
 
     createNodeKeyStore(nodeCaCert, nodeCaKeyPair, intermediateCa, rootCert)
-
     createSslKeyStore(nodeCaCert, nodeCaKeyPair, legalName, intermediateCa, rootCert)
 }
 

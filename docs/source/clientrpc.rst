@@ -248,7 +248,7 @@ The client RPC wire protocol is defined and documented in ``net/corda/client/rpc
 Wire security
 -------------
 ``CordaRPCClient`` has an optional constructor parameter of type ``SSLConfiguration``, defaulting to ``null``, which allows
-communication with node using SSL. Default ``null`` value means no SSL used in context of RPC.
+communication with the node using SSL. Default ``null`` value means no SSL used in the context of RPC.
 
 Whitelisting classes with the Corda node
 ----------------------------------------

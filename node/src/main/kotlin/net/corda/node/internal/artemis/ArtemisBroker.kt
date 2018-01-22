@@ -15,7 +15,6 @@ interface ArtemisBroker : LifecycleSupport, AutoCloseable {
 
         stopBlocking()
     }
-
 }
 
 data class BrokerAddresses(val public: NetworkHostAndPort, private val adminArg: NetworkHostAndPort?) {
