@@ -5,7 +5,8 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -45,15 +46,14 @@ class NodeKeystoreCheckTest {
             node.stop()
 
             // Fiddle with node keystore.
-            val keystore = loadKeyStore(config.nodeKeystore, config.keyStorePassword)
-
-            // Self signed root
-            val badRootKeyPair = Crypto.generateKeyPair()
-            val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)
-            val nodeCA = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, config.keyStorePassword)
-            val badNodeCACert = X509Utilities.createCertificate(CertificateType.NODE_CA, badRoot, badRootKeyPair, ALICE_NAME.x500Principal, nodeCA.keyPair.public)
-            keystore.setKeyEntry(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, config.keyStorePassword.toCharArray(), arrayOf(badNodeCACert, badRoot))
-            keystore.save(config.nodeKeystore, config.keyStorePassword)
+            config.loadNodeKeyStore().update {
+                // Self signed root
+                val badRootKeyPair = Crypto.generateKeyPair()
+                val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)
+                val nodeCA = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+                val badNodeCACert = X509Utilities.createCertificate(CertificateType.NODE_CA, badRoot, badRootKeyPair, ALICE_NAME.x500Principal, nodeCA.keyPair.public)
+                setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, listOf(badNodeCACert, badRoot))
+            }
 
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)).getOrThrow()

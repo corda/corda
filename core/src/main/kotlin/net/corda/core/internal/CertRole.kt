@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import net.corda.core.CordaOID
+import net.corda.core.utilities.NonEmptySet
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1Primitive
@@ -23,40 +24,38 @@ import java.security.cert.X509Certificate
 // NOTE: The order of the entries in the enum MUST NOT be changed, as their ordinality is used as an identifier. Please
 //       also note that IDs are numbered from 1 upwards, matching numbering of other enum types in ASN.1 specifications.
 // TODO: Link to the specification once it has a permanent URL
-enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, val isWellKnown: Boolean) : ASN1Encodable {
+enum class CertRole(val validParents: NonEmptySet<CertRole?>, val isIdentity: Boolean, val isWellKnown: Boolean) : ASN1Encodable {
     /**
      * Intermediate CA (Doorman service).
      */
-    INTERMEDIATE_CA(setOf(null), false, false),
+    INTERMEDIATE_CA(NonEmptySet.of(null), false, false),
     /** Signing certificate for the network map. */
-    NETWORK_MAP(setOf(null), false, false),
+    NETWORK_MAP(NonEmptySet.of(null), false, false),
     /** Well known (publicly visible) identity of a service (such as notary). */
-    SERVICE_IDENTITY(setOf(INTERMEDIATE_CA), true, true),
+    SERVICE_IDENTITY(NonEmptySet.of(INTERMEDIATE_CA), true, true),
     /** Node level CA from which the TLS and well known identity certificates are issued. */
-    NODE_CA(setOf(INTERMEDIATE_CA), false, false),
+    NODE_CA(NonEmptySet.of(INTERMEDIATE_CA), false, false),
     /** Transport layer security certificate for a node. */
-    TLS(setOf(NODE_CA), false, false),
+    TLS(NonEmptySet.of(NODE_CA), false, false),
     /** Well known (publicly visible) identity of a legal entity. */
-    LEGAL_IDENTITY(setOf(INTERMEDIATE_CA, NODE_CA), true, true),
+    LEGAL_IDENTITY(NonEmptySet.of(INTERMEDIATE_CA, NODE_CA), true, true),
     /** Confidential (limited visibility) identity of a legal entity. */
-    CONFIDENTIAL_LEGAL_IDENTITY(setOf(LEGAL_IDENTITY), true, false);
+    CONFIDENTIAL_LEGAL_IDENTITY(NonEmptySet.of(LEGAL_IDENTITY), true, false);
 
     companion object {
-        private var cachedRoles: Array<CertRole>? = null
+        private val values by lazy(LazyThreadSafetyMode.NONE, CertRole::values)
+
         /**
          * Get a role from its ASN.1 encoded form.
          *
          * @throws IllegalArgumentException if the encoded data is not a valid role.
          */
         fun getInstance(id: ASN1Integer): CertRole {
-            if (cachedRoles == null) {
-                cachedRoles = CertRole.values()
-            }
             val idVal = id.value
-            require(idVal.compareTo(BigInteger.ZERO) > 0) { "Invalid role ID" }
+            require(idVal > BigInteger.ZERO) { "Invalid role ID" }
             return try {
                 val ordinal = idVal.intValueExact() - 1
-                cachedRoles!![ordinal]
+                values[ordinal]
             } catch (ex: ArithmeticException) {
                 throw IllegalArgumentException("Invalid role ID")
             } catch (ex: ArrayIndexOutOfBoundsException) {
@@ -77,14 +76,7 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
          * @return the role if the extension is present, or null otherwise.
          * @throws IllegalArgumentException if the extension is present but is invalid.
          */
-        fun extract(cert: Certificate): CertRole? {
-            val x509Cert = cert as? X509Certificate
-            return if (x509Cert != null) {
-                extract(x509Cert)
-            } else {
-                null
-            }
-        }
+        fun extract(cert: Certificate): CertRole? = (cert as? X509Certificate)?.let { extract(it) }
 
         /**
          * Get a role from a certificate.
@@ -93,12 +85,9 @@ enum class CertRole(val validParents: Set<CertRole?>, val isIdentity: Boolean, v
          * @throws IllegalArgumentException if the extension is present but is invalid.
          */
         fun extract(cert: X509Certificate): CertRole? {
-            val extensionData: ByteArray? = cert.getExtensionValue(CordaOID.X509_EXTENSION_CORDA_ROLE)
-            return if (extensionData != null) {
-                val extensionString = DEROctetString.getInstance(extensionData)
+            return cert.getExtensionValue(CordaOID.X509_EXTENSION_CORDA_ROLE)?.let {
+                val extensionString = DEROctetString.getInstance(it)
                 getInstance(extensionString.octets)
-            } else {
-                null
             }
         }
     }

@@ -7,8 +7,6 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.reader
 import net.corda.core.internal.writer
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.*
@@ -95,6 +93,7 @@ object X509Utilities {
         return createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
     }
 
+    // TODO Provide an overload which takes in a List or a CertPath
     @Throws(CertPathValidatorException::class)
     fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
@@ -287,10 +286,12 @@ class X509CertificateFactory {
         return delegate.generateCertificate(input) as X509Certificate
     }
 
+    // TODO X509Certificate
     fun generateCertPath(certificates: List<Certificate>): CertPath {
         return delegate.generateCertPath(certificates)
     }
 
+    // TODO X509Certificate
     fun generateCertPath(vararg certificates: Certificate): CertPath {
         return delegate.generateCertPath(certificates.asList())
     }

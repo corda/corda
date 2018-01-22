@@ -1,21 +1,19 @@
 package net.corda.core.identity
 
+import com.google.common.jimfs.Configuration.unix
+import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.internal.read
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.crypto.save
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
-import java.io.File
 import java.math.BigInteger
-import java.security.KeyStore
 import kotlin.test.assertFailsWith
 
 class PartyAndCertificateTest {
@@ -46,17 +44,18 @@ class PartyAndCertificateTest {
                 CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
                 entropyToKeyPair(BigInteger.valueOf(83)).public))
         val original = identity.certificate
+        val alias = identity.name.toString()
         val storePassword = "test"
-        val keyStoreFilePath = File.createTempFile("serialization_test", "jks").toPath()
-        var keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        keyStore.load(null, storePassword.toCharArray())
-        keyStore.setCertificateEntry(identity.name.toString(), original)
-        keyStore.save(keyStoreFilePath, storePassword)
+        Jimfs.newFileSystem(unix()).use {
+            val keyStoreFile = it.getPath("/serialization_test.jks")
 
-        // Load the key store back in again
-        keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        keyStoreFilePath.read { keyStore.load(it, storePassword.toCharArray()) }
-        val copy = keyStore.getCertificate(identity.name.toString())
-        assertThat(copy).isEqualTo(original) // .isNotSameAs(original)
+            X509KeyStore.fromFile(keyStoreFile, storePassword, createNew = true).update {
+                setCertificate(alias, original)
+            }
+
+            // Load the key store back in again
+            val copy = X509KeyStore.fromFile(keyStoreFile, storePassword).getCertificate(alias)
+            assertThat(copy).isEqualTo(original)
+        }
     }
 }

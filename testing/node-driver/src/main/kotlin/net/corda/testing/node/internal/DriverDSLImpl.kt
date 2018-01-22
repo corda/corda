@@ -34,16 +34,14 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
-import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
-import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -51,7 +49,6 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
-import net.corda.testing.core.setGlobalSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Observable
@@ -239,9 +236,8 @@ class DriverDSLImpl(
         ))
 
         config.corda.certificatesDirectory.createDirectories()
-        loadOrCreateKeyStore(config.corda.trustStoreFile, config.corda.trustStorePassword).apply {
-            addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
-            save(config.corda.trustStoreFile, config.corda.trustStorePassword)
+        config.corda.loadTrustStore(createNew = true).update {
+            setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
         }
 
         return if (startNodesInProcess) {
