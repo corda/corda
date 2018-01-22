@@ -16,7 +16,7 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
     val exportJMXto: String get() = "http"
     val useHTTPS: Boolean by config
     val myLegalName: String by config
-    val rpcAddress: NetworkHostAndPort by config
+    val rpcAddress: NetworkHostAndPort = NetworkHostAndPort.parse(config.getString("rpcSettings.address"))
     val webAddress: NetworkHostAndPort by config
     val rpcUsers: List<User> by config
 }
