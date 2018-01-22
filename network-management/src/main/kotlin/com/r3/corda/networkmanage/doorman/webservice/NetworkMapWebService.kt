@@ -7,9 +7,8 @@ import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoWithSigned
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
-import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
-import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.NETWORK_MAP_PATH
+import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -31,9 +30,9 @@ import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
 @Path(NETWORK_MAP_PATH)
-class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
-                         private val networkMapStorage: NetworkMapStorage,
-                         private val config: NetworkMapConfig) {
+class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
+                           private val networkMapStorage: NetworkMapStorage,
+                           private val config: NetworkMapConfig) {
 
     companion object {
         val log = contextLogger()
@@ -42,7 +41,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, Pair<SignedNetworkMap?, NetworkParameters?>> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getCurrentSignedNetworkParameters()?.verified()) })
+            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getNetworkParametersOfNetworkMap()?.verified()) })
 
     @POST
     @Path("publish")
@@ -87,7 +86,6 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     @GET
     @Path("my-ip")
     fun myIp(@Context request: HttpServletRequest): Response {
-        // TODO: Verify this returns IP correctly.
         return ok(request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}").build()
     }
 

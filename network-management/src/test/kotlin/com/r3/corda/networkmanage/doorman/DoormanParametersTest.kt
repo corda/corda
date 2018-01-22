@@ -52,6 +52,5 @@ class DoormanParametersTest {
         assertEquals("TD", parameter.jiraConfig?.projectCode)
         assertEquals("username", parameter.jiraConfig?.username)
         assertEquals("password", parameter.jiraConfig?.password)
-        assertEquals(41, parameter.jiraConfig?.doneTransitionCode)
     }
 }

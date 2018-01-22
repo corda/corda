@@ -1,7 +1,10 @@
 package com.r3.corda.networkmanage.hsm
 
+import com.google.common.util.concurrent.MoreExecutors
+import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
+import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
@@ -16,9 +19,18 @@ import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStor
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
+import net.corda.core.utilities.minutes
+import org.apache.logging.log4j.LogManager
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
+import java.time.Duration
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit.MILLISECONDS
+import java.util.concurrent.TimeUnit.SECONDS
 import javax.crypto.Cipher
+
+private val log = LogManager.getLogger("com.r3.corda.networkmanage.hsm.Main")
 
 fun main(args: Array<String>) {
     // Grabbed from https://stackoverflow.com/questions/7953567/checking-if-unlimited-cryptography-is-available
@@ -46,12 +58,15 @@ fun run(parameters: Parameters) {
         checkNotNull(dataSourceProperties)
         val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
-        val networkMapStorage = PersistentNetworkMapStorage(database)
-        val hsmNetworkMapSigningThread = HsmNetworkMapSigner(
-                networkMapStorage,
+        val hsmSigner = HsmNetworkMapSigner(
                 networkMapCertificateName,
                 networkMapPrivateKeyPassword,
-                Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold)).start()
+                Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
+
+        val networkMapStorage = PersistentNetworkMapStorage(database)
+        val scheduler = Executors.newSingleThreadScheduledExecutor()
+        startNetworkingMapSigningPolling(networkMapStorage, hsmSigner, scheduler, 10.minutes)
+
         val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
             val signer = HsmCsrSigner(
                     csrStorage,
@@ -62,6 +77,7 @@ fun run(parameters: Parameters) {
                     Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
             signer.sign(it)
         }
+
         Menu().withExceptionHandler(::processError).addItem("1", "Generate root and intermediate certificates", {
             if (confirmedKeyGen()) {
                 val generator = KeyCertificateGenerator(
@@ -104,13 +120,29 @@ fun run(parameters: Parameters) {
                 println("There is no approved and unsigned CSR")
             }
         }).showMenu()
-        hsmNetworkMapSigningThread.stop()
+
+        MoreExecutors.shutdownAndAwaitTermination(scheduler, 30, SECONDS)
     }
+}
+
+private fun startNetworkingMapSigningPolling(networkMapStorage: NetworkMapStorage,
+                                             signer: HsmNetworkMapSigner,
+                                             executor: ScheduledExecutorService,
+                                             signingPeriod: Duration) {
+    val networkMapSigner = NetworkMapSigner(networkMapStorage, signer)
+    executor.scheduleAtFixedRate({
+        try {
+            networkMapSigner.signNetworkMap()
+        } catch (e: Exception) {
+            log.warn("Exception thrown while signing network map", e)
+        }
+    }, signingPeriod.toMillis(), signingPeriod.toMillis(), MILLISECONDS)
 }
 
 private fun processError(exception: Exception) {
     val processed = mapCryptoServerException(exception)
-    System.err.println("An error occurred: ${processed.message}")
+    System.err.println("An error occurred:")
+    processed.printStackTrace()
 }
 
 private fun confirmedSign(selectedItems: List<ApprovedCertificateRequestData>): Boolean {

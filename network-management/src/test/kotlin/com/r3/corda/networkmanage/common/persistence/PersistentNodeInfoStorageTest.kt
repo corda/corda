@@ -9,7 +9,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -23,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -83,8 +83,8 @@ class PersistentNodeInfoStorageTest : TestBase() {
     @Test
     fun `getNodeInfo returns persisted SignedNodeInfo using the hash of just the NodeInfo`() {
         // given
-        val (nodeA) = createValidSignedNodeInfo("TestA")
-        val (nodeB) = createValidSignedNodeInfo("TestB")
+        val (nodeA) = createValidSignedNodeInfo("TestA", requestStorage)
+        val (nodeB) = createValidSignedNodeInfo("TestB", requestStorage)
 
         // Put signed node info data
         nodeInfoStorage.putNodeInfo(nodeA)
@@ -102,7 +102,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
     @Test
     fun `same public key with different node info`() {
         // Create node info.
-        val (node1, key) = createValidSignedNodeInfo("Test", serial = 1)
+        val (node1, key) = createValidSignedNodeInfo("Test", requestStorage)
         val nodeInfo2 = node1.nodeInfo.copy(serial = 2)
         val node2 = NodeInfoWithSigned(nodeInfo2.signWith(listOf(key)))
 
@@ -120,7 +120,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
     @Test
     fun `putNodeInfo persists SignedNodeInfo with its signature`() {
         // given
-        val (nodeInfoWithSigned) = createValidSignedNodeInfo("Test")
+        val (nodeInfoWithSigned) = createValidSignedNodeInfo("Test", requestStorage)
 
         // when
         val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoWithSigned)
@@ -129,16 +129,17 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val persistedSignedNodeInfo = nodeInfoStorage.getNodeInfo(nodeInfoHash)
         assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoWithSigned.signedNodeInfo.signatures)
     }
+}
 
-    private fun createValidSignedNodeInfo(organisation: String, serial: Long = 1): Pair<NodeInfoWithSigned, PrivateKey> {
-        val nodeInfoBuilder = TestNodeInfoBuilder()
-        val requestId = requestStorage.saveRequest(createRequest(organisation).first)
-        requestStorage.markRequestTicketCreated(requestId)
-        requestStorage.approveRequest(requestId, "TestUser")
-        val (identity, key) = nodeInfoBuilder.addIdentity(CordaX500Name(organisation, "London", "GB"))
-        val nodeCaCertPath = X509CertificateFactory().generateCertPath(identity.certPath.certificates.drop(1))
-        requestStorage.putCertificatePath(requestId, nodeCaCertPath, emptyList())
-        val (_, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(serial)
-        return Pair(NodeInfoWithSigned(signedNodeInfo), key)
-    }
+internal fun createValidSignedNodeInfo(organisation: String,
+                                       storage: CertificationRequestStorage): Pair<NodeInfoWithSigned, PrivateKey> {
+    val (csr, nodeKeyPair) = createRequest(organisation)
+    val requestId = storage.saveRequest(csr)
+    storage.markRequestTicketCreated(requestId)
+    storage.approveRequest(requestId, "TestUser")
+    val nodeInfoBuilder = TestNodeInfoBuilder()
+    val (identity, key) = nodeInfoBuilder.addIdentity(CordaX500Name.build(X500Principal(csr.subject.encoded)), nodeKeyPair)
+    storage.putCertificatePath(requestId, identity.certPath, listOf("Test"))
+    val (_, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(1)
+    return Pair(NodeInfoWithSigned(signedNodeInfo), key)
 }

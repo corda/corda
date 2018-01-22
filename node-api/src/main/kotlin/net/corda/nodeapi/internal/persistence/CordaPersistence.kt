@@ -1,13 +1,16 @@
 package net.corda.nodeapi.internal.persistence
 
+import co.paralleluniverse.strands.Strand
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import rx.Observable
 import rx.Subscriber
+import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.Closeable
 import java.sql.Connection
 import java.sql.SQLException
+import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.persistence.AttributeConverter
 import javax.sql.DataSource
@@ -40,6 +43,11 @@ enum class TransactionIsolationLevel {
     val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
 }
 
+private val _contextDatabase = ThreadLocal<CordaPersistence>()
+var contextDatabase: CordaPersistence
+    get() = _contextDatabase.get() ?: error("Was expecting to find CordaPersistence set on current thread: ${Strand.currentStrand()}")
+    set(database) = _contextDatabase.set(database)
+
 class CordaPersistence(
         val dataSource: DataSource,
         databaseConfig: DatabaseConfig,
@@ -51,7 +59,7 @@ class CordaPersistence(
         private val log = contextLogger()
     }
 
-    val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
+    private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
 
         transaction {
@@ -60,8 +68,19 @@ class CordaPersistence(
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
+    data class Boundary(val txId: UUID)
+
+    internal val transactionBoundaries = PublishSubject.create<Boundary>().toSerialized()
+
     init {
-        DatabaseTransactionManager(this)
+        // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
+        // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
+        // database transaction open.  The [transaction] helper above handles this in a finally clause for you
+        // but any manual database transaction management is liable to have this problem.
+        contextTransactionOrNull?.let {
+            error("Was not expecting to find existing database transaction on current strand when setting database: ${Strand.currentStrand()}, $it")
+        }
+        _contextDatabase.set(this)
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
@@ -72,25 +91,29 @@ class CordaPersistence(
         const val DATA_SOURCE_URL = "dataSource.url"
     }
 
-    /**
-     * Creates an instance of [DatabaseTransaction], with the given transaction isolation level.
-     */
-    fun createTransaction(isolationLevel: TransactionIsolationLevel): DatabaseTransaction {
-        // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-        DatabaseTransactionManager.dataSource = this
-        return DatabaseTransactionManager.currentOrNew(isolationLevel)
+    fun currentOrNew(isolation: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
+        return contextTransactionOrNull ?: newTransaction(isolation)
+    }
+
+    fun newTransaction(isolation: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
+        return DatabaseTransaction(isolation.jdbcValue, contextTransactionOrNull, this).also {
+            contextTransactionOrNull = it
+        }
     }
 
     /**
-     * Creates an instance of [DatabaseTransaction], with the default transaction isolation level.
+     * Creates an instance of [DatabaseTransaction], with the given transaction isolation level.
      */
-    fun createTransaction(): DatabaseTransaction = createTransaction(defaultIsolationLevel)
+    fun createTransaction(isolationLevel: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
+        // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
+        _contextDatabase.set(this)
+        return currentOrNew(isolationLevel)
+    }
 
     fun createSession(): Connection {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-        DatabaseTransactionManager.dataSource = this
-        val ctx = DatabaseTransactionManager.currentOrNull()
-        return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
+        _contextDatabase.set(this)
+        return contextTransaction.connection
     }
 
     /**
@@ -99,7 +122,7 @@ class CordaPersistence(
      * @param statement to be executed in the scope of this transaction.
      */
     fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T {
-        DatabaseTransactionManager.dataSource = this
+        _contextDatabase.set(this)
         return transaction(isolationLevel, 2, statement)
     }
 
@@ -110,7 +133,7 @@ class CordaPersistence(
     fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
 
     private fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
-        val outer = DatabaseTransactionManager.currentOrNull()
+        val outer = contextTransactionOrNull
         return if (outer != null) {
             outer.statement()
         } else {
@@ -126,7 +149,7 @@ class CordaPersistence(
             log.warn("Cleanup task failed:", t)
         }
         while (true) {
-            val transaction = DatabaseTransactionManager.currentOrNew(isolationLevel)
+            val transaction = contextDatabase.currentOrNew(isolationLevel) // XXX: Does this code really support statement changing the contextDatabase?
             try {
                 val answer = transaction.statement()
                 transaction.commit()
@@ -160,8 +183,8 @@ class CordaPersistence(
  * For examples, see the call hierarchy of this function.
  */
 fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
-    val currentTxId = DatabaseTransactionManager.transactionId
-    val databaseTxBoundary: Observable<DatabaseTransactionManager.Boundary> = DatabaseTransactionManager.transactionBoundaries.first { it.txId == currentTxId }
+    val currentTxId = contextTransaction.id
+    val databaseTxBoundary: Observable<CordaPersistence.Boundary> = contextDatabase.transactionBoundaries.first { it.txId == currentTxId }
     val subject = UnicastSubject.create<T>()
     subject.delaySubscription(databaseTxBoundary).subscribe(this)
     databaseTxBoundary.doOnCompleted { subject.onCompleted() }
@@ -169,12 +192,12 @@ fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
 }
 
 // A subscriber that delegates to multiple others, wrapping a database transaction around the combination.
-private class DatabaseTransactionWrappingSubscriber<U>(val db: CordaPersistence?) : Subscriber<U>() {
+private class DatabaseTransactionWrappingSubscriber<U>(private val db: CordaPersistence?) : Subscriber<U>() {
     // Some unsubscribes happen inside onNext() so need something that supports concurrent modification.
     val delegates = CopyOnWriteArrayList<Subscriber<in U>>()
 
     fun forEachSubscriberWithDbTx(block: Subscriber<in U>.() -> Unit) {
-        (db ?: DatabaseTransactionManager.dataSource).transaction {
+        (db ?: contextDatabase).transaction {
             delegates.filter { !it.isUnsubscribed }.forEach {
                 it.block()
             }

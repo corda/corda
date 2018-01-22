@@ -1,11 +1,11 @@
-package com.r3.corda.networkmanage.doorman
+package com.r3.corda.networkmanage.doorman.webservice
 
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.utils.buildCertPath
+import com.r3.corda.networkmanage.doorman.NetworkManagementWebServer
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
-import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -100,7 +100,7 @@ class RegistrationWebServiceTest : TestBase() {
                     CertificateResponse.Ready(it)
                 } ?: CertificateResponse.NotReady
             }
-            on { processApprovedRequests() }.then {
+            on { processRequests() }.then {
                 val request = X509Utilities.createCertificateSigningRequest(subject, "my@mail.com", keyPair)
                 certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
                     val tlsCert = X509Utilities.createCertificate(
@@ -118,7 +118,7 @@ class RegistrationWebServiceTest : TestBase() {
         startSigningServer(requestProcessor)
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
 
-        requestProcessor.processApprovedRequests()
+        requestProcessor.processRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
         verify(requestProcessor, times(2)).getResponse(any())
@@ -141,7 +141,7 @@ class RegistrationWebServiceTest : TestBase() {
                     CertificateResponse.Ready(it)
                 } ?: CertificateResponse.NotReady
             }
-            on { processApprovedRequests() }.then {
+            on { processRequests() }.then {
                 val request = X509Utilities.createCertificateSigningRequest(
                         CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB").x500Principal,
                         "my@mail.com",
@@ -165,7 +165,7 @@ class RegistrationWebServiceTest : TestBase() {
 
         startSigningServer(storage)
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
-        storage.processApprovedRequests()
+        storage.processRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
         verify(storage, times(2)).getResponse(any())

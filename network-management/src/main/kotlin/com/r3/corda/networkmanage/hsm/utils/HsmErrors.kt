@@ -33,9 +33,9 @@ object HsmErrors {
 fun mapCryptoServerException(exception: Exception): Exception {
     // Try to decode the error code
     val crypto = exception as? CryptoServerException ?: exception.cause as? CryptoServerException
-    if (crypto != null) {
-        return Exception("(CryptoServer) ${HsmErrors.errors[crypto.ErrorCode]}", exception)
+    return if (crypto != null) {
+        Exception("(CryptoServer) ${HsmErrors.errors[crypto.ErrorCode]}", exception)
     } else {
-        return exception
+        exception
     }
 }

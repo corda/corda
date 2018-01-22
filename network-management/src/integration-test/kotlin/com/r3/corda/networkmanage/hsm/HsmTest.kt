@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertTrue
 
 class HsmTest {
@@ -19,7 +20,12 @@ class HsmTest {
     @Rule
     @JvmField
     val hsmSimulator: HsmSimulator = HsmSimulator()
-    val testParameters = Parameters(
+
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
+
+    private val testParameters = Parameters(
             dataSourceProperties = mock(),
             device = "${hsmSimulator.port}@${hsmSimulator.host}",
             keySpecifier = 1,
@@ -29,10 +35,6 @@ class HsmTest {
             keyGroup = "DEV.DOORMAN",
             validDays = 3650
     )
-
-    @Rule
-    @JvmField
-    val tempFolder = TemporaryFolder()
 
     private lateinit var inputReader: InputReader
 
@@ -47,14 +49,12 @@ class HsmTest {
     fun `Authenticator executes the block once user is successfully authenticated`() {
         // given
         val authenticator = Authenticator(testParameters.createProvider(), inputReader = inputReader)
-        var executed = false
+        val executed = AtomicBoolean(false)
 
         // when
-        authenticator.connectAndAuthenticate({ provider, signers ->
-            executed = true
-        })
+        authenticator.connectAndAuthenticate { _, _ -> executed.set(true) }
 
         // then
-        assertTrue(executed)
+        assertTrue(executed.get())
     }
 }

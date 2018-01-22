@@ -10,7 +10,7 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.trace
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.contextDatabase
 import java.util.*
 
 class VaultSoftLockManager private constructor(private val vault: VaultService) {
@@ -52,14 +52,14 @@ class VaultSoftLockManager private constructor(private val vault: VaultService) 
 
     private fun registerSoftLocks(flowId: UUID, stateRefs: NonEmptySet<StateRef>) {
         log.trace { "Reserving soft locks for flow id $flowId and states $stateRefs" }
-        DatabaseTransactionManager.dataSource.transaction {
+        contextDatabase.transaction {
             vault.softLockReserve(flowId, stateRefs)
         }
     }
 
     private fun unregisterSoftLocks(flowId: UUID, logic: FlowLogic<*>) {
         log.trace { "Releasing soft locks for flow ${logic.javaClass.simpleName} with flow id $flowId" }
-        DatabaseTransactionManager.dataSource.transaction {
+        contextDatabase.transaction {
             vault.softLockRelease(flowId)
         }
     }

@@ -29,24 +29,20 @@ import net.corda.node.services.vault.VaultSchemaV1
  * TODO: support plugins for schema version upgrading or custom mapping not supported by original [QueryableState].
  * TODO: create whitelisted tables when a CorDapp is first installed
  */
-class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
-    // Entities for compulsory services
-    object NodeServices
+class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNotarySchemas: Boolean = false) : SchemaService, SingletonSerializeAsToken() {
+    // Core Entities used by a Node
+    object NodeCore
 
-    object NodeServicesV1 : MappedSchema(schemaFamily = NodeServices.javaClass, version = 1,
+    object NodeCoreV1 : MappedSchema(schemaFamily = NodeCore.javaClass, version = 1,
             mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
                     DBTransactionStorage.DBTransaction::class.java,
                     DBTransactionMappingStorage.DBTransactionMapping::class.java,
                     PersistentKeyManagementService.PersistentKey::class.java,
-                    PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     P2PMessagingClient.ProcessedMessage::class.java,
                     P2PMessagingClient.RetryMessage::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    RaftUniquenessProvider.RaftState::class.java,
-                    BFTNonValidatingNotaryService.PersistedCommittedState::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
@@ -67,15 +63,25 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet()) : SchemaSe
         override val migrationResource = "node-notary.changelog-master"
     }
 
+    // Entities used by a Notary
+    object NodeNotary
+
+    object NodeNotaryV1 : MappedSchema(schemaFamily = NodeNotary.javaClass, version = 1,
+            mappedTypes = listOf(PersistentUniquenessProvider.PersistentUniqueness::class.java,
+                    PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
+                    RaftUniquenessProvider.RaftState::class.java,
+                    BFTNonValidatingNotaryService.PersistedCommittedState::class.java
+            ))
+
     // Required schemas are those used by internal Corda services
-    // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaOptions()),
-                    Pair(VaultSchemaV1, SchemaOptions()),
-                    Pair(NodeInfoSchemaV1, SchemaOptions()),
-                    Pair(NodeServicesV1, SchemaOptions()))
+                  Pair(VaultSchemaV1, SchemaOptions()),
+                  Pair(NodeInfoSchemaV1, SchemaOptions()),
+                  Pair(NodeCoreV1, SchemaOptions()))
+    private val notarySchemas = if (includeNotarySchemas) mapOf(Pair(NodeNotaryV1, SchemaOptions())) else emptyMap<MappedSchema, SchemaService.SchemaOptions>()
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
+    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + notarySchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
     override fun selectSchemas(state: ContractState): Iterable<MappedSchema> {

@@ -20,6 +20,7 @@ abstract class TestBase {
             requestId: String = SecureHash.randomSHA256().toString(),
             status: RequestStatus = RequestStatus.NEW,
             legalName: String = "TestLegalName",
+            publicKeyHash: SecureHash = SecureHash.randomSHA256(),
             remark: String = "Test remark",
             request: PKCS10CertificationRequest = mock(),
             certData: CertificateData = mock(),
@@ -29,6 +30,7 @@ abstract class TestBase {
                 requestId = requestId,
                 status = status,
                 legalName = legalName,
+                publicKeyHash = publicKeyHash,
                 remark = remark,
                 certData = certData,
                 request = request,
@@ -36,11 +38,9 @@ abstract class TestBase {
         )
     }
 
-    protected fun certificateData(publicKeyHash: String = SecureHash.randomSHA256().toString(),
-                                  certStatus: CertificateStatus = CertificateStatus.VALID,
+    protected fun certificateData(certStatus: CertificateStatus = CertificateStatus.VALID,
                                   certPath: CertPath = mock()): CertificateData {
         return CertificateData(
-                publicKeyHash = publicKeyHash,
                 certStatus = certStatus,
                 certPath = certPath
         )

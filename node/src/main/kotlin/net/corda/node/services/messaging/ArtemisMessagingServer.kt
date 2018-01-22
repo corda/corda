@@ -8,16 +8,15 @@ import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.node.internal.Node
 import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
@@ -31,7 +30,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
@@ -94,7 +93,7 @@ import javax.security.cert.CertificateException
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val p2pPort: Int,
                              val rpcPort: Int?,
-                             val networkMapCache: NetworkMapCache,
+                             val networkMapCache: NetworkMapCacheInternal,
                              val securityManager: RPCSecurityManager,
                              val maxMessageSize: Int) : SingletonSerializeAsToken() {
     companion object {
@@ -191,7 +190,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         // by having its password be an unknown securely random 128-bit value.
         clusterPassword = BigInteger(128, newSecureRandom()).toString(16)
         queueConfigurations = listOf(
-                queueConfig(P2P_QUEUE, durable = true),
                 // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
                 // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
                 // but these queues are not worth persisting.
@@ -243,7 +241,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     private fun ConfigurationImpl.configureAddressSecurity(): Pair<Configuration, LoginListener> {
         val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
-        securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
+        securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // Each RPC user must have its own role and its own queue. This prevents users accessing each other's queues
         // and stealing RPC responses.
@@ -309,8 +307,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
         if (queueName.startsWith(PEERS_PREFIX)) {
             try {
-                val identity = parsePublicKeyBase58(queueName.substring(PEERS_PREFIX.length))
-                val nodeInfos = networkMapCache.getNodesByLegalIdentityKey(identity)
+                val nodeInfos = networkMapCache.getNodesByOwningKeyIndex(queueName.substring(PEERS_PREFIX.length))
                 if (nodeInfos.isNotEmpty()) {
                     nodeInfos.forEach { deployBridgeToPeer(it) }
                 } else {

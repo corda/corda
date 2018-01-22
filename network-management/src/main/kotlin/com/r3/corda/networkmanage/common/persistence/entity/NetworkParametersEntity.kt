@@ -35,13 +35,15 @@ class NetworkParametersEntity(
         @Column(name = "certificate")
         val certificate: ByteArray?
 ) {
-    fun networkParameters(): NetworkParameters = parametersBytes.deserialize()
+    val isSigned: Boolean get() = certificate != null && signature != null
 
-    // Return signed network parameters or null if they haven't been signed yet.
-    fun signedParameters(): SignedNetworkParameters? {
-        return if (certificate != null && signature != null) {
-            val sigWithCert = DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
-            SignedDataWithCert(SerializedBytes(parametersBytes), sigWithCert)
-        } else null
+    fun toNetworkParameters(): NetworkParameters = parametersBytes.deserialize()
+
+    fun toSignedNetworkParameters(): SignedNetworkParameters {
+        if (certificate == null || signature == null) throw IllegalStateException("Network parameters entity is not signed: $parametersHash")
+        return SignedDataWithCert(
+                SerializedBytes(parametersBytes),
+                DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
+        )
     }
 }

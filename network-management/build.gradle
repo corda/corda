@@ -88,7 +88,7 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
     testCompile "com.spotify:docker-client:8.9.1"
 
-    compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {
+    compile('com.atlassian.jira:jira-rest-java-client-core:5.0.4') {
         // The jira client includes jersey-core 1.5 which breaks everything.
         exclude module: 'jersey-core'
     }

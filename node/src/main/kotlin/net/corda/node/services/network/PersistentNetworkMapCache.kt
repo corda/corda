@@ -160,6 +160,12 @@ open class PersistentNetworkMapCache(
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024, 8, { key -> database.transaction { queryByIdentityKey(session, key) } })
 
+    override fun getNodesByOwningKeyIndex(identityKeyIndex: String): List<NodeInfo> {
+        return database.transaction {
+            queryByIdentityKeyIndex(session, identityKeyIndex)
+        }
+    }
+
     override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address) }
 
     override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = identityByLegalNameCache.get(name).orElse(null)
@@ -245,15 +251,23 @@ open class PersistentNetworkMapCache(
     }
 
     private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
+        return findByIdentityKeyIndex(session, identityKey.toStringShort())
+    }
+
+    private fun findByIdentityKeyIndex(session: Session, identityKeyIndex: String): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val query = session.createQuery(
                 "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKeyHash = :owningKeyHash",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-        query.setParameter("owningKeyHash", identityKey.toStringShort())
+        query.setParameter("owningKeyHash", identityKeyIndex)
         return query.resultList
     }
 
     private fun queryByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfo> {
-        val result = findByIdentityKey(session, identityKey)
+        return queryByIdentityKeyIndex(session, identityKey.toStringShort())
+    }
+
+    private fun queryByIdentityKeyIndex(session: Session, identityKeyIndex: String): List<NodeInfo> {
+        val result = findByIdentityKeyIndex(session, identityKeyIndex)
         return result.map { it.toNodeInfo() }
     }
 
@@ -279,13 +293,13 @@ open class PersistentNetworkMapCache(
 
     private fun queryByAddress(session: Session, hostAndPort: NetworkHostAndPort): NodeInfo? {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.host = :host AND a.port = :port",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
+        query.setMaxResults(1)
         val result = query.resultList
-        return if (result.isEmpty()) null
-        else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
+        return result.map { it.toNodeInfo() }.singleOrNull()
     }
 
     /** Object Relational Mapping support. */

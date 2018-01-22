@@ -1,7 +1,11 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
+import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import net.corda.core.internal.DigitalSignatureWithCert
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.network.NetworkMap
 import javax.persistence.*
 
 @Entity
@@ -23,11 +27,12 @@ class NetworkMapEntity(
         @Column(name = "certificate")
         val certificate: ByteArray
 ) {
-    /**
-     * Deserializes NetworkMapEntity.signatureBytes into the [DigitalSignatureWithCert] instance
-     */
-    fun signatureAndCertificate(): DigitalSignatureWithCert {
-        return DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
-    }
+    fun toNetworkMap(): NetworkMap = networkMap.deserialize()
 
+    fun toSignedNetworkMap(): SignedNetworkMap {
+        return SignedNetworkMap(
+                SerializedBytes(networkMap),
+                DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
+        )
+    }
 }

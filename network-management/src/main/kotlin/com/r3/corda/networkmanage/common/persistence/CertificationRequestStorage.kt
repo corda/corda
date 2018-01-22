@@ -1,12 +1,14 @@
 package com.r3.corda.networkmanage.common.persistence
 
+import net.corda.core.crypto.SecureHash
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.CertPath
 
-data class CertificateData(val publicKeyHash: String, val certStatus: CertificateStatus, val certPath: CertPath)
+data class CertificateData(val certStatus: CertificateStatus, val certPath: CertPath)
 
 data class CertificateSigningRequest(val requestId: String,
                                      val legalName: String,
+                                     val publicKeyHash: SecureHash,
                                      val status: RequestStatus,
                                      val request: PKCS10CertificationRequest,
                                      val remark: String?,
@@ -59,7 +61,7 @@ interface CertificationRequestStorage {
      * @param rejectedBy authority (its identifier) rejecting this request.
      * @param rejectReason brief description of the rejection reason
      */
-    fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String)
+    fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String?)
 
     /**
      * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.SIGNED].

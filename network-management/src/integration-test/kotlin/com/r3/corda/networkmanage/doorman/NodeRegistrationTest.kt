@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
+import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.random63BitValue
@@ -141,11 +142,11 @@ class NodeRegistrationTest : IntegrationTest() {
             start(
                     serverAddress,
                     configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)),
-                    LocalSigner(csrCa.keyPair, arrayOf(csrCa.certificate, rootCaCert)),
+                    CertPathAndKey(listOf(csrCa.certificate, rootCaCert), csrCa.keyPair.private),
                     DoormanConfig(approveAll = true, jiraConfig = null, approveInterval = timeoutMillis),
                     networkParameters?.let {
                         NetworkMapStartParams(
-                                LocalSigner(networkMapCa.keyPair, arrayOf(networkMapCa.certificate, rootCaCert)),
+                                LocalSigner(networkMapCa),
                                 networkParameters,
                                 NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis)
                         )

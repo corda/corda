@@ -27,7 +27,8 @@ import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
@@ -58,8 +59,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
 
         private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
-            val transaction = DatabaseTransactionManager.current()
-            DatabaseTransactionManager.setThreadLocalTx(null)
+            val transaction = contextTransaction
+            contextTransactionOrNull = null
             return TransientReference(transaction)
         }
     }
@@ -234,7 +235,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
 
-            DatabaseTransactionManager.setThreadLocalTx(transaction.value)
+            contextTransactionOrNull = transaction.value
             val event = try {
                 Event.Suspend(
                         ioRequest = ioRequest,

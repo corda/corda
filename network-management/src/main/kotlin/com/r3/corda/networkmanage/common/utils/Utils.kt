@@ -10,13 +10,19 @@ import net.corda.core.internal.SignedDataWithCert
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
+import java.security.KeyPair
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
-import java.security.cert.Certificate
+import java.security.cert.X509Certificate
 
 // TODO These should be defined in node-api
 typealias SignedNetworkParameters = SignedDataWithCert<NetworkParameters>
 typealias SignedNetworkMap = SignedDataWithCert<NetworkMap>
+
+data class CertPathAndKey(val certPath: List<X509Certificate>, val key: PrivateKey) {
+    fun toKeyPair(): KeyPair = KeyPair(certPath[0].publicKey, key)
+}
 
 // TODO: replace this with Crypto.hash when its available.
 /**
@@ -42,7 +48,7 @@ fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Un
 
 class ShowHelpException(val parser: OptionParser, val errorMessage: String? = null) : Exception()
 
-fun buildCertPath(vararg certificates: Certificate): CertPath = X509CertificateFactory().delegate.generateCertPath(certificates.asList())
+fun buildCertPath(vararg certificates: X509Certificate): CertPath = X509CertificateFactory().generateCertPath(certificates.asList())
 
 fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())
 
