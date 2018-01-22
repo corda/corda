@@ -4,6 +4,8 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
@@ -43,8 +45,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     }
 
     private lateinit var env: SerializationEnvironment
-    var serializationFactory = env.serializationFactory
-    var checkpointContext = env.checkpointContext
+    lateinit var serializationFactory : SerializationFactory
+    lateinit var checkpointContext : SerializationContext
 
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())
@@ -55,6 +57,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
 
     private fun init(envLabel: String) {
         env = createTestSerializationEnv(envLabel)
+        serializationFactory = env.serializationFactory
+        checkpointContext = env.checkpointContext
     }
 
     private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
