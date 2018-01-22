@@ -8,12 +8,15 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
-import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.core.internal.NETWORK_PARAMS_FILE_NAME
+import net.corda.core.internal.NetworkParameters
+import net.corda.nodeapi.internal.crypto.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.CompatibilityZoneParams
@@ -28,6 +31,7 @@ import java.net.URL
 import java.time.Instant
 import kotlin.streams.toList
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class NetworkMapTest {
     @Rule
@@ -45,7 +49,7 @@ class NetworkMapTest {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
         compatibilityZone = CompatibilityZoneParams(URL("http://$address"), publishNotaries = {
-            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
         })
     }
 
@@ -70,6 +74,27 @@ class NetworkMapTest {
             // We use a random modified time above to make the network parameters unqiue so that we're sure they came
             // from the server
             assertEquals(networkMapServer.networkParameters, networkParameters)
+        }
+    }
+
+    @Test
+    fun `node correcty goes through network parameters update process on the startup`() {
+        internalDriver(
+                startNodesInProcess = true,
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false,
+                notarySpecs = emptyList()
+        ) {
+            val aliceDir = baseDirectory(ALICE_NAME)
+            aliceDir.createDirectories()
+            val oldParameters = testNetworkParameters(emptyList(), epoch = 1)
+            NetworkParametersCopier(oldParameters).install(aliceDir)
+            NetworkParametersCopier(networkMapServer.networkParameters).install(aliceDir, update = true)
+            startNode(providedName = ALICE_NAME).getOrThrow()
+            assertFalse((aliceDir / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
+            val parametersFromFile = (aliceDir / NETWORK_PARAMS_FILE_NAME).readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+            assertEquals(networkMapServer.networkParameters, parametersFromFile)
         }
     }
 

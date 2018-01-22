@@ -22,6 +22,8 @@ The set of REST end-points for the network map service are as follows.
 +================+=========================================+==============================================================================================================================================+
 | POST           | /network-map/publish                    | For the node to upload its signed ``NodeInfo`` object to the network map.                                                                    |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| POST           | /network-map/ack-parameters             | For the node operator to acknowledge network map that new parameters were accepted for future update.                                        |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map                            | Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.         |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |

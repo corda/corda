@@ -1,22 +1,37 @@
-package net.corda.nodeapi.internal.network
+package net.corda.core.internal
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.internal.CertRole
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import java.security.cert.X509Certificate
 import java.time.Instant
 
 const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
+const val NETWORK_PARAMS_UPDATE_FILE_NAME = "network-parameters-update"
 
 /**
  * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
+ * @property parametersUpdate if present means that network operator scheduled update of network parameters
  */
 @CordaSerializable
-data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameterHash: SecureHash)
+data class NetworkMap(
+        val nodeInfoHashes: List<SecureHash>,
+        val networkParameterHash: SecureHash,
+        val parametersUpdate: ParametersUpdate?
+)
+
+/**
+ * @property newParametersHash Hash of the new [NetworkParameters], which will be requested from network map
+ * @property description Short description of the update
+ * @property flagDay initially set to null, when most of the participants of the network agree on the new parameters the network
+ * operator decides when to switch to using new parameters
+ */
+@CordaSerializable
+data class ParametersUpdate(
+        val newParametersHash: SecureHash,
+        val description: String,
+        val flagDay: Instant?
+)
 
 /**
  * @property minimumPlatformVersion Minimum version of Corda platform that is required for nodes in the network.
@@ -50,9 +65,3 @@ data class NetworkParameters(
 
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
-
-fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
-    require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
-    X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
-    return verified()
-}

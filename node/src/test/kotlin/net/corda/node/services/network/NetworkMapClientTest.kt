@@ -1,12 +1,16 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
@@ -89,5 +93,25 @@ class NetworkMapClientTest {
     @Test
     fun `get hostname string from http response correctly`() {
         assertEquals("test.host.name", networkMapClient.myPublicHostname())
+    }
+
+    @Test
+    fun `handle parameters update`() {
+        val nextParameters = testNetworkParameters(emptyList(), epoch = 2)
+        val hash1 = server.networkParameters.serialize().hash
+        val hash2 = nextParameters.serialize().hash
+        val description = "Test parameters"
+        server.scheduleParametersUpdate(nextParameters, description)
+        val (networkMap) = networkMapClient.getNetworkMap()
+        assertEquals(networkMap.networkParameterHash, hash1)
+        assertEquals(networkMap.parametersUpdate?.description, description)
+        assertEquals(networkMap.parametersUpdate?.newParametersHash, hash2)
+        val params1 = networkMapClient.getNetworkParameters(hash1).verified()
+        val params2 = networkMapClient.getNetworkParameters(hash2).verified()
+        assertEquals(params1, server.networkParameters)
+        assertEquals(params2, nextParameters)
+        val keyPair = Crypto.generateKeyPair()
+        val signedHash = SignedData(hash2.serialize(), keyPair.private.sign(hash2.serialize().bytes, keyPair.public))
+        networkMapClient.ackNetworkParametersUpdate(signedHash)
     }
 }

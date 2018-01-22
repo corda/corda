@@ -6,6 +6,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -19,6 +20,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -46,6 +48,18 @@ internal class CordaRPCOpsImpl(
         val (snapshot, updates) = networkMapFeed()
         updates.notUsed()
         return snapshot
+    }
+
+    override fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
+        return services.networkMapUpdater.track()
+    }
+
+    override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
+        services.networkMapUpdater.acceptNewNetworkParameters(
+                parametersHash,
+                // TODO When multiple identities design will be better specified this should be signature from node operator.
+                { hash -> SignedData(hash.serialize(), services.keyManagementService.sign(hash.serialize().bytes, services.myInfo.legalIdentities[0].owningKey)) }
+        )
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {

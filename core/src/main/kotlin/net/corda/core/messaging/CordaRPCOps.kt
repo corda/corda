@@ -13,6 +13,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -71,6 +72,14 @@ sealed class StateMachineUpdate {
 
     data class Removed(override val id: StateMachineRunId, val result: Try<*>) : StateMachineUpdate()
 }
+
+@CordaSerializable
+data class ParametersUpdateInfo(
+        val hash: SecureHash,
+        val parameters: NetworkParameters,
+        val description: String,
+        val flagDay: Instant?
+)
 
 @CordaSerializable
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
@@ -204,6 +213,23 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
+
+    /**
+     * Returns [DataFeed] object containing information on currently scheduled parameters update (null if none were scheduled)
+     * and observable with future update events.
+     */
+    @RPCReturnsObservables
+    fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
+
+    /**
+     * Accept network parameters with given hash, usually hash is obtained through [newNetworkMapParameters] method.
+     * On approval, new network parameters are saved in node's base directory as `network-parameters-update` file.
+     * Information is sent back to the zone operator that the node accepted the parameters update - this process cannot be
+     * revoked.
+     * Only parameters that are scheduled for update can be accepted, if different hash is provided this method will fail.
+     */
+    @Throws(IllegalArgumentException::class)
+    fun acceptNewNetworkParameters(parametersHash: SecureHash)
 
     /**
      * Start the given flow with the given arguments. [logicType] must be annotated

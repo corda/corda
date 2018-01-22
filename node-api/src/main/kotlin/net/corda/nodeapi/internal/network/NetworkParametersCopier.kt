@@ -1,8 +1,6 @@
 package net.corda.nodeapi.internal.network
 
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
-import net.corda.core.internal.signWithCert
+import net.corda.core.internal.*
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -21,9 +19,10 @@ class NetworkParametersCopier(
             networkMapCa.certificate
     ).serialize()
 
-    fun install(nodeDir: Path) {
+    fun install(nodeDir: Path, update: Boolean = false) {
+        val fileName = if (update) NETWORK_PARAMS_UPDATE_FILE_NAME else NETWORK_PARAMS_FILE_NAME
         try {
-            serialisedSignedNetParams.open().copyTo(nodeDir / NETWORK_PARAMS_FILE_NAME, *copyOptions)
+            serialisedSignedNetParams.open().copyTo(nodeDir / fileName, *copyOptions)
         } catch (e: FileAlreadyExistsException) {
             // This is only thrown if the file already exists and we didn't specify to overwrite it. In that case we
             // ignore this exception as we're happy with the existing file.

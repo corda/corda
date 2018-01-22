@@ -167,7 +167,7 @@ class NetworkBootstrapper {
                 epoch = 1
         ), overwriteFile = true)
 
-        nodeDirs.forEach(copier::install)
+        nodeDirs.forEach { copier.install(it) }
     }
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
