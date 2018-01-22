@@ -2,7 +2,7 @@ package net.corda.finance.contracts.universal
 
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.TestIdentity
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals

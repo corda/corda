@@ -2,14 +2,13 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.singleIdentity
-import net.corda.testing.singleIdentityAndCert
+import net.corda.testing.core.singleIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test

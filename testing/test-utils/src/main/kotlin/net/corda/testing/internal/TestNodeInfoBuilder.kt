@@ -8,7 +8,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.core.getTestPartyAndCertificate
 import java.security.PrivateKey
 
 class TestNodeInfoBuilder {

@@ -24,8 +24,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.internal.poll
-import net.corda.testing.DUMMY_BANK_B_NAME
-import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL

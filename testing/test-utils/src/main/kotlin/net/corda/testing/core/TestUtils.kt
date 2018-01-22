@@ -1,7 +1,7 @@
 @file:Suppress("UNUSED_PARAMETER")
-@file:JvmName("CoreTestUtils")
+@file:JvmName("TestUtils")
 
-package net.corda.testing
+package net.corda.testing.core
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
@@ -20,9 +20,6 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import org.bouncycastle.asn1.x509.GeneralName
-import org.bouncycastle.asn1.x509.GeneralSubtree
-import org.bouncycastle.asn1.x509.NameConstraints
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
