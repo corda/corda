@@ -25,10 +25,11 @@ class ContractAttachmentSerializerTest {
     private lateinit var context: SerializationContext
     private lateinit var contextWithToken: SerializationContext
     private val mockServices = MockServices(emptyList(), rigorousMock(), CordaX500Name("MegaCorp", "London", "GB"))
+
     @Before
     fun setup() {
-        factory = testSerialization.env.serializationFactory
-        context = testSerialization.env.checkpointContext
+        factory = testSerialization.serializationFactory
+        context = testSerialization.checkpointContext
         contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl(Any(), factory, context, mockServices))
     }
 
