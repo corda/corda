@@ -48,7 +48,7 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     RunOnceService.MutualExclusion::class.java
             )){
-        override val migrationResource = "node-services.changelog-master"
+        override val migrationResource = "node-core.changelog-master"
     }
 
     // Entities used by a Notary
@@ -59,7 +59,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
                     RaftUniquenessProvider.RaftState::class.java,
                     BFTNonValidatingNotaryService.PersistedCommittedState::class.java
-            ))
+            )){
+        override val migrationResource = "node-notary.changelog-master"
+    }
 
     // Required schemas are those used by internal Corda services
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
