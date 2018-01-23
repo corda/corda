@@ -1,20 +1,37 @@
 package net.corda.node.internal
 
+import com.codahale.metrics.MetricFilter
+import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.graphite.GraphiteReporter
+import com.codahale.metrics.graphite.PickledGraphite
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.GraphiteOptions
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 
 class EnterpriseNode(configuration: NodeConfiguration,
                      versionInfo: VersionInfo) : Node(configuration, versionInfo) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
+
+        private fun defaultGraphitePrefix(legalName: CordaX500Name): String {
+            return legalName.organisation + "_" + InetAddress.getLocalHost().hostAddress.trim().replace(".", "_")
+        }
+
+        private fun getGraphitePrefix(configuration: NodeConfiguration): String {
+            return configuration.graphiteOptions!!.prefix ?: defaultGraphitePrefix(configuration.myLegalName)
+        }
     }
 
     class Startup(args: Array<String>) : NodeStartup(args) {
@@ -102,5 +119,29 @@ D""".trimStart()
 
             logger.info("Relay setup successfully!")
         }
+    }
+
+    private fun registerOptionalMetricsReporter(configuration: NodeConfiguration, metrics: MetricRegistry) {
+        if (configuration.graphiteOptions != null) {
+            nodeReadyFuture.thenMatch({
+                serverThread.execute {
+                    GraphiteReporter.forRegistry(metrics)
+                            .prefixedWith(getGraphitePrefix(configuration))
+                            .convertDurationsTo(TimeUnit.MILLISECONDS)
+                            .convertRatesTo(TimeUnit.MINUTES)
+                            .filter(MetricFilter.ALL)
+                            .build(PickledGraphite(configuration.graphiteOptions!!.server, configuration.graphiteOptions!!.port))
+                            .start(configuration.graphiteOptions!!.sampleInvervallSeconds, TimeUnit.SECONDS)
+                }
+            }, { th ->
+                log.error("Unexpected exception", th)
+            })
+        }
+    }
+
+    override fun start(): StartedNode<Node> {
+        val started = super.start()
+        registerOptionalMetricsReporter(configuration, started.services.monitoringService.metrics)
+        return started
     }
 }

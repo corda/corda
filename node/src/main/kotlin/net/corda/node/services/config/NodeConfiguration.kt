@@ -45,6 +45,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val relay: RelayConfiguration?
     val useAMQPBridges: Boolean get() = true
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
+    val graphiteOptions: GraphiteOptions? get() = null
+
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -58,6 +60,13 @@ interface NodeConfiguration : NodeSSLConfiguration {
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
+
+data class GraphiteOptions(
+        val server: String,
+        val port: Int,
+        val prefix: String? = null, // defaults to org name and ip address when null
+        val sampleInvervallSeconds: Long = 60
+)
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
@@ -142,7 +151,8 @@ data class NodeConfigurationImpl(
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(exportHibernateJMXStatistics = devMode),
         override val useAMQPBridges: Boolean = true,
-        override val transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize
+        override val transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize,
+        override val graphiteOptions: GraphiteOptions? = null
         ) : NodeConfiguration {
 
     override val exportJMXto: String get() = "http"

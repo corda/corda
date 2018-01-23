@@ -98,6 +98,12 @@ class StateMachineManagerImpl(
     override val allStateMachines: List<FlowLogic<*>>
         get() = mutex.locked { flows.values.map { it.fiber.logic } }
 
+
+    private val totalStartedFlows = metrics.counter("Flows.Started")
+    private val totalFinishedFlows = metrics.counter("Flows.Finished")
+    private val totalSuccessFlows = metrics.counter("Flows.Success")
+    private val totalErrorFlows = metrics.counter("Flows.Error")
+
     /**
      * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
      * which may change across restarts.
@@ -194,6 +200,7 @@ class StateMachineManagerImpl(
             if (flow != null) {
                 logger.debug("Killing flow known to physical node.")
                 decrementLiveFibers()
+                totalFinishedFlows.inc()
                 unfinishedFibers.countDown()
                 try {
                     flow.fiber.interrupt()
@@ -243,6 +250,7 @@ class StateMachineManagerImpl(
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
+                totalFinishedFlows.inc()
                 unfinishedFibers.countDown()
                 return when (removalReason) {
                     is FlowRemovalReason.OrderlyFinish -> removeFlowOrderly(flow, removalReason, lastState)
@@ -431,7 +439,7 @@ class StateMachineManagerImpl(
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
-        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
+        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler, totalSuccessFlows, totalErrorFlows)
         val resultFuture = openFuture<Any?>()
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
@@ -453,6 +461,7 @@ class StateMachineManagerImpl(
         mutex.locked {
             startedFutures[flowId] = startedFuture
         }
+        totalStartedFlows.inc()
         addAndStartFlow(flowId, Flow(flowStateMachineImpl, resultFuture))
         return startedFuture.map { flowStateMachineImpl as FlowStateMachine<A> }
     }
@@ -514,7 +523,7 @@ class StateMachineManagerImpl(
                         isRemoved = false,
                         flowLogic = logic
                 )
-                val fiber = FlowStateMachineImpl(id, logic, scheduler)
+                val fiber = FlowStateMachineImpl(id, logic, scheduler, totalSuccessFlows, totalErrorFlows)
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
                 fiber.transientState = TransientReference(state)
                 fiber.logic.stateMachine = fiber
@@ -586,7 +595,8 @@ class StateMachineManagerImpl(
                 checkpointStorage,
                 flowMessaging,
                 this,
-                checkpointSerializationContext
+                checkpointSerializationContext,
+                metrics
         )
     }
 

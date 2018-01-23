@@ -191,3 +191,12 @@ path to the node's base directory.
 
 :useAMQPBridges: Optionally can be set to ``false`` to use Artemis CORE Bridges for peer-to-peer communications.
         Otherwise, defaults to ``true`` and the AMQP 1.0 protocol will be used for message transfer between nodes.
+
+:graphiteOptions: Optionally export metrics to a graphite server. When specified, the node will push out all JMX
+                metrics to the specified Graphite server at regular intervals.
+
+            :server: Server name or ip address of the graphite instance.
+            :port: Port the graphite instance is listening at.
+            :prefix: Optional prefix string to identify metrics from this node, will default to a string made up
+                    from Organisation Name and ip address.
+            :sampleIntervallSeconds: optional wait time between pushing metrics. This will default to 60 seconds.

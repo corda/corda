@@ -2,6 +2,10 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
+import com.codahale.metrics.Gauge
+import com.codahale.metrics.Histogram
+import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.SlidingTimeWindowReservoir
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -25,12 +29,31 @@ class ActionExecutorImpl(
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
         private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: SerializationContext
+        private val checkpointSerializationContext: SerializationContext,
+        metrics: MetricRegistry
 ) : ActionExecutor {
 
     private companion object {
         val log = contextLogger()
     }
+
+    private class LatchedGauge : Gauge<Long> {
+        private var value: Long = 0
+        fun update(value: Long) {
+            this.value = value
+        }
+
+        override fun getValue(): Long {
+            val retVal = value
+            value = 0
+            return retVal
+        }
+    }
+
+    private val checkpointingMeter = metrics.meter("Flows.Checkpointing Rate")
+    private val checkpointSizesThisSecond = SlidingTimeWindowReservoir(1, TimeUnit.SECONDS)
+    private val checkpointBandwidthHist = metrics.register("Flows.CheckpointVolumeBytesPerSecondHist", Histogram(SlidingTimeWindowReservoir(1, TimeUnit.DAYS)))
+    private val checkpointBandwidth = metrics.register("Flows.CheckpointVolumeBytesPerSecondCurrent", LatchedGauge())
 
     @Suspendable
     override fun executeAction(fiber: FlowFiber, action: Action) {
@@ -72,6 +95,11 @@ class ActionExecutorImpl(
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
         val checkpointBytes = serializeCheckpoint(action.checkpoint)
         checkpointStorage.addCheckpoint(action.id, checkpointBytes)
+        checkpointingMeter.mark()
+        checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
+        val checkpointVolume = checkpointSizesThisSecond.snapshot.values.sum()
+        checkpointBandwidthHist.update(checkpointVolume)
+        checkpointBandwidth.update(checkpointVolume)
     }
 
     @Suspendable

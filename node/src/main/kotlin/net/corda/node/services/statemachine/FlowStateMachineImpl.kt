@@ -6,6 +6,8 @@ import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
+import com.codahale.metrics.Counter
+import com.codahale.metrics.Metric
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
@@ -41,7 +43,9 @@ class TransientReference<out A>(@Transient val value: A)
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler
+                              scheduler: FiberScheduler,
+                              private val totalSuccessMetric: Counter,
+                              private val totalErrorMetric: Counter
                               // Store the Party rather than the full cert path with PartyAndCertificate
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
@@ -150,9 +154,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
+                totalSuccessMetric.inc()
                 Event.FlowFinish(resultOrError.value)
             }
             is Try.Failure -> {
+                totalErrorMetric.inc()
                 Event.Error(resultOrError.exception)
             }
         }
