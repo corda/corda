@@ -5,6 +5,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.testsupport.withCertificates
 import net.corda.node.testsupport.withKeyStores
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
@@ -29,7 +30,7 @@ class RpcSslTest {
 
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
                 var successful = false
-                driver(isDebug = true, startNodesInProcess = true) {
+                driver(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
                         node.rpcClientToNode(clientSslOptions).start(user.username, user.password).use { connection ->
                             connection.proxy.apply {
@@ -48,7 +49,7 @@ class RpcSslTest {
     fun rpc_client_not_using_ssl() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
-        driver(isDebug = true, startNodesInProcess = true) {
+        driver(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree) {
             startNode(rpcUsers = listOf(user)).getOrThrow().use { node ->
                 node.rpcClientToNode().start(user.username, user.password).use { connection ->
                     connection.proxy.apply {

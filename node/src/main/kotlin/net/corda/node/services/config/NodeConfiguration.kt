@@ -190,6 +190,10 @@ data class NodeRpcSettings(
             override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
             override val useSsl = this@NodeRpcSettings.useSsl
             override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+
+            override fun toString(): String {
+                return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
+            }
         }
     }
 }

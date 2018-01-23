@@ -154,7 +154,7 @@ open class Node(configuration: NodeConfiguration,
         val advertisedAddress = info.addresses.first()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-        rpcMessagingClient = RPCMessagingClient(configuration, rpcServerAddresses.admin, networkParameters.maxMessageSize)
+        rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, rpcServerAddresses.admin, networkParameters.maxMessageSize)
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
