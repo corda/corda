@@ -12,6 +12,6 @@ interface ArtemisBroker : LifecycleSupport, AutoCloseable {
     override fun close() = stop()
 }
 
-data class BrokerAddresses(val public: NetworkHostAndPort, private val adminArg: NetworkHostAndPort?) {
-    val admin = adminArg ?: public
+data class BrokerAddresses(val primary: NetworkHostAndPort, private val adminArg: NetworkHostAndPort?) {
+    val admin = adminArg ?: primary
 }

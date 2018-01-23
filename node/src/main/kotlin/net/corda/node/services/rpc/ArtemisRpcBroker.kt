@@ -20,7 +20,6 @@ import java.io.IOException
 import java.nio.file.Path
 import java.security.KeyStoreException
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletableFuture.runAsync
 import javax.security.auth.login.AppConfigurationEntry
 
 internal class ArtemisRpcBroker internal constructor(
@@ -67,7 +66,7 @@ internal class ArtemisRpcBroker internal constructor(
     private val server = initialiseServer()
 
     private fun initialiseServer(): ActiveMQServer {
-        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.public, adminAddressOptional, sslOptions, useSsl)
+        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.primary, adminAddressOptional, sslOptions, useSsl)
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener, sslOptions)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {

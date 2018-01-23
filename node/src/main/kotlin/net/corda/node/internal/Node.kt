@@ -199,8 +199,8 @@ open class Node(configuration: NodeConfiguration,
         val addresses = mutableListOf<NetworkHostAndPort>()
         addresses.add(configuration.messagingServerAddress ?: getAdvertisedAddress())
         rpcBroker?.addresses?.let {
-            addresses.add(it.public)
-            if (it.admin != it.public) {
+            addresses.add(it.primary)
+            if (it.admin != it.primary) {
                 addresses.add(it.admin)
             }
         }

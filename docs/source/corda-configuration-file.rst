@@ -99,7 +99,7 @@ path to the node's base directory.
         :useSsl: (optional) boolean, indicates whether the node should require clients to use SSL for RPC connections, defaulted to ``false``.
         :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaulted to ``false``.
         :address: (optional) host and port for the RPC server binding, if any.
-        :adminAddress: (optional) host and port for the RPC admin binding (only required when ``useSsl`` is ``false`` to ensure queue privileges are reserved to the node).
+        :adminAddress: (optional) host and port for the RPC admin binding (only required when ``useSsl`` is ``false``, because the node connects to Artemis using SSL to ensure admin privileges are not accessible outside the node).
         :ssl: (optional) SSL settings for the RPC server.
 
                 :keyStorePassword: password for the key store.

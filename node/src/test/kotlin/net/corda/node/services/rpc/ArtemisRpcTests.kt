@@ -178,7 +178,7 @@ class ArtemisRpcTests {
             RPCMessagingClient(brokerSslOptions, broker.addresses.admin, maxMessageSize).use { server ->
                 server.start(TestRpcOpsImpl(), securityManager, broker.serverControl)
 
-                val client = RPCClient<TestRpcOps>(tcpTransport(ConnectionDirection.Outbound(), broker.addresses.public, clientSslOptions))
+                val client = RPCClient<TestRpcOps>(tcpTransport(ConnectionDirection.Outbound(), broker.addresses.primary, clientSslOptions))
 
                 clientConnectionSpy {
                     client.start(TestRpcOps::class.java, user.username, user.password).use { connection ->
