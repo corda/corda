@@ -160,13 +160,20 @@ private class HeadlessLauncher(jarName: String, dir: File, debugPort: Int?, moni
 private class OSXTabbingLauncher(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
     : Launcher(jarName, dir, debugPort, monitoringPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
     override fun toProcess(dir: File): RunningProcess {
-        val processCommand = listOf("osascript", "-e", """tell app "Terminal"
-    activate
-    delay 0.5
-    tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
-    delay 0.5
-    do script "bash -c 'cd \"$dir\" ; \"${javaCommand.joinToString("""\" \"""")}\" && exit'" in selected tab of the front window
-end tell""")
+        val terminalActivateCode = """
+            tell app "Terminal"
+            activate
+            delay 0.5
+            """
+        val newTabCode = """
+            tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
+            end tell
+            """
+        val terminalActivateProcess = ProcessBuilder(listOf("osascript", "-e", terminalActivateCode))
+        val newTabProcesses = ProcessBuilder(listOf("osascript", "-e", newTabCode))
+        listOf(terminalActivateProcess, newTabProcesses).forEach { it.inheritIO().start().waitFor() }
+        val processCommand = listOf("osascript", "-e",
+                """"do script "bash -c 'cd \"$dir\" ; \"${javaCommand.joinToString("""\" \"""")}\" && exit'" in selected tab of the front window""")
         print("Sleeping for 1000 millis to allow OSX terminal to catch up")
         Thread.sleep(1000)
         return RunningProcess(ProcessBuilder(processCommand).directory(dir).start(), processCommand.joinToString(" "));
