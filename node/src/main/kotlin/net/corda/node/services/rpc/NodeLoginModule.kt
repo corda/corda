@@ -36,9 +36,7 @@ import javax.security.cert.X509Certificate
  * valid RPC users. RPC clients are given permission to perform RPC and nothing else.
  */
 internal class NodeLoginModule : LoginModule {
-
     companion object {
-
         internal const val NODE_ROLE = "SystemRoles/Node"
         internal const val RPC_ROLE = "SystemRoles/RPC"
 
@@ -60,7 +58,6 @@ internal class NodeLoginModule : LoginModule {
     private val principals = ArrayList<Principal>()
 
     override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
-
         this.subject = subject
         this.callbackHandler = callbackHandler
         securityManager = uncheckedCast(options[SECURITY_MANAGER_ARG])
@@ -72,7 +69,6 @@ internal class NodeLoginModule : LoginModule {
     }
 
     override fun login(): Boolean {
-
         val nameCallback = NameCallback("Username: ")
         val passwordCallback = PasswordCallback("Password: ", false)
         val certificateCallback = CertificateCallback()
@@ -118,13 +114,11 @@ internal class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateNode(certificates: Array<X509Certificate>) {
-
         nodeCertCheck.checkCertificateChain(certificates)
         principals += RolePrincipal(NodeLoginModule.NODE_ROLE)
     }
 
     private fun authenticateRpcUser(username: String, password: Password, certificates: Array<X509Certificate>, useSsl: Boolean) {
-
         if (useSsl) {
             rpcCertCheck.checkCertificateChain(certificates)
             // no point in matching username with CN because companies wouldn't want to provide a certificate for each user
@@ -136,7 +130,6 @@ internal class NodeLoginModule : LoginModule {
     }
 
     private fun determineUserRole(certificates: Array<X509Certificate>, username: String, useSsl: Boolean): String? {
-
         return when (username) {
             ArtemisMessagingComponent.NODE_USER -> {
                 require(certificates.isNotEmpty()) { "No TLS?" }
@@ -152,7 +145,6 @@ internal class NodeLoginModule : LoginModule {
     }
 
     override fun commit(): Boolean {
-
         val result = loginSucceeded
         if (result) {
             subject.principals.addAll(principals)
@@ -162,19 +154,16 @@ internal class NodeLoginModule : LoginModule {
     }
 
     override fun abort(): Boolean {
-
         clear()
         return true
     }
 
     override fun logout(): Boolean {
-
         subject.principals.removeAll(principals)
         return true
     }
 
     private fun clear() {
-
         loginSucceeded = false
     }
 }

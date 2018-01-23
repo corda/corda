@@ -29,7 +29,6 @@ class UnsafeCertificatesFactory(
         private val keyStoreType: String = defaults.keyStoreType) {
 
     companion object {
-
         private const val KEY_TYPE_RSA = "RSA"
         private const val SIG_ALG_SHA_RSA = "SHA1WithRSA"
         private const val KEY_SIZE = 1024
@@ -60,20 +59,16 @@ class UnsafeCertificatesFactory(
 }
 
 class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
-
     fun save(directory: Path = Files.createTempDirectory(null)): AutoClosableSSLConfiguration {
-
         val keyStoreFile = keyStore.toTemporaryFile("sslkeystore", directory = directory)
         val trustStoreFile = trustStore.toTemporaryFile("truststore", directory = directory)
 
         val sslConfiguration = sslConfiguration(directory)
 
         return object : AutoClosableSSLConfiguration {
-
             override val value = sslConfiguration
 
             override fun close() {
-
                 keyStoreFile.close()
                 trustStoreFile.close()
             }
@@ -84,16 +79,13 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {
-
     val value: SslOptions
 }
 
 typealias KeyStoreEntry = Pair<String, UnsafeCertificate>
 
 data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) : Iterable<KeyStoreEntry> {
-
     companion object {
-
         private const val JKS_TYPE = "JKS"
 
         fun create(type: String, password: String) = UnsafeKeyStore(newKeyStore(type, password), password)
@@ -106,7 +98,6 @@ data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) 
     override fun iterator(): Iterator<Pair<String, UnsafeCertificate>> = delegate.aliases().toList().map { alias -> alias to get(alias) }.iterator()
 
     operator fun get(alias: String): UnsafeCertificate {
-
         return when {
             delegate.isKeyEntry(alias) -> delegate.getCertificateAndKeyPair(alias, password).unsafe()
             else -> UnsafeCertificate(delegate.getX509Certificate(alias), null)
@@ -114,7 +105,6 @@ data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) 
     }
 
     operator fun set(alias: String, certificate: UnsafeCertificate) {
-
         delegate.setCertificateEntry(alias, certificate.value)
         delegate.setKeyEntry(alias, certificate.privateKey, password.toCharArray(), arrayOf(certificate.value))
     }
@@ -122,13 +112,11 @@ data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) 
     fun save(path: Path) = delegate.save(path, password)
 
     fun toTemporaryFile(fileName: String, fileExtension: String? = delegate.type.toLowerCase(), directory: Path): TemporaryFile {
-
         return TemporaryFile("$fileName.$fileExtension", directory).also { save(it.path) }
     }
 }
 
 class TemporaryFile(fileName: String, val directory: Path) : AutoCloseable {
-
     private val file = (directory / fileName).toFile()
     init {
         file.createNewFile()
@@ -141,7 +129,6 @@ class TemporaryFile(fileName: String, val directory: Path) : AutoCloseable {
 }
 
 data class UnsafeCertificate(val value: X509Certificate, val privateKey: PrivateKey?) {
-
     val keyPair = KeyPair(value.publicKey, privateKey)
 
     val principal: X500Principal get() = value.subjectX500Principal
@@ -149,7 +136,6 @@ data class UnsafeCertificate(val value: X509Certificate, val privateKey: Private
     val issuer: X500Principal get() = value.issuerX500Principal
 
     fun createSigned(subject: X500Principal, keyType: String, signatureAlgorithm: String, keySize: Int, certificatesValidityWindow: CertificateValidityWindow): UnsafeCertificate {
-
         val keyGen = keyGen(keyType, signatureAlgorithm, keySize)
 
         return UnsafeCertificate(X509Utilities.createCertificate(
@@ -166,7 +152,6 @@ data class UnsafeCertificate(val value: X509Certificate, val privateKey: Private
 }
 
 data class CertificateValidityWindow(val from: Instant, val to: Instant) {
-
     constructor(from: Instant, duration: Duration) : this(from, from.plus(duration))
 
     val duration = Duration.between(from, to)!!
@@ -175,7 +160,6 @@ data class CertificateValidityWindow(val from: Instant, val to: Instant) {
 }
 
 private fun createSelfSigned(name: X500Name, keyType: String, signatureAlgorithm: String, keySize: Int, certificatesValidityWindow: CertificateValidityWindow): UnsafeCertificate {
-
     val keyGen = keyGen(keyType, signatureAlgorithm, keySize)
     return UnsafeCertificate(keyGen.getSelfCertificate(name, certificatesValidityWindow.duration.toMillis()), keyGen.privateKey)
 }
@@ -185,14 +169,12 @@ private fun CordaX500Name.asX500Name(): X500Name = X500Name.asX500Name(x500Princ
 private fun CertificateAndKeyPair.unsafe() = UnsafeCertificate(certificate, keyPair.private)
 
 private fun keyGen(keyType: String, signatureAlgorithm: String, keySize: Int): CertAndKeyGen {
-
     val keyGen = CertAndKeyGen(keyType, signatureAlgorithm)
     keyGen.generate(keySize)
     return keyGen
 }
 
 private fun newKeyStore(type: String, password: String): KeyStore {
-
     val keyStore = KeyStore.getInstance(type)
     // Loading creates the store, can't do anything with it until it's loaded
     keyStore.load(null, password.toCharArray())
@@ -201,7 +183,6 @@ private fun newKeyStore(type: String, password: String): KeyStore {
 }
 
 fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: SslOptions, clientSslOptions: SslOptions) -> Unit) {
-
     val serverDir = Files.createTempDirectory(null)
     FileUtils.forceDeleteOnExit(serverDir.toFile())
 
@@ -209,9 +190,7 @@ fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOption
     FileUtils.forceDeleteOnExit(clientDir.toFile())
 
     server.save(serverDir).use { serverSslConfiguration ->
-
         client.save(clientDir).use { clientSslConfiguration ->
-
             action(serverSslConfiguration.value, clientSslConfiguration.value)
         }
     }
@@ -220,7 +199,6 @@ fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOption
 }
 
 fun withCertificates(factoryDefaults: UnsafeCertificatesFactory.Defaults = UnsafeCertificatesFactory.defaults(), action: (server: KeyStores, client: KeyStores, createSelfSigned: (name: CordaX500Name) -> UnsafeCertificate, createSignedBy: (name: CordaX500Name, issuer: UnsafeCertificate) -> UnsafeCertificate) -> Unit) {
-
     val factory = UnsafeCertificatesFactory(factoryDefaults)
     val server = factory.newKeyStores("serverKeyStorePass", "serverTrustKeyStorePass")
     val client = factory.newKeyStores("clientKeyStorePass", "clientTrustKeyStorePass")

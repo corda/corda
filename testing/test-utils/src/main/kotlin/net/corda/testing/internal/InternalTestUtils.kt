@@ -119,7 +119,6 @@ fun createDevNodeCaCertPath(
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
 
 fun SslOptions.useSslRpcOverrides(): Map<String, String> {
-
     return mapOf(
             "rpcSettings.useSsl" to "true",
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
@@ -129,7 +128,6 @@ fun SslOptions.useSslRpcOverrides(): Map<String, String> {
 }
 
 fun SslOptions.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
-
     return mapOf(
             "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
             "rpcSettings.useSsl" to "false",

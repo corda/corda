@@ -39,7 +39,7 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class ArtemisMessagingTests {
+class ArtemisMessagingTest {
     companion object {
         const val TOPIC = "platform.self"
     }

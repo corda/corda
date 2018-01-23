@@ -34,7 +34,6 @@ data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHa
 
 @DoNotImplement
 sealed class NodeHandle : AutoCloseable {
-
     abstract val nodeInfo: NodeInfo
     /**
      * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one

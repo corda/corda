@@ -21,8 +21,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME

@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 
 class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort, maxMessageSize: Int) : SingletonSerializeAsToken(), AutoCloseable {
-
     private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     private var rpcServer: RPCServer? = null
 

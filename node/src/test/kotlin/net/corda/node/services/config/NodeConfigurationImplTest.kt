@@ -40,7 +40,6 @@ class NodeConfigurationImplTest {
     private val testConfiguration = testNodeConfiguration()
 
     private fun testNodeConfiguration(): NodeConfigurationImpl {
-
         val baseDirectory = Paths.get(".")
         val keyStorePassword = "cordacadevpass"
         val trustStorePassword = "trustpass"

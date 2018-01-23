@@ -32,7 +32,6 @@ import java.nio.file.Path
 import kotlin.reflect.KClass
 
 class ArtemisRpcTests {
-
     private val ports: PortAllocation = PortAllocation.RandomFree
 
     private val user = User("mark", "dadada", setOf(all()))
@@ -45,9 +44,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_with_ssl_enabled() {
-
         withCertificates { server, client, createSelfSigned, createSignedBy ->
-
             val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
             val markCertificate = createSignedBy(CordaX500Name("mark", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
 
@@ -60,7 +57,6 @@ class ArtemisRpcTests {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-
                 testSslCommunication(brokerSslOptions, true, clientSslOptions)
             }
         }
@@ -68,9 +64,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_with_ssl_disabled() {
-
         withCertificates { server, client, createSelfSigned, _ ->
-
             val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
 
             // truststore needs to contain root CA for how the driver works...
@@ -78,7 +72,6 @@ class ArtemisRpcTests {
             server.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, _ ->
-
                 // here server is told not to use SSL, and client sslOptions are null (as in, do not use SSL)
                 testSslCommunication(brokerSslOptions, false, null)
             }
@@ -87,9 +80,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_with_server_certificate_untrusted_to_client() {
-
         withCertificates { server, client, createSelfSigned, createSignedBy ->
-
             val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
             val markCertificate = createSignedBy(CordaX500Name("mark", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
 
@@ -103,7 +94,6 @@ class ArtemisRpcTests {
 //            client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-
                 testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(ActiveMQNotConnectedException::class))
             }
         }
@@ -111,9 +101,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_with_no_client_certificate() {
-
         withCertificates { server, client, createSelfSigned, createSignedBy ->
-
             val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
             val markCertificate = createSignedBy(CordaX500Name("mark", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
 
@@ -127,7 +115,6 @@ class ArtemisRpcTests {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-
                 testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(ActiveMQNotConnectedException::class))
             }
         }
@@ -135,9 +122,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_with_no_ssl_on_client_side_and_ssl_on_server_side() {
-
         withCertificates { server, client, createSelfSigned, createSignedBy ->
-
             val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
             val markCertificate = createSignedBy(CordaX500Name("mark", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
 
@@ -150,7 +135,6 @@ class ArtemisRpcTests {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, _ ->
-
                 // here client sslOptions are passed null (as in, do not use SSL)
                 testSslCommunication(brokerSslOptions, true, null, clientConnectionSpy = expectExceptionOfType(ActiveMQConnectionTimedOutException::class))
             }
@@ -159,9 +143,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_client_certificate_untrusted_to_server() {
-
         withCertificates { server, client, createSelfSigned, _ ->
-
             val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
             // here client's certificate is self-signed, otherwise Artemis allows the connection (the issuing certificate is in the truststore)
             val markCertificate = createSelfSigned(CordaX500Name("mark", "IT", "R3 London", "London", "London", "GB"))
@@ -176,14 +158,13 @@ class ArtemisRpcTests {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-
                 testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(ActiveMQNotConnectedException::class))
             }
         }
     }
 
-    private fun testSslCommunication(brokerSslOptions: SSLConfiguration, useSslForBroker: Boolean, clientSslOptions: SSLConfiguration?, address: NetworkHostAndPort = ports.nextHostAndPort(), adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = Files.createTempDirectory(null), clientConnectionSpy: (() -> Unit) -> Unit = {}) {
-
+    private fun testSslCommunication(brokerSslOptions: SSLConfiguration, useSslForBroker: Boolean, clientSslOptions: SSLConfiguration?, address: NetworkHostAndPort = ports.nextHostAndPort(),
+                                     adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = Files.createTempDirectory(null), clientConnectionSpy: (() -> Unit) -> Unit = {}) {
         val maxMessageSize = 10000
         val jmxEnabled = false
         val certificateChainCheckPolicies: List<CertChainPolicyConfig> = listOf()
@@ -194,20 +175,15 @@ class ArtemisRpcTests {
             ArtemisRpcBroker.withoutSsl(address, adminAddress, brokerSslOptions, securityManager, certificateChainCheckPolicies, maxMessageSize, jmxEnabled, baseDirectory)
         }
         artemisBroker.use { broker ->
-
             broker.startBlocking()
             RPCMessagingClient(brokerSslOptions, broker.addresses.admin, maxMessageSize).use { server ->
-
                 server.start(TestRpcOpsImpl(), securityManager, broker.serverControl)
 
                 val client = RPCClient<TestRpcOps>(tcpTransport(ConnectionDirection.Outbound(), broker.addresses.public, clientSslOptions))
 
                 clientConnectionSpy {
-
                     client.start(TestRpcOps::class.java, user.username, user.password).use { connection ->
-
                         connection.proxy.apply {
-
                             val greeting = greet("Frodo")
                             assertThat(greeting).isEqualTo("Oh, hello Frodo!")
                         }
@@ -218,7 +194,6 @@ class ArtemisRpcTests {
     }
 
     private fun <OPS : RPCOps> RPCMessagingClient.start(ops: OPS, securityManager: RPCSecurityManager, brokerControl: ActiveMQServerControl) {
-
         apply {
             start(ops, securityManager)
             start2(brokerControl)
@@ -226,17 +201,14 @@ class ArtemisRpcTests {
     }
 
     private fun <EXCEPTION : Exception> expectExceptionOfType(exceptionType: KClass<EXCEPTION>): (() -> Unit) -> Unit {
-
         return { action -> assertThatThrownBy { action.invoke() }.isInstanceOf(exceptionType.java) }
     }
 
     interface TestRpcOps : RPCOps {
-
         fun greet(name: String): String
     }
 
     class TestRpcOpsImpl : TestRpcOps {
-
         override fun greet(name: String): String = "Oh, hello $name!"
 
         override val protocolVersion: Int = 1

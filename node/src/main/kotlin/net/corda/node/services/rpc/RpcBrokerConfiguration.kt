@@ -18,11 +18,9 @@ import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import java.nio.file.Path
 
 internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: SSLConfiguration?, useSsl: Boolean) : SecureArtemisConfiguration() {
-
     val loginListener: (String) -> Unit
 
     init {
-
         setDirectories(baseDirectory)
 
         val acceptorConfigurationsSet = mutableSetOf(acceptorConfiguration(address, useSsl, sslOptions))
@@ -64,20 +62,17 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     }
 
     private fun configureAddressSecurity(nodeInternalRole: Role, rolesAdderOnLogin: RolesAdderOnLogin) {
-
         securityRoles["${ArtemisMessagingComponent.INTERNAL_PREFIX}#"] = setOf(nodeInternalRole)
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(NodeLoginModule.RPC_ROLE, send = true))
         securitySettingPlugins.add(rolesAdderOnLogin)
     }
 
     private fun enableJmx() {
-
         isJMXManagementEnabled = true
         isJMXUseBrokerName = true
     }
 
     private fun initialiseSettings(maxMessageSize: Int) {
-
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
@@ -89,7 +84,6 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     }
 
     private fun queueConfigurations(): List<CoreQueueConfiguration> {
-
         return listOf(
                 queueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME, durable = false),
                 queueConfiguration(
@@ -108,14 +102,12 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     }
 
     private fun setDirectories(baseDirectory: Path) {
-
         bindingsDirectory = (baseDirectory / "bindings").toString()
         journalDirectory = (baseDirectory / "journal").toString()
         largeMessagesDirectory = (baseDirectory / "large-messages").toString()
     }
 
     private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
-
         val configuration = CoreQueueConfiguration()
 
         configuration.name = name
@@ -128,14 +120,12 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
 
     private fun acceptorConfiguration(address: NetworkHostAndPort, enableSsl: Boolean, sslOptions: SSLConfiguration?): TransportConfiguration {
-
         return tcpTransport(ConnectionDirection.Inbound(NettyAcceptorFactory::class.java.name), address, sslOptions, enableSsl)
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
                                deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
                                deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
-
         return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse)
     }
 }

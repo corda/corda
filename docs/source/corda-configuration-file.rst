@@ -96,17 +96,17 @@ path to the node's base directory.
 
 :rpcSettings: Options for the RPC server.
 
-        :useSsl: (optional) boolean, indicates whether node should require clients to use SSL for RPC connections, defaults to ``false``.
-        :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaults to ``false``.
-        :address: (optional) host and port for RPC server binding, if any.
-        :adminAddress: (optional) host and port for RPC admin binding (only required when ``useSsl`` is ``false``).
+        :useSsl: (optional) boolean, indicates whether the node should require clients to use SSL for RPC connections, defaulted to ``false``.
+        :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaulted to ``false``.
+        :address: (optional) host and port for the RPC server binding, if any.
+        :adminAddress: (optional) host and port for the RPC admin binding (only required when ``useSsl`` is ``false`` to ensure queue privileges are reserved to the node).
         :ssl: (optional) SSL settings for the RPC server.
 
-                :keyStorePassword: password for key store.
-                :trustStorePassword: password for trust store.
-                :certificatesDirectory: directory in which stores will be searched, unless absolute paths are provided.
-                :sslKeystore: absolute path to ssl key store, defaults to ``certificatesDirectory / "sslkeystore.jks"``.
-                :trustStoreFile: absolute path to trust store, defaults to ``certificatesDirectory / "truststore.jks"``.
+                :keyStorePassword: password for the key store.
+                :trustStorePassword: password for the trust store.
+                :certificatesDirectory: directory in which the stores will be searched, unless absolute paths are provided.
+                :sslKeystore: absolute path to the ssl key store, defaulted to ``certificatesDirectory / "sslkeystore.jks"``.
+                :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
 
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.

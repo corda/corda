@@ -86,7 +86,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              val networkMapCache: NetworkMapCacheInternal,
                              val securityManager: RPCSecurityManager,
                              val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
-
     companion object {
         private val log = contextLogger()
     }
@@ -109,7 +108,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * We assume network map will be updated accordingly when the client node register with the network map.
      */
     override fun start(): Observable<Unit> {
-
         return Observable.just(mutex.locked {
             if (!running) {
                 configureAndStartServer()
@@ -120,7 +118,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     }
 
     override fun stop(): Observable<Unit> {
-
         return Observable.just(mutex.locked {
             mutex.locked {
                 bridgeManager.close()

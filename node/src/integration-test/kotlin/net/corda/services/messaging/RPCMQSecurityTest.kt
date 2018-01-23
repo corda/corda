@@ -15,7 +15,6 @@ import org.junit.Test
  * the attacker to [alice].
  */
 abstract class RPCMQSecurityTest : MQSecurityTest() {
-
     @Test
     fun `consume message from P2P queue`() {
         assertConsumeAttackFailsNonexistent("$P2P_PREFIX${alice.info.chooseIdentity().owningKey.toStringShort()}")

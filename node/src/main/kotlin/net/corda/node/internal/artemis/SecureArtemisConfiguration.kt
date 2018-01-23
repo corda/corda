@@ -5,7 +5,6 @@ import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import java.math.BigInteger
 
 internal open class SecureArtemisConfiguration : ConfigurationImpl() {
-
     init {
         // Artemis allows multiple servers to be grouped together into a cluster for load balancing purposes. The cluster
         // user is used for connecting the nodes together. It has super-user privileges and so it's imperative that its

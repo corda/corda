@@ -151,7 +151,6 @@ data class NodeConfigurationImpl(
     override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
 
     private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
-
         return when {
             explicitAddress != null -> {
                 require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
@@ -187,7 +186,6 @@ data class NodeRpcSettings(
         val ssl: SslOptions?
 ) {
     fun asOptions(fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
-
         return object : NodeRpcOptions {
             override val address = this@NodeRpcSettings.address
             override val adminAddress = this@NodeRpcSettings.adminAddress

@@ -5,12 +5,10 @@ import rx.Observable
 interface LifecycleSupport : Startable, Stoppable
 
 interface Stoppable {
-
     fun stop(): Observable<Unit>
 }
 
 interface Startable {
-
     fun start(): Observable<Unit>
 
     val started: Boolean

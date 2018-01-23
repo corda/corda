@@ -38,18 +38,15 @@ internal class ArtemisRpcBroker internal constructor(
         private val logger = loggerFor<ArtemisRpcBroker>()
 
         fun withSsl(address: NetworkHostAndPort, sslOptions: SSLConfiguration, securityManager: RPCSecurityManager, certificateChainCheckPolicies: List<CertChainPolicyConfig>, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path): ArtemisBroker {
-
             return ArtemisRpcBroker(address, null, sslOptions, true, securityManager, certificateChainCheckPolicies, maxMessageSize, jmxEnabled, baseDirectory)
         }
 
         fun withoutSsl(address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: SSLConfiguration, securityManager: RPCSecurityManager, certificateChainCheckPolicies: List<CertChainPolicyConfig>, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path): ArtemisBroker {
-
             return ArtemisRpcBroker(address, adminAddress, sslOptions, false, securityManager, certificateChainCheckPolicies, maxMessageSize, jmxEnabled, baseDirectory)
         }
     }
 
     override fun start(): Observable<Unit> {
-
         return runAsync { logger.debug("Artemis RPC broker is starting.") }
                 .thenApply { server.start() }
                 .thenApply { logger.debug("Artemis RPC broker is started.") }
@@ -57,7 +54,6 @@ internal class ArtemisRpcBroker internal constructor(
     }
 
     override fun stop(): Observable<Unit> {
-
         return runAsync { logger.debug("Artemis RPC broker is stopping.") }
                 .thenApply { server.stop(true) }
                 .thenApply { logger.debug("Artemis RPC broker is stopped.") }
@@ -73,12 +69,10 @@ internal class ArtemisRpcBroker internal constructor(
     private val server = initialiseServer()
 
     private fun initialiseServer(): ActiveMQServer {
-
         val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.public, adminAddressOptional, sslOptions, useSsl)
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener, sslOptions)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {
-
             registerActivationFailureListener { exception -> throw exception }
             registerPostQueueDeletionCallback { address, qName -> logger.debug("Queue deleted: $qName for $address") }
         }
@@ -86,7 +80,6 @@ internal class ArtemisRpcBroker internal constructor(
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(loginListener: LoginListener, sslOptions: SSLConfiguration): ActiveMQJAASSecurityManager {
-
         val keyStore = loadKeyStore(sslOptions.sslKeystore, sslOptions.keyStorePassword)
         val trustStore = loadKeyStore(sslOptions.trustStoreFile, sslOptions.trustStorePassword)
 
@@ -95,15 +88,12 @@ internal class ArtemisRpcBroker internal constructor(
                 NodeLoginModule.RPC_ROLE to CertificateChainCheckPolicy.Any
         )
         val certChecks = defaultCertPolicies.mapValues { (role, defaultPolicy) ->
-
             val policy = certificateChainCheckPolicies.noneOrSingle { it.role == role }?.certificateChainCheckPolicy ?: defaultPolicy
             policy.createCheck(keyStore, trustStore)
         }
 
         val securityConfig = object : SecurityConfiguration() {
-
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
-
                 val options = mapOf(
                         NodeLoginModule.LOGIN_LISTENER_ARG to loginListener,
                         NodeLoginModule.SECURITY_MANAGER_ARG to securityManager,
