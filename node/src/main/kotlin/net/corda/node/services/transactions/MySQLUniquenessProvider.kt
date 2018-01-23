@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import com.codahale.metrics.MetricRegistry
+import com.google.common.base.Stopwatch
 import com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -20,6 +21,7 @@ import java.sql.BatchUpdateException
 import java.sql.Connection
 import java.sql.SQLTransientConnectionException
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 /**
  * Uniqueness provider backed by a MySQL database. It is intended to be used with a multi-master synchronously replicated
@@ -38,7 +40,7 @@ class MySQLUniquenessProvider(
         private val createTableStatement =
                 "CREATE TABLE IF NOT EXISTS committed_states (" +
                         "issue_tx_id BINARY(32) NOT NULL," +
-                        "issue_tx_output_id INT NOT NULL," +
+                        "issue_tx_output_id INT UNSIGNED NOT NULL," +
                         "consuming_tx_id BINARY(32) NOT NULL," +
                         "consuming_tx_input_id INT UNSIGNED NOT NULL," +
                         "consuming_party_name TEXT NOT NULL," +
@@ -63,6 +65,8 @@ class MySQLUniquenessProvider(
     private val connectionExceptionCounter = metrics.counter("$metricPrefix.ConnectionException")
     /** Track double spend attempts. Note that this will also include notarisation retries. */
     private val conflictCounter = metrics.counter("$metricPrefix.Conflicts")
+    /** Track the distribution of the number of input states **/
+    private val nrInputStates = metrics.histogram("$metricPrefix.NumberOfInputStates")
 
     val dataSource = HikariDataSource(HikariConfig(configuration.dataSource))
     private val connectionRetries = configuration.connectionRetries
@@ -96,15 +100,18 @@ class MySQLUniquenessProvider(
     }
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
-        val timer = commitTimer.time()
+        val s = Stopwatch.createStarted()
         try {
             retryTransaction(CommitAll(states, txId, callerIdentity))
+            nrInputStates.update(states.size)
         } catch (e: BatchUpdateException) {
-            log.info("Unable to commit input states, finding conflicts", e)
+            log.info("Unable to commit input states, finding conflicts, txId: $txId", e)
             conflictCounter.inc()
             retryTransaction(FindConflicts(states))
         } finally {
-            timer.stop()
+            val dt = s.stop().elapsed(TimeUnit.MILLISECONDS)
+            commitTimer.update(dt, TimeUnit.MILLISECONDS)
+            log.info("Processed notarisation request, txId: $txId, nrInputStates: ${states.size}, dt: $dt")
         }
     }
 
@@ -114,12 +121,13 @@ class MySQLUniquenessProvider(
                 try {
                     tx.run(it)
                 } catch (e: Exception) {
-                    it.rollback()
                     if (e is MySQLTransactionRollbackException) {
                         log.warn("Rollback exception occurred, retrying", e)
                         rollbackCounter.inc()
                         continue
                     } else {
+                        log.warn("Attempting to rollback", e)
+                        it.rollback()
                         throw e
                     }
                 }
