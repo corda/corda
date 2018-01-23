@@ -9,18 +9,24 @@ Identifying an area to contribute
 ---------------------------------
 There are several ways to identify an area where you can contribute to Corda:
 
-* Browse open issues on the
-  `Corda JIRA board <https://r3-cev.atlassian.net/projects/CORDA/issues/CORDA-601?filter=allopenissues>`_
-* Check the `Corda GitHub issues <https://github.com/corda/corda/issues>`_
-* Ask in the `Corda Slack channel <http://slack.corda.net/>`_
+* Browse issues labelled as ``HelpWanted`` on the
+  `Corda JIRA board <https://r3-cev.atlassian.net/issues/?jql=labels%20%3D%20HelpWanted>`_
 
-It's always worth checking in the Corda Slack channel whether a given area or issue is a good target for your
-contribution. Someone else may already be working on it, or it may be blocked by another on-going piece of work.
+  * Any issue with a ``HelpWanted`` label is considered ideal for open-source contributions
+  * If there is a feature you would like to add and there isn't a corresponding issue labelled as ``HelpWanted``, that
+    doesn't mean your contribution isn't welcome. Please reach out on the Corda Slack channel (see below) to clarify
+
+* Check the `Corda GitHub issues <https://github.com/corda/corda/issues>`_
+
+  * It's always worth checking in the Corda Slack channel (see below) whether a given issue is a good target for your
+    contribution. Someone else may already be working on it, or it may be blocked by an on-going piece of work
+
+* Ask in the `Corda Slack channel <http://slack.corda.net/>`_
 
 Making the required changes
 ---------------------------
 
-1. Create a fork of the master branch of the Corda repo (https://github.com/corda/corda)
+1. Create a fork of the master branch of the `Corda repo <https://github.com/corda/corda>`_
 2. Clone the fork to your local machine
 3. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
 
