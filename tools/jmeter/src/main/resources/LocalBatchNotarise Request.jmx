@@ -63,9 +63,14 @@
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Linear State Batch Notarise Request" enabled="true">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Linear State Batch Notarise Request (Node 1)" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
             <collectionProp name="Arguments.arguments">
+              <elementProp name="label" elementType="Argument">
+                <stringProp name="Argument.name">label</stringProp>
+                <stringProp name="Argument.value">${___samplerName}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
               <elementProp name="host" elementType="Argument">
                 <stringProp name="Argument.name">host</stringProp>
                 <stringProp name="Argument.value">localhost</stringProp>
@@ -106,9 +111,9 @@
                 <stringProp name="Argument.value">true</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="transactionsPerMinute" elementType="Argument">
-                <stringProp name="Argument.name">transactionsPerMinute</stringProp>
-                <stringProp name="Argument.value">10</stringProp>
+              <elementProp name="transactionsPerSecond" elementType="Argument">
+                <stringProp name="Argument.name">transactionsPerSecond</stringProp>
+                <stringProp name="Argument.value">1.0</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="repeatInvoke" elementType="Argument">
@@ -124,6 +129,11 @@
         <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Cash Issue Request" enabled="false">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
             <collectionProp name="Arguments.arguments">
+              <elementProp name="label" elementType="Argument">
+                <stringProp name="Argument.name">label</stringProp>
+                <stringProp name="Argument.value"></stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
               <elementProp name="host" elementType="Argument">
                 <stringProp name="Argument.name">host</stringProp>
                 <stringProp name="Argument.value">localhost</stringProp>
@@ -180,9 +190,14 @@
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
-        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Linear State Batch Notarise Request" enabled="true">
+        <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Linear State Batch Notarise Request (Node 2)" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
             <collectionProp name="Arguments.arguments">
+              <elementProp name="label" elementType="Argument">
+                <stringProp name="Argument.name">label</stringProp>
+                <stringProp name="Argument.value">${___samplerName}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
               <elementProp name="host" elementType="Argument">
                 <stringProp name="Argument.name">host</stringProp>
                 <stringProp name="Argument.value">localhost</stringProp>
@@ -223,9 +238,9 @@
                 <stringProp name="Argument.value">true</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="transactionsPerMinute" elementType="Argument">
-                <stringProp name="Argument.name">transactionsPerMinute</stringProp>
-                <stringProp name="Argument.value">10</stringProp>
+              <elementProp name="transactionsPerSecond" elementType="Argument">
+                <stringProp name="Argument.name">transactionsPerSecond</stringProp>
+                <stringProp name="Argument.value">1.0</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="repeatInvoke" elementType="Argument">
@@ -241,6 +256,11 @@
         <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Cash Issue Request" enabled="false">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
             <collectionProp name="Arguments.arguments">
+              <elementProp name="label" elementType="Argument">
+                <stringProp name="Argument.name">label</stringProp>
+                <stringProp name="Argument.value"></stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
               <elementProp name="host" elementType="Argument">
                 <stringProp name="Argument.name">host</stringProp>
                 <stringProp name="Argument.value">localhost</stringProp>

@@ -29,6 +29,11 @@
         <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="Cash Issue Request" enabled="true">
           <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
             <collectionProp name="Arguments.arguments">
+              <elementProp name="label" elementType="Argument">
+                <stringProp name="Argument.name">label</stringProp>
+                <stringProp name="Argument.value">${___samplerName}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
               <elementProp name="host" elementType="Argument">
                 <stringProp name="Argument.name">host</stringProp>
                 <stringProp name="Argument.value">localhost</stringProp>
@@ -57,6 +62,11 @@
               <elementProp name="otherPartyName" elementType="Argument">
                 <stringProp name="Argument.name">otherPartyName</stringProp>
                 <stringProp name="Argument.value">O=Perf-10.155.0.7, OU=Corda, L=London, C=GB</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="useCoinSelection" elementType="Argument">
+                <stringProp name="Argument.name">useCoinSelection</stringProp>
+                <stringProp name="Argument.value">true</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>

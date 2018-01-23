@@ -86,3 +86,11 @@ The interesting bit here are the `jmeterArgs`:
 - `-l <filename>` specifies the output to write to (if it exists, it will be appended)
 - `-R <hostname:port>` specifies the host to run against - note this is localhost in this case as we are using ssh 
 tunnels to reach the test nodes. 
+
+### Generating an HTML report from a recorded CSV file
+
+It's possible to generate a simple but effective HTML report for a JMeter test run that already produced a CSV file.
+
+```./gradlew tools:jmeter:run -PjmeterArgs="['-g', '<input-file>.csv', '-o', '<path-of-report-dir>', '-Jjmeter.reportgenerator.report_title=<report title>']"```
+
+The report output directory must be empty or not exist (in which case JMeter attempts to create it).
