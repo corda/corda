@@ -45,8 +45,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     }
 
     private lateinit var env: SerializationEnvironment
-    lateinit var serializationFactory : SerializationFactory
-    lateinit var checkpointContext : SerializationContext
+    val serializationFactory get() = env.serializationFactory
+    val checkpointContext get() = env.checkpointContext
 
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())
@@ -57,8 +57,6 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
 
     private fun init(envLabel: String) {
         env = createTestSerializationEnv(envLabel)
-        serializationFactory = env.serializationFactory
-        checkpointContext = env.checkpointContext
     }
 
     private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
