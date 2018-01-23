@@ -26,8 +26,8 @@ class ContractAttachmentSerializerTest {
     private val attachments = MockAttachmentStorage()
     @Before
     fun setup() {
-        factory = testSerialization.env.serializationFactory
-        context = testSerialization.env.checkpointContext
+        factory = testSerialization.serializationFactory
+        context = testSerialization.checkpointContext
         // XXX: Why is the SerializeAsTokenContextImpl significant?
         contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl {}).withProperty(AttachmentStorageKey, attachments)
     }
