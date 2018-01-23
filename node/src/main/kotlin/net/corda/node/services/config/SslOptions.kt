@@ -4,7 +4,6 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import java.nio.file.Path
 import java.nio.file.Paths
 
-
 data class SslOptions(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration {
     constructor(certificatesDirectory: String, keyStorePassword: String, trustStorePassword: String) : this(certificatesDirectory.toAbsolutePath(), keyStorePassword, trustStorePassword)
 

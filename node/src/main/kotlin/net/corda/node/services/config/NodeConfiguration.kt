@@ -50,7 +50,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
 
-
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
         val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
@@ -143,7 +142,6 @@ data class NodeConfigurationImpl(
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
     ) : NodeConfiguration {
-
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
     }

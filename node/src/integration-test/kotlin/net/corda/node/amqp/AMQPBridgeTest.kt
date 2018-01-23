@@ -164,7 +164,6 @@ class AMQPBridgeTest {
     }
 
     private fun createArtemis(sourceQueueName: String?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
-
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName

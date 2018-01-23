@@ -12,7 +12,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class RpcSslTest {
-
     @Test
     fun rpc_client_using_ssl() {
         val user = User("mark", "dadada", setOf(all()))

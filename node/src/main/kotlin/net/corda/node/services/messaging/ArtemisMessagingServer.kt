@@ -105,24 +105,20 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * The server will make sure the bridge exists on network map changes, see method [updateBridgesOnNetworkChange]
      * We assume network map will be updated accordingly when the client node register with the network map.
      */
-    override fun start() {
-        return mutex.locked {
-            if (!running) {
-                configureAndStartServer()
-                networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
-                running = true
-            }
+    override fun start() = mutex.locked {
+        if (!running) {
+            configureAndStartServer()
+            networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
+            running = true
         }
     }
 
-    override fun stop() {
-        return mutex.locked {
-            bridgeManager.close()
-            networkChangeHandle?.unsubscribe()
-            networkChangeHandle = null
-            activeMQServer.stop()
-            running = false
-        }
+    override fun stop() = mutex.locked {
+        bridgeManager.close()
+        networkChangeHandle?.unsubscribe()
+        networkChangeHandle = null
+        activeMQServer.stop()
+        running = false
     }
 
     override val addresses = config.p2pAddress.let { BrokerAddresses(it, it) }
