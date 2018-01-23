@@ -109,13 +109,19 @@ class SSHServerTest {
             channel.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
             channel.connect()
             val response = String(Streams.readAll(channel.inputStream))
+            assertThat(response).matches("(?s)User not authorized to perform RPC call .*")
 
             val flowNameEscaped = Pattern.quote("StartFlow.${SSHServerTest::class.qualifiedName}$${FlowICannotRun::class.simpleName}")
+            val channel2 = session.openChannel("exec") as ChannelExec
+            channel2.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
+            channel2.connect()
+            val response2 = String(Streams.readAll(channel2.inputStream))
+            channel2.disconnect()
 
             channel.disconnect()
             session.disconnect()
 
-            assertThat(response).matches("(?s)User not authorized to perform RPC call .*")
+            assertThat(response2).matches("(?s)User not authorized to perform RPC call .*")
         }
     }
 

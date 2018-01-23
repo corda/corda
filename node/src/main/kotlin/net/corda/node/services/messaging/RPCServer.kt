@@ -273,6 +273,7 @@ class RPCServer(
         log.debug { "-> RPC -> $clientToServer" }
         when (clientToServer) {
             is RPCApi.ClientToServer.RpcRequest -> {
+                println( "SZSZ clientToServer " + clientToServer + " method " + clientToServer.methodName)
                 val arguments = Try.on {
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
@@ -368,6 +369,7 @@ class RPCServer(
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
+        println("SZSZ validatedUser " +validatedUser )
         return Pair(Actor(Id(validatedUser), securityManager.id, targetLegalIdentity), securityManager.buildSubject(validatedUser))
     }
 }

@@ -11,11 +11,12 @@ import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject) : CordaRPCOps {
-
+fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject, debugContext: String) : CordaRPCOps {
+    println("SZSZ makeRPCOpsWithContext debugContext=" +debugContext +",invocationContext=" +invocationContext.actor)
     return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { _, method, args ->
         RPCContextRunner(invocationContext, authorizingSubject) {
             try {
+                println("SZSZ RPCContextRunner debugContext=" +debugContext +", method=" + method.name + " ")
                 method.invoke(cordaRPCOps, *(args ?: arrayOf()))
             } catch (e: InvocationTargetException) {
                 // Unpack exception.
@@ -30,6 +31,7 @@ private class RPCContextRunner<T>(val invocationContext: InvocationContext, val 
     private var result: CompletableFuture<T> = CompletableFuture()
 
     override fun run() {
+        println("SZSZ RPCContextRunner run invocationContext=" + invocationContext.actor)
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(invocationContext, authorizingSubject))
         try {
             result.complete(block())

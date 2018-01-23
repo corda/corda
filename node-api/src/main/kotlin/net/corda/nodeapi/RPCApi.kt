@@ -275,7 +275,7 @@ fun ClientMessage.externalTrace(): Trace? {
 }
 
 fun ClientMessage.impersonatedActor(): Actor? {
-
+    println("SZSZ getStringProperty(RPC_IMPERSONATED_ACTOR_ID) " + getStringProperty(RPC_IMPERSONATED_ACTOR_ID))
     return getStringProperty(RPC_IMPERSONATED_ACTOR_ID)?.let {
         val impersonatedStoreId = getStringProperty(RPC_IMPERSONATED_ACTOR_STORE_ID)
         val impersonatingOwningLegalIdentity = getStringProperty(RPC_IMPERSONATED_ACTOR_OWNING_LEGAL_IDENTITY)
