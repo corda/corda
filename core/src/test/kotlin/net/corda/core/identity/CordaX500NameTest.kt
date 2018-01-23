@@ -73,4 +73,32 @@ class CordaX500NameTest {
             CordaX500Name.parse("O=Bank A, L=New York, C=US, SN=blah")
         }
     }
+
+    @Test
+    fun `default format should return a sensible display string`() {
+        val name = CordaX500Name.parse("CN=cName, OU=orgUnit, O=org, L=city, S=state, C=GB")
+        val displayString = name.toDisplayString()
+        assertEquals("cName, org, orgUnit, GB", displayString)
+    }
+
+    @Test
+    fun `default format should handle null name fields`() {
+        val name = CordaX500Name.parse("O=org, L=city, C=GB")
+        val displayString = name.toDisplayString()
+        assertEquals("org, GB", displayString)
+    }
+
+    @Test
+    fun `custom format should return a sensible display string`() {
+        val name = CordaX500Name.parse("CN=cName, OU=orgUnit, O=org, L=city, S=state, C=GB")
+        val displayString = name.toDisplayString(CordaX500Name.NameSelector.ORG, CordaX500Name.NameSelector.COUNTRY, CordaX500Name.NameSelector.ORG_UNIT)
+        assertEquals("org, GB, orgUnit", displayString)
+    }
+
+    @Test
+    fun `custom selectors should handle nullable fields`() {
+        val name = CordaX500Name.parse("O=org, L=city, C=GB")
+        val displayString = name.toDisplayString(CordaX500Name.NameSelector.ORG_UNIT, CordaX500Name.NameSelector.COMMON_NAME, CordaX500Name.NameSelector.COUNTRY)
+        assertEquals("GB", displayString)
+    }
 }

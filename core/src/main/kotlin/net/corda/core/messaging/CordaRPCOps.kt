@@ -314,6 +314,14 @@ interface CordaRPCOps : RPCOps {
 
     /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
+
+    fun displayNameFromParty(party: Party): String
+
+    fun displayNameFromX500(x500Name: CordaX500Name) : String
+
+    fun displayNameFromParty(party: Party, vararg selectors: CordaX500Name.NameSelector): String
+
+    fun displayNameFromX500(x500Name: CordaX500Name, vararg selectors: CordaX500Name.NameSelector) : String
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

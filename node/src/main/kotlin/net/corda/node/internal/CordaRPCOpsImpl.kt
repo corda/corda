@@ -42,6 +42,22 @@ internal class CordaRPCOpsImpl(
         private val database: CordaPersistence,
         private val flowStarter: FlowStarter
 ) : CordaRPCOps {
+    override fun displayNameFromParty(party: Party, vararg selectors: CordaX500Name.NameSelector): String {
+        return displayNameFromX500(party.name, *selectors);
+    }
+
+    override fun displayNameFromX500(x500Name: CordaX500Name, vararg selectors: CordaX500Name.NameSelector): String {
+        return x500Name.toDisplayString(*selectors)
+    }
+
+    override fun displayNameFromParty(party: Party): String {
+        return displayNameFromX500(party.name)
+    }
+
+    override fun displayNameFromX500(x500Name: CordaX500Name): String {
+        return x500Name.toDisplayString();
+    }
+
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
         updates.notUsed()
@@ -175,7 +191,7 @@ internal class CordaRPCOpsImpl(
         }
     }
 
-    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader:String, filename:String): SecureHash {
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
             services.attachments.importAttachment(jar, uploader, filename)
@@ -286,7 +302,8 @@ internal class CordaRPCOpsImpl(
         val principal = origin.principal().name
         return when (origin) {
             is Origin.RPC -> FlowInitiator.RPC(principal)
-            is Origin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as Origin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as Origin.Peer).party}.")
+            is Origin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as Origin.Peer).party)?.let { FlowInitiator.Peer(it) }
+                    ?: throw IllegalStateException("Unknown peer with name ${(origin as Origin.Peer).party}.")
             is Origin.Service -> FlowInitiator.Service(principal)
             is Origin.Shell -> FlowInitiator.Shell
             is Origin.Scheduled -> FlowInitiator.Scheduled((origin as Origin.Scheduled).scheduledState)

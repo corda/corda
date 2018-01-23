@@ -105,10 +105,13 @@ data class CordaX500Name(val commonName: String?,
 
             val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
-            val O = attrsMap[BCStyle.O]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
-            val L = attrsMap[BCStyle.L]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
+            val O = attrsMap[BCStyle.O]?.toString()
+                    ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
+            val L = attrsMap[BCStyle.L]?.toString()
+                    ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
             val ST = attrsMap[BCStyle.ST]?.toString()
-            val C = attrsMap[BCStyle.C]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
+            val C = attrsMap[BCStyle.C]?.toString()
+                    ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
 
@@ -120,9 +123,48 @@ data class CordaX500Name(val commonName: String?,
     private var _x500Principal: X500Principal? = null
 
     /** Return the [X500Principal] equivalent of this name. */
-    val x500Principal: X500Principal get() {
-        return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
-    }
+    val x500Principal: X500Principal
+        get() {
+            return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
+        }
 
     override fun toString(): String = x500Principal.toString()
+
+    fun toDisplayString(vararg selectors: CordaX500Name.NameSelector): String {
+        val nonNullElementsOfName = selectors.map { it.extract(this) }.filter { it != null }
+        return nonNullElementsOfName.joinToString ( ", " )
+    }
+
+    fun toDisplayString(): String {
+        return toDisplayString(
+                CordaX500Name.NameSelector.COMMON_NAME,
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY)
+    }
+
+    enum class NameSelector {
+        ORG {
+            override fun extract(x500name: CordaX500Name): String? {
+                return x500name.organisation
+            }
+        },
+        ORG_UNIT {
+            override fun extract(x500name: CordaX500Name): String? {
+                return x500name.organisationUnit
+            }
+        },
+        COMMON_NAME {
+            override fun extract(x500name: CordaX500Name): String? {
+                return x500name.commonName
+            }
+        },
+        COUNTRY {
+            override fun extract(x500name: CordaX500Name): String? {
+                return x500name.country
+            }
+        };
+
+        abstract fun extract(x500name: CordaX500Name): String?
+    }
 }
