@@ -10,8 +10,6 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.internal.startBlocking
-import net.corda.node.internal.stopBlocking
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
@@ -126,7 +124,7 @@ class AMQPBridgeTest {
 
         amqpServer.stop()
         artemisClient.stop()
-        artemisServer.stopBlocking()
+        artemisServer.stop()
     }
 
     @Test
@@ -160,9 +158,9 @@ class AMQPBridgeTest {
         }
 
         artemisClient.stop()
-        artemisServer.stopBlocking()
+        artemisServer.stop()
         artemisLegacyClient.stop()
-        artemisLegacyServer.stopBlocking()
+        artemisLegacyServer.stop()
     }
 
     private fun createArtemis(sourceQueueName: String?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
@@ -185,7 +183,7 @@ class AMQPBridgeTest {
         val userService = rigorousMock<RPCSecurityManager>()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, userService, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
-        artemisServer.startBlocking()
+        artemisServer.start()
         artemisClient.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -215,7 +213,7 @@ class AMQPBridgeTest {
         val userService = rigorousMock<RPCSecurityManager>()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, networkMap, userService, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress2, MAX_MESSAGE_SIZE)
-        artemisServer.startBlocking()
+        artemisServer.start()
         artemisClient.start()
         val artemis = artemisClient.started!!
         // Local queue for outgoing messages

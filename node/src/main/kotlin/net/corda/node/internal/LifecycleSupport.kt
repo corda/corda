@@ -1,19 +1,13 @@
 package net.corda.node.internal
 
-import rx.Observable
-
 interface LifecycleSupport : Startable, Stoppable
 
 interface Stoppable {
-    fun stop(): Observable<Unit>
+    fun stop()
 }
 
 interface Startable {
-    fun start(): Observable<Unit>
+    fun start()
 
     val started: Boolean
 }
-
-fun LifecycleSupport.startBlocking() = start().toBlocking().subscribe()
-
-fun LifecycleSupport.stopBlocking() = stop().toBlocking().subscribe()

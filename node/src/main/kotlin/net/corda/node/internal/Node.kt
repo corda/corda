@@ -174,6 +174,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun startLocalRpcBroker(): BrokerAddresses {
+
         with(configuration) {
             require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
             val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
@@ -196,6 +197,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> {
+
         val addresses = mutableListOf<NetworkHostAndPort>()
         addresses.add(configuration.messagingServerAddress ?: getAdvertisedAddress())
         rpcBroker?.addresses?.let {
@@ -251,11 +253,11 @@ open class Node(configuration: NodeConfiguration,
         // Start up the embedded MQ server
         messageBroker?.apply {
             runOnStop += this::close
-            startBlocking()
+            start()
         }
         rpcBroker?.apply {
             runOnStop += this::close
-            startBlocking()
+            start()
         }
         // Start up the MQ clients.
         rpcMessagingClient.run {

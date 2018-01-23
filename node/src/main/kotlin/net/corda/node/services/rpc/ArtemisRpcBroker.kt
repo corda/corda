@@ -46,18 +46,16 @@ internal class ArtemisRpcBroker internal constructor(
         }
     }
 
-    override fun start(): Observable<Unit> {
-        return runAsync { logger.debug("Artemis RPC broker is starting.") }
-                .thenApply { server.start() }
-                .thenApply { logger.debug("Artemis RPC broker is started.") }
-                .toObservable()
+    override fun start() {
+        logger.debug("Artemis RPC broker is starting.")
+        server.start()
+        logger.debug("Artemis RPC broker is started.")
     }
 
-    override fun stop(): Observable<Unit> {
-        return runAsync { logger.debug("Artemis RPC broker is stopping.") }
-                .thenApply { server.stop(true) }
-                .thenApply { logger.debug("Artemis RPC broker is stopped.") }
-                .toObservable()
+    override fun stop() {
+        logger.debug("Artemis RPC broker is stopping.")
+        server.stop(true)
+        logger.debug("Artemis RPC broker is stopped.")
     }
 
     override val started get() = server.isStarted

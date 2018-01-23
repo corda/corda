@@ -13,8 +13,6 @@ import net.corda.node.internal.protonwrapper.messages.MessageStatus
 import net.corda.node.internal.protonwrapper.netty.AMQPClient
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.internal.startBlocking
-import net.corda.node.internal.stopBlocking
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
@@ -169,7 +167,7 @@ class ProtonWrapperTests {
         assertArrayEquals(testData, ByteArray(received.bodySize).apply { received.bodyBuffer.readBytes(this) })
         amqpClient.stop()
         artemisClient.stop()
-        server.stopBlocking()
+        server.stop()
     }
 
     @Test
@@ -241,7 +239,7 @@ class ProtonWrapperTests {
         val userService = rigorousMock<RPCSecurityManager>()
         val server = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, userService, MAX_MESSAGE_SIZE)
         val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), MAX_MESSAGE_SIZE)
-        server.startBlocking()
+        server.start()
         client.start()
         return Pair(server, client)
     }

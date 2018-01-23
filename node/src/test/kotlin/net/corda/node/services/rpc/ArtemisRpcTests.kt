@@ -8,7 +8,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.internal.startBlocking
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.messaging.RPCMessagingClient
@@ -175,7 +174,7 @@ class ArtemisRpcTests {
             ArtemisRpcBroker.withoutSsl(address, adminAddress, brokerSslOptions, securityManager, certificateChainCheckPolicies, maxMessageSize, jmxEnabled, baseDirectory)
         }
         artemisBroker.use { broker ->
-            broker.startBlocking()
+            broker.start()
             RPCMessagingClient(brokerSslOptions, broker.addresses.admin, maxMessageSize).use { server ->
                 server.start(TestRpcOpsImpl(), securityManager, broker.serverControl)
 

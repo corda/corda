@@ -8,8 +8,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.internal.startBlocking
-import net.corda.node.internal.stopBlocking
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -86,7 +84,7 @@ class ArtemisMessagingTest {
     @After
     fun cleanUp() {
         messagingClient?.stop()
-        messagingServer?.stopBlocking()
+        messagingServer?.stop()
         database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
@@ -95,7 +93,7 @@ class ArtemisMessagingTest {
     fun `server starting with the port already bound should throw`() {
         ServerSocket(serverPort).use {
             val messagingServer = createMessagingServer()
-            assertThatThrownBy { messagingServer.startBlocking() }
+            assertThatThrownBy { messagingServer.start() }
         }
     }
 
@@ -103,7 +101,7 @@ class ArtemisMessagingTest {
     fun `client should connect to remote server`() {
         val remoteServerAddress = freeLocalHostAndPort()
 
-        createMessagingServer(remoteServerAddress.port).startBlocking()
+        createMessagingServer(remoteServerAddress.port).start()
         createMessagingClient(server = remoteServerAddress)
         startNodeMessagingClient()
     }
@@ -113,7 +111,7 @@ class ArtemisMessagingTest {
         val serverAddress = freeLocalHostAndPort()
         val invalidServerAddress = freeLocalHostAndPort()
 
-        createMessagingServer(serverAddress.port).startBlocking()
+        createMessagingServer(serverAddress.port).start()
 
         messagingClient = createMessagingClient(server = invalidServerAddress)
         assertThatThrownBy { startNodeMessagingClient() }
@@ -122,7 +120,7 @@ class ArtemisMessagingTest {
 
     @Test
     fun `client should connect to local server`() {
-        createMessagingServer().startBlocking()
+        createMessagingServer().start()
         createMessagingClient()
         startNodeMessagingClient()
     }
@@ -155,7 +153,7 @@ class ArtemisMessagingTest {
     private fun createAndStartClientAndServer(platformVersion: Int = 1): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
         val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
 
-        createMessagingServer().startBlocking()
+        createMessagingServer().start()
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
         startNodeMessagingClient()

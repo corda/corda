@@ -39,7 +39,6 @@ import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.Configuration
-import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
@@ -50,7 +49,6 @@ import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
-import rx.Observable
 import rx.Subscription
 import java.io.IOException
 import java.security.KeyStoreException
@@ -107,26 +105,24 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * The server will make sure the bridge exists on network map changes, see method [updateBridgesOnNetworkChange]
      * We assume network map will be updated accordingly when the client node register with the network map.
      */
-    override fun start(): Observable<Unit> {
-        return Observable.just(mutex.locked {
+    override fun start() {
+        return mutex.locked {
             if (!running) {
                 configureAndStartServer()
                 networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
                 running = true
             }
-        })
+        }
     }
 
-    override fun stop(): Observable<Unit> {
-        return Observable.just(mutex.locked {
-            mutex.locked {
-                bridgeManager.close()
-                networkChangeHandle?.unsubscribe()
-                networkChangeHandle = null
-                activeMQServer.stop()
-                running = false
-            }
-        })
+    override fun stop() {
+        return mutex.locked {
+            bridgeManager.close()
+            networkChangeHandle?.unsubscribe()
+            networkChangeHandle = null
+            activeMQServer.stop()
+            running = false
+        }
     }
 
     override val addresses = config.p2pAddress.let { BrokerAddresses(it, it) }
@@ -186,16 +182,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
 
     }.configureAddressSecurity()
-
-
-    private fun queueConfig(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
-        return CoreQueueConfiguration().apply {
-            this.name = name
-            this.address = address
-            filterString = filter
-            isDurable = durable
-        }
-    }
 
     /**
      * Authenticated clients connecting to us fall in one of the following groups:
