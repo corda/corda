@@ -19,13 +19,15 @@ import java.util.*
 data class Parameters(val dataSourceProperties: Properties,
                       val databaseConfig: DatabaseConfig = DatabaseConfig(),
                       val device: String = DEFAULT_DEVICE,
-        // TODO this needs cleaning up after the config-file-only support is implemented
+                      // TODO this needs cleaning up after the config-file-only support is implemented
                       val keyGroup: String,
                       val keySpecifier: Int = DEFAULT_KEY_SPECIFIER,
                       val rootPrivateKeyPassword: String,
                       val csrPrivateKeyPassword: String,
                       val csrCertificateName: String = DEFAULT_CSR_CERTIFICATE_NAME,
-                      val networkMapCertificateName: String = DEFAULT_NETWORK_MAP_CERTIFICATE_NAME,
+                      val csrCertCrlDistPoint: String,
+                      val csrCertCrlIssuer: String? = DEFAULT_CSR_CERT_CRL_ISSUER, // X500 name of the issuing authority e.g. "L=New York, C=US, OU=Org Unit, CN=Service Name",
+                                                                                   // if null parent CA is is considered as an issuer.
                       val networkMapPrivateKeyPassword: String,
                       val rootCertificateName: String = DEFAULT_ROOT_CERTIFICATE_NAME,
                       val validDays: Int,
@@ -35,7 +37,7 @@ data class Parameters(val dataSourceProperties: Properties,
                       val authKeyFilePath: Path? = DEFAULT_KEY_FILE_PATH,
                       val authKeyFilePassword: String? = DEFAULT_KEY_FILE_PASSWORD,
                       val autoUsername: String? = DEFAULT_AUTO_USERNAME,
-        // TODO Change this to Duration in the future.
+                      // TODO Change this to Duration in the future.
                       val signInterval: Long = DEFAULT_SIGN_INTERVAL) {
     companion object {
         val DEFAULT_DEVICE = "3001@127.0.0.1"
@@ -48,8 +50,8 @@ data class Parameters(val dataSourceProperties: Properties,
         val DEFAULT_KEY_FILE_PATH: Path? = null //Paths.get("/Users/michalkit/WinDev1706Eval/Shared/TEST4.key")
         val DEFAULT_KEY_FILE_PASSWORD: String? = null
         val DEFAULT_AUTO_USERNAME: String? = null
-        val DEFAULT_NETWORK_MAP_CERTIFICATE_NAME = "cordaintermediateca_nm" // TODO Change the value to "cordanetworkmap" since this is not a CA
         val DEFAULT_SIGN_INTERVAL = 600L // in seconds (10 minutes)
+        val DEFAULT_CSR_CERT_CRL_ISSUER: String? = null
     }
 }
 

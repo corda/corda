@@ -1,24 +1,24 @@
 package com.r3.corda.networkmanage.hsm.utils
 
 import CryptoServerJCE.CryptoServerProvider
+import net.corda.core.CordaOID
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.getX509Certificate
+import net.corda.nodeapi.internal.crypto.toJca
 import org.bouncycastle.asn1.ASN1EncodableVector
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -32,47 +32,48 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-object X509Utilities {
+object HsmX509Utilities {
 
     val SIGNATURE_ALGORITHM = "SHA256withECDSA"
 
     /**
      * Create a de novo root self-signed X509 v3 CA cert for the specified [KeyPair].
-     * @param legalName The Common (CN) field of the cert Subject will be populated with the domain string
+     * @param type type of the certificate to be created
+     * @param subject X500 name of the certificate subject
      * @param keyPair public and private keys to be associated with the generated certificate
      * @param validDays number of days which this certificate is valid for
      * @param provider provider to be used during the certificate signing process
+     * @param crlDistPoint url to the certificate revocation list of this certificate
+     * @param crlIssuer issuer of the certificate revocation list of this certificate
      * @return an instance of [CertificateAndKeyPair] class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
-    fun createSelfSignedCACert(legalName: String, keyPair: KeyPair, validDays: Int, provider: Provider): CertificateAndKeyPair {
+    fun createSelfSignedCACert(type: CertificateType,
+                               subject: X500Name,
+                               keyPair: KeyPair,
+                               validDays: Int,
+                               provider: Provider,
+                               crlDistPoint: String? = null,
+                               crlIssuer: String? = null): CertificateAndKeyPair {
         // TODO this needs to be chaneged
-        val issuer = getDevX509Name(legalName)
         val serial = BigInteger.valueOf(random63BitValue(provider))
-        val subject = issuer
         val pubKey = keyPair.public
 
         // Ten year certificate validity
         // TODO how do we manage certificate expiry, revocation and loss
         val window = getCertificateValidityWindow(0, validDays)
+        val keyPurposes = DERSequence(ASN1EncodableVector().apply { type.purposes.forEach { add(it) } })
 
-        val builder = JcaX509v3CertificateBuilder(
-                issuer, serial, window.first, window.second, subject, pubKey)
-
-        builder.addExtension(Extension.subjectKeyIdentifier, false,
-                createSubjectKeyIdentifier(pubKey))
-        // TODO to remove once we allow for longer certificate chains
-        builder.addExtension(Extension.basicConstraints, true,
-                BasicConstraints(2))
-
-        val usage = KeyUsage(KeyUsage.keyCertSign or KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.dataEncipherment or KeyUsage.cRLSign)
-        builder.addExtension(Extension.keyUsage, false, usage)
-
-        val purposes = ASN1EncodableVector()
-        purposes.add(KeyPurposeId.id_kp_serverAuth)
-        purposes.add(KeyPurposeId.id_kp_clientAuth)
-        purposes.add(KeyPurposeId.anyExtendedKeyUsage)
-        builder.addExtension(Extension.extendedKeyUsage, false, DERSequence(purposes).toASN1Primitive())
+        val builder = JcaX509v3CertificateBuilder(subject, serial, window.first, window.second, subject, pubKey)
+        builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(pubKey))
+        builder.addExtension(Extension.basicConstraints, true, BasicConstraints(type.isCA))
+        builder.addExtension(Extension.keyUsage, false, type.keyUsage)
+        builder.addExtension(Extension.extendedKeyUsage, false, keyPurposes)
+        builder.addExtension(Extension.authorityKeyIdentifier, false, JcaX509ExtensionUtils().createAuthorityKeyIdentifier(keyPair.public))
+        if (type.role != null) {
+            builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, type.role)
+        }
+        addCrlInfo(builder, crlDistPoint, crlIssuer)
 
         val cert = signCertificate(builder, keyPair.private, provider)
 
@@ -112,84 +113,109 @@ object X509Utilities {
     }
 
     /**
+     * Retrieves key pair and certificate chain from the given key store. Also, the keys retrieved are cleaned in a sense of the
+     * [getCleanEcdsaKeyPair] method.
+     * @param certificateKeyName certificate and key name (alias) to be used when querying the key store.
+     * @param privateKeyPassword password for the private key.
+     * @param keyStore key store that holds the certificate with its keys.
+     * @return instance of [KeyPairAndCertificateChain] holding the key pair and the certificate chain.
+     */
+    fun retrieveKeysAndCertificateChain(certificateKeyName: String, privateKeyPassword: String, keyStore: KeyStore): KeyPairAndCertificateChain {
+        val privateKey = keyStore.getKey(certificateKeyName, privateKeyPassword.toCharArray()) as PrivateKey
+        val publicKey = keyStore.getCertificate(certificateKeyName).publicKey
+        val certificateChain = keyStore.getCertificateChain(certificateKeyName).map { it as X509Certificate }
+        return KeyPairAndCertificateChain(getCleanEcdsaKeyPair(publicKey, privateKey), certificateChain.toTypedArray())
+    }
+
+    /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
-     * @param commonName The Common (CN) field of the cert Subject will be populated with the domain string.
+     * @param type type of the certificate to be created
+     * @param subject X500 name of the certificate subject
      * @param certificateAuthority The Public certificate and KeyPair of the root CA certificate above this used to sign it.
      * @param keyPair public and private keys to be associated with the generated certificate
      * @param validDays number of days which this certificate is valid for
      * @param provider provider to be used during the certificate signing process
+     * @param crlDistPoint url to the certificate revocation list of this certificate
+     * @param crlIssuer issuer of the certificate revocation list of this certificate
      * @return an instance of [CertificateAndKeyPair] class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
      */
-    fun createIntermediateCert(commonName: String,
+    fun createIntermediateCert(type: CertificateType,
+                               subject: X500Name,
                                certificateAuthority: CertificateAndKeyPair,
-                               keyPair: KeyPair, validDays: Int, provider: Provider): CertificateAndKeyPair {
+                               keyPair: KeyPair,
+                               validDays: Int,
+                               provider: Provider,
+                               crlDistPoint: String?,
+                               crlIssuer: String?): CertificateAndKeyPair {
 
         val issuer = X509CertificateHolder(certificateAuthority.certificate.encoded).subject
         val serial = BigInteger.valueOf(random63BitValue(provider))
-        val subject = getDevX509Name(commonName)
         val pubKey = keyPair.public
 
         // Ten year certificate validity
         // TODO how do we manage certificate expiry, revocation and loss
         val window = getCertificateValidityWindow(0, validDays, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
+        val keyPurposes = DERSequence(ASN1EncodableVector().apply { type.purposes.forEach { add(it) } })
 
-        val builder = JcaX509v3CertificateBuilder(
-                issuer, serial, window.first, window.second, subject, pubKey)
-
-        builder.addExtension(Extension.subjectKeyIdentifier, false,
-                createSubjectKeyIdentifier(pubKey))
-        // TODO to remove onece we allow for longer certificate chains
-        builder.addExtension(Extension.basicConstraints, true,
-                BasicConstraints(1))
-
-        val usage = KeyUsage(KeyUsage.keyCertSign or KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.dataEncipherment or KeyUsage.cRLSign)
-        builder.addExtension(Extension.keyUsage, false, usage)
-
-        val purposes = ASN1EncodableVector()
-        purposes.add(KeyPurposeId.id_kp_serverAuth)
-        purposes.add(KeyPurposeId.id_kp_clientAuth)
-        purposes.add(KeyPurposeId.anyExtendedKeyUsage)
-        builder.addExtension(Extension.extendedKeyUsage, false,
-                DERSequence(purposes))
+        val builder = JcaX509v3CertificateBuilder(issuer, serial, window.first, window.second, subject, pubKey)
+        builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(pubKey))
+        builder.addExtension(Extension.basicConstraints, true, BasicConstraints(type.isCA))
+        builder.addExtension(Extension.keyUsage, false, type.keyUsage)
+        builder.addExtension(Extension.extendedKeyUsage, false, keyPurposes)
+        builder.addExtension(Extension.authorityKeyIdentifier, false, JcaX509ExtensionUtils().createAuthorityKeyIdentifier(certificateAuthority.keyPair.public))
+        if (type.role != null) {
+            builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, type.role)
+        }
+        addCrlInfo(builder, crlDistPoint, crlIssuer)
 
         val cert = signCertificate(builder, certificateAuthority.keyPair.private, provider)
 
         cert.checkValidity(Date())
         cert.verify(certificateAuthority.keyPair.public)
 
-        return CertificateAndKeyPair(cert, KeyPair(pubKey, keyPair.private))
+        return CertificateAndKeyPair(cert, keyPair)
     }
 
     /**
      * Creates and signs a X509 v3 client certificate.
+     * @param type type of the certificate to be created
      * @param caCertAndKey signing certificate authority certificate and its keys
-     * @param request certficate signing request
+     * @param request certificate signing request
      * @param validDays number of days which this certificate is valid for
      * @param provider provider to be used during the certificate signing process
+     * @param crlDistPoint url to the certificate revocation list of this certificate
+     * @param crlIssuer issuer of the certificate revocation list of this certificate
      * @return an instance of [CertificateAndKeyPair] class is returned containing the signed client certificate.
      */
-    fun createClientCertificate(caCertAndKey: CertificateAndKeyPair,
+    fun createClientCertificate(type: CertificateType,
+                                caCertAndKey: CertificateAndKeyPair,
                                 request: PKCS10CertificationRequest,
                                 validDays: Int,
-                                provider: Provider): Certificate {
+                                provider: Provider,
+                                crlDistPoint: String?,
+                                crlIssuer: String?): Certificate {
         val jcaRequest = JcaPKCS10CertificationRequest(request)
         // This can be adjusted more to our future needs.
         val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = null).x500Name))), arrayOf())
         val issuerCertificate = caCertAndKey.certificate
         val issuerKeyPair = caCertAndKey.keyPair
-        val certificateType = CertificateType.NODE_CA
         val validityWindow = getCertificateValidityWindow(0, validDays, issuerCertificate.notBefore, issuerCertificate.notAfter)
         val serial = BigInteger.valueOf(random63BitValue(provider))
         val subject = CordaX500Name.parse(jcaRequest.subject.toString()).x500Name
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(jcaRequest.publicKey.encoded))
-        val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
+        val keyPurposes = DERSequence(ASN1EncodableVector().apply { type.purposes.forEach { add(it) } })
         val builder = JcaX509v3CertificateBuilder(issuerCertificate, serial, validityWindow.first, validityWindow.second, subject, jcaRequest.publicKey)
                 .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
-                .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
-                .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
+                .addExtension(Extension.basicConstraints, type.isCA, BasicConstraints(type.isCA))
+                .addExtension(Extension.keyUsage, false, type.keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
                 .addExtension(Extension.nameConstraints, true, nameConstraints)
+                .addExtension(Extension.authorityKeyIdentifier, false, JcaX509ExtensionUtils().createAuthorityKeyIdentifier(issuerKeyPair.public))
+        if (type.role != null) {
+            builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, type.role)
+        }
+        addCrlInfo(builder, crlDistPoint, crlIssuer)
         val certificate = signCertificate(builder, issuerKeyPair.private, provider)
         certificate.checkValidity(Date())
         certificate.verify(issuerKeyPair.public)
@@ -285,26 +311,23 @@ object X509Utilities {
                                 provider: Provider,
                                 signatureAlgorithm: String = SIGNATURE_ALGORITHM): X509Certificate {
         val signer = JcaContentSignerBuilder(signatureAlgorithm).setProvider(provider).build(signedWithPrivateKey)
-        return JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certificateBuilder.build(signer))
+        return certificateBuilder.build(signer).toJca()
     }
 
-    /**
-     * Return a bogus X509 for dev purposes. Use [getX509Name] for something more real.
-     */
-    private fun getDevX509Name(commonName: String): X500Name {
-        val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
-        nameBuilder.addRDN(BCStyle.CN, commonName)
-        nameBuilder.addRDN(BCStyle.O, "R3")
-        nameBuilder.addRDN(BCStyle.OU, "corda")
-        nameBuilder.addRDN(BCStyle.L, "London")
-        nameBuilder.addRDN(BCStyle.C, "UK")
-        return nameBuilder.build()
-    }
-
-    private fun getX509Name(myLegalName: String, nearestCity: String, email: String): X500Name {
-        return X500NameBuilder(BCStyle.INSTANCE)
-                .addRDN(BCStyle.CN, myLegalName)
-                .addRDN(BCStyle.L, nearestCity)
-                .addRDN(BCStyle.E, email).build()
+    private fun addCrlInfo(builder: X509v3CertificateBuilder, crlDistPoint: String?, crlIssuer: String?) {
+        if (crlDistPoint != null) {
+            val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
+            val crlIssuerGeneralNames = crlIssuer?.let {
+                GeneralNames(GeneralName(CordaX500Name.parse(crlIssuer).x500Name))
+            }
+            // The second argument is flag that allows you to define what reason of certificate revocation is served by this distribution point see [ReasonFlags].
+            // The idea is that you have different revocation per revocation reason. Since we won't go into such a granularity, we can skip that parameter.
+            // The third argument allows you to specify the name of the CRL issuer, it needs to be consistent with the crl (IssuingDistributionPoint) extension and the idp argument.
+            // If idp == true, set it, if idp == false, leave it null as done here.
+            val distPoint = DistributionPoint(distPointName, null, crlIssuerGeneralNames)
+            builder.addExtension(Extension.cRLDistributionPoints, false, CRLDistPoint(arrayOf(distPoint)))
+        }
     }
 }
+
+data class KeyPairAndCertificateChain(val keyPair: KeyPair, val certificateChain: Array<X509Certificate>)

@@ -30,15 +30,20 @@ Allowed parameters are:
 
 :keyGroup: HSM key group. This parameter is vendor specific (see Utimaco docs).
 
-:keySpecifier: HSM key specifier. This parameter is vendor specific (see Utimaco docs). Default value: 1
+:keySpecifier: HSM key specifier. This parameter is vendor specific (see Utimaco docs). Default value: 1.
 
 :rootPrivateKeyPassword: Private key password for the root certificate.
 
-:rootCertificateName: Root certificate name. Default value: "cordarootca"
+:rootCertificateName: Root certificate name. Default value: "cordarootca".
 
 :csrPrivateKeyPassword: Private key password for the intermediate certificate used to sign certficate signing requests.
 
-:csrCertificateName: Certificate signing requests intermediate certificate name. Default value: "cordaintermediateca"
+:csrCertificateName: Certificate signing requests intermediate certificate name. Default value: "cordaintermediateca".
+
+:csrCertCrlDistPoint: Certificate revocation list location for the node CA certificate.
+
+:csrCertCrlIssuer: Certificate revocation list issuer. The expected value is of the X500 name format - e.g. "L=London, C=GB, OU=Org Unit, CN=Service Name".
+                   If not specified, the node CA certificate issuer is considered also as the CRL issuer.
 
 :databaseProperties: Database properties.
 

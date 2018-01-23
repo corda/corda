@@ -1,101 +1,116 @@
 package com.r3.corda.networkmanage.hsm.generator
 
-import CryptoServerCXI.CryptoServerCXI
+import CryptoServerCXI.CryptoServerCXI.KEY_ALGO_ECDSA
+import CryptoServerCXI.CryptoServerCXI.KeyAttributes
 import CryptoServerJCE.CryptoServerProvider
-import com.r3.corda.networkmanage.hsm.authentication.Authenticator
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities.createIntermediateCert
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities.createSelfSignedCACert
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getAndInitializeKeyStore
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getCleanEcdsaKeyPair
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities.retrieveCertificateAndKeys
-import net.corda.nodeapi.internal.crypto.addOrReplaceKey
+import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
+import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createIntermediateCert
+import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createSelfSignedCACert
+import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
+import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getCleanEcdsaKeyPair
+import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveKeysAndCertificateChain
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
+import net.corda.core.internal.isDirectory
+import net.corda.core.internal.x500Name
+import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType.*
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.cert.X509Certificate
 
 data class CertificateNameAndPass(val certificateName: String, val privateKeyPassword: String)
-
 /**
- * Encapsulates logic for root and intermediate key/certificate generation.
+ * Encapsulates logic for key and certificate generation.
+ *
  */
-class KeyCertificateGenerator(private val authenticator: Authenticator,
-                              private val keySpecifier: Int,
-                              private val keyGroup: String) {
-    /**
-     * Generates root and intermediate key and certificates and stores them in the key store given by provider.
-     * If the keys and certificates already exists they will be overwritten.
-     * @param intermediateCertificatesCredentials name and password for the intermediate key/certificate
-     * @param parentCertificateName name of the parent key/certificate
-     * @param parentPrivateKeyPassword password for the parent private key
-     * @param validDays days of certificate validity
-     */
-    fun generateAllCertificates(intermediateCertificatesCredentials: List<CertificateNameAndPass>,
-                                parentCertificateName: String,
-                                parentPrivateKeyPassword: String,
-                                validDays: Int) {
-        authenticator.connectAndAuthenticate { provider, _ ->
-            val keyStore = getAndInitializeKeyStore(provider)
-            generateRootCertificate(provider, keyStore, parentCertificateName, parentPrivateKeyPassword, validDays)
-            intermediateCertificatesCredentials.forEach {
-                generateIntermediateCertificate(provider, keyStore, it.certificateName, it.privateKeyPassword, parentCertificateName, parentPrivateKeyPassword, validDays)
+class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
+    companion object {
+        val logger = contextLogger()
+    }
+
+    fun generate(provider: CryptoServerProvider) {
+        parameters.run {
+            require(trustStoreDirectory.isDirectory()) { "trustStoreDirectory must point to a directory." }
+            val keyName = when (certConfig.certificateType) {
+                ROOT_CA -> CORDA_ROOT_CA
+                INTERMEDIATE_CA -> CORDA_INTERMEDIATE_CA
+                NETWORK_MAP -> CORDA_NETWORK_MAP
+                else -> throw IllegalArgumentException("Invalid certificate type. ${certConfig.certificateType}")
             }
+            val keyStore = getAndInitializeKeyStore(provider)
+            val keyPair = certConfig.generateEcdsaKeyPair(keyName, provider, keyStore)
+            val certChain = if (certConfig.certificateType == ROOT_CA) {
+                certConfig.generateRootCert(provider, keyPair, trustStoreDirectory, trustStorePassword)
+            } else {
+                certConfig.generateIntermediateCert(provider, keyPair, keyStore)
+            }
+            keyStore.addOrReplaceKey(keyName, keyPair.private, certConfig.privateKeyPassword.toCharArray(), certChain)
+            logger.info("New certificate and key pair named $keyName have been generated and stored in HSM")
         }
     }
 
-    /**
-     * Generates a root certificate
-     */
-    private fun generateRootCertificate(provider: CryptoServerProvider,
-                                        keyStore: KeyStore,
-                                        certificateKeyName: String,
-                                        privateKeyPassword: String,
-                                        validDays: Int) {
-        val keyPair = generateEcdsaKeyPair(provider, keyStore, certificateKeyName, privateKeyPassword)
-        val selfSignedRootCertificate = createSelfSignedCACert("R3", keyPair, validDays, provider).certificate
-        keyStore.addOrReplaceKey(certificateKeyName, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(selfSignedRootCertificate))
-        println("New certificate and key pair named $certificateKeyName have been generated")
+    private fun CertificateConfiguration.generateRootCert(provider: CryptoServerProvider,
+                                                          keyPair: KeyPair,
+                                                          trustStoreDirectory: Path,
+                                                          trustStorePassword: String): Array<X509Certificate> {
+        val certificate = createSelfSignedCACert(ROOT_CA,
+                CordaX500Name.parse(subject).x500Name,
+                keyPair,
+                validDays,
+                provider,
+                crlDistributionUrl,
+                crlIssuer).certificate
+        val trustStorePath = trustStoreDirectory / "truststore.jks"
+        val trustStore = loadOrCreateKeyStore(trustStorePath, trustStorePassword)
+        logger.info("Trust store for distribution to nodes created in $trustStore")
+        trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificate)
+        logger.info("Certificate $CORDA_ROOT_CA has been added to $trustStore")
+        trustStore.save(trustStorePath, trustStorePassword)
+        logger.info("Trust store has been persisted. Ready for distribution.")
+        return arrayOf(certificate)
     }
 
-    /**
-     * Generates an intermediate certificate
-     */
-    private fun generateIntermediateCertificate(provider: CryptoServerProvider,
-                                                keyStore: KeyStore,
-                                                certificateKeyName: String,
-                                                privateKeyPassword: String,
-                                                parentCertificateName: String,
-                                                parentPrivateKeyPassword: String,
-                                                validDays: Int) {
-        val parentCACertKey = retrieveCertificateAndKeys(parentCertificateName, parentPrivateKeyPassword, keyStore)
-        val keyPair = generateEcdsaKeyPair(provider, keyStore, certificateKeyName, privateKeyPassword)
-        val intermediateCertificate = createIntermediateCert("R3 Intermediate", parentCACertKey, keyPair, validDays, provider)
-        keyStore.addOrReplaceKey(certificateKeyName, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(intermediateCertificate.certificate, parentCACertKey.certificate))
-        println("New certificate and key pair named $certificateKeyName have been generated")
+    private fun CertificateConfiguration.generateIntermediateCert(
+            provider: CryptoServerProvider,
+            keyPair: KeyPair,
+            keyStore: KeyStore): Array<X509Certificate> {
+        val rootKeysAndCertChain = retrieveKeysAndCertificateChain(CORDA_ROOT_CA,
+                rootPrivateKeyPassword,
+                keyStore)
+        val certificateAndKeyPair = createIntermediateCert(
+                certificateType,
+                CordaX500Name.parse(subject).x500Name,
+                CertificateAndKeyPair(rootKeysAndCertChain.certificateChain.first(), rootKeysAndCertChain.keyPair),
+                keyPair,
+                validDays,
+                provider,
+                crlDistributionUrl,
+                crlIssuer)
+        return arrayOf(certificateAndKeyPair.certificate, *rootKeysAndCertChain.certificateChain)
     }
 
-    private fun generateECDSAKey(keySpecifier: Int, keyName: String, keyGroup: String, provider: CryptoServerProvider, overwrite: Boolean = true) {
-        val generateFlag = if (overwrite) {
-            println("!!! WARNING: OVERWRITING KEY NAMED $keyName !!!")
-            CryptoServerCXI.FLAG_OVERWRITE
-        } else {
-            0
-        }
-        val keyAttributes = CryptoServerCXI.KeyAttributes()
+    private fun CertificateConfiguration.generateECDSAKey(keyName: String, provider: CryptoServerProvider) {
+        val keyAttributes = KeyAttributes()
         keyAttributes.apply {
-            algo = CryptoServerCXI.KEY_ALGO_ECDSA
+            algo = KEY_ALGO_ECDSA
             group = keyGroup
             specifier = keySpecifier
-            export = 0 // deny export
+            export = keyExport
             name = keyName
-            setCurve("NIST-P256")
+            setCurve(keyCurve)
         }
-        println("Generating key...")
-        val mechanismFlag = CryptoServerCXI.MECH_RND_REAL or CryptoServerCXI.MECH_KEYGEN_UNCOMP
-        provider.cryptoServer.generateKey(generateFlag, keyAttributes, mechanismFlag)
+        logger.info("Generating key $keyName")
+        provider.cryptoServer.generateKey(keyOverride, keyAttributes, keyGenMechanism)
     }
 
-    private fun generateEcdsaKeyPair(provider: CryptoServerProvider, keyStore: KeyStore, keyName: String, privateKeyPassword: String): KeyPair {
-        generateECDSAKey(keySpecifier, keyName, keyGroup, provider)
+    private fun CertificateConfiguration.generateEcdsaKeyPair(keyName: String, provider: CryptoServerProvider, keyStore: KeyStore): KeyPair {
+        generateECDSAKey(keyName, provider)
         val privateKey = keyStore.getKey(keyName, privateKeyPassword.toCharArray()) as PrivateKey
         val publicKey = keyStore.getCertificate(keyName).publicKey
         return getCleanEcdsaKeyPair(publicKey, privateKey)

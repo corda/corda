@@ -36,6 +36,18 @@ For a list of options the HSM signing server takes, run with the `--help` option
 java -jar capsule-hsm/build/libs/hsm-<version>.jar --help
 ```
 
+## HSM Certificate Generator
+
+To build a fat jar containing all the hsm certificate generator code you can simply invoke
+```
+    ./gradlew network-management:capsule-hsm-cert-generator:buildHsmCertGeneratorJAR
+```
+
+The built file will appear in
+```
+network-management/capsule-hsm-cert-generator/build/libs/hsm-cert-generator-<VERSION>.jar
+```
+
 #Configuring network management service
 ### Local signing
 
@@ -135,7 +147,7 @@ networkMapConfig {
 
 ### 1. Create keystore for local signer
 
-   If local signer is enabled, the server will look for key stores in the certificate folder on start up.  
+   If local signer is enabled, the server will look for key stores in the certificate folder on start up.
    The key stores can be created using `--mode` flag.
    ```
    java -jar doorman-<version>.jar --mode ROOT_KEYGEN
@@ -146,11 +158,11 @@ networkMapConfig {
    ```
    
    A trust store file containing the root trust certificate will be produced in the location `distribute-nodes / truststore.jks`
-   (relative to `rootStorePath`). `truststore.jks` must be copied to the `certificates` directory of each node before 
+   (relative to `rootStorePath`). `truststore.jks` must be copied to the `certificates` directory of each node before
    they attempt to register. The trust store password is `trustpass`.
 
 ### 2. Start Doorman service for notary registration 
-   Start the network management server with the doorman service for initial bootstrapping. Network map service (`networkMapConfig`) should be **disabled** at this point.  
+   Start the network management server with the doorman service for initial bootstrapping. Network map service (`networkMapConfig`) should be **disabled** at this point.
    **Comment out** network map config in the config file and start the server by running :
    ```
    java -jar doorman-<version>.jar

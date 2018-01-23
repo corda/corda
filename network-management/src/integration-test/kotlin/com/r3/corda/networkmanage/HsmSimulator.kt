@@ -33,6 +33,7 @@ data class CryptoUserCredentials(val username: String, val password: String)
 class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
                    private val imageRepoTag: String = DEFAULT_IMAGE_REPO_TAG,
                    private val imageVersion: String = DEFAULT_IMAGE_VERSION,
+                   private val pullImage: Boolean = DEFAULT_PULL_IMAGE,
                    private val registryUser: String? = REGISTRY_USERNAME,
                    private val registryPass: String? = REGISTRY_PASSWORD) : ExternalResource() {
 
@@ -40,6 +41,7 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
         val DEFAULT_SERVER_ADDRESS = "corda.azurecr.io"
         val DEFAULT_IMAGE_REPO_TAG = "corda.azurecr.io/network-management/hsm-simulator"
         val DEFAULT_IMAGE_VERSION = "latest"
+        val DEFAULT_PULL_IMAGE = true
 
         val HSM_SIMULATOR_PORT = "3001/tcp"
         val CONTAINER_KILL_TIMEOUT_SECONDS = 10
@@ -63,7 +65,10 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
     override fun before() {
         assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
         assumeFalse("Docker registry password is not set!. Skipping the test.", registryPass.isNullOrBlank())
-        docker = DefaultDockerClient.fromEnv().build().pullHsmSimulatorImageFromRepository()
+        docker = DefaultDockerClient.fromEnv().build()
+        if (pullImage) {
+            docker.pullHsmSimulatorImageFromRepository()
+        }
         containerId = docker.createContainer()
         docker.startHsmSimulatorContainer()
     }

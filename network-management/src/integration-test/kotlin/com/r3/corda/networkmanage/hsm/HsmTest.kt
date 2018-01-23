@@ -33,7 +33,8 @@ class HsmTest {
             networkMapPrivateKeyPassword = "",
             rootPrivateKeyPassword = "",
             keyGroup = "DEV.DOORMAN",
-            validDays = 3650
+            validDays = 3650,
+            csrCertCrlDistPoint = "http://test.com/revoked.crl"
     )
 
     private lateinit var inputReader: InputReader

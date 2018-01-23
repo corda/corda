@@ -11,8 +11,6 @@ import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.r3.corda.networkmanage.hsm.configuration.Parameters
 import com.r3.corda.networkmanage.hsm.configuration.parseParameters
-import com.r3.corda.networkmanage.hsm.generator.CertificateNameAndPass
-import com.r3.corda.networkmanage.hsm.generator.KeyCertificateGenerator
 import com.r3.corda.networkmanage.hsm.menu.Menu
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
@@ -59,7 +57,6 @@ fun run(parameters: Parameters) {
         val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
         val hsmSigner = HsmNetworkMapSigner(
-                networkMapCertificateName,
                 networkMapPrivateKeyPassword,
                 Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
 
@@ -72,25 +69,14 @@ fun run(parameters: Parameters) {
                     csrStorage,
                     csrCertificateName,
                     csrPrivateKeyPassword,
+                    csrCertCrlDistPoint,
+                    csrCertCrlIssuer,
                     rootCertificateName,
                     validDays,
                     Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
             signer.sign(it)
         }
-
-        Menu().withExceptionHandler(::processError).addItem("1", "Generate root and intermediate certificates", {
-            if (confirmedKeyGen()) {
-                val generator = KeyCertificateGenerator(
-                        Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePassword, keyGenAuthThreshold),
-                        keySpecifier,
-                        keyGroup)
-                generator.generateAllCertificates(
-                        listOf(CertificateNameAndPass(csrCertificateName, csrPrivateKeyPassword), CertificateNameAndPass(networkMapCertificateName, networkMapPrivateKeyPassword)),
-                        rootCertificateName,
-                        rootPrivateKeyPassword,
-                        validDays)
-            }
-        }).addItem("2", "Sign all approved and unsigned CSRs", {
+        Menu().withExceptionHandler(::processError).addItem("1", "Sign all approved and unsigned CSRs", {
             val approved = csrStorage.getApprovedRequests()
             if (approved.isNotEmpty()) {
                 if (confirmedSign(approved)) {
@@ -99,7 +85,7 @@ fun run(parameters: Parameters) {
             } else {
                 println("There is no approved CSR")
             }
-        }).addItem("3", "List all approved and unsigned CSRs", {
+        }).addItem("2", "List all approved and unsigned CSRs", {
             val approved = csrStorage.getApprovedRequests()
             if (approved.isNotEmpty()) {
                 println("Approved CSRs:")

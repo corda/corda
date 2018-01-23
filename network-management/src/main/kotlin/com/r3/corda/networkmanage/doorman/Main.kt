@@ -3,11 +3,11 @@ package com.r3.corda.networkmanage.doorman
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
+import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_NETWORK_MAP_CERTIFICATE_NAME
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
@@ -127,7 +127,7 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
             X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
 
     storeCertIfAbsent(
-            DEFAULT_NETWORK_MAP_CERTIFICATE_NAME,
+            CORDA_NETWORK_MAP,
             CertificateType.NETWORK_MAP,
             X500Principal("CN=Corda Network Map,OU=Corda,O=R3 Ltd,L=London,C=GB"),
             Crypto.EDDSA_ED25519_SHA512)
@@ -149,7 +149,7 @@ private fun processKeyStore(parameters: NetworkManagementServerParameters): Pair
         )
     }
 
-    val networkMapSigner = LocalSigner(keyStore.getCertificateAndKeyPair(DEFAULT_NETWORK_MAP_CERTIFICATE_NAME, privateKeyPassword))
+    val networkMapSigner = LocalSigner(keyStore.getCertificateAndKeyPair(CORDA_NETWORK_MAP, privateKeyPassword))
 
     return Pair(csrCertPathAndKey, networkMapSigner)
 }
