@@ -507,7 +507,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Installs a flow that's core to the Corda platform. Unlike CorDapp flows which are versioned individually using
      * [InitiatingFlow.version], core flows have the same version as the node's platform version. To cater for backwards
      * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
-     * @suppress
      */
     @VisibleForTesting
     fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
