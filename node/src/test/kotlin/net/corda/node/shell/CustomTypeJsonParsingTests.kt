@@ -34,10 +34,11 @@ class CustomTypeJsonParsingTests {
 
     @Test
     fun `Deserializing UniqueIdentifier by parsing string`() {
-        val json = """{"linearId":"26b37265-a1fd-4c77-b2e0-715917ef619f"}"""
+        val id = "26b37265-a1fd-4c77-b2e0-715917ef619f"
+        val json = """{"linearId":"$id"}"""
         val state = objectMapper.readValue<State>(json)
 
-        assertEquals("26b37265-a1fd-4c77-b2e0-715917ef619f", state.linearId.externalId)
+        assertEquals(id, state.linearId.id.toString())
     }
 
     @Test
