@@ -4,6 +4,7 @@ import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NodeInfo
@@ -15,6 +16,8 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
+import net.corda.node.internal.artemis.ArtemisBroker
+import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -23,6 +26,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.messaging.*
+import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
@@ -36,6 +40,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.nio.file.Path
 import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
@@ -132,6 +137,7 @@ open class Node(configuration: NodeConfiguration,
     override lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     private var messageBroker: ArtemisMessagingServer? = null
+    private var rpcBroker: ArtemisBroker? = null
 
     private var shutdownHook: ShutdownHook? = null
 
@@ -139,15 +145,16 @@ open class Node(configuration: NodeConfiguration,
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService ?:
-            SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+        SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
-        val advertisedAddress = info.addresses.single()
+        val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
+        val advertisedAddress = info.addresses.first()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-        rpcMessagingClient = RPCMessagingClient(configuration, serverAddress, networkParameters.maxMessageSize)
+        rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, rpcServerAddresses.admin, networkParameters.maxMessageSize)
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
@@ -166,15 +173,38 @@ open class Node(configuration: NodeConfiguration,
                 networkParameters.maxMessageSize)
     }
 
+    private fun startLocalRpcBroker(): BrokerAddresses {
+        with(configuration) {
+            require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
+            val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
+            with(rpcOptions) {
+                rpcBroker = if (useSsl) {
+                    ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                } else {
+                    ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                }
+            }
+            return rpcBroker!!.addresses
+        }
+    }
+
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> {
-        return listOf(configuration.messagingServerAddress ?: getAdvertisedAddress())
+        val addresses = mutableListOf<NetworkHostAndPort>()
+        addresses.add(configuration.messagingServerAddress ?: getAdvertisedAddress())
+        rpcBroker?.addresses?.let {
+            addresses.add(it.primary)
+            if (it.admin != it.primary) {
+                addresses.add(it.admin)
+            }
+        }
+        return addresses
     }
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
@@ -220,12 +250,16 @@ open class Node(configuration: NodeConfiguration,
     override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
-            runOnStop += this::stop
+            runOnStop += this::close
+            start()
+        }
+        rpcBroker?.apply {
+            runOnStop += this::close
             start()
         }
         // Start up the MQ clients.
         rpcMessagingClient.run {
-            runOnStop += this::stop
+            runOnStop += this::close
             start(rpcOps, securityManager)
         }
         verifierMessagingClient?.run {
@@ -331,7 +365,7 @@ open class Node(configuration: NodeConfiguration,
     private var verifierMessagingClient: VerifierMessagingClient? = null
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        rpcMessagingClient.start2(messageBroker!!.serverControl)
+        rpcMessagingClient.start2(rpcBroker!!.serverControl)
         verifierMessagingClient?.start2()
         (network as P2PMessagingClient).run()
     }

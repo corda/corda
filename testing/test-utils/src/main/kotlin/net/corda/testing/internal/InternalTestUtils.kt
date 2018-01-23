@@ -4,7 +4,9 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.config.SslOptions
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
@@ -115,3 +117,22 @@ fun createDevNodeCaCertPath(
 
 /** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
+
+fun SslOptions.useSslRpcOverrides(): Map<String, String> {
+    return mapOf(
+            "rpcSettings.useSsl" to "true",
+            "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
+            "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+    )
+}
+
+fun SslOptions.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
+    return mapOf(
+            "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
+            "rpcSettings.useSsl" to "false",
+            "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
+            "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+    )
+}

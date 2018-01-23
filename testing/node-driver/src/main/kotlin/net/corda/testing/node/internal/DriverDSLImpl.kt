@@ -145,14 +145,18 @@ class DriverDSLImpl(
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
-        val rpcAddress = config.corda.rpcAddress!!
-        val client = CordaRPCClient(rpcAddress)
+        val rpcAddress = config.corda.rpcOptions.address!!
+        val client = if (config.corda.rpcOptions.useSsl) {
+            CordaRPCClient(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
+        } else {
+            CordaRPCClient(rpcAddress)
+        }
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
             } catch (e: Exception) {
                 if (processDeathFuture.isDone) throw e
-                log.error("Exception $e, Retrying RPC connection at $rpcAddress")
+                log.error("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
                 null
             }
         }
@@ -202,6 +206,7 @@ class DriverDSLImpl(
                                     maximumHeapSize: String = "200m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
+        val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
@@ -211,7 +216,8 @@ class DriverDSLImpl(
                 configOverrides = configOf(
                         "myLegalName" to name.toString(),
                         "p2pAddress" to p2pAddress.toString(),
-                        "rpcAddress" to rpcAddress.toString(),
+                        "rpcSettings.address" to rpcAddress.toString(),
+                        "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
                         "webAddress" to webAddress.toString(),
                         "useTestClock" to useTestClock,
                         "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
@@ -312,7 +318,23 @@ class DriverDSLImpl(
     private fun startCordformNode(cordform: CordformNode, localNetworkMap: LocalNetworkMap): CordaFuture<NodeHandle> {
         val name = CordaX500Name.parse(cordform.name)
         // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
-        val rpcAddress = if (cordform.rpcAddress == null) mapOf("rpcAddress" to portAllocation.nextHostAndPort().toString()) else emptyMap()
+        val rpcAddress = if (cordform.rpcAddress == null) {
+            val overrides = mutableMapOf<String, Any>("rpcSettings.address" to portAllocation.nextHostAndPort().toString())
+            cordform.config.apply {
+                if (!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) {
+                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
+                }
+            }
+            overrides
+        } else {
+            val overrides = mutableMapOf<String, Any>()
+            cordform.config.apply {
+                if ((!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) && !hasPath("rpcSettings.adminAddress")) {
+                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
+                }
+            }
+            overrides
+        }
         val webAddress = cordform.webAddress?.let { NetworkHostAndPort.parse(it) } ?: portAllocation.nextHostAndPort()
         val notary = if (cordform.notary != null) mapOf("notary" to cordform.notary) else emptyMap()
         val rpcUsers = cordform.rpcUsers

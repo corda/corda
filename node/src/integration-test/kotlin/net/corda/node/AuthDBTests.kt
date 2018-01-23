@@ -94,7 +94,7 @@ class AuthDBTests : NodeBasedTest() {
         )
 
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
     }
 
     @Test

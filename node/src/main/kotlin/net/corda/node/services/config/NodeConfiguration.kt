@@ -3,10 +3,14 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.node.services.messaging.CertificateChainCheckPolicy
+import net.corda.node.internal.artemis.CertificateChainCheckPolicy
+import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -34,7 +38,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
-    val rpcAddress: NetworkHostAndPort?
+    val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
@@ -45,7 +49,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
-
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -100,7 +103,7 @@ data class BridgeConfiguration(val retryIntervalMs: Long,
 
 data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
-fun Config.parseAsNodeConfiguration(): NodeConfiguration = this.parseAs<NodeConfigurationImpl>()
+fun Config.parseAsNodeConfiguration(): NodeConfiguration = parseAs<NodeConfigurationImpl>()
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
@@ -118,7 +121,8 @@ data class NodeConfigurationImpl(
         // Then rename this to messageRedeliveryDelay and make it of type Duration
         override val messageRedeliveryDelaySeconds: Int = 30,
         override val p2pAddress: NetworkHostAndPort,
-        override val rpcAddress: NetworkHostAndPort?,
+        private val rpcAddress: NetworkHostAndPort? = null,
+        private val rpcSettings: NodeRpcSettings,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
@@ -137,7 +141,23 @@ data class NodeConfigurationImpl(
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
-        ) : NodeConfiguration {
+    ) : NodeConfiguration {
+    companion object {
+        private val logger = loggerFor<NodeConfigurationImpl>()
+    }
+
+    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+
+    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+        return when {
+            explicitAddress != null -> {
+                require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
+                logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
+                settings.copy(address = explicitAddress)
+            }
+            else -> settings
+        }.asOptions(fallbackSslOptions)
+    }
 
     override val exportJMXto: String get() = "http"
     override val transactionCacheSizeBytes: Long
@@ -156,6 +176,28 @@ data class NodeConfigurationImpl(
     }
 }
 
+data class NodeRpcSettings(
+        val address: NetworkHostAndPort?,
+        val adminAddress: NetworkHostAndPort?,
+        val standAloneBroker: Boolean = false,
+        val useSsl: Boolean = false,
+        val ssl: SslOptions?
+) {
+    fun asOptions(fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+        return object : NodeRpcOptions {
+            override val address = this@NodeRpcSettings.address
+            override val adminAddress = this@NodeRpcSettings.adminAddress
+            override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
+            override val useSsl = this@NodeRpcSettings.useSsl
+            override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+
+            override fun toString(): String {
+                return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
+            }
+        }
+    }
+}
+
 enum class VerifierType {
     InMemory,
     OutOfProcess
@@ -165,7 +207,8 @@ enum class CertChainPolicyType {
     Any,
     RootMustMatch,
     LeafMustMatch,
-    MustContainOneOf
+    MustContainOneOf,
+    UsernameMustMatch
 }
 
 data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
@@ -176,6 +219,7 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
                 CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
                 CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
                 CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
+                CertChainPolicyType.UsernameMustMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
             }
         }
 }

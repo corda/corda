@@ -6,6 +6,20 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
+
+* Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
+
+* Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, defaulted to ``null``.
+
+* Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce username == CN condition on RPC SSL certificates.
+
+* Modified ``DriverDSL`` and sub-types to allow specifying RPC settings for the Node.
+
+* Modified the ``DriverDSL`` to start Cordformation nodes allowing automatic generation of "rpcSettings.adminAddress" in case "rcpSettings.useSsl" is ``false`` (the default).
+
+* Introduced ``UnsafeCertificatesFactory`` allowing programmatic generation of X509 certificates for test purposes.
+
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
   `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
   See: DummyDealStateSchemaV1.PersistentDummyDealState

@@ -23,15 +23,22 @@ fun SSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
                                         intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) {
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
 
-    loadOrCreateKeyStore(nodeKeystore, keyStorePassword).apply {
-        addOrReplaceKey(
-                X509Utilities.CORDA_CLIENT_CA,
-                nodeCaKeyPair.private,
-                keyStorePassword.toCharArray(),
-                arrayOf(nodeCaCert, intermediateCa.certificate, rootCert))
-        save(nodeKeystore, keyStorePassword)
-    }
+    createDevKeyStores(rootCert, intermediateCa, nodeCaCert, nodeCaKeyPair, legalName)
+}
 
+/**
+ * Create the node and SSL key stores needed by a node. The node key store will be populated with a node CA cert (using
+ * the given legal name), and the SSL key store will store the TLS cert which is a sub-cert of the node CA.
+ */
+fun SSLConfiguration.createDevKeyStores(rootCert: X509Certificate, intermediateCa: CertificateAndKeyPair, nodeCaCert: X509Certificate, nodeCaKeyPair: KeyPair, legalName: CordaX500Name) {
+    createNodeKeyStore(nodeCaCert, nodeCaKeyPair, intermediateCa, rootCert)
+    createSslKeyStore(nodeCaCert, nodeCaKeyPair, legalName, intermediateCa, rootCert)
+}
+
+/**
+ * Create the SSL key store needed by a node.
+ */
+fun SSLConfiguration.createSslKeyStore(nodeCaCert: X509Certificate, nodeCaKeyPair: KeyPair, legalName: CordaX500Name, intermediateCa: CertificateAndKeyPair, rootCert: X509Certificate) {
     val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)
 
@@ -42,6 +49,20 @@ fun SSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
                 keyStorePassword.toCharArray(),
                 arrayOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert))
         save(sslKeystore, keyStorePassword)
+    }
+}
+
+/**
+ * Create the node key store needed by a node.
+ */
+fun SSLConfiguration.createNodeKeyStore(nodeCaCert: X509Certificate, nodeCaKeyPair: KeyPair, intermediateCa: CertificateAndKeyPair, rootCert: X509Certificate) {
+    loadOrCreateKeyStore(nodeKeystore, keyStorePassword).apply {
+        addOrReplaceKey(
+                X509Utilities.CORDA_CLIENT_CA,
+                nodeCaKeyPair.private,
+                keyStorePassword.toCharArray(),
+                arrayOf(nodeCaCert, intermediateCa.certificate, rootCert))
+        save(nodeKeystore, keyStorePassword)
     }
 }
 

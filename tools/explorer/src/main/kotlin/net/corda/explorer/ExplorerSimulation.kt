@@ -83,7 +83,7 @@ class ExplorerSimulation(private val options: OptionSet) {
             issuerNodeUSD = issuerUSD.get()
 
             arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
-                println("${it.nodeInfo.legalIdentities.first()} started on ${it.configuration.rpcAddress}")
+                println("${it.nodeInfo.legalIdentities.first()} started on ${it.configuration.rpcOptions.address}")
             }
 
             when {

@@ -101,7 +101,7 @@ class IRSDemoTest {
     }
 
     private fun getFixingDateObservable(config: NodeConfiguration): Observable<LocalDate?> {
-        val client = CordaRPCClient(config.rpcAddress!!)
+        val client = CordaRPCClient(config.rpcOptions.address!!)
         val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 

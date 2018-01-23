@@ -35,7 +35,7 @@ class NetworkMapTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val cacheTimeout = 1.seconds
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = PortAllocation.RandomFree
 
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams

@@ -226,6 +226,7 @@ class ProtonWrapperTests {
             doReturn(CHARLIE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(true).whenever(it).useAMQPBridges
@@ -236,7 +237,7 @@ class ProtonWrapperTests {
             doReturn(never<NetworkMapCache.MapChange>()).whenever(it).changed
         }
         val userService = rigorousMock<RPCSecurityManager>()
-        val server = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val server = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, userService, MAX_MESSAGE_SIZE)
         val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), MAX_MESSAGE_SIZE)
         server.start()
         client.start()

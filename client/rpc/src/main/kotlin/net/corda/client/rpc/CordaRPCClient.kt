@@ -10,6 +10,7 @@ import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
@@ -67,10 +68,12 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
+ * @param sslConfiguration An optional [SSLConfiguration] used to enable secure communication with the server.
  */
 class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+        sslConfiguration: SSLConfiguration? = null
 ) {
     init {
         try {
@@ -85,7 +88,7 @@ class CordaRPCClient @JvmOverloads constructor(
     }
 
     private val rpcClient = RPCClient<CordaRPCOps>(
-            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = null),
+            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
             configuration.toRpcClientConfiguration(),
             KRYO_RPC_CLIENT_CONTEXT
     )

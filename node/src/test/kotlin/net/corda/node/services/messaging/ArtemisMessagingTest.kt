@@ -37,7 +37,7 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class ArtemisMessagingTests {
+class ArtemisMessagingTest {
     companion object {
         const val TOPIC = "platform.self"
     }
@@ -51,7 +51,6 @@ class ArtemisMessagingTests {
     val temporaryFolder = TemporaryFolder()
 
     private val serverPort = freePort()
-    private val rpcPort = freePort()
     private val identity = generateKeyPair()
 
     private lateinit var config: NodeConfiguration
@@ -71,6 +70,7 @@ class ArtemisMessagingTests {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(5).whenever(it).messageRedeliveryDelaySeconds
@@ -183,8 +183,8 @@ class ArtemisMessagingTests {
         }
     }
 
-    private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager, maxMessageSize).apply {
+    private fun createMessagingServer(local: Int = serverPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
+        return ArtemisMessagingServer(config, local, networkMapCache, securityManager, maxMessageSize).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

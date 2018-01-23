@@ -27,7 +27,7 @@ import java.nio.file.Files
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
  */
-class MQSecurityAsNodeTest : MQSecurityTest() {
+class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
         return clientTo(alice.internals.configuration.p2pAddress)
     }
@@ -67,7 +67,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a node user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcAddress!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_USER, NODE_USER, enableSSL = false)
         }
@@ -75,7 +75,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a peer user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcAddress!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }

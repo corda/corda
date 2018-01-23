@@ -38,7 +38,7 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
 }
 
 fun <T : Any> Config.parseAs(clazz: KClass<T>): T {
-    require(clazz.isData) { "Only Kotlin data classes can be parsed" }
+    require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
     val args = constructor.parameters
             .filterNot { it.isOptional && !hasPath(it.name!!) }
