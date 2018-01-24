@@ -2,12 +2,14 @@ package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.typesafe.config.ConfigException
+import joptsimple.OptionException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.io.File
 import java.lang.reflect.InvocationTargetException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class DoormanParametersTest {
     private val validOverrideNetworkConfigPath = File("network-parameters.conf").absolutePath
@@ -52,5 +54,23 @@ class DoormanParametersTest {
         assertEquals("TD", parameter.jiraConfig?.projectCode)
         assertEquals("username", parameter.jiraConfig?.username)
         assertEquals("password", parameter.jiraConfig?.password)
+    }
+
+    @Test
+    fun `should parse trust store password correctly`() {
+        val parameter = parseParameters("--config-file", validConfigPath, "--mode", "ROOT_KEYGEN", "--trust-store-password", "testPassword")
+        assertEquals("testPassword", parameter.trustStorePassword)
+
+        assertFailsWith<OptionException> {
+            parseParameters("--trust-store-password")
+        }
+
+        // Should fail if password is provided in mode other then root keygen.
+        assertFailsWith<IllegalArgumentException> {
+            parseParameters("--config-file", validConfigPath, "--trust-store-password", "testPassword")
+        }
+
+        // trust store password is optional.
+        assertNull(parseParameters("--config-file", validConfigPath).trustStorePassword)
     }
 }

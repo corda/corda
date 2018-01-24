@@ -22,6 +22,7 @@ data class NetworkManagementServerParameters(// TODO: Move local signing to sign
         val networkMapConfig: NetworkMapConfig?,
 
         val updateNetworkParameters: Path?,
+        val trustStorePassword: String?,
 
         // TODO Should be part of a localSigning sub-config
         val keystorePath: Path? = null,
@@ -53,12 +54,13 @@ data class DoormanConfig(val approveAll: Boolean = false,
                          val approveInterval: Long = NetworkManagementServerParameters.DEFAULT_APPROVE_INTERVAL.toMillis())
 
 data class NetworkMapConfig(val cacheTimeout: Long,
-                        // TODO: Move signing to signing server.
+        // TODO: Move signing to signing server.
                             val signInterval: Long = NetworkManagementServerParameters.DEFAULT_SIGN_INTERVAL.toMillis())
 
 enum class Mode {
     // TODO CA_KEYGEN now also generates the nework map cert, so it should be renamed.
-    DOORMAN, CA_KEYGEN, ROOT_KEYGEN
+    DOORMAN,
+    CA_KEYGEN, ROOT_KEYGEN
 }
 
 data class JiraConfig(
@@ -82,6 +84,9 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
         accepts("mode", "Set the mode of this application")
                 .withRequiredArg()
                 .defaultsTo(Mode.DOORMAN.name)
+        accepts("trust-store-password", "Password for generated network root trust store. Only required when operating in root keygen mode.")
+                .withRequiredArg()
+                .describedAs("password")
     }
 
     // The config-file option is changed to configFile
@@ -92,8 +97,14 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
     }
     require(configFile.isRegularFile()) { "Config file $configFile does not exist" }
 
-    return argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
+    val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
             .resolve()
-            .parseAs()
-}
+            .parseAs<NetworkManagementServerParameters>()
 
+    // Make sure trust store password is only specified in root keygen mode.
+    if (config.mode != Mode.ROOT_KEYGEN) {
+        require(config.trustStorePassword == null) { "Trust store password should not be specified in this mode." }
+    }
+
+    return config
+}

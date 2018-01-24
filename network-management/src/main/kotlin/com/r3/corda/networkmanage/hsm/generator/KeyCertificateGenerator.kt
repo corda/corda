@@ -4,6 +4,7 @@ import CryptoServerCXI.CryptoServerCXI.KEY_ALGO_ECDSA
 import CryptoServerCXI.CryptoServerCXI.KeyAttributes
 import CryptoServerJCE.CryptoServerProvider
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
+import com.r3.corda.networkmanage.doorman.NETWORK_ROOT_TRUSTSTORE_FILENAME
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createIntermediateCert
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createSelfSignedCACert
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
@@ -67,8 +68,8 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
 
     private fun CertificateConfiguration.generateRootCert(provider: CryptoServerProvider,
                                                           keyPair: KeyPair,
-                                                          trustStoreDirectory: Path,
-                                                          trustStorePassword: String): Array<X509Certificate> {
+                                                          networkRootTrustStoreDirectory: Path,
+                                                          networkRootTrustStorePassword: String): Array<X509Certificate> {
         val certificate = createSelfSignedCACert(ROOT_CA,
                 CordaX500Name.parse(subject).x500Name,
                 keyPair,
@@ -76,12 +77,12 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
                 provider,
                 crlDistributionUrl,
                 crlIssuer).certificate
-        val trustStorePath = trustStoreDirectory / "truststore.jks"
-        val trustStore = loadOrCreateKeyStore(trustStorePath, trustStorePassword)
-        logger.info("Trust store for distribution to nodes created in $trustStore")
-        trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificate)
-        logger.info("Certificate $CORDA_ROOT_CA has been added to $trustStore")
-        trustStore.save(trustStorePath, trustStorePassword)
+        val networkRootTruststorePath = networkRootTrustStoreDirectory / NETWORK_ROOT_TRUSTSTORE_FILENAME
+        val networkRootTruststore = loadOrCreateKeyStore(networkRootTruststorePath, networkRootTrustStorePassword)
+        logger.info("Trust store for distribution to nodes created in $networkRootTruststorePath")
+        networkRootTruststore.addOrReplaceCertificate(CORDA_ROOT_CA, certificate)
+        logger.info("Certificate $CORDA_ROOT_CA has been added to $networkRootTruststorePath")
+        networkRootTruststore.save(networkRootTruststorePath, networkRootTrustStorePassword)
         logger.info("Trust store has been persisted. Ready for distribution.")
         return arrayOf(certificate)
     }

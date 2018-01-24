@@ -160,6 +160,11 @@ networkMapConfig {
    A trust store file containing the root trust certificate will be produced in the location `distribute-nodes / truststore.jks`
    (relative to `rootStorePath`). `truststore.jks` must be copied to the `certificates` directory of each node before
    they attempt to register. The trust store password is `trustpass`.
+   A trust store containing the root certificate will be created in the location `distribute-nodes / network-root-truststore.jks`
+   (relative to `rootStorePath`). The trust store's password can be set using command line argument `--trust-store-password`, 
+   or the doorman's keygen utility will ask for password input if trust store password is not provided using this flag.
+   Path to the network root trust store and password must be provided to corda node via command line arguments before 
+   they attempt to register.
 
 ### 2. Start Doorman service for notary registration 
    Start the network management server with the doorman service for initial bootstrapping. Network map service (`networkMapConfig`) should be **disabled** at this point.
