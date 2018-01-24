@@ -318,10 +318,6 @@ open class MockNetwork(private val cordappPackages: List<String>,
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
-        override fun startShell(rpcOps: CordaRPCOps) {
-            //No mock shell
-        }
-
         override fun startMessagingService(rpcOps: RPCOps) {
             // Nothing to do
         }
@@ -514,5 +510,6 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doReturn(true).whenever(it).useAMQPBridges
+        doReturn(null).whenever(it).sshd
     }
 }
