@@ -165,6 +165,6 @@ data class CordaX500Name(val commonName: String?,
             }
         };
 
-        abstract fun extract(x500name: CordaX500Name): String?
+         internal abstract fun extract(x500name: CordaX500Name): String?
     }
 }

@@ -28,12 +28,12 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
         return implementation.displayNameFromX500(x500Name)
     }
 
-    override fun displayNameFromParty(party: Party, vararg selectors: CordaX500Name.NameSelector): String {
-        return implementation.displayNameFromParty(party, *selectors)
+    override fun formatDisplayNameFromParty(party: Party, vararg selectors: CordaX500Name.NameSelector): String {
+        return implementation.formatDisplayNameFromParty(party, *selectors)
     }
 
-    override fun displayNameFromX500(x500Name: CordaX500Name, vararg selectors: CordaX500Name.NameSelector): String {
-        return implementation.displayNameFromX500(x500Name, *selectors)
+    override fun formatDisplayNameFromX500(x500Name: CordaX500Name, vararg selectors: CordaX500Name.NameSelector): String {
+        return implementation.formatDisplayNameFromX500(x500Name, *selectors)
     }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash = guard("uploadAttachmentWithMetadata") {
