@@ -54,6 +54,7 @@ import okhttp3.Request
 import rx.Observable
 import rx.observables.ConnectableObservable
 import rx.schedulers.Schedulers
+import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
@@ -737,6 +738,9 @@ class DriverDSLImpl(
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
+                if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
+                    throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
+                }
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe)
                 // TODO pass the version in?

@@ -31,13 +31,6 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
-
-private fun checkQuasarAgent() {
-    if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
-        throw IllegalStateException("No quasar agent")
-    }
-}
-
 @Ignore("Run these locally")
 class NodePerformanceTests {
     @StartableByRPC
@@ -51,11 +44,6 @@ class NodePerformanceTests {
             val flowPerSecond: Double,
             val averageMs: Double
     )
-
-    @Before
-    fun before() {
-        checkQuasarAgent()
-    }
 
     @Test
     fun `empty flow per second`() {
