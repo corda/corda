@@ -5,7 +5,6 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.driver
 import org.junit.Assert

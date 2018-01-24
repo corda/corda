@@ -720,6 +720,9 @@ class DriverDSLImpl(
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
+                if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
+                    throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
+                }
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe)
                 // TODO pass the version in?
@@ -889,9 +892,6 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
-        if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
-            throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
-        }
         driverDsl.start()
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
