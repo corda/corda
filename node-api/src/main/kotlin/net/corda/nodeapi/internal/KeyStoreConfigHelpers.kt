@@ -62,7 +62,7 @@ fun X509KeyStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto.gen
     val identityCertPath = listOf(identityCert) + nodeCaCertPath
     setPrivateKey(alias, keyPair.private, identityCertPath)
     save()
-    return PartyAndCertificate(X509CertificateFactory().generateCertPath(identityCertPath))
+    return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
 }
 
 fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {

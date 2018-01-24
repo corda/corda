@@ -5,8 +5,8 @@ import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
@@ -23,7 +23,7 @@ class PartyAndCertificateTest {
 
     @Test
     fun `reject a path with no roles`() {
-        val path =  X509CertificateFactory().generateCertPath(DEV_ROOT_CA.certificate)
+        val path =  X509Utilities.buildCertPath(DEV_ROOT_CA.certificate)
         assertFailsWith<IllegalArgumentException> { PartyAndCertificate(path) }
     }
 

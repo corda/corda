@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.x509
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
@@ -43,7 +44,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
                     "This file must contain the root CA cert of your compatibility zone. " +
                     "Please contact your CZ operator."
         }
-        this.rootCert = rootCert as X509Certificate
+        this.rootCert = rootCert.x509
     }
 
     /**
@@ -109,7 +110,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         }
 
         println("Checking root of the  certificate path is what we expect.")
-        X509Utilities.validateCertificateChain(rootCert, *certificates.toTypedArray())
+        X509Utilities.validateCertificateChain(rootCert, certificates)
 
         println("Certificate signing request approved, storing private key with the certificate chain.")
         // Save private key and certificate chain to the key store.

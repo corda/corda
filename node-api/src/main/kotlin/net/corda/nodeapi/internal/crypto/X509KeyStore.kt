@@ -13,7 +13,13 @@ import java.security.cert.X509Certificate
  */
 class X509KeyStore private constructor(val internal: KeyStore, private val storePassword: String, private val keyStoreFile: Path? = null) {
     /** Wrap an existing [KeyStore]. [save] is not supported. */
-    constructor(internal: KeyStore, storePassword: String) : this(internal, storePassword, null)
+    constructor(keyStore: KeyStore, storePassword: String) : this(keyStore, storePassword, null)
+
+    /** Create an empty [KeyStore] using the given password. [save] is not supported. */
+    constructor(storePassword: String) : this(
+            KeyStore.getInstance(KEYSTORE_TYPE).apply { load(null, storePassword.toCharArray()) },
+            storePassword
+    )
 
     companion object {
         /**
@@ -49,12 +55,10 @@ class X509KeyStore private constructor(val internal: KeyStore, private val store
     }
 
     fun setPrivateKey(alias: String, key: PrivateKey, certificates: List<X509Certificate>, keyPassword: String = storePassword) {
-        checkWritableToFile()
         internal.setKeyEntry(alias, key, keyPassword.toCharArray(), certificates.toTypedArray())
     }
 
     fun setCertificate(alias: String, certificate: X509Certificate) {
-        checkWritableToFile()
         internal.setCertificateEntry(alias, certificate)
     }
 

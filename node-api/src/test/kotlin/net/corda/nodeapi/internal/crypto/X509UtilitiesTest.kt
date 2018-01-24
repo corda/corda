@@ -266,10 +266,10 @@ class X509UtilitiesTest {
         assertTrue(clientSocket.isConnected)
 
         // Double check hostname manually
-        val peerChain = clientSocket.session.peerCertificates
-        val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
+        val peerChain = clientSocket.session.peerCertificates.x509
+        val peerX500Principal = peerChain[0].subjectX500Principal
         assertEquals(MEGA_CORP.name.x500Principal, peerX500Principal)
-        X509Utilities.validateCertificateChain(rootCa.certificate, *peerChain)
+        X509Utilities.validateCertificateChain(rootCa.certificate, peerChain)
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")
         var timeout = 0
@@ -338,7 +338,7 @@ class X509UtilitiesTest {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB_NAME.x500Principal, BOB.publicKey)
-        val expected = X509CertificateFactory().generateCertPath(certificate, rootCACert)
+        val expected = X509Utilities.buildCertPath(certificate, rootCACert)
         val serialized = expected.serialize(factory, context).bytes
         val actual: CertPath = serialized.deserialize(factory, context)
         assertEquals(expected, actual)

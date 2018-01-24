@@ -7,8 +7,8 @@ import net.corda.core.utilities.days
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
@@ -43,7 +43,7 @@ fun freshCertificate(identityService: IdentityServiceInternal,
             issuer.name.x500Principal,
             subjectPublicKey,
             window)
-    val ourCertPath = X509CertificateFactory().generateCertPath(listOf(ourCertificate) + issuer.certPath.certificates)
+    val ourCertPath = X509Utilities.buildCertPath(ourCertificate, issuer.certPath.x509Certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
     identityService.justVerifyAndRegisterIdentity(anonymisedIdentity)
     return anonymisedIdentity

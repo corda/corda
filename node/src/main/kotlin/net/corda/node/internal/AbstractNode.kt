@@ -58,7 +58,6 @@ import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
@@ -755,7 +754,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
         }
 
-        val certPath = X509CertificateFactory().generateCertPath(certificates)
+        val certPath = X509Utilities.buildCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
 
