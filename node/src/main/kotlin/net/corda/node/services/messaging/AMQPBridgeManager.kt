@@ -153,7 +153,7 @@ internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: 
     }
 
     private fun gatherAddresses(node: NodeInfo): Sequence<ArtemisMessagingComponent.ArtemisPeerAddress> {
-        val address = node.addresses.first()
+        val address = node.addresses.single()
         return node.legalIdentitiesAndCerts.map { ArtemisMessagingComponent.NodeAddress(it.party.owningKey, address) }.asSequence()
     }
 

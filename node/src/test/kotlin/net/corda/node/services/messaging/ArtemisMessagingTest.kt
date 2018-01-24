@@ -184,7 +184,7 @@ class ArtemisMessagingTest {
     }
 
     private fun createMessagingServer(local: Int = serverPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, networkMapCache, securityManager, maxMessageSize).apply {
+        return ArtemisMessagingServer(config, local, networkMapCache, maxMessageSize).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

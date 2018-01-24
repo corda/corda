@@ -17,7 +17,6 @@ import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
@@ -34,9 +33,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -84,7 +80,6 @@ import javax.security.auth.spi.LoginModule
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val p2pPort: Int,
                              val networkMapCache: NetworkMapCacheInternal,
-                             val securityManager: RPCSecurityManager,
                              val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
@@ -132,8 +127,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     // Artemis IO errors
     @Throws(IOException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
-        val (artemisConfig, securityPlugin) = createArtemisConfig()
-        val securityManager = createArtemisSecurityManager(securityPlugin)
+        val artemisConfig = createArtemisConfig()
+        val securityManager = createArtemisSecurityManager()
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
             // Throw any exceptions which are detected during startup
             registerActivationFailureListener { exception -> throw exception }
@@ -188,14 +183,13 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
-    private fun ConfigurationImpl.configureAddressSecurity(): Pair<Configuration, LoginListener> {
+    private fun ConfigurationImpl.configureAddressSecurity(): Configuration {
         val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
         securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.#"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
-        val onLoginListener = { _: String ->  }
-        return Pair(this, onLoginListener)
+        return this
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
@@ -206,7 +200,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     }
 
     @Throws(IOException::class, KeyStoreException::class)
-    private fun createArtemisSecurityManager(loginListener: LoginListener): ActiveMQJAASSecurityManager {
+    private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = config.loadSslKeyStore().internal
         val trustStore = config.loadTrustStore().internal
 
@@ -222,10 +216,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
-                val options = mapOf(
-                        LoginListener::javaClass.name to loginListener,
-                        RPCSecurityManager::class.java.name to securityManager,
-                        NodeLoginModule.CERT_CHAIN_CHECKS_OPTION_NAME to certChecks)
+                val options = mapOf(NodeLoginModule.CERT_CHAIN_CHECKS_OPTION_NAME to certChecks)
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }
         }
@@ -236,7 +227,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         log.debug { "Queue created: $queueName, deploying bridge(s)" }
         fun deployBridgeToPeer(nodeInfo: NodeInfo) {
             log.debug("Deploying bridge for $queueName to $nodeInfo")
-            val address = nodeInfo.addresses.first()
+            val address = nodeInfo.addresses.single()
             bridgeManager.deployBridge(queueName, address, nodeInfo.legalIdentitiesAndCerts.map { it.name }.toSet())
         }
 
@@ -265,7 +256,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     private fun updateBridgesOnNetworkChange(change: MapChange) {
         log.debug { "Updating bridges on network map change: ${change.node}" }
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
-            val address = node.addresses.first()
+            val address = node.addresses.single()
             return node.legalIdentitiesAndCerts.map { NodeAddress(it.party.owningKey, address) }.asSequence()
         }
 
@@ -329,8 +320,6 @@ class NodeLoginModule : LoginModule {
     private var loginSucceeded: Boolean = false
     private lateinit var subject: Subject
     private lateinit var callbackHandler: CallbackHandler
-    private lateinit var securityManager: RPCSecurityManager
-    private lateinit var loginListener: LoginListener
     private lateinit var peerCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var nodeCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var verifierCertCheck: CertificateChainCheckPolicy.Check
@@ -339,8 +328,6 @@ class NodeLoginModule : LoginModule {
     override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
         this.subject = subject
         this.callbackHandler = callbackHandler
-        securityManager = options[RPCSecurityManager::class.java.name] as RPCSecurityManager
-        loginListener = options[LoginListener::javaClass.name] as LoginListener
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
@@ -440,5 +427,3 @@ class NodeLoginModule : LoginModule {
         loginSucceeded = false
     }
 }
-
-typealias LoginListener = (String) -> Unit
