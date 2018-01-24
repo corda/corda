@@ -125,7 +125,7 @@ All ``QueryCriteria`` implementations provide an explicitly specifiable set of c
 
 An example of a custom query is illustrated here:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample20
     :end-before: DOCEND VaultQueryExample20
@@ -156,7 +156,7 @@ The Vault Query API leverages the rich semantics of the underlying JPA Hibernate
 
 An example of a custom query in Java is illustrated here:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample3
     :end-before: DOCEND VaultJavaQueryExample3
@@ -200,7 +200,7 @@ Kotlin
 
 Query for all unconsumed states (simplest query possible):
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample1
     :end-before: DOCEND VaultQueryExample1
@@ -208,7 +208,7 @@ Query for all unconsumed states (simplest query possible):
 
 Query for unconsumed states for some state references:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample2
     :end-before: DOCEND VaultQueryExample2
@@ -216,7 +216,7 @@ Query for unconsumed states for some state references:
 
 Query for unconsumed states for several contract state types:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample3
     :end-before: DOCEND VaultQueryExample3
@@ -224,7 +224,7 @@ Query for unconsumed states for several contract state types:
 
 Query for unconsumed states for a given notary:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample4
     :end-before: DOCEND VaultQueryExample4
@@ -232,7 +232,7 @@ Query for unconsumed states for a given notary:
 
 Query for unconsumed states for a given set of participants:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample5
     :end-before: DOCEND VaultQueryExample5
@@ -240,7 +240,7 @@ Query for unconsumed states for a given set of participants:
 
 Query for unconsumed states recorded between two time intervals:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample6
     :end-before: DOCEND VaultQueryExample6
@@ -250,7 +250,7 @@ Query for unconsumed states recorded between two time intervals:
 
 Query for all states with pagination specification (10 results per page):
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample7
     :end-before: DOCEND VaultQueryExample7
@@ -262,7 +262,7 @@ Query for all states with pagination specification (10 results per page):
 Query for all states using pagination specification and iterate using `totalStatesAvailable` field until no further
 pages available:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/ScheduledFlowTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/ScheduledFlowTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExamplePaging
     :end-before: DOCEND VaultQueryExamplePaging
@@ -272,7 +272,7 @@ pages available:
 
 Query for unconsumed linear states for given linear ids:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample8
     :end-before: DOCEND VaultQueryExample8
@@ -280,7 +280,7 @@ Query for unconsumed linear states for given linear ids:
 
 Query for all linear states associated with a linear id:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample9
     :end-before: DOCEND VaultQueryExample9
@@ -288,7 +288,7 @@ Query for all linear states associated with a linear id:
 
 Query for unconsumed deal states with deals references:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample10
     :end-before: DOCEND VaultQueryExample10
@@ -296,7 +296,7 @@ Query for unconsumed deal states with deals references:
 
 Query for unconsumed deal states with deals parties:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample11
     :end-before: DOCEND VaultQueryExample11
@@ -306,7 +306,7 @@ Query for unconsumed deal states with deals parties:
 
 Query for fungible assets for a given currency:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample12
     :end-before: DOCEND VaultQueryExample12
@@ -314,7 +314,7 @@ Query for fungible assets for a given currency:
 
 Query for fungible assets for a minimum quantity:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample13
     :end-before: DOCEND VaultQueryExample13
@@ -324,7 +324,7 @@ Query for fungible assets for a minimum quantity:
 
 Query for fungible assets for a specific issuer party:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample14
     :end-before: DOCEND VaultQueryExample14
@@ -336,7 +336,7 @@ Query for fungible assets for a specific issuer party:
 
 Aggregations on cash using various functions:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample21
     :end-before: DOCEND VaultQueryExample21
@@ -346,7 +346,7 @@ Aggregations on cash using various functions:
 
 Aggregations on cash grouped by currency for various functions:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample22
     :end-before: DOCEND VaultQueryExample22
@@ -357,7 +357,7 @@ Aggregations on cash grouped by currency for various functions:
 
 Sum aggregation on cash grouped by issuer party and currency and sorted by sum:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample23
     :end-before: DOCEND VaultQueryExample23
@@ -373,7 +373,7 @@ this type.
 
 Track unconsumed cash states:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample15
     :end-before: DOCEND VaultQueryExample15
@@ -381,7 +381,7 @@ Track unconsumed cash states:
 
 Track unconsumed linear states:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample16
     :end-before: DOCEND VaultQueryExample16
@@ -391,7 +391,7 @@ Track unconsumed linear states:
 
 Track unconsumed deal states:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTest.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample17
     :end-before: DOCEND VaultQueryExample17
@@ -404,7 +404,7 @@ Java examples
 
 Query for all unconsumed linear states:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample0
     :end-before: DOCEND VaultJavaQueryExample0
@@ -412,7 +412,7 @@ Query for all unconsumed linear states:
 
 Query for all consumed cash states:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample1
     :end-before: DOCEND VaultJavaQueryExample1
@@ -420,7 +420,7 @@ Query for all consumed cash states:
 
 Query for consumed deal states or linear ids, specify a paging specification and sort by unique identifier:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample2
     :end-before: DOCEND VaultJavaQueryExample2
@@ -430,7 +430,7 @@ Query for consumed deal states or linear ids, specify a paging specification and
 
 Aggregations on cash using various functions:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample21
     :end-before: DOCEND VaultJavaQueryExample21
@@ -438,7 +438,7 @@ Aggregations on cash using various functions:
 
 Aggregations on cash grouped by currency for various functions:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample22
     :end-before: DOCEND VaultJavaQueryExample22
@@ -446,7 +446,7 @@ Aggregations on cash grouped by currency for various functions:
 
 Sum aggregation on cash grouped by issuer party and currency and sorted by sum:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample23
     :end-before: DOCEND VaultJavaQueryExample23
@@ -454,7 +454,7 @@ Sum aggregation on cash grouped by issuer party and currency and sorted by sum:
 
 Track unconsumed cash states:
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample4
     :end-before: DOCEND VaultJavaQueryExample4
@@ -463,7 +463,7 @@ Track unconsumed cash states:
 Track unconsumed deal states or linear states (with snapshot including specification of paging and sorting by unique
 identifier):
 
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTest.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample4
     :end-before: DOCEND VaultJavaQueryExample4

@@ -139,9 +139,9 @@ The example CorDapp has the following directory structure:
     │                   └── example
     │                       ├── Main.kt
     │                       ├── contract
-    │                       │   └── IOUContractTests.kt
+    │                       │   └── IOUContractTest.kt
     │                       └── flow
-    │                           └── IOUFlowTests.kt
+    │                           └── IOUFlowTest.kt
     ├── .gitignore
     ├── LICENCE
     ├── README.md

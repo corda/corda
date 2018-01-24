@@ -172,7 +172,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  * - The flow returns the transaction signed with the additional signature.
  *
  * Example - checking and signing a transaction involving a [net.corda.core.contracts.DummyContract], see
- * CollectSignaturesFlowTests.kt for further examples:
+ * CollectSignaturesFlowTest.kt for further examples:
  *
  *     class Responder(val otherPartySession: FlowSession): FlowLogic<SignedTransaction>() {
  *          @Suspendable override fun call(): SignedTransaction {

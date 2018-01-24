@@ -53,15 +53,15 @@ Creating an instance and lifecycle
 
 There are two valid operations on an IRS. The first is to generate via the ``Agree`` command (signed by both parties)
 and the second (and repeated operation) is ``Fix`` to apply a rate fixing.
-To see the minimum dataset required for the creation of an IRS, refer to ``IRSTests.kt`` which has two examples in the
-function ``IRSTests.createDummyIRS()``. Implicitly, when the agree function is called, the floating leg and fixed
+To see the minimum dataset required for the creation of an IRS, refer to ``IRSTest.kt`` which has two examples in the
+function ``IRSTest.createDummyIRS()``. Implicitly, when the agree function is called, the floating leg and fixed
 leg payment schedules are created (more details below) and can be queried.
 
 Once an IRS has been agreed, then the only valid operation is to apply a fixing on one of the entries in the
 ``Calculation.floatingLegPaymentSchedule`` map. Fixes do not have to be applied in order (although it does make most
 sense to do them so).
 
-Examples of applying fixings to rates can been seen in ``IRSTests.generateIRSandFixSome()`` which loops through the next
+Examples of applying fixings to rates can been seen in ``IRSTest.generateIRSandFixSome()`` which loops through the next
 fixing date of an IRS that is created with the above example function and then applies a fixing of 0.052% to each floating
 event.
 

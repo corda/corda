@@ -11,7 +11,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.exactAdd
 import java.util.*
 
-// TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
+// TODO: This code is currently unit tested by TwoPartyTradeFlowTest, it should have its own tests.
 /**
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
  * Each retrieved transaction is validated and inserted into the local transaction storage.

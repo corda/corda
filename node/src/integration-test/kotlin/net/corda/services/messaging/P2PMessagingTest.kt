@@ -177,7 +177,7 @@ class P2PMessagingTest {
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection
         // strategy. 3 attempts for each node seems to be sufficient.
-        // This is not testing the distribution of the requests - DistributedServiceTests already does that
+        // This is not testing the distribution of the requests - DistributedServiceTest already does that
         for (it in 1..participatingServiceNodes.size * 3) {
             participatingNodes += originatingNode.receiveFrom(serviceAddress).getOrThrow(10.seconds)
             if (participatingNodes.size == participatingServiceNodes.size) {

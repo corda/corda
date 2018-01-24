@@ -1,0 +1,38 @@
+package net.corda.nodeapi.internal.serialization.amqp;
+
+import org.junit.Test;
+
+import net.corda.nodeapi.internal.serialization.AllWhitelist;
+import net.corda.core.serialization.SerializedBytes;
+
+import java.io.NotSerializableException;
+
+public class JavaSerialiseEnumTest {
+
+    public enum Bras {
+        TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
+    }
+
+    private static class Bra {
+        private final Bras bra;
+
+        private Bra(Bras bra) {
+            this.bra = bra;
+        }
+
+        public Bras getBra() {
+            return this.bra;
+        }
+    }
+
+    @Test
+    public void testJavaConstructorAnnotations() throws NotSerializableException {
+        Bra bra = new Bra(Bras.UNDERWIRE);
+
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter);
+        SerializationOutput ser = new SerializationOutput(factory1);
+        SerializedBytes<Object> bytes = ser.serialize(bra);
+    }
+}
