@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
-import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -38,9 +37,9 @@ internal class AMQPBridgeManager(val config: NodeConfiguration, val p2pAddress: 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
     private var sharedEventLoopGroup: EventLoopGroup? = null
-    private val keyStore = loadKeyStore(config.sslKeystore, config.keyStorePassword)
+    private val keyStore = config.loadSslKeyStore().internal
     private val keyStorePrivateKeyPassword: String = config.keyStorePassword
-    private val trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
+    private val trustStore = config.loadTrustStore().internal
     private var artemis: ArtemisMessagingClient? = null
 
     companion object {

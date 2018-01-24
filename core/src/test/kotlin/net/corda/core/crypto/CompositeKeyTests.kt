@@ -6,9 +6,13 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -341,9 +345,9 @@ class CompositeKeyTests {
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"
-        val keystore = loadOrCreateKeyStore(keystorePath, "password")
-        keystore.setCertificateEntry("CompositeKey", compositeKeyCert)
-        keystore.save(keystorePath, "password")
+        X509KeyStore.fromFile(keystorePath, "password", createNew = true).update {
+            setCertificate("CompositeKey", compositeKeyCert)
+        }
 
         // Load keystore from disk.
         val keystore2 = loadKeyStore(keystorePath, "password")
@@ -352,7 +356,7 @@ class CompositeKeyTests {
         val key = keystore2.getCertificate("CompositeKey").publicKey
         // Convert sun public key to Composite key.
         val compositeKey2 = Crypto.toSupportedPublicKey(key)
-        assertTrue { compositeKey2 is CompositeKey }
+        assertThat(compositeKey2).isInstanceOf(CompositeKey::class.java)
 
         // Run the same composite key test again.
         assertTrue { compositeKey2.isFulfilledBy(signatures.byKeys()) }

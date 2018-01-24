@@ -15,7 +15,6 @@ import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -229,16 +228,14 @@ class AMQPBridgeTest {
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val serverTruststore = loadKeyStore(serverConfig.trustStoreFile, serverConfig.trustStorePassword)
-        val serverKeystore = loadKeyStore(serverConfig.sslKeystore, serverConfig.keyStorePassword)
-        val amqpServer = AMQPServer("0.0.0.0",
+        return AMQPServer("0.0.0.0",
                 amqpPort,
                 ArtemisMessagingComponent.PEER_USER,
                 ArtemisMessagingComponent.PEER_USER,
-                serverKeystore,
+                serverConfig.loadSslKeyStore().internal,
                 serverConfig.keyStorePassword,
-                serverTruststore,
-                trace = true)
-        return amqpServer
+                serverConfig.loadTrustStore().internal,
+                trace = true
+        )
     }
 }

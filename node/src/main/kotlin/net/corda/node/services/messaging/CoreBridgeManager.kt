@@ -23,6 +23,7 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.cluster.Transformer
 import org.apache.activemq.artemis.spi.core.remoting.*
 import org.apache.activemq.artemis.utils.ConfigurationHelper
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
@@ -161,7 +162,7 @@ class VerifyingNettyConnectorFactory : NettyConnectorFactory() {
                         "Peer has wrong subject name in the certificate - expected $expectedLegalNames but got $peerCertificateName. This is either a fatal " +
                                 "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                     }
-                    X509Utilities.validateCertificateChain(session.localCertificates.last() as java.security.cert.X509Certificate, *session.peerCertificates)
+                    X509Utilities.validateCertificateChain(session.localCertificates.last() as X509Certificate, *session.peerCertificates)
                 } catch (e: IllegalArgumentException) {
                     connection.close()
                     log.error(e.message)

@@ -222,7 +222,8 @@ class X509UtilitiesTest {
         val clientSocketFactory = context.socketFactory
 
         val serverSocket = serverSocketFactory.createServerSocket(0) as SSLServerSocket // use 0 to get first free socket
-        val serverParams = SSLParameters(CIPHER_SUITES, arrayOf("TLSv1.2"))
+        val serverParams = SSLParameters(CIPHER_SUITES,
+                arrayOf("TLSv1.2"))
         serverParams.wantClientAuth = true
         serverParams.needClientAuth = true
         serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
@@ -230,7 +231,8 @@ class X509UtilitiesTest {
         serverSocket.useClientMode = false
 
         val clientSocket = clientSocketFactory.createSocket() as SSLSocket
-        val clientParams = SSLParameters(CIPHER_SUITES, arrayOf("TLSv1.2"))
+        val clientParams = SSLParameters(CIPHER_SUITES,
+                arrayOf("TLSv1.2"))
         clientParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
         clientSocket.sslParameters = clientParams
         clientSocket.useClientMode = true
@@ -267,7 +269,7 @@ class X509UtilitiesTest {
         val peerChain = clientSocket.session.peerCertificates
         val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
         assertEquals(MEGA_CORP.name.x500Principal, peerX500Principal)
-        X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA), *peerChain)
+        X509Utilities.validateCertificateChain(rootCa.certificate, *peerChain)
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")
         var timeout = 0
