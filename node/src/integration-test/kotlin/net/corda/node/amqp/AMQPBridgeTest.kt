@@ -9,7 +9,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
@@ -178,8 +177,7 @@ class AMQPBridgeTest {
             doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
             doReturn(listOf(NodeInfo(listOf(amqpAddress), listOf(BOB.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
-        val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
@@ -208,8 +206,7 @@ class AMQPBridgeTest {
             doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
             doReturn(listOf(NodeInfo(listOf(artemisAddress), listOf(ALICE.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
-        val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, networkMap, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress2, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
