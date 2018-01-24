@@ -64,6 +64,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
         logger.trace { "Fetching node info : '$nodeInfoHash' from $url." }
         val verifiedNodeInfo = url.openHttpConnection().responseAs<SignedNodeInfo>().verified()
         logger.trace { "Fetched node info: '$nodeInfoHash' successfully." }
+        logger.trace { "$verifiedNodeInfo" }
         return verifiedNodeInfo
     }
 
@@ -72,6 +73,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
         logger.trace { "Fetching network parameters : '$networkParameterHash' from $url." }
         val networkParameter = url.openHttpConnection().responseAs<SignedDataWithCert<NetworkParameters>>()
         logger.trace { "Fetched network parameters: '$networkParameterHash' successfully." }
+        logger.trace { "$networkParameter" }
         return networkParameter
     }
 
