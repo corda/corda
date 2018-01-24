@@ -318,10 +318,6 @@ interface CordaRPCOps : RPCOps {
     fun displayNameFromParty(party: Party): String
 
     fun displayNameFromX500(x500Name: CordaX500Name) : String
-
-    fun formatDisplayNameFromParty(party: Party, vararg selectors: CordaX500Name.NameSelector): String
-
-    fun formatDisplayNameFromX500(x500Name: CordaX500Name, vararg selectors: CordaX500Name.NameSelector) : String
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

@@ -2,6 +2,7 @@ package net.corda.core.identity
 
 import com.google.common.collect.ImmutableSet
 import net.corda.core.internal.LegalNameValidator
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
@@ -130,17 +131,14 @@ data class CordaX500Name(val commonName: String?,
 
     override fun toString(): String = x500Principal.toString()
 
-    fun toDisplayString(vararg selectors: CordaX500Name.NameSelector): String {
-        val nonNullElementsOfName = selectors.map { it.extract(this) }.filter { it != null }
-        return nonNullElementsOfName.joinToString ( ", " )
-    }
-
-    fun toDisplayString(): String {
-        return toDisplayString(
-                CordaX500Name.NameSelector.COMMON_NAME,
-                CordaX500Name.NameSelector.ORG,
-                CordaX500Name.NameSelector.ORG_UNIT,
-                CordaX500Name.NameSelector.COUNTRY)
+    fun toUniqueDisplayName(others: Set<CordaX500Name>): String {
+        return toUniqueName(others,
+                NameSelector.COMMON_NAME,
+                NameSelector.ORG,
+                NameSelector.ORG_UNIT,
+                NameSelector.COUNTRY,
+                NameSelector.LOCALITY,
+                NameSelector.STATE)
     }
 
     enum class NameSelector {
@@ -163,8 +161,45 @@ data class CordaX500Name(val commonName: String?,
             override fun extract(x500name: CordaX500Name): String? {
                 return x500name.country
             }
+        },
+        LOCALITY {
+            override fun extract(x500name: CordaX500Name): String? {
+                return x500name.locality
+            }
+        },
+        STATE {
+            override fun extract(x500name: CordaX500Name): String? {
+                return x500name.state
+            }
         };
 
-         internal abstract fun extract(x500name: CordaX500Name): String?
+
+        internal abstract fun extract(x500name: CordaX500Name): String?
+    }
+
+
+    @VisibleForTesting
+    internal fun toUniqueName(others: Set<CordaX500Name>, vararg selectors: CordaX500Name.NameSelector): String {
+        var currentSelectorIndex = 0;
+        val allNodes = HashSet(others)
+        while (currentSelectorIndex < selectors.size) {
+            val selectorsToUse = selectors.toList().subList(0, ++currentSelectorIndex)
+            val displayCandidate = selectorsToUse.map { it.extract(this) }.joinToString(", ")
+            val uniqueTrackingMap = HashMap<String, MutableList<CordaX500Name>>()
+            allNodes.forEach { nodeX500 ->
+                val nodeDisplayName = selectorsToUse.map { it.extract(nodeX500) }.joinToString(", ")
+                uniqueTrackingMap.computeIfAbsent(nodeDisplayName, { _ -> ArrayList() }).add(nodeX500)
+            }
+            val interestingList = uniqueTrackingMap.remove(displayCandidate)
+            if (interestingList != null && interestingList.size > 1) {
+                //this is the case where there is multiple entries for the candidate
+                //remove all non possible candidates
+                //loopdiloop
+                uniqueTrackingMap.values.flatMap { it }.forEach { allNodes.remove(it) }
+            } else {
+                return displayCandidate
+            }
+        }
+        throw IllegalStateException("Unable to select a unique name for certificate with given selectors")
     }
 }

@@ -75,30 +75,56 @@ class CordaX500NameTest {
     }
 
     @Test
-    fun `default format should return a sensible display string`() {
-        val name = CordaX500Name.parse("CN=cName, OU=orgUnit, O=org, L=city, S=state, C=GB")
-        val displayString = name.toDisplayString()
-        assertEquals("cName, org, orgUnit, GB", displayString)
-    }
+    fun `should provide the shortest possible unique name given set of nodes and selectors`() {
+        val name1 = CordaX500Name.parse("O=blarg,   OU=unit,    C=GB,   L=city, CN=CommonName")
+        val name2 = CordaX500Name.parse("O=org,     OU=blarg,   C=GB,   L=city, CN=CommonName")
+        val name3 = CordaX500Name.parse("O=org,     OU=unit,    C=BL,   L=city, CN=CommonName")
+        val name4 = CordaX500Name.parse("O=org,     OU=unit,    C=US,   L=city, CN=Blaargh")
+        val name5 = CordaX500Name.parse("O=org,     OU=unit,    C=US,   L=city, CN=Blargh")
+        val outsiderName = CordaX500Name.parse("O=thisIs,  OU=unit,    C=BL,   L=city, CN=Blargh")
 
-    @Test
-    fun `default format should handle null name fields`() {
-        val name = CordaX500Name.parse("O=org, L=city, C=GB")
-        val displayString = name.toDisplayString()
-        assertEquals("org, GB", displayString)
-    }
+        val displayString1 = name1.toUniqueName(setOf(name1, name2, name3, name4, name5),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME)
 
-    @Test
-    fun `custom format should return a sensible display string`() {
-        val name = CordaX500Name.parse("CN=cName, OU=orgUnit, O=org, L=city, S=state, C=GB")
-        val displayString = name.toDisplayString(CordaX500Name.NameSelector.ORG, CordaX500Name.NameSelector.COUNTRY, CordaX500Name.NameSelector.ORG_UNIT)
-        assertEquals("org, GB, orgUnit", displayString)
-    }
+        val displayString2 = name2.toUniqueName(setOf(name1, name2, name3, name4, name5),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME)
 
-    @Test
-    fun `custom selectors should handle nullable fields`() {
-        val name = CordaX500Name.parse("O=org, L=city, C=GB")
-        val displayString = name.toDisplayString(CordaX500Name.NameSelector.ORG_UNIT, CordaX500Name.NameSelector.COMMON_NAME, CordaX500Name.NameSelector.COUNTRY)
-        assertEquals("GB", displayString)
+        val displayString3 = name3.toUniqueName(setOf(name1, name2, name3, name4, name5),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME)
+
+        val displayString4 = name4.toUniqueName(setOf(name1, name2, name3, name4, name5),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME)
+
+        val displayString5 = name5.toUniqueName(setOf(name1, name2, name3, name4, name5),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME)
+
+        val displayString6 = outsiderName.toUniqueName(setOf(name1, name2, name3, name4, name5),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME)
+
+        assertEquals("blarg", displayString1)
+        assertEquals("org, blarg", displayString2)
+        assertEquals("org, unit, BL", displayString3)
+        assertEquals("org, unit, US, Blaargh", displayString4)
+        assertEquals("org, unit, US, Blargh", displayString5)
+        assertEquals("thisIs", displayString6)
+
     }
 }

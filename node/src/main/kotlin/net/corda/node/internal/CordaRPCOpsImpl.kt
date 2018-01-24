@@ -42,20 +42,14 @@ internal class CordaRPCOpsImpl(
         private val database: CordaPersistence,
         private val flowStarter: FlowStarter
 ) : CordaRPCOps {
-    override fun formatDisplayNameFromParty(party: Party, vararg selectors: CordaX500Name.NameSelector): String {
-        return formatDisplayNameFromX500(party.name, *selectors);
-    }
 
-    override fun formatDisplayNameFromX500(x500Name: CordaX500Name, vararg selectors: CordaX500Name.NameSelector): String {
-        return x500Name.toDisplayString(*selectors)
-    }
 
     override fun displayNameFromParty(party: Party): String {
         return displayNameFromX500(party.name)
     }
 
     override fun displayNameFromX500(x500Name: CordaX500Name): String {
-        return x500Name.toDisplayString();
+        return x500Name.toUniqueDisplayName(services.networkMapCache.allNodes.map { it.legalIdentities.first().name }.toSet());
     }
 
     override fun networkMapSnapshot(): List<NodeInfo> {
