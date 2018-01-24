@@ -1,9 +1,8 @@
 Node administration
 ===================
 
-When a node is running, it exposes an RPC interface that lets you monitor it,
-you can upload and download attachments, access a REST API and so on. A bundled
-Jetty web server exposes the same interface over HTTP.
+When a node is running, it exposes an RPC interface that lets you monitor it, upload and download attachments, and so
+on.
 
 Logging
 -------
