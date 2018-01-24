@@ -190,7 +190,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, services.networkMapCache, securityManager, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, services.networkMapCache, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
