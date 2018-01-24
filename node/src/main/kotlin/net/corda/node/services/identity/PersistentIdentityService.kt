@@ -13,6 +13,8 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -111,23 +113,23 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
+        val identityCertChain = identity.certPath.x509Certificates
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
             log.warn(e.localizedMessage)
             log.warn("Path = ")
-            identity.certPath.certificates.reversed().forEach {
-                log.warn((it as X509Certificate).subjectX500Principal.toString())
+            identityCertChain.reversed().forEach {
+                log.warn(it.subjectX500Principal.toString())
             }
             throw e
         }
 
         // Ensure we record the first identity of the same name, first
-        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
+        val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
         if (wellKnownCert != identity.certificate) {
-            val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(wellKnownCert)
-            val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
+            val idx = identityCertChain.lastIndexOf(wellKnownCert)
+            val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 
@@ -136,7 +138,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         keyToParties.addWithDuplicatesAllowed(key, identity)
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
-        val parentId = mapToKey(identity.certPath.certificates[1].publicKey)
+        val parentId = mapToKey(identityCertChain[1].publicKey)
         return keyToParties[parentId]
     }
 
@@ -175,7 +177,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         val results = LinkedHashSet<Party>()
         for ((x500name, partyId) in principalToParties.allPersisted()) {
             val party = keyToParties[partyId]!!.party
-            val components = listOf(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country).filterNotNull()
+            val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
             components.forEach { component ->
                 if (exactMatch && component == query) {
                     results += party

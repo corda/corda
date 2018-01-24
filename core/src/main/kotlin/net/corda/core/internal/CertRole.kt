@@ -7,7 +7,6 @@ import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1Primitive
 import org.bouncycastle.asn1.DEROctetString
 import java.math.BigInteger
-import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 
 /**
@@ -69,14 +68,6 @@ enum class CertRole(val validParents: NonEmptySet<CertRole?>, val isIdentity: Bo
          * @throws IllegalArgumentException if the encoded data is not a valid role.
          */
         fun getInstance(data: ByteArray): CertRole = getInstance(ASN1Integer.getInstance(data))
-
-        /**
-         * Get a role from a certificate.
-         *
-         * @return the role if the extension is present, or null otherwise.
-         * @throws IllegalArgumentException if the extension is present but is invalid.
-         */
-        fun extract(cert: Certificate): CertRole? = (cert as? X509Certificate)?.let { extract(it) }
 
         /**
          * Get a role from a certificate.

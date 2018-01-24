@@ -14,6 +14,7 @@ import net.corda.node.internal.protonwrapper.engine.EventProcessor
 import net.corda.node.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.node.internal.protonwrapper.messages.impl.ReceivedMessageImpl
 import net.corda.node.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.crypto.x509
 import org.apache.qpid.proton.engine.ProtonJTransport
 import org.apache.qpid.proton.engine.Transport
 import org.apache.qpid.proton.engine.impl.ProtocolTracer
@@ -80,8 +81,8 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         if (evt is SslHandshakeCompletionEvent) {
             if (evt.isSuccess) {
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
-                localCert = sslHandler.engine().session.localCertificates[0] as X509Certificate
-                remoteCert = sslHandler.engine().session.peerCertificates[0] as X509Certificate
+                localCert = sslHandler.engine().session.localCertificates[0].x509
+                remoteCert = sslHandler.engine().session.peerCertificates[0].x509
                 try {
                     val remoteX500Name = CordaX500Name.build(remoteCert.subjectX500Principal)
                     require(allowedRemoteLegalNames == null || remoteX500Name in allowedRemoteLegalNames)
