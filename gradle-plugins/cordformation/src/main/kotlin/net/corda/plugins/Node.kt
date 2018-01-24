@@ -3,6 +3,7 @@ package net.corda.plugins
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
+import groovy.lang.Closure
 import net.corda.cordform.CordformNode
 import org.gradle.api.Project
 import java.io.File
@@ -52,6 +53,14 @@ class Node(private val project: Project) : CordformNode() {
 
     fun useTestClock(useTestClock: Boolean) {
         config = config.withValue("useTestClock", ConfigValueFactory.fromAnyRef(useTestClock))
+    }
+
+    /**
+     * Specifies RPC settings for the node.
+     */
+    fun rpcSettings(configureClosure: Closure<in RpcSettings>) {
+        val rpcSettings = project.configure(RpcSettings(project), configureClosure) as RpcSettings
+        config = rpcSettings.addTo("rpcSettings", config)
     }
 
     /**
