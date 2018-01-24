@@ -46,10 +46,6 @@ Certificate Configuration
 :certificateType: Type of the certificate to be created. Allowed values are:
                   ROOT_CA, INTERMEDIATE_CA, NETWORK_MAP.
 
-:rootPrivateKeyPassword: Private key of the root certificate.
-
-:privateKeyPassword: Private key password to be used during the key generation process.
-
 :subject: X500Name formatted string to be used as the certificate public key subject.
 
 :validDays: Days number for certificate validity.

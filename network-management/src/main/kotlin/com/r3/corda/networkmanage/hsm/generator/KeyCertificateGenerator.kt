@@ -19,9 +19,11 @@ import net.corda.nodeapi.internal.crypto.CertificateType.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import java.nio.file.Path
+import java.security.Key
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 
 data class CertificateNameAndPass(val certificateName: String, val privateKeyPassword: String)
@@ -50,9 +52,17 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
             } else {
                 certConfig.generateIntermediateCert(provider, keyPair, keyStore)
             }
-            keyStore.addOrReplaceKey(keyName, keyPair.private, certConfig.privateKeyPassword.toCharArray(), certChain)
+            keyStore.addOrReplaceKey(keyName, keyPair.private, null, certChain)
             logger.info("New certificate and key pair named $keyName have been generated and stored in HSM")
         }
+    }
+
+    // TODO remove this and modify the node-api internal version of this method - nullable password
+    fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray?, chain: Array<out Certificate>) {
+        if (containsAlias(alias)) {
+            this.deleteEntry(alias)
+        }
+        this.setKeyEntry(alias, key, password, chain)
     }
 
     private fun CertificateConfiguration.generateRootCert(provider: CryptoServerProvider,
@@ -80,9 +90,7 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
             provider: CryptoServerProvider,
             keyPair: KeyPair,
             keyStore: KeyStore): Array<X509Certificate> {
-        val rootKeysAndCertChain = retrieveKeysAndCertificateChain(CORDA_ROOT_CA,
-                rootPrivateKeyPassword,
-                keyStore)
+        val rootKeysAndCertChain = retrieveKeysAndCertificateChain(CORDA_ROOT_CA, keyStore)
         val certificateAndKeyPair = createIntermediateCert(
                 certificateType,
                 CordaX500Name.parse(subject).x500Name,
@@ -111,7 +119,7 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
 
     private fun CertificateConfiguration.generateEcdsaKeyPair(keyName: String, provider: CryptoServerProvider, keyStore: KeyStore): KeyPair {
         generateECDSAKey(keyName, provider)
-        val privateKey = keyStore.getKey(keyName, privateKeyPassword.toCharArray()) as PrivateKey
+        val privateKey = keyStore.getKey(keyName, null) as PrivateKey
         val publicKey = keyStore.getCertificate(keyName).publicKey
         return getCleanEcdsaKeyPair(publicKey, privateKey)
     }

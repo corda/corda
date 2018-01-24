@@ -42,8 +42,6 @@ data class CertificateConfiguration(val keyGroup: String,
                                     val keySpecifier: Int,
                                     val storeKeysExternal: Boolean,
                                     val certificateType: CertificateType,
-                                    val rootPrivateKeyPassword: String,
-                                    val privateKeyPassword: String,
                                     val subject: String, // it is certificate [X500Name] subject
                                     val validDays: Int,
                                     val crlDistributionUrl: String?,
@@ -71,7 +69,7 @@ fun parseCommandLine(vararg args: String): CommandLineOptions {
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
             .describedAs("filepath")
-    val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp();
+    val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp()
 
     val optionSet = optionParser.parse(*args)
     // Print help and exit on help option or if there are missing options.

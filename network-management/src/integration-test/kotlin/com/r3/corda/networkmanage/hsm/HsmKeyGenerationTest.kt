@@ -17,10 +17,6 @@ import kotlin.test.assertNotNull
 
 class HsmKeyGenerationTest {
 
-    companion object {
-        val KEY_PASSWORD = "PASSWORD"
-    }
-
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -45,8 +41,6 @@ class HsmKeyGenerationTest {
                         keySpecifier = 1,
                         keyGroup = "DEV.DOORMAN",
                         storeKeysExternal = false,
-                        privateKeyPassword = KEY_PASSWORD,
-                        rootPrivateKeyPassword = KEY_PASSWORD,
                         subject = "CN=Corda Root, O=R3Cev, L=London, C=GB",
                         validDays = 3650,
                         keyCurve = "NIST-P256",
