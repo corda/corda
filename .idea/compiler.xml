@@ -42,6 +42,8 @@
       <module name="core_main" target="1.8" />
       <module name="core_smokeTest" target="1.8" />
       <module name="core_test" target="1.8" />
+      <module name="dbmigration_main" target="1.8" />
+      <module name="dbmigration_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
       <module name="demobench_test" target="1.8" />
       <module name="docs_main" target="1.8" />

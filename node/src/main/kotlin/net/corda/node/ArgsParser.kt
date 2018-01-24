@@ -37,16 +37,8 @@ class ArgsParser {
     private val noLocalShellArg = optionParser.accepts("no-local-shell", "Do not start the embedded shell locally.")
     private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
-    private val justRunDbMigrationArg = optionParser.accepts("just-run-db-migration",
-            "This will only run the db migration. It will not start the node!")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
-    private val justGenerateDatabaseMigrationArg = optionParser
-            .accepts("just-generate-db-migration", "Generate the database migration in the specified output file, and then quit.")
-            .withOptionalArg()
-    private val justCreateMigrationForCorDappArg = optionParser
-            .accepts("just-create-migration-cordapp", "Create migration files for a CorDapp")
-            .withRequiredArg()
     private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
     private val helpArg = optionParser.accepts("help").forHelp()
 
@@ -65,15 +57,9 @@ class ArgsParser {
         val noLocalShell = optionSet.has(noLocalShellArg)
         val sshdServer = optionSet.has(sshdServerArg)
         val justGenerateNodeInfo = optionSet.has(justGenerateNodeInfoArg)
-        val justRunDbMigration = optionSet.has(justRunDbMigrationArg)
-        val generateDatabaseMigrationToFile = if (optionSet.has(justGenerateDatabaseMigrationArg))
-            Pair(true, optionSet.valueOf(justGenerateDatabaseMigrationArg) ?: "migration${SimpleDateFormat("yyyyMMddHHmmss").format(Date())}.sql")
-        else
-            Pair(false, null)
-        val createMigrationForCorDapp: String? = optionSet.valueOf(justCreateMigrationForCorDappArg)
         val bootstrapRaftCluster = optionSet.has(bootstrapRaftClusterArg)
         return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion,
-                noLocalShell, sshdServer, justGenerateNodeInfo, justRunDbMigration, generateDatabaseMigrationToFile, bootstrapRaftCluster, createMigrationForCorDapp)
+                noLocalShell, sshdServer, justGenerateNodeInfo, bootstrapRaftCluster)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -89,10 +75,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
-                          val justRunDbMigration: Boolean,
-                          val generateDatabaseMigrationToFile: Pair<Boolean, String?>,
-                          val bootstrapRaftCluster: Boolean,
-                          val justCreateMigrationForCorDapp: String?) {
+                          val bootstrapRaftCluster: Boolean) {
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
         if (isRegistration) {

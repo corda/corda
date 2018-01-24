@@ -204,20 +204,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // TODO: Migrate classes and factories from start method.
     }
 
-    fun generateDatabaseSchema(outputFile: String) {
-        HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
-            val jdbcUrl = configuration.dataSourceProperties.getProperty("url", "")
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database).generateMigrationScript(File(outputFile))
-        }
-    }
-
-    fun runDbMigration() {
-        HikariDataSource(HikariConfig(configuration.dataSourceProperties)).use { dataSource ->
-            val jdbcUrl = configuration.dataSourceProperties.getProperty("url", "")
-            SchemaMigration(cordappLoader.cordappSchemas, dataSource, !isH2Database(jdbcUrl), configuration.database).runMigration()
-        }
-    }
-
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
@@ -886,9 +872,7 @@ fun configureDatabase(hikariProperties: Properties,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
 
-    if (databaseConfig.runMigration) {
-        SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig).runMigration()
-    }
+    SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig).nodeStartup()
 
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
 }

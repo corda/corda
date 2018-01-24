@@ -11,7 +11,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
-import net.corda.node.services.persistence.MigrationExporter
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -131,22 +130,6 @@ open class NodeStartup(val args: Array<String>) {
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateAndSaveNodeInfo()
-            return
-        }
-        if (cmdlineOptions.justRunDbMigration) {
-            node.runDbMigration()
-            return
-        }
-        if (cmdlineOptions.generateDatabaseMigrationToFile.first) {
-            node.generateDatabaseSchema(cmdlineOptions.generateDatabaseMigrationToFile.second!!)
-            return
-        }
-        if(cmdlineOptions.justCreateMigrationForCorDapp != null){
-            try {
-                MigrationExporter.generateMigrationForCorDapp(cmdlineOptions.justCreateMigrationForCorDapp)
-            } catch (e: Exception) {
-                logger.error("Could not generate migration for ${cmdlineOptions.justCreateMigrationForCorDapp}", e)
-            }
             return
         }
 

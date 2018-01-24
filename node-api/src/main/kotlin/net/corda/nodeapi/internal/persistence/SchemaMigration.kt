@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
+import MigrationHelpers.getMigrationResource
 import com.fasterxml.jackson.databind.ObjectMapper
 import liquibase.Contexts
 import liquibase.LabelExpression
@@ -8,14 +9,19 @@ import liquibase.database.Database
 import liquibase.database.DatabaseFactory
 import liquibase.database.core.MSSQLDatabase
 import liquibase.database.jvm.JdbcConnection
+import liquibase.lockservice.LockServiceFactory
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.getMigrationResource
 import net.corda.core.utilities.contextLogger
 import java.io.*
 import javax.sql.DataSource
 
-class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource, val failOnMigrationMissing: Boolean, private val databaseConfig: DatabaseConfig) {
+class SchemaMigration(
+        val schemas: Set<MappedSchema>,
+        val dataSource: DataSource,
+        val failOnMigrationMissing: Boolean,
+        private val databaseConfig: DatabaseConfig,
+        private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader) {
 
     companion object {
         private val logger = contextLogger()
@@ -25,7 +31,12 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
      * Main entry point to the schema migration.
      * Called during node startup.
      */
-    fun nodeStartup() = if (databaseConfig.runMigration) runMigration() else checkState()
+    fun nodeStartup(): Unit {
+        when {
+            databaseConfig.runMigration -> runMigration()
+            failOnMigrationMissing -> checkState()
+        }
+    }
 
     /**
      * will run the liquibase migration on the actual database
@@ -33,14 +44,23 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
     fun runMigration() = doRunMigration(run = true, outputWriter = null, check = false)
 
     /**
-     * will write the migration to the outputFile
+     * will write the migration to a Writer
      */
-    fun generateMigrationScript(outputFile: File) = doRunMigration(run = false, outputWriter = PrintWriter(outputFile), check = false)
+    fun generateMigrationScript(writer: Writer) = doRunMigration(run = false, outputWriter = writer, check = false)
 
     /**
      * ensures that the database is up to date with the latest migration changes
      */
     fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
+
+    /**
+     * can be used from an external tool to release the lock in case something went terribly wrong
+     */
+    fun forceReleaseMigrationLock(): Unit {
+        dataSource.connection.use { connection ->
+            LockServiceFactory.getInstance().getLockService(getLiquibaseDatabase(JdbcConnection(connection))).forceReleaseLock()
+        }
+    }
 
     private fun doRunMigration(run: Boolean, outputWriter: Writer?, check: Boolean) {
 
@@ -52,7 +72,7 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
             // collect all changelog file referenced in the included schemas
             // for backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update
             val changelogList = schemas.map { mappedSchema ->
-                val resource = getMigrationResource(mappedSchema)
+                val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
                     resource != null -> resource
                     failOnMigrationMissing -> throw IllegalStateException("No migration defined for schema: ${mappedSchema.name} v${mappedSchema.version}")
@@ -64,7 +84,7 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
             }
 
             //create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream
-            val customResourceAccessor = object : ClassLoaderResourceAccessor() {
+            val customResourceAccessor = object : ClassLoaderResourceAccessor(classLoader) {
                 override fun getResourcesAsStream(path: String): Set<InputStream> {
 
                     if (path == dynamicInclude) {
@@ -103,7 +123,7 @@ class SchemaMigration(val schemas: Set<MappedSchema>, val dataSource: DataSource
                 check && !run -> {
                     val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
                     if (unRunChanges.isNotEmpty()) {
-                        throw Exception("There are ${unRunChanges.size} outstanding database changes that need to be run. Please use the provided tools to update the database.")
+                        throw IllegalStateException("There are ${unRunChanges.size} outstanding database changes that need to be run. Please use the provided tools to update the database.")
                     }
                 }
                 (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)

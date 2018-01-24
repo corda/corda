@@ -2702,9 +2702,6 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public final void setTxId(String)
   public String toString()
 ##
-public final class net.corda.core.schemas.PersistentTypesKt extends java.lang.Object
-  @org.jetbrains.annotations.Nullable public static final String getMigrationResource(net.corda.core.schemas.MappedSchema)
-##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.schemas.QueryableState extends net.corda.core.contracts.ContractState
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.schemas.PersistentState generateMappedObject(net.corda.core.schemas.MappedSchema)
   @org.jetbrains.annotations.NotNull public abstract Iterable supportedSchemas()

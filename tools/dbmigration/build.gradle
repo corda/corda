@@ -1,0 +1,32 @@
+description 'Database Migration Tool'
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
+        classpath 'de.sebastianboegl.gradle.plugins:shadow-log4j-transformer:2.1.1'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+mainClassName = 'com.r3.corda.dbmigration.DBMigration'
+
+dependencies{
+    compile project(':node')
+    // JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+}
+
+shadowJar {
+    transform(de.sebastianboegl.gradle.plugins.shadow.transformers.Log4j2PluginsFileTransformer)
+}
+
+

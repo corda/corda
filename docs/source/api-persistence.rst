@@ -150,19 +150,31 @@ which is then referenced within a custom flow:
 Database Migration
 ==================
 
-As a database migration tool, we use the open source library liquibase  <http://www.liquibase.org/>.
+As a database migration tool, we use the open source library liquibase <http://www.liquibase.org/>.
 
-If migration is enabled (using the `database.runMigration` node configuration), the database state is checked (and updated) during node startup.
-For example, after deploying a new version of the code that contains database migrations (see example below for a possible scenario), they are executed at that point (during startup).
-Possible database changes range from schema changes to data changes (organized on changesets)
+Migration is enabled by specifying true in the ``database.runMigration`` node configuration setting (default behaviour is false).
+When enabled, the database state is checked, and updated during node startup.
+
+The default behaviour (``database.runMigration=false``) is to just check the database state, and fail if it is not up to date. To bring the database to the correct state we provide an advanced migration tool. See below for details.
+
+For example, if migration is enabled, after deploying a new version of the code that contains database migrations (see example below for a possible scenario), they are executed at that point (during startup).
+
+Possible database changes range from schema changes to data changes. (The database changes are grouped together in `changesets`. See the example below.).
+
+About Liquibase
+---------------
 
 Liquibase will create a table called ``DATABASECHANGELOG``, that will store information about each executed change (like timestamp, description, user, md5 hash so it can't be changed, etc).
-This table will be used every time a migration is run to determine what changesets need to be applied.
+This table will be used every time a migration command is run to determine what changesets need to be applied.
 Changesets should never be modified once they were executed. Any correction should be applied in a new changeset.
 We can also "tag" the database at each release to make rollback easier.
 
 Database changes are maintained in several xml files per ``MappedSchema``, so that only migrations corresponding to the node’s configured schemas are run.
-By following our convention, and using the node-info schema as an example, if there are any database changes for release 12, the changes will be added to a new file called:  ``node-info.changelog-v12.xml`` which has to be included in ``node-info.changelog-master.xml``.
+The migration file(s) for all ``MappedSchemas`` are dynamically included in the global changelog, as long as they are present on the classpath and are either explicitly declared in the ``MappedSchema`` implementation, or follow a naming convention based on the ``MappedSchema`` name.
+(The migration tool that we provide can generate liquibase files with the correct name for a schema)
+
+Our convention is to maintain a "master" changelog file per ``MappedSchema`` which will include "version" changelogs.
+By following our versioning convention, and using the node-info schema as an example, if there are any database changes for release 12, the changes will be added to a new file called: ``node-info.changelog-v12.xml`` which has to be included in ``node-info.changelog-master.xml``.
 
 
 Example:
@@ -234,14 +246,35 @@ Usage:
 Configurations:
 
 - To enable migration at startup, set:
-	- ``database.runMigration = true``   // false by default,
+	- ``database.runMigration = true``   // false by default.
 
-Command line arguments:
+Migration tool:
+---------------
 
-- To export the migration to a file use `—just-generate-db-migration outputSqlFile`. This will generate the delta from the last release, and will output the resulting sql into the outputSqlFile. It will not write to the db. It will not start the node! ( default value for `outputSqlFile` is a `.sql` file with the current date)
+The Migration tool will be distributed as a standalone jar file, with the following options:
 
-- To run the migration without starting the node: `--just-run-db-migration`
+.. table::
 
+   ====================================  =======================================================================
+     Option                               Description
+   ====================================  =======================================================================
+    --help                               Print help message
+    --mode                               Either 'NODE' or 'DOORMAN'. By default 'NODE'
+    --base-directory                     The node or doorman directory
+    --config-file                        The name of the config file. By default 'node.conf' for a simple node and 'network-management.conf' for a doorman.
+    --doorman-jar-path                   The path to the doorman fat jar
+    --create-migration-sql-for-cordapp   Create migration files for a CorDapp. You can specify the fully qualified of the `MappedSchema` class. If not specified it will generate foll all schemas that don't have migrations. The output directory is the base-directory, where a `migration` folder is created.
+    --dry-run                            Output the database migration to the specified output file. The output directory is the base-directory. You can specify a file name or 'CONSOLE' if you want to send the output to the console.
+    --execute-migration                  This option will run the db migration on the configured database
+    --release-lock                       Releases whatever locks are on the database change log table, in case shutdown failed.
+   ====================================  =======================================================================
+
+It is intended to be used by R3 Corda node administrators.
+Currently it has these features :
+    - it allows running the migration on the database (`--execute-migration` )
+    - offers the option to inspect the actual sql statements that will be run as part of the current migration (`--dry-run` )
+    - can be used to release the migration lock (`--release-lock`)
+    - when a CorDapp released by the open source community is ready to be deployed on a production node, using this tool it can be "upgraded" (`--create-migration-sql-for-cordapp`). See below for details.
 
 CorDapps:
 ---------
@@ -250,7 +283,7 @@ CorDapp developers who decide to store contract state in custom entities can cre
 
 There are 2 ways of associating a migration file with a schema:
  1) By overriding ``val migrationResource: String`` and pointing to a file that needs to be in the classpath
- 2) By putting a file on the classpath in a `migration` package whose name is the hyphenated name of the schema. ( All supported file extensions will be appended to the name)
+ 2) By putting a file on the classpath in a `migration` package whose name is the hyphenated name of the schema. (All supported file extensions will be appended to the name)
 
 CorDapp developers can use any of the supported formats (xml, sql, json, yaml) for the migration files they create.
 
@@ -261,12 +294,14 @@ In case CorDapp developers don't distribute a CorDapp with migration files, then
 
 The following options are available:
  1) In case the organisation is running a demo or trial node on the default H2 database, then the CorDapp will just work when deployed by relying on the migration tool provided by hibernate, which is not intended for production.
- 2) In case the organisation is running a production node with live data on an enterprise database, then they will have to manage the database migration for the CorDapp.
+ 2) In case the organisation is running a production node (with live data) on an enterprise database, then they will have to manage the database migration for the CorDapp.
 
     These are the steps to do this:
-        - find out the name of the MappedSchema containing the new contract state entities and hyphenate it. For example:
-            - `CommercialPaperSchemaV1` -> `commercial-paper-schema-v1.changelog-master.xml`.
-            - `IOUSchemaV1` -> `i-o-u-schema-v1.changelog-master.xml`.
-        - create a file with the preferred extension and add the migration in it (see <http://www.liquibase.org/documentation/index.html>). For DBAs, the Sql format might be very familiar (basically T-SQL with metadata). The first changeset should be just creating the tables, indexes, etc. The author name should not be `R3.Corda`, because this is reserved.
-        - add the files to a folder named `migration` and create a jar (by convention it could be named: originalCorDappName-migration.jar), and deploy this jar together with the CorDapp
-        - by using the `--just-generate-db-migration` flag, the migration can be tested by inspecting the generated sql.
+        - deploy the CorDapp on your node (copy the jar in the `cordapps` folder)
+        - find out the name of the MappedSchema containing the new contract state entities and hyphenate it. For example:``net.corda.finance.schemasCommercialPaperSchemaV1``
+        - call the migration tool ``java -jar migration-tool.jar --base-directory path_to_node --create-migration-sql-for-cordapp net.corda.finance.schemasCommercialPaperSchemaV1``
+        - this will generate a file called ``commercial-paper-schema-v1.changelog-master.sql`` in a folder called ``migration`` in the `base-directory`
+        - in case you don't specify the actual MappedSchema name, the tool will generate one sql file for each schema defined in the CorDapp
+        - inspect the file(s) to make sure it is correct
+        - create a jar with the `migration` folder (by convention it could be named: originalCorDappName-migration.jar), and deploy this jar together with the CorDapp
+        - To make sure that the new migration will be used, the migration tool can be run in a `dry-run` mode and inspect the output file
