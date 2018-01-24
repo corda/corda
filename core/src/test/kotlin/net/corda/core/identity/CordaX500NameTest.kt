@@ -125,6 +125,18 @@ class CordaX500NameTest {
         assertEquals("org, unit, US, Blaargh", displayString4)
         assertEquals("org, unit, US, Blargh", displayString5)
         assertEquals("thisIs", displayString6)
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun `should throw exception if unable to produce unique name with given selectors`() {
+        val name1 = CordaX500Name.parse("O=org,   OU=unit,    C=GB,   L=LONDON, CN=CommonName")
+        val name2 = CordaX500Name.parse("O=org,     OU=unit,   C=GB,  L=NEW_YOURK, CN=CommonName")
+
+        println(name1.toUniqueName(setOf(name1, name2),
+                CordaX500Name.NameSelector.ORG,
+                CordaX500Name.NameSelector.ORG_UNIT,
+                CordaX500Name.NameSelector.COUNTRY,
+                CordaX500Name.NameSelector.COMMON_NAME))
 
     }
 }
