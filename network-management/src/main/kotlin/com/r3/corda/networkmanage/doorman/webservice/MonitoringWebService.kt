@@ -8,9 +8,9 @@ import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
+@Path("/status")
 class MonitoringWebService(private val serverStatus: NetworkManagementServerStatus) {
     @GET
-    @Path("status")
     @Produces(MediaType.APPLICATION_JSON)
     fun status(): Response {
         return Response.ok(ObjectMapper().writeValueAsString(serverStatus)).build()
