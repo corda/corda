@@ -151,7 +151,7 @@ open class Node(configuration: NodeConfiguration,
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
-        val advertisedAddress = info.addresses.first()
+        val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
         rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, rpcServerAddresses.admin, networkParameters.maxMessageSize)
@@ -196,15 +196,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> {
-        val addresses = mutableListOf<NetworkHostAndPort>()
-        addresses.add(configuration.messagingServerAddress ?: getAdvertisedAddress())
-        rpcBroker?.addresses?.let {
-            addresses.add(it.primary)
-            if (it.admin != it.primary) {
-                addresses.add(it.admin)
-            }
-        }
-        return addresses
+        return listOf(configuration.messagingServerAddress ?: getAdvertisedAddress())
     }
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {

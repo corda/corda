@@ -236,7 +236,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         log.debug { "Queue created: $queueName, deploying bridge(s)" }
         fun deployBridgeToPeer(nodeInfo: NodeInfo) {
             log.debug("Deploying bridge for $queueName to $nodeInfo")
-            val address = nodeInfo.addresses.first()
+            val address = nodeInfo.addresses.single()
             bridgeManager.deployBridge(queueName, address, nodeInfo.legalIdentitiesAndCerts.map { it.name }.toSet())
         }
 
@@ -265,7 +265,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     private fun updateBridgesOnNetworkChange(change: MapChange) {
         log.debug { "Updating bridges on network map change: ${change.node}" }
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
-            val address = node.addresses.first()
+            val address = node.addresses.single()
             return node.legalIdentitiesAndCerts.map { NodeAddress(it.party.owningKey, address) }.asSequence()
         }
 

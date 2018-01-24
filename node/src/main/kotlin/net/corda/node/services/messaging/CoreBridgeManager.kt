@@ -43,7 +43,7 @@ internal class CoreBridgeManager(val config: NodeConfiguration, val activeMQServ
     }
 
     private fun gatherAddresses(node: NodeInfo): Sequence<ArtemisMessagingComponent.ArtemisPeerAddress> {
-        val address = node.addresses.first()
+        val address = node.addresses.single()
         return node.legalIdentitiesAndCerts.map { ArtemisMessagingComponent.NodeAddress(it.party.owningKey, address) }.asSequence()
     }
 
