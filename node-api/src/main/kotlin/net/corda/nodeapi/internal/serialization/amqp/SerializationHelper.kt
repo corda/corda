@@ -62,11 +62,12 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
 }
 
 /**
- * Identifies the properties to be used during serialization by attempting to find those that match the parameters to the
- * deserialization constructor, if the class is concrete.  If it is abstract, or an interface, then use all the properties.
+ * Identifies the properties to be used during serialization by attempting to find those that match the parameters
+ * to the deserialization constructor, if the class is concrete.  If it is abstract, or an interface, then use all
+ * the properties.
  *
- * Note, you will need any Java classes to be compiled with the `-parameters` option to ensure constructor parameters have
- * names accessible via reflection.
+ * Note, you will need any Java classes to be compiled with the `-parameters` option to ensure constructor parameters
+ * have names accessible via reflection.
  */
 internal fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,

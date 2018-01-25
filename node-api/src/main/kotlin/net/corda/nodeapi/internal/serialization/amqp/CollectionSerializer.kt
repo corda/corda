@@ -66,12 +66,12 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) = ifThrowsAppend({ declaredType.typeName }) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 for (entry in obj as Collection<*>) {
-                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0])
+                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0], offset)
                 }
             }
         }

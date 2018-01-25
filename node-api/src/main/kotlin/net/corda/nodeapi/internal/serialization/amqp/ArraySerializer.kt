@@ -45,12 +45,12 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 for (entry in obj as Array<*>) {
-                    output.writeObjectOrNull(entry, this, elementType)
+                    output.writeObjectOrNull(entry, this, elementType, offset)
                 }
             }
         }
@@ -109,15 +109,15 @@ abstract class PrimArraySerializer(type: Type, factory: SerializerFactory) : Arr
 
 class PrimIntArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(IntArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as IntArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as IntArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 }
 
 class PrimCharArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(CharArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as CharArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as CharArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 
     override fun <T> List<T>.toArrayOfType(type: Type): Any {
@@ -132,35 +132,35 @@ class PrimCharArraySerializer(factory: SerializerFactory) :
 
 class PrimBooleanArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(BooleanArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as BooleanArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as BooleanArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 }
 
 class PrimDoubleArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(DoubleArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as DoubleArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as DoubleArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 }
 
 class PrimFloatArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(FloatArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as FloatArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as FloatArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 }
 
 class PrimShortArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(ShortArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as ShortArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as ShortArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 }
 
 class PrimLongArraySerializer(factory: SerializerFactory) :
         PrimArraySerializer(LongArray::class.java, factory) {
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        localWriteObject(data) { (obj as LongArray).forEach { output.writeObjectOrNull(it, data, elementType) } }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) {
+        localWriteObject(data) { (obj as LongArray).forEach { output.writeObjectOrNull(it, data, elementType, offset+4) } }
     }
 }

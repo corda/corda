@@ -124,7 +124,12 @@ fun AMQPField.getTypeAsClass(classloader: ClassLoader) = typeStrToType[Pair(type
     "string" -> String::class.java
     "binary" -> ByteArray::class.java
     "*" -> if (requires.isEmpty()) Any::class.java else classloader.loadClass(requires[0])
-    else -> classloader.loadClass(type)
+    else -> {
+        classloader.loadClass(
+                if (type.endsWith("<?>")) {
+                    type.substring(0, type.length-3)
+                } else type)
+    }
 }
 
 fun AMQPField.validateType(classloader: ClassLoader) = when (type) {

@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import com.google.common.primitives.Primitives
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
@@ -51,12 +52,11 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     }
 
     @Throws(NotSerializableException::class)
-    inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T =
-            deserialize(bytes, T::class.java)
+    inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)
 
     @Throws(NotSerializableException::class)
     inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
-            deserializeAndReturnEnvelope(bytes, T::class.java)
+        deserializeAndReturnEnvelope(bytes, T::class.java)
 
     @Throws(NotSerializableException::class)
     internal fun getEnvelope(bytes: ByteSequence): Envelope {
@@ -106,41 +106,47 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
         ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz)), envelope)
     }
 
-    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type): Any? {
-        return if (obj == null) null else readObject(obj, schema, type)
+    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, offset: Int = 0): Any? {
+        return if (obj == null) null else readObject(obj, schema, type, offset)
     }
 
-    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type): Any =
-            if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
-                // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
-                val objectIndex = (obj.described as UnsignedInteger).toInt()
-                if (objectIndex !in 0..objectHistory.size)
-                    throw NotSerializableException("Retrieval of existing reference failed. Requested index $objectIndex " +
-                            "is outside of the bounds for the list of size: ${objectHistory.size}")
+    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, offset: Int = 0): Any {
+        return if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
+            // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
+            val objectIndex = (obj.described as UnsignedInteger).toInt()
+            if (objectIndex !in 0..objectHistory.size)
+                throw NotSerializableException("Retrieval of existing reference failed. Requested index $objectIndex " +
+                        "is outside of the bounds for the list of size: ${objectHistory.size}")
 
-                val objectRetrieved = objectHistory[objectIndex]
-                if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!))
-                    throw NotSerializableException("Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}'")
-                objectRetrieved
-            } else {
-                val objectRead = when (obj) {
-                    is DescribedType -> {
-                        // Look up serializer in factory by descriptor
-                        val serializer = serializerFactory.get(obj.descriptor, schemas)
-                        if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
-                            throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
-                                    "expected to be of type $type but was ${serializer.type}")
-                        serializer.readObject(obj.described, schemas, this)
-                    }
-                    is Binary -> obj.array
-                    else -> obj // this will be the case for primitive types like [boolean] et al.
-                }
-
-                // Store the reference in case we need it later on.
-                // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
-                if (suitableForObjectReference(objectRead.javaClass)) objectHistory.add(objectRead)
-                objectRead
+            val objectRetrieved = objectHistory[objectIndex]
+            if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!)) {
+                throw NotSerializableException(
+                        "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +
+                                "@ ${objectIndex}")
             }
+            objectRetrieved
+        } else {
+            val objectRead = when (obj) {
+                is DescribedType -> {
+                    // Look up serializer in factory by descriptor
+                    val serializer = serializerFactory.get(obj.descriptor, schemas)
+                    if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
+                        throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
+                                "expected to be of type $type but was ${serializer.type}")
+                    serializer.readObject(obj.described, schemas, this)
+                }
+                is Binary -> obj.array
+                else -> obj // this will be the case for primitive types like [boolean] et al.
+            }
+
+            // Store the reference in case we need it later on.
+            // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
+            if (suitableForObjectReference(objectRead.javaClass)) {
+                objectHistory.add(objectRead)
+            }
+            objectRead
+        }
+    }
 
     /**
      * Currently performs checks aimed at:

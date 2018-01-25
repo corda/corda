@@ -9,7 +9,7 @@ import java.lang.reflect.Type
  */
 sealed class PropertySerializer(val name: String, val propertyReader: PropertyReader, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
-    abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
+    abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, offset: Int = 0)
     abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any?
 
     val type: String = generateType()
@@ -80,8 +80,8 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
             input.readObjectOrNull(obj, schemas, resolvedType)
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
-            output.writeObjectOrNull(propertyReader.read(obj), data, resolvedType)
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, offset: Int) = ifThrowsAppend({ nameForDebug }) {
+            output.writeObjectOrNull(propertyReader.read(obj), data, resolvedType, offset)
         }
 
         private val nameForDebug = "$name(${resolvedType.typeName})"
@@ -100,7 +100,7 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
             return if (obj is Binary) obj.array else obj
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, offset: Int) {
             val value = propertyReader.read(obj)
             if (value is ByteArray) {
                 data.putObject(Binary(value))
@@ -123,7 +123,7 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
             return if (obj == null) null else (obj as Short).toChar()
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, offset: Int) {
             val input = propertyReader.read(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
