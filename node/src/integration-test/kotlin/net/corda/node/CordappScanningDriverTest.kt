@@ -10,12 +10,13 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.driver.driver
-import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test

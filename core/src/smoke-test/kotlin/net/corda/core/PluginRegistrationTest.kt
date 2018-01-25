@@ -32,6 +32,7 @@ class PluginRegistrationTest {
                 p2pPort = 30100,
                 rpcPort = 30101,
                 webPort = 30102,
+                rpcAdminPort = 30103,
                 isNotary = false,
                 users = listOf(User("_", "_", setOf("ALL"))),
                 jarDirs = listOf(jarDir))

@@ -9,8 +9,9 @@ import net.corda.core.internal.readLines
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
-import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -19,10 +20,6 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.http.HttpApi
-import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.json.simple.JSONObject
 import org.junit.ClassRule

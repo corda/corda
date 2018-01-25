@@ -11,7 +11,7 @@ import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger

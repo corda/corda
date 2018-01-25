@@ -21,8 +21,8 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -125,9 +125,16 @@ class SigningServiceIntegrationTest {
                 }
             }
             config.certificatesDirectory.createDirectories()
-            loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword).also {
-                it.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert)
-                it.save(config.trustStoreFile, config.trustStorePassword)
+            val trustStore = X509KeyStore.fromFile(config.trustStoreFile, config.trustStorePassword, createNew = true)
+            trustStore.update {
+                setCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert)
+            }
+            val nodeKeyStore = X509KeyStore.fromFile(config.nodeKeystore, config.keyStorePassword, createNew = true)
+            val sslKeyStore = X509KeyStore.fromFile(config.sslKeystore, config.keyStorePassword, createNew = true)
+            config.also {
+                doReturn(trustStore).whenever(it).loadTrustStore(any())
+                doReturn(nodeKeyStore).whenever(it).loadNodeKeyStore(any())
+                doReturn(sslKeyStore).whenever(it).loadSslKeyStore(any())
             }
             NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
             verify(hsmSigner).sign(any())
@@ -144,6 +151,9 @@ class SigningServiceIntegrationTest {
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn("iTest@R3.com").whenever(it).emailAddress
+//            doReturn(X509KeyStore.fromFile(it.nodeKeystore, it.keyStorePassword, true)).whenever(it).loadNodeKeyStore(any())
+//            doReturn(X509KeyStore.fromFile(it.sslKeystore, it.keyStorePassword, true)).whenever(it).loadSslKeyStore(any())
+//            doReturn(trustStore).whenever(it).loadTrustStore(any())
         }
     }
 

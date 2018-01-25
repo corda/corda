@@ -3,9 +3,7 @@ package net.corda.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -22,14 +20,10 @@ import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.chooseIdentity
-import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.node.User
 import net.corda.testing.core.chooseIdentity
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User

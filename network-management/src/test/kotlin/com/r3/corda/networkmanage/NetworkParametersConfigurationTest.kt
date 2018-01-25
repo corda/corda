@@ -4,12 +4,11 @@ import com.r3.corda.networkmanage.doorman.NetworkParametersConfiguration
 import com.r3.corda.networkmanage.doorman.NotaryConfiguration
 import com.r3.corda.networkmanage.doorman.parseNetworkParameters
 import com.r3.corda.networkmanage.doorman.parseNetworkParametersFrom
-import com.typesafe.config.ConfigFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.serialization.serialize
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

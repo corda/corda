@@ -19,15 +19,14 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.node.User
-import net.corda.testing.*
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.toDatabaseSchemaNames
+import net.corda.testing.node.User
 import org.junit.Assume.assumeFalse
 import org.junit.ClassRule
 import org.junit.Test

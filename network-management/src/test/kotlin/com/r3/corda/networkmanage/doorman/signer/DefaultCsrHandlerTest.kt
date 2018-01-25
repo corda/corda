@@ -12,6 +12,7 @@ import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -73,7 +74,7 @@ class DefaultCsrHandlerTest : TestBase() {
 
         // Then make sure the generated node cert paths are correct
         certPathCapture.allValues.forEachIndexed { index, certPath ->
-            X509Utilities.validateCertificateChain(rootCa.certificate, *certPath.certificates.toTypedArray())
+            X509Utilities.validateCertificateChain(rootCa.certificate, certPath.x509Certificates)
             assertThat(certPath.certificates).hasSize(3).element(1).isEqualTo(csrCa.certificate)
             (certPath.certificates[0] as X509Certificate).apply {
                 assertThat(CertRole.extract(this)).isEqualTo(CertRole.NODE_CA)

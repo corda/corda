@@ -10,11 +10,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.testing.*
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.IntegrationTest

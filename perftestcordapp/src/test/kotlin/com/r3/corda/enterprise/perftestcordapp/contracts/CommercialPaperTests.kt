@@ -16,7 +16,7 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.days
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter

@@ -65,7 +65,7 @@ class NodeConfigurationImplTest {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private fun testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
+    private fun  testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
         return testConfiguration.copy(dataSourceProperties = dataSourceProperties)
     }
 

@@ -1,9 +1,5 @@
 package net.corda.finance.contracts.asset
 
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -28,7 +24,6 @@ import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices

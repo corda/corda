@@ -12,13 +12,14 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.internal.toDatabaseSchemaNames
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.*
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After

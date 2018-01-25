@@ -16,7 +16,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -32,10 +31,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL

@@ -8,13 +8,13 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.driver.driver
 import net.corda.testing.internal.toDatabaseSchemaName
-import org.junit.ClassRule
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Path
 import javax.security.auth.x500.X500Principal

@@ -20,8 +20,9 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.IntegrationTest
@@ -30,7 +31,6 @@ import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
-import net.corda.testing.singleIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import java.net.URL

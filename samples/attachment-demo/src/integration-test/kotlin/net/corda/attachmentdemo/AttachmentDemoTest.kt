@@ -6,13 +6,13 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.DUMMY_NOTARY_NAME
-import net.corda.testing.node.User
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync

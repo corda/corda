@@ -13,10 +13,9 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
-import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.testThreadFactory
