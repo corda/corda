@@ -8,7 +8,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
-
+Cord
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime

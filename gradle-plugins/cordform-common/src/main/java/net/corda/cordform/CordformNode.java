@@ -105,7 +105,9 @@ public class CordformNode implements NodeDefinition {
      * Set the Artemis RPC port for this node on localhost.
      *
      * @param rpcPort The Artemis RPC queue port.
+     * @deprecated Use {@link CordformNode#rpcSettings(RpcSettings)} instead.
      */
+    @Deprecated
     public void rpcPort(int rpcPort) {
         rpcAddress(DEFAULT_HOST + ':' + rpcPort);
     }
@@ -114,7 +116,9 @@ public class CordformNode implements NodeDefinition {
      * Set the Artemis RPC address for this node.
      *
      * @param rpcAddress The Artemis RPC queue host and port.
+     * @deprecated Use {@link CordformNode#rpcSettings(RpcSettings)} instead.
      */
+    @Deprecated
     public void rpcAddress(String rpcAddress) {
         setValue("rpcAddress", rpcAddress);
     }
