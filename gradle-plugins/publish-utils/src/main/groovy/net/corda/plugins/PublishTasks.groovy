@@ -56,7 +56,9 @@ class PublishTasks implements Plugin<Project> {
             groupId project.group
             artifactId publishName
 
-            artifact project.tasks.sourceJar
+            if (publishConfig.publishSources) {
+                artifact project.tasks.sourceJar
+            }
             artifact project.tasks.javadocJar
 
             project.configurations.publish.artifacts.each {

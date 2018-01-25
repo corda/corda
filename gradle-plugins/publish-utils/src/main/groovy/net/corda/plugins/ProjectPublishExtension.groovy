@@ -31,4 +31,9 @@ class ProjectPublishExtension {
      * True if publishing a WAR instead of a JAR. Forces disableDefaultJAR to "true" when true
      */
     Boolean publishWar = false
+
+    /**
+     * True if publishing sources to remote repositories
+     */
+    Boolean publishSources = true
 }
