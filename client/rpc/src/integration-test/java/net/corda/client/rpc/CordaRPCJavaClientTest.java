@@ -10,7 +10,7 @@ import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
-import net.corda.testing.CoreTestUtils;
+import net.corda.testing.core.TestUtils;
 import net.corda.testing.node.User;
 import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
@@ -28,7 +28,7 @@ import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
-import static net.corda.testing.TestConstants.ALICE_NAME;
+import static net.corda.testing.core.TestConstants.ALICE_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
@@ -57,7 +57,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Before
     public void setUp() throws Exception {
         node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
-        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
+        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcOptions().getAddress()));
     }
 
     @After
@@ -76,7 +76,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 DOLLARS(123), OpaqueBytes.of((byte)0),
-                CoreTestUtils.chooseIdentity(node.getInfo()));
+                TestUtils.chooseIdentity(node.getInfo()));
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

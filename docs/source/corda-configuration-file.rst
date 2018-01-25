@@ -38,7 +38,12 @@ Simple Notary configuration file.
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
     p2pAddress : "localhost:12345"
-    rpcAddress : "localhost:12346"
+    rpcSettings = {
+        useSsl = false
+        standAloneBroker = false
+        address : "my-corda-node:10003"
+        adminAddress : "my-corda-node:10004"
+    }
     webAddress : "localhost:12347"
     notary : {
         validating : false
@@ -87,7 +92,21 @@ path to the node's base directory.
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
 
-:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
+:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
+
+:rpcSettings: Options for the RPC server.
+
+        :useSsl: (optional) boolean, indicates whether the node should require clients to use SSL for RPC connections, defaulted to ``false``.
+        :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaulted to ``false``.
+        :address: (optional) host and port for the RPC server binding, if any.
+        :adminAddress: (optional) host and port for the RPC admin binding (only required when ``useSsl`` is ``false``, because the node connects to Artemis using SSL to ensure admin privileges are not accessible outside the node).
+        :ssl: (optional) SSL settings for the RPC server.
+
+                :keyStorePassword: password for the key store.
+                :trustStorePassword: password for the trust store.
+                :certificatesDirectory: directory in which the stores will be searched, unless absolute paths are provided.
+                :sslKeystore: absolute path to the ssl key store, defaulted to ``certificatesDirectory / "sslkeystore.jks"``.
+                :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
 
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.
@@ -171,3 +190,12 @@ path to the node's base directory.
 
 :useAMQPBridges: Optionally can be set to ``false`` to use Artemis CORE Bridges for peer-to-peer communications.
         Otherwise, defaults to ``true`` and the AMQP 1.0 protocol will be used for message transfer between nodes.
+
+:transactionCacheSizeMegaBytes: Optionally specify how much memory should be used for caching of ledger transactions in memory.
+            Otherwise defaults to 8MB plus 5% of all heap memory above 300MB.
+
+:attachmentContentCacheSizeMegaBytes: Optionally specify how much memory should be used to cache attachment contents in memory.
+            Otherwise defaults to 10MB
+
+:attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
+            metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.

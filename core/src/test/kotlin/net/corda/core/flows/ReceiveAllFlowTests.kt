@@ -6,7 +6,7 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.singleIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

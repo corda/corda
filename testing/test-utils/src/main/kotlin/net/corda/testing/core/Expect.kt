@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.core
 
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.DoNotImplement

@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.x509
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection
@@ -42,7 +43,7 @@ internal class CoreBridgeManager(val config: NodeConfiguration, val activeMQServ
     }
 
     private fun gatherAddresses(node: NodeInfo): Sequence<ArtemisMessagingComponent.ArtemisPeerAddress> {
-        val address = node.addresses.first()
+        val address = node.addresses.single()
         return node.legalIdentitiesAndCerts.map { ArtemisMessagingComponent.NodeAddress(it.party.owningKey, address) }.asSequence()
     }
 
@@ -161,7 +162,9 @@ class VerifyingNettyConnectorFactory : NettyConnectorFactory() {
                         "Peer has wrong subject name in the certificate - expected $expectedLegalNames but got $peerCertificateName. This is either a fatal " +
                                 "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                     }
-                    X509Utilities.validateCertificateChain(session.localCertificates.last() as java.security.cert.X509Certificate, *session.peerCertificates)
+                    X509Utilities.validateCertificateChain(
+                            session.localCertificates.last().x509,
+                            session.peerCertificates.x509)
                 } catch (e: IllegalArgumentException) {
                     connection.close()
                     log.error(e.message)

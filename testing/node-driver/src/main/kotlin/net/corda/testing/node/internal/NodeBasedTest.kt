@@ -13,11 +13,11 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.node.User
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.getFreeLocalPorts
+import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import org.apache.logging.log4j.Level
@@ -69,7 +69,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             val portNotBoundChecks = nodes.flatMap {
                 listOf(
                         it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                        it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                        it.internals.configuration.rpcOptions.address?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
                 )
             }.filterNotNull()
             nodes.clear()
@@ -85,7 +85,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         val baseDirectory = baseDirectory(legalName).createDirectories()
-        val localPort = getFreeLocalPorts("localhost", 2)
+        val localPort = getFreeLocalPorts("localhost", 3)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
@@ -93,7 +93,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 configOverrides = configOf(
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
-                        "rpcAddress" to localPort[1].toString(),
+                        "rpcSettings.address" to localPort[1].toString(),
+                        "rpcSettings.adminAddress" to localPort[2].toString(),
                         "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }
                 ) + configOverrides
         )

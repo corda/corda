@@ -22,7 +22,7 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
             /** parent attributes */
             @ElementCollection
             @Column(name = "participants")
-            @CollectionTable(name = "dummy_deal_states_participants", joinColumns = arrayOf(
+            @CollectionTable(name = "dummy_deal_states_parts", joinColumns = arrayOf(
                     JoinColumn(name = "output_index", referencedColumnName = "output_index"),
                     JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             override var participants: MutableSet<AbstractParty>? = null,

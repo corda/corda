@@ -9,7 +9,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.*
 import java.net.URL
-import java.security.cert.Certificate
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
 
@@ -22,19 +22,19 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
     }
 
     @Throws(CertificateRequestException::class)
-    override fun retrieveCertificates(requestId: String): Array<Certificate>? {
+    override fun retrieveCertificates(requestId: String): List<X509Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
         val conn = URL("$registrationURL/$requestId").openHttpConnection()
         conn.requestMethod = "GET"
 
         return when (conn.responseCode) {
             HTTP_OK -> ZipInputStream(conn.inputStream).use {
-                val certificates = ArrayList<Certificate>()
+                val certificates = ArrayList<X509Certificate>()
                 val factory = X509CertificateFactory()
                 while (it.nextEntry != null) {
                     certificates += factory.generateCertificate(it)
                 }
-                certificates.toTypedArray()
+                certificates
             }
             HTTP_NO_CONTENT -> null
             HTTP_UNAUTHORIZED -> throw CertificateRequestException("Certificate signing request has been rejected: ${conn.errorMessage}")

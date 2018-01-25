@@ -13,8 +13,8 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
-import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
@@ -28,13 +28,13 @@ class DriverTests {
         val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
         fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
-            val hostAndPort = nodeInfo.addresses.first()
+            val hostAndPort = nodeInfo.addresses.single()
             // Check that the port is bound
             addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
         }
 
         fun nodeMustBeDown(handle: NodeHandle) {
-            val hostAndPort = handle.nodeInfo.addresses.first()
+            val hostAndPort = handle.nodeInfo.addresses.single()
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }

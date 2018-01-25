@@ -2,8 +2,11 @@ package net.corda.testing.internal
 
 import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.config.SslOptions
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
@@ -15,6 +18,7 @@ import org.mockito.Mockito
 import org.mockito.internal.stubbing.answers.ThrowsException
 import java.lang.reflect.Modifier
 import java.nio.file.Files
+import java.security.KeyPair
 import java.util.*
 import javax.security.auth.x500.X500Principal
 
@@ -102,13 +106,33 @@ fun createDevIntermediateCaCertPath(
  */
 fun createDevNodeCaCertPath(
         legalName: CordaX500Name,
+        nodeKeyPair: KeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME),
         rootCaName: X500Principal = defaultRootCaName,
         intermediateCaName: X500Principal = defaultIntermediateCaName
 ): Triple<CertificateAndKeyPair, CertificateAndKeyPair, CertificateAndKeyPair> {
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath(rootCaName, intermediateCaName)
-    val nodeCa = createDevNodeCa(intermediateCa, legalName)
+    val nodeCa = createDevNodeCa(intermediateCa, legalName, nodeKeyPair)
     return Triple(rootCa, intermediateCa, nodeCa)
 }
 
 /** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
+
+fun SslOptions.useSslRpcOverrides(): Map<String, String> {
+    return mapOf(
+            "rpcSettings.useSsl" to "true",
+            "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
+            "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+    )
+}
+
+fun SslOptions.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
+    return mapOf(
+            "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
+            "rpcSettings.useSsl" to "false",
+            "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
+            "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+    )
+}

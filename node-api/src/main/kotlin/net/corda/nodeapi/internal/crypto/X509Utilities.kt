@@ -6,9 +6,8 @@ import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.reader
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.writer
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.*
@@ -95,14 +94,19 @@ object X509Utilities {
         return createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
     }
 
-    @Throws(CertPathValidatorException::class)
-    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
+    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: X509Certificate) {
+        validateCertificateChain(trustedRoot, certificates.asList())
+    }
+
+    fun validateCertificateChain(trustedRoot: X509Certificate, certificates: List<X509Certificate>) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
+        validateCertPath(trustedRoot, buildCertPath(certificates))
+    }
+
+    fun validateCertPath(trustedRoot: X509Certificate, certPath: CertPath) {
         val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
-        val certPath = X509CertificateFactory().generateCertPath(*certificates)
-        val pathValidator = CertPathValidator.getInstance("PKIX")
-        pathValidator.validate(certPath, params)
+        CertPathValidator.getInstance("PKIX").validate(certPath, params)
     }
 
     /**
@@ -266,6 +270,21 @@ object X509Utilities {
     fun createCertificateSigningRequest(subject: X500Principal, email: String, keyPair: KeyPair): PKCS10CertificationRequest {
         return createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
     }
+
+    fun buildCertPath(first: X509Certificate, remaining: List<X509Certificate>): CertPath {
+        val certificates = ArrayList<X509Certificate>(1 + remaining.size)
+        certificates += first
+        certificates += remaining
+        return buildCertPath(certificates)
+    }
+
+    fun buildCertPath(vararg certificates: X509Certificate): CertPath {
+        return X509CertificateFactory().generateCertPath(*certificates)
+    }
+
+    fun buildCertPath(certificates: List<X509Certificate>): CertPath {
+        return X509CertificateFactory().generateCertPath(certificates)
+    }
 }
 
 /**
@@ -276,6 +295,16 @@ object X509Utilities {
 fun X509Certificate.toBc() = X509CertificateHolder(encoded)
 fun X509CertificateHolder.toJca(): X509Certificate = X509CertificateFactory().generateCertificate(encoded.inputStream())
 
+val CertPath.x509Certificates: List<X509Certificate> get() {
+    require(type == "X.509") { "Not an X.509 cert path: $this" }
+    // We're not mapping the list to avoid creating a new one.
+    return uncheckedCast(certificates)
+}
+
+val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certificate) { "Not an X.509 certificate: $this" }
+
+val Array<Certificate>.x509: List<X509Certificate> get() = map { it.x509 }
+
 /**
  * Wraps a [CertificateFactory] to remove boilerplate. It's unclear whether [CertificateFactory] is threadsafe so best
  * so assume this class is not.
@@ -283,17 +312,11 @@ fun X509CertificateHolder.toJca(): X509Certificate = X509CertificateFactory().ge
 class X509CertificateFactory {
     val delegate: CertificateFactory = CertificateFactory.getInstance("X.509")
 
-    fun generateCertificate(input: InputStream): X509Certificate {
-        return delegate.generateCertificate(input) as X509Certificate
-    }
+    fun generateCertificate(input: InputStream): X509Certificate = delegate.generateCertificate(input).x509
 
-    fun generateCertPath(certificates: List<Certificate>): CertPath {
-        return delegate.generateCertPath(certificates)
-    }
+    fun generateCertPath(vararg certificates: X509Certificate): CertPath = generateCertPath(certificates.asList())
 
-    fun generateCertPath(vararg certificates: Certificate): CertPath {
-        return delegate.generateCertPath(certificates.asList())
-    }
+    fun generateCertPath(certificates: List<X509Certificate>): CertPath = delegate.generateCertPath(certificates)
 }
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: CertRole?) {

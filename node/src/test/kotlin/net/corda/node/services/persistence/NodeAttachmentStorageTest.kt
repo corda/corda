@@ -13,18 +13,18 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
@@ -66,10 +66,10 @@ class NodeAttachmentStorageTest {
             val stream = storage.openAttachment(expectedHash)!!.openAsJAR()
             val e1 = stream.nextJarEntry!!
             assertEquals("test1.txt", e1.name)
-            assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "This is some useful content")
+            assertEquals(stream.readBytes().toString(StandardCharsets.UTF_8), "This is some useful content")
             val e2 = stream.nextJarEntry!!
             assertEquals("test2.txt", e2.name)
-            assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "Some more useful content")
+            assertEquals(stream.readBytes().toString(StandardCharsets.UTF_8), "Some more useful content")
 
             stream.close()
 
@@ -79,6 +79,44 @@ class NodeAttachmentStorageTest {
             }
         }
     }
+
+    @Test
+    fun `missing is not cached`() {
+        val (testJar, expectedHash) = makeTestJar()
+        val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
+
+        database.transaction {
+            val storage = NodeAttachmentService(MetricRegistry())
+            val id = testJar.read { storage.importAttachment(it) }
+            assertEquals(expectedHash, id)
+
+
+            assertNull(storage.openAttachment(hashB))
+            val stream = storage.openAttachment(expectedHash)!!.openAsJAR()
+            val e1 = stream.nextJarEntry!!
+            assertEquals("test1.txt", e1.name)
+            assertEquals(stream.readBytes().toString(StandardCharsets.UTF_8), "This is some useful content")
+            val e2 = stream.nextJarEntry!!
+            assertEquals("test2.txt", e2.name)
+            assertEquals(stream.readBytes().toString(StandardCharsets.UTF_8), "Some more useful content")
+
+            stream.close()
+
+            val idB = jarB.read { storage.importAttachment(it) }
+            assertEquals(hashB, idB)
+
+            storage.openAttachment(id)!!.openAsJAR().use {
+                it.nextJarEntry
+                it.readBytes()
+            }
+
+            storage.openAttachment(idB)!!.openAsJAR().use {
+                it.nextJarEntry
+                it.readBytes()
+            }
+        }
+    }
+
 
     @Test
     fun `metadata can be used to search`() {

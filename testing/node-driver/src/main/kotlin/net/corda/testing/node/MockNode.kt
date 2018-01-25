@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -14,15 +15,17 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
+import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
-import net.corda.lazyhub.MutableLazyHub
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
@@ -43,13 +46,13 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.setGlobalSerialization
+import net.corda.testing.core.setGlobalSerialization
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
@@ -62,7 +65,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-    return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
+    return (network as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
 }
 
 /** Helper builder for configuring a [MockNetwork] from Java. */
@@ -172,29 +175,32 @@ open class MockNetwork(private val cordappPackages: List<String>,
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode> get() {
-        return when (notaryNodes.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryNodes[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryNode: StartedNode<MockNode>
+        get() {
+            return when (notaryNodes.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryNodes[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentity: Party get() {
-        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentity: Party
+        get() {
+            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
-        return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentityAndCert: PartyAndCertificate
+        get() {
+            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
@@ -291,14 +297,9 @@ open class MockNetwork(private val cordappPackages: List<String>,
                     }
         }
 
-        override fun configure(lh: MutableLazyHub) {
-            super.configure(lh)
-            lh.factory(this::makeMessagingService)
-        }
-
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        private fun makeMessagingService(database: CordaPersistence): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -315,6 +316,14 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
         override fun makeKeyManagementService(identityService: IdentityServiceInternal, keyPairs: Set<KeyPair>): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
+        }
+
+        override fun startShell(rpcOps: CordaRPCOps) {
+            //No mock shell
+        }
+
+        override fun startMessagingService(rpcOps: RPCOps) {
+            // Nothing to do
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine

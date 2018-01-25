@@ -27,7 +27,8 @@ import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
@@ -122,7 +123,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun createTransaction() {
         // Make sure we have a database transaction
         database.createTransaction()
-        logger.trace { "Starting database transaction ${DatabaseTransactionManager.currentOrNull()} on ${Strand.currentStrand()}" }
+        logger.trace { "Starting database transaction $contextTransactionOrNull on ${Strand.currentStrand()}" }
     }
 
     private fun processException(exception: Throwable, propagated: Boolean) {
@@ -132,7 +133,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     internal fun commitTransaction() {
-        val transaction = DatabaseTransactionManager.current()
+        val transaction = contextTransaction
         try {
             logger.trace { "Committing database transaction $transaction on ${Strand.currentStrand()}." }
             transaction.commit()
@@ -468,7 +469,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun suspend(ioRequest: FlowIORequest) {
         // We have to pass the thread local database transaction across via a transient field as the fiber park
         // swaps them out.
-        txTrampoline = DatabaseTransactionManager.setThreadLocalTx(null)
+        txTrampoline = contextTransactionOrNull
+        contextTransactionOrNull = null
         if (ioRequest is WaitingRequest)
             waitingForResponse = ioRequest
 
@@ -477,7 +479,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
             try {
-                DatabaseTransactionManager.setThreadLocalTx(txTrampoline)
+                contextTransactionOrNull = txTrampoline
                 txTrampoline = null
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {

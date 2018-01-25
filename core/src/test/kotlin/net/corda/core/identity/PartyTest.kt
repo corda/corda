@@ -1,7 +1,7 @@
 package net.corda.core.identity
 
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals

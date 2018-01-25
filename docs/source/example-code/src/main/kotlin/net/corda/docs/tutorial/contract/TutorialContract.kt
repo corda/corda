@@ -10,7 +10,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.utils.sumCashBy
-import net.corda.testing.chooseIdentityAndCert
+import net.corda.testing.core.chooseIdentityAndCert
 import java.time.Instant
 import java.util.*
 

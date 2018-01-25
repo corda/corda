@@ -3,16 +3,21 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.node.services.messaging.CertificateChainCheckPolicy
+import net.corda.node.internal.artemis.CertificateChainCheckPolicy
+import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
+
 
 val Int.MB: Long get() = this * 1024L * 1024L
 
@@ -33,7 +38,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
-    val rpcAddress: NetworkHostAndPort?
+    val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
@@ -42,6 +47,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val database: DatabaseConfig
     val useAMQPBridges: Boolean get() = true
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
+    val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
+    val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -51,6 +58,9 @@ interface NodeConfiguration : NodeSSLConfiguration {
         private fun getAdditionalCacheMemory(): Long {
             return Math.max((Runtime.getRuntime().maxMemory() - 300.MB) / 20, 0)
         }
+
+        val defaultAttachmentContentCacheSize: Long = 10.MB
+        val defaultAttachmentCacheBound = 1024L
     }
 }
 
@@ -93,7 +103,7 @@ data class BridgeConfiguration(val retryIntervalMs: Long,
 
 data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
-fun Config.parseAsNodeConfiguration(): NodeConfiguration = this.parseAs<NodeConfigurationImpl>()
+fun Config.parseAsNodeConfiguration(): NodeConfiguration = parseAs<NodeConfigurationImpl>()
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
@@ -111,7 +121,8 @@ data class NodeConfigurationImpl(
         // Then rename this to messageRedeliveryDelay and make it of type Duration
         override val messageRedeliveryDelaySeconds: Int = 30,
         override val p2pAddress: NetworkHostAndPort,
-        override val rpcAddress: NetworkHostAndPort?,
+        private val rpcAddress: NetworkHostAndPort? = null,
+        private val rpcSettings: NodeRpcSettings,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
@@ -127,10 +138,33 @@ data class NodeConfigurationImpl(
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
         override val useAMQPBridges: Boolean = true,
-        override val transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize
-        ) : NodeConfiguration {
+        private val transactionCacheSizeMegaBytes: Int? = null,
+        private val attachmentContentCacheSizeMegaBytes: Int? = null,
+        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+    ) : NodeConfiguration {
+    companion object {
+        private val logger = loggerFor<NodeConfigurationImpl>()
+    }
+
+    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+
+    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+        return when {
+            explicitAddress != null -> {
+                require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
+                logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
+                settings.copy(address = explicitAddress)
+            }
+            else -> settings
+        }.asOptions(fallbackSslOptions)
+    }
 
     override val exportJMXto: String get() = "http"
+    override val transactionCacheSizeBytes: Long
+        get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
+    override val attachmentContentCacheSizeBytes: Long
+        get() = attachmentContentCacheSizeMegaBytes?.MB ?: super.attachmentContentCacheSizeBytes
+
 
     init {
         // This is a sanity feature do not remove.
@@ -138,6 +172,28 @@ data class NodeConfigurationImpl(
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
+        }
+    }
+}
+
+data class NodeRpcSettings(
+        val address: NetworkHostAndPort?,
+        val adminAddress: NetworkHostAndPort?,
+        val standAloneBroker: Boolean = false,
+        val useSsl: Boolean = false,
+        val ssl: SslOptions?
+) {
+    fun asOptions(fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+        return object : NodeRpcOptions {
+            override val address = this@NodeRpcSettings.address
+            override val adminAddress = this@NodeRpcSettings.adminAddress
+            override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
+            override val useSsl = this@NodeRpcSettings.useSsl
+            override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+
+            override fun toString(): String {
+                return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
+            }
         }
     }
 }
@@ -151,7 +207,8 @@ enum class CertChainPolicyType {
     Any,
     RootMustMatch,
     LeafMustMatch,
-    MustContainOneOf
+    MustContainOneOf,
+    UsernameMustMatch
 }
 
 data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
@@ -162,6 +219,7 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
                 CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
                 CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
                 CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
+                CertChainPolicyType.UsernameMustMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
             }
         }
 }

@@ -12,7 +12,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.protonwrapper.messages.MessageStatus
 import net.corda.node.internal.protonwrapper.netty.AMQPClient
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
@@ -21,8 +20,7 @@ import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.crypto.loadKeyStore
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.junit.Assert.assertArrayEquals
@@ -226,6 +224,7 @@ class ProtonWrapperTests {
             doReturn(CHARLIE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(true).whenever(it).useAMQPBridges
@@ -235,8 +234,7 @@ class ProtonWrapperTests {
         val networkMap = rigorousMock<NetworkMapCacheInternal>().also {
             doReturn(never<NetworkMapCache.MapChange>()).whenever(it).changed
         }
-        val userService = rigorousMock<RPCSecurityManager>()
-        val server = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val server = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, MAX_MESSAGE_SIZE)
         val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), MAX_MESSAGE_SIZE)
         server.start()
         client.start()
@@ -252,8 +250,8 @@ class ProtonWrapperTests {
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = loadKeyStore(clientConfig.trustStoreFile, clientConfig.trustStorePassword)
-        val clientKeystore = loadKeyStore(clientConfig.sslKeystore, clientConfig.keyStorePassword)
+        val clientTruststore = clientConfig.loadTrustStore().internal
+        val clientKeystore = clientConfig.loadSslKeyStore().internal
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
                 NetworkHostAndPort("localhost", serverPort2),
@@ -275,8 +273,8 @@ class ProtonWrapperTests {
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = loadKeyStore(clientConfig.trustStoreFile, clientConfig.trustStorePassword)
-        val clientKeystore = loadKeyStore(clientConfig.sslKeystore, clientConfig.keyStorePassword)
+        val clientTruststore = clientConfig.loadTrustStore().internal
+        val clientKeystore = clientConfig.loadSslKeyStore().internal
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
                 setOf(ALICE_NAME),
@@ -296,8 +294,8 @@ class ProtonWrapperTests {
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val serverTruststore = loadKeyStore(serverConfig.trustStoreFile, serverConfig.trustStorePassword)
-        val serverKeystore = loadKeyStore(serverConfig.sslKeystore, serverConfig.keyStorePassword)
+        val serverTruststore = serverConfig.loadTrustStore().internal
+        val serverKeystore = serverConfig.loadSslKeyStore().internal
         return AMQPServer(
                 "0.0.0.0",
                 port,

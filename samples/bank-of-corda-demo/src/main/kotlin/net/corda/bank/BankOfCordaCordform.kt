@@ -13,7 +13,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
 import net.corda.testing.node.internal.demorun.*
-import net.corda.testing.BOC_NAME
+import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.User
 import java.util.*
 import kotlin.system.exitProcess

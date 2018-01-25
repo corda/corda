@@ -28,7 +28,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Test
@@ -75,7 +75,7 @@ class NodeMonitorModelTest {
             vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
             networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-            monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+            monitor.register(aliceNodeHandle.configuration.rpcOptions.address!!, cashUser.username, cashUser.password)
             rpc = monitor.proxyObservable.value!!
             notaryParty = defaultNotaryIdentity
 
@@ -83,7 +83,7 @@ class NodeMonitorModelTest {
             bobNode = bobNodeHandle.nodeInfo
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-            monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+            monitorBob.register(bobNodeHandle.configuration.rpcOptions.address!!, cashUser.username, cashUser.password)
             rpcBob = monitorBob.proxyObservable.value!!
             runTest()
         }

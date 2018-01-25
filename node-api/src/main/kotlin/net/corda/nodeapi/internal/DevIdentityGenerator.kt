@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -9,7 +8,9 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.KeyPair
@@ -37,10 +38,9 @@ object DevIdentityGenerator {
         }
 
         nodeSslConfig.certificatesDirectory.createDirectories()
-        nodeSslConfig.createDevKeyStores(legalName)
+        val (nodeKeyStore) = nodeSslConfig.createDevKeyStores(legalName)
 
-        val keyStoreWrapper = KeyStoreWrapper(nodeSslConfig.nodeKeystore, nodeSslConfig.keyStorePassword)
-        val identity = keyStoreWrapper.storeLegalIdentity(legalName, "$NODE_IDENTITY_ALIAS_PREFIX-private-key", Crypto.generateKeyPair())
+        val identity = nodeKeyStore.storeLegalIdentity("$NODE_IDENTITY_ALIAS_PREFIX-private-key")
         return identity.party
     }
 
@@ -78,13 +78,13 @@ object DevIdentityGenerator {
                     publicKey)
         }
         val distServKeyStoreFile = (nodeDir / "certificates").createDirectories() / "distributedService.jks"
-        val keystore = loadOrCreateKeyStore(distServKeyStoreFile, "cordacadevpass")
-        keystore.setCertificateEntry("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert)
-        keystore.setKeyEntry(
-                "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
-                keyPair.private,
-                "cordacadevkeypass".toCharArray(),
-                arrayOf(serviceKeyCert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
-        keystore.save(distServKeyStoreFile, "cordacadevpass")
+        X509KeyStore.fromFile(distServKeyStoreFile, "cordacadevpass", createNew = true).update {
+            setCertificate("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert)
+            setPrivateKey(
+                    "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
+                    keyPair.private,
+                    listOf(serviceKeyCert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate),
+                    "cordacadevkeypass")
+        }
     }
 }

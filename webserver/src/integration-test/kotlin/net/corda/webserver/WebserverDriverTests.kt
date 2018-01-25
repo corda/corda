@@ -2,7 +2,7 @@ package net.corda.webserver
 
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound

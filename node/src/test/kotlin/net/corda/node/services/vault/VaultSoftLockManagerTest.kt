@@ -26,7 +26,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNodeParameters

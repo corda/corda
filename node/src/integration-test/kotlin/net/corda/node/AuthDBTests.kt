@@ -15,7 +15,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
@@ -94,7 +94,7 @@ class AuthDBTests : NodeBasedTest() {
         )
 
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
     }
 
     @Test

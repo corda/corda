@@ -3,7 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.TestIdentity
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import org.junit.runner.RunWith
