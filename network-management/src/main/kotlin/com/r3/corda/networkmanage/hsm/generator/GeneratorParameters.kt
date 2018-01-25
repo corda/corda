@@ -15,7 +15,7 @@ import java.nio.file.Paths
  */
 data class UserAuthenticationParameters(val username: String,
                                         val authMode: AuthMode,
-                                        val authToken: String, // password or path to the key file, depending on the [authMode]
+                                        val authToken: String?, // password or path to the key file, depending on the [authMode]
                                         val keyFilePassword: String?) // used only if authMode == [AuthMode.KEY_FILE]
 
 /**
@@ -42,6 +42,7 @@ data class CertificateConfiguration(val keyGroup: String,
                                     val keySpecifier: Int,
                                     val storeKeysExternal: Boolean,
                                     val certificateType: CertificateType,
+                                    val rootKeyGroup: String?,
                                     val subject: String, // it is certificate [X500Name] subject
                                     val validDays: Int,
                                     val crlDistributionUrl: String?,

@@ -57,8 +57,13 @@ fun run(parameters: Parameters) {
         val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
         val hsmSigner = HsmNetworkMapSigner(
-                networkMapPrivateKeyPassword,
-                Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
+                Authenticator(
+                        AuthMode.KEY_FILE,
+                        autoUsername,
+                        authKeyFilePath,
+                        authKeyFilePassword,
+                        signAuthThreshold,
+                        provider = createProvider(networkMapKeyGroup)))
 
         val networkMapStorage = PersistentNetworkMapStorage(database)
         val scheduler = Executors.newSingleThreadScheduledExecutor()
@@ -68,12 +73,18 @@ fun run(parameters: Parameters) {
             val signer = HsmCsrSigner(
                     csrStorage,
                     csrCertificateName,
-                    csrPrivateKeyPassword,
                     csrCertCrlDistPoint,
                     csrCertCrlIssuer,
                     rootCertificateName,
                     validDays,
-                    Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
+                    Authenticator(
+                            authMode,
+                            autoUsername,
+                            authKeyFilePath,
+                            authKeyFilePassword,
+                            signAuthThreshold,
+                            provider = createProvider(doormanKeyGroup),
+                            rootProvider = createProvider(rootKeyGroup)))
             signer.sign(it)
         }
         Menu().withExceptionHandler(::processError).addItem("1", "Sign all approved and unsigned CSRs", {
@@ -136,13 +147,6 @@ private fun confirmedSign(selectedItems: List<ApprovedCertificateRequestData>): 
     selectedItems.forEachIndexed { index, data ->
         println("${index + 1} ${data.request.subject}")
     }
-    var result = false
-    Menu().addItem("Y", "Yes", { result = true }, true).setExitOption("N", "No").showMenu()
-    return result
-}
-
-private fun confirmedKeyGen(): Boolean {
-    println("Are you sure you want to generate new keys/certificates (it will overwrite the existing ones):")
     var result = false
     Menu().addItem("Y", "Yes", { result = true }, true).setExitOption("N", "No").showMenu()
     return result

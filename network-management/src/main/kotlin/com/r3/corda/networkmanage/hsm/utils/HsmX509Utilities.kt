@@ -101,12 +101,11 @@ object HsmX509Utilities {
      * Retrieves a certificate and keys from the given key store. Also, the keys retrieved are cleaned in a sense of the
      * [getCleanEcdsaKeyPair] method.
      * @param certificateKeyName certificate and key name (alias) to be used when querying the key store.
-     * @param privateKeyPassword password for the private key.
      * @param keyStore key store that holds the certificate with its keys.
      * @return instance of [CertificateAndKeyPair] holding the retrieved certificate with its keys.
      */
-    fun retrieveCertificateAndKeys(certificateKeyName: String, privateKeyPassword: String, keyStore: KeyStore): CertificateAndKeyPair {
-        val privateKey = keyStore.getKey(certificateKeyName, privateKeyPassword.toCharArray()) as PrivateKey
+    fun retrieveCertificateAndKeys(certificateKeyName: String, keyStore: KeyStore): CertificateAndKeyPair {
+        val privateKey = keyStore.getKey(certificateKeyName, null) as PrivateKey
         val publicKey = keyStore.getCertificate(certificateKeyName).publicKey
         val certificate = keyStore.getX509Certificate(certificateKeyName)
         return CertificateAndKeyPair(certificate, getCleanEcdsaKeyPair(publicKey, privateKey))

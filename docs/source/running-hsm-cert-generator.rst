@@ -46,6 +46,8 @@ Certificate Configuration
 :certificateType: Type of the certificate to be created. Allowed values are:
                   ROOT_CA, INTERMEDIATE_CA, NETWORK_MAP.
 
+:rootKeyGroup: This is an HSM specific parameter that corresponds to key name spacing for the root key. It is ignored if the certificateType value is ROOT_CA. See Utimaco documentation for more details.
+
 :subject: X500Name formatted string to be used as the certificate public key subject.
 
 :validDays: Days number for certificate validity.
@@ -64,7 +66,7 @@ Certificate Configuration
 
 :keySpecifier: This is an HSM specific parameter that corresponds to key name spacing. See Utimaco documentation for more details.
 
-:keyGroup: This is an HSM specific parameter that corresponds to key name spacing. See Utimaco documentation for more details.
+:keyGroup: This is an HSM specific parameter that corresponds to key name spacing for the generated key. See Utimaco documentation for more details.
 
 
 User Authentication Configuration
@@ -78,6 +80,6 @@ Allowed parameters are:
            CARD_READER - Smart card reader authentication
            KEY_FILE - Key file based authentication.
 
-:authToken: Depending on the authMode it is either user's password or path to the authentication key file.
+:authToken: Depending on the authMode it is either user's password or path to the authentication key file. In case of the CARD_READER authMode value, this can be omitted.
 
 :keyFilePassword: Only relevant, if authMode == KEY_FILE. It is the key file password.

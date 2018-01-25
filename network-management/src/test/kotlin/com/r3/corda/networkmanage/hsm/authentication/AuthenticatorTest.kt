@@ -28,7 +28,7 @@ class AuthenticatorTest : TestBase() {
 
         // when
         assertFailsWith<AuthenticationException> {
-            Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> }
+            Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _, _ -> }
         }
 
         //then
@@ -47,7 +47,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _, _ -> executed = true }
 
         // then
         verify(provider).loginPassword(username, password)
@@ -64,7 +64,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, inputReader = inputReader, mode = AuthMode.CARD_READER).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader, mode = AuthMode.CARD_READER).connectAndAuthenticate { _, _, _ -> executed = true }
 
         // then
         verify(provider).loginSign(username, ":cs2:cyb:USB0", null)
@@ -83,7 +83,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _, _ -> executed = true }
 
         // then
         verify(provider, times(3)).loginPassword(username, password)

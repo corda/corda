@@ -1,111 +1,82 @@
 package com.r3.corda.networkmanage.hsm
 
-import com.r3.corda.networkmanage.HsmSimulator
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
-import com.r3.corda.networkmanage.hsm.authentication.CryptoServerProviderConfig
-import com.r3.corda.networkmanage.hsm.generator.*
+import com.r3.corda.networkmanage.hsm.authentication.InputReader
+import com.r3.corda.networkmanage.hsm.generator.AutoAuthenticator
+import com.r3.corda.networkmanage.hsm.generator.run
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities
+import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import org.junit.Rule
+import org.junit.Before
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import java.security.cert.X509Certificate
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class HsmKeyGenerationTest {
+class HsmKeyGenerationTest : HsmCertificateTest() {
 
-    @Rule
-    @JvmField
-    val tempFolder = TemporaryFolder()
+    private lateinit var inputReader: InputReader
 
-    @Rule
-    @JvmField
-    val hsmSimulator: HsmSimulator = HsmSimulator()
-
-    private val rootCertParameters: GeneratorParameters by lazy {
-        GeneratorParameters(
-                hsmHost = hsmSimulator.host,
-                hsmPort = hsmSimulator.port,
-                trustStoreDirectory = tempFolder.root.toPath(),
-                trustStorePassword = "",
-                userConfigs = listOf(UserAuthenticationParameters(
-                        username = "INTEGRATION_TEST",
-                        authMode = AuthMode.PASSWORD,
-                        authToken = "INTEGRATION_TEST",
-                        keyFilePassword = null
-                )),
-                certConfig = CertificateConfiguration(
-                        keySpecifier = 1,
-                        keyGroup = "DEV.DOORMAN",
-                        storeKeysExternal = false,
-                        subject = "CN=Corda Root, O=R3Cev, L=London, C=GB",
-                        validDays = 3650,
-                        keyCurve = "NIST-P256",
-                        certificateType = CertificateType.ROOT_CA,
-                        keyExport = 0,
-                        keyGenMechanism = 4,
-                        keyOverride = 0,
-                        crlIssuer = null,
-                        crlDistributionUrl = null
-                )
-        )
-    }
-
-    private val providerConfig: CryptoServerProviderConfig by lazy {
-        CryptoServerProviderConfig(
-                Device = "${rootCertParameters.hsmPort}@${rootCertParameters.hsmHost}",
-                KeySpecifier = rootCertParameters.certConfig.keySpecifier,
-                KeyGroup = rootCertParameters.certConfig.keyGroup,
-                StoreKeysExternal = rootCertParameters.certConfig.storeKeysExternal)
+    @Before
+    fun setUp() {
+        inputReader = mock()
+        whenever(inputReader.readLine()).thenReturn(hsmSimulator.cryptoUserCredentials().username)
+        whenever(inputReader.readPassword(any())).thenReturn(hsmSimulator.cryptoUserCredentials().password)
     }
 
     @Test
-    fun `Authenticator executes the block once user is successfully authenticated`() {
-        // given
-        val authenticator = AutoAuthenticator(providerConfig, rootCertParameters.userConfigs)
-        val rootCertGenerator = KeyCertificateGenerator(rootCertParameters)
+    fun `Root and network map certificates have different namespace`() {
         // when root cert is created
-        authenticator.connectAndAuthenticate { provider ->
-            rootCertGenerator.generate(provider)
-            // then
+        run(rootCertParameters)
+        // when network map cert is created
+        run(rootCertParameters.copy(
+                certConfig = rootCertParameters.certConfig.copy(
+                        keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
+                        rootKeyGroup = ROOT_CERT_KEY_GROUP,
+                        certificateType = CertificateType.NETWORK_MAP,
+                        subject = NETWORK_MAP_CERT_SUBJECT
+                )
+        ))
+        // when doorman cert is created
+        run(rootCertParameters.copy(
+                certConfig = rootCertParameters.certConfig.copy(
+                        keyGroup = DOORMAN_CERT_KEY_GROUP,
+                        rootKeyGroup = ROOT_CERT_KEY_GROUP,
+                        certificateType = CertificateType.INTERMEDIATE_CA,
+                        subject = DOORMAN_CERT_SUBJECT
+                )
+        ))
+
+        // then root cert is persisted in the HSM
+        AutoAuthenticator(providerConfig, rootCertParameters.userConfigs).connectAndAuthenticate { provider ->
             val keyStore = HsmX509Utilities.getAndInitializeKeyStore(provider)
             val rootCert = keyStore.getCertificate(CORDA_ROOT_CA) as X509Certificate
             assertEquals(rootCert.issuerX500Principal, rootCert.subjectX500Principal)
         }
-        // when network map cert is created
-        val networkMapCertGenerator = KeyCertificateGenerator(rootCertParameters.copy(
-                certConfig = rootCertParameters.certConfig.copy(
-                        certificateType = CertificateType.NETWORK_MAP,
-                        subject = "CN=Corda NM, O=R3Cev, L=London, C=GB"
-                )
-        ))
-        authenticator.connectAndAuthenticate { provider ->
-            networkMapCertGenerator.generate(provider)
-            // then
-            val keyStore = HsmX509Utilities.getAndInitializeKeyStore(provider)
-            val rootCert = keyStore.getCertificate(CORDA_ROOT_CA) as X509Certificate
-            val networkMapCert = keyStore.getCertificate(CORDA_NETWORK_MAP) as X509Certificate
-            assertNotNull(networkMapCert)
-            assertEquals(rootCert.subjectX500Principal, networkMapCert.issuerX500Principal)
-        }
-        // when csr cert is created
-        val csrCertGenerator = KeyCertificateGenerator(rootCertParameters.copy(
-                certConfig = rootCertParameters.certConfig.copy(
-                        certificateType = CertificateType.INTERMEDIATE_CA,
-                        subject = "CN=Corda CSR, O=R3Cev, L=London, C=GB"
-                )
-        ))
-        authenticator.connectAndAuthenticate { provider ->
-            csrCertGenerator.generate(provider)
-            // then
-            val keyStore = HsmX509Utilities.getAndInitializeKeyStore(provider)
-            val rootCert = keyStore.getCertificate(CORDA_ROOT_CA) as X509Certificate
-            val csrCert = keyStore.getCertificate(CORDA_INTERMEDIATE_CA) as X509Certificate
-            assertNotNull(csrCert)
-            assertEquals(rootCert.subjectX500Principal, csrCert.issuerX500Principal)
-        }
+
+        // then network map cert is persisted in the HSM
+
+        AutoAuthenticator(providerConfig.copy(KeyGroup = NETWORK_MAP_CERT_KEY_GROUP), rootCertParameters.userConfigs)
+                .connectAndAuthenticate { provider ->
+                    val keyStore = HsmX509Utilities.getAndInitializeKeyStore(provider)
+                    val networkMapCert = keyStore.getCertificate(CORDA_NETWORK_MAP) as X509Certificate
+                    assertNotNull(networkMapCert)
+                    assertEquals(CordaX500Name.parse(ROOT_CERT_SUBJECT).x500Principal, networkMapCert.issuerX500Principal)
+                }
+
+        // then doorman cert is persisted in the HSM
+
+        AutoAuthenticator(providerConfig.copy(KeyGroup = DOORMAN_CERT_KEY_GROUP), rootCertParameters.userConfigs)
+                .connectAndAuthenticate { provider ->
+                    val keyStore = HsmX509Utilities.getAndInitializeKeyStore(provider)
+                    val networkMapCert = keyStore.getCertificate(CORDA_INTERMEDIATE_CA) as X509Certificate
+                    assertNotNull(networkMapCert)
+                    assertEquals(CordaX500Name.parse(ROOT_CERT_SUBJECT).x500Principal, networkMapCert.issuerX500Principal)
+                }
     }
 }

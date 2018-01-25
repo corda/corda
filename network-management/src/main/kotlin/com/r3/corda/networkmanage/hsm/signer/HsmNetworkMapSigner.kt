@@ -15,18 +15,17 @@ import java.security.Signature
  * Signer which connects to a HSM using the given [authenticator] to sign bytes.
  */
 // TODO Rename this to HsmSigner
-class HsmNetworkMapSigner(private val privateKeyPassword: String,
-                          private val authenticator: Authenticator) : Signer {
+class HsmNetworkMapSigner(private val authenticator: Authenticator) : Signer {
     /**
      * Signs given data using [CryptoServerJCE.CryptoServerProvider], which connects to the underlying HSM.
      */
     override fun signBytes(data: ByteArray): DigitalSignatureWithCert {
-        return authenticator.connectAndAuthenticate { provider, _ ->
+        return authenticator.connectAndAuthenticate { provider, _, _ ->
             val keyStore = getAndInitializeKeyStore(provider)
             val certificate = keyStore.getX509Certificate(CORDA_NETWORK_MAP)
             // Don't worry this is not a real private key but a pointer to one that resides in the HSM. It only works
             // when used with the given provider.
-            val key = keyStore.getKey(CORDA_NETWORK_MAP, privateKeyPassword.toCharArray()) as PrivateKey
+            val key = keyStore.getKey(CORDA_NETWORK_MAP, null) as PrivateKey
             val signature = Signature.getInstance(HsmX509Utilities.SIGNATURE_ALGORITHM, provider).run {
                 initSign(key)
                 update(data)

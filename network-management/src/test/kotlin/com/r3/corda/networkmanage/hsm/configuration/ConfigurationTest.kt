@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ConfigurationTest : TestBase() {
-    private val validConfigPath = File(javaClass.getResource("/hsm.conf").toURI()).absolutePath
+    private val validConfigPath = File("./hsm.conf").absolutePath
     private val invalidConfigPath = File(javaClass.getResource("/hsm_fail.conf").toURI()).absolutePath
 
     @Test

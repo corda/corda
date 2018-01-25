@@ -4,7 +4,6 @@ import CryptoServerCXI.CryptoServerCXI.KEY_ALGO_ECDSA
 import CryptoServerCXI.CryptoServerCXI.KeyAttributes
 import CryptoServerJCE.CryptoServerProvider
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
-import com.r3.corda.networkmanage.doorman.NETWORK_ROOT_TRUSTSTORE_FILENAME
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createIntermediateCert
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createSelfSignedCACert
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
@@ -15,10 +14,13 @@ import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.save
 import java.nio.file.Path
 import java.security.Key
 import java.security.KeyPair
@@ -27,7 +29,6 @@ import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 
-data class CertificateNameAndPass(val certificateName: String, val privateKeyPassword: String)
 /**
  * Encapsulates logic for key and certificate generation.
  *
@@ -37,7 +38,7 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
         val logger = contextLogger()
     }
 
-    fun generate(provider: CryptoServerProvider) {
+    fun generate(provider: CryptoServerProvider, rootProvider: CryptoServerProvider? = null) {
         parameters.run {
             require(trustStoreDirectory.isDirectory()) { "trustStoreDirectory must point to a directory." }
             val keyName = when (certConfig.certificateType) {
@@ -48,10 +49,11 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
             }
             val keyStore = getAndInitializeKeyStore(provider)
             val keyPair = certConfig.generateEcdsaKeyPair(keyName, provider, keyStore)
-            val certChain = if (certConfig.certificateType == ROOT_CA) {
+            val certChain = if (rootProvider == null) {
                 certConfig.generateRootCert(provider, keyPair, trustStoreDirectory, trustStorePassword)
             } else {
-                certConfig.generateIntermediateCert(provider, keyPair, keyStore)
+                val rootKeyStore = getAndInitializeKeyStore(rootProvider)
+                certConfig.generateIntermediateCert(rootProvider, keyPair, rootKeyStore)
             }
             keyStore.addOrReplaceKey(keyName, keyPair.private, null, certChain)
             logger.info("New certificate and key pair named $keyName have been generated and stored in HSM")
@@ -77,12 +79,13 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
                 provider,
                 crlDistributionUrl,
                 crlIssuer).certificate
-        val networkRootTruststorePath = networkRootTrustStoreDirectory / NETWORK_ROOT_TRUSTSTORE_FILENAME
-        val networkRootTruststore = loadOrCreateKeyStore(networkRootTruststorePath, networkRootTrustStorePassword)
-        logger.info("Trust store for distribution to nodes created in $networkRootTruststorePath")
-        networkRootTruststore.addOrReplaceCertificate(CORDA_ROOT_CA, certificate)
-        logger.info("Certificate $CORDA_ROOT_CA has been added to $networkRootTruststorePath")
-        networkRootTruststore.save(networkRootTruststorePath, networkRootTrustStorePassword)
+        logger.info("Certificate for $subject created.")
+        val trustStorePath = networkRootTrustStoreDirectory / "truststore.jks"
+        val trustStore = loadOrCreateKeyStore(trustStorePath, networkRootTrustStorePassword)
+        logger.info("Trust store for distribution to nodes created in $trustStore")
+        trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificate)
+        logger.info("Certificate $CORDA_ROOT_CA has been added to $trustStore")
+        trustStore.save(trustStorePath, networkRootTrustStorePassword)
         logger.info("Trust store has been persisted. Ready for distribution.")
         return arrayOf(certificate)
     }
@@ -90,8 +93,10 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
     private fun CertificateConfiguration.generateIntermediateCert(
             provider: CryptoServerProvider,
             keyPair: KeyPair,
-            keyStore: KeyStore): Array<X509Certificate> {
-        val rootKeysAndCertChain = retrieveKeysAndCertificateChain(CORDA_ROOT_CA, keyStore)
+            rootKeyStore: KeyStore): Array<X509Certificate> {
+        logger.info("Retrieving the root key pair.")
+        val rootKeysAndCertChain = retrieveKeysAndCertificateChain(CORDA_ROOT_CA,
+                rootKeyStore)
         val certificateAndKeyPair = createIntermediateCert(
                 certificateType,
                 CordaX500Name.parse(subject).x500Name,
@@ -101,6 +106,7 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
                 provider,
                 crlDistributionUrl,
                 crlIssuer)
+        logger.info("Certificate for $subject created.")
         return arrayOf(certificateAndKeyPair.certificate, *rootKeysAndCertChain.certificateChain)
     }
 
@@ -114,8 +120,9 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
             name = keyName
             setCurve(keyCurve)
         }
-        logger.info("Generating key $keyName")
+        logger.info("Generating key $keyName.")
         provider.cryptoServer.generateKey(keyOverride, keyAttributes, keyGenMechanism)
+        logger.info("$keyName key generated.")
     }
 
     private fun CertificateConfiguration.generateEcdsaKeyPair(keyName: String, provider: CryptoServerProvider, keyStore: KeyStore): KeyPair {

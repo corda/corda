@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.crypto.CertificateType
  */
 class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
                    private val intermediateCertAlias: String,
-                   private val intermediateCertPrivateKeyPass: String?,
                    private val csrCertCrlDistPoint: String,
                    private val csrCertCrlIssuer: String?,
                    private val rootCertAlias: String,
@@ -32,22 +31,22 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
      * @param toSign list of approved certificates to be signed
      */
     override fun sign(toSign: List<ApprovedCertificateRequestData>) {
-        authenticator.connectAndAuthenticate { provider, signers ->
-            val keyStore = getAndInitializeKeyStore(provider)
+        authenticator.connectAndAuthenticate { provider, rootProvider, signers ->
+            val rootKeyStore = getAndInitializeKeyStore(rootProvider!!)
             // This should be changed once we allow for more certificates in the chain. Preferably we should use
             // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
-            val rootCert = keyStore.getCertificate(rootCertAlias)
-            val intermediatePrivateKeyPass = intermediateCertPrivateKeyPass ?: authenticator.readPassword("CA Private Key Password: ")
-            val intermediateCertAndKey = retrieveCertificateAndKeys(intermediateCertAlias, intermediatePrivateKeyPass, keyStore)
+            val rootCert = rootKeyStore.getCertificate(rootCertAlias)
+            val keyStore = getAndInitializeKeyStore(provider)
+            val doormanCertAndKey = retrieveCertificateAndKeys(intermediateCertAlias, keyStore)
             toSign.forEach {
                 it.certPath = buildCertPath(createClientCertificate(
                         CertificateType.NODE_CA,
-                        intermediateCertAndKey,
+                        doormanCertAndKey,
                         it.request,
                         validDays, 
                         provider,
                         csrCertCrlDistPoint,
-                        csrCertCrlIssuer), rootCert)
+                        csrCertCrlIssuer), doormanCertAndKey.certificate, rootCert)
             }
             storage.store(toSign, signers)
             println("The following certificates have been signed by $signers:")

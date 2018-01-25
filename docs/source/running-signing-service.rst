@@ -28,7 +28,11 @@ Allowed parameters are:
 :device: HSM connection string. It is of the following format 3001@127.0.0.1, where 3001 is the port number.
     Default value: "3001@127.0.0.1"
 
-:keyGroup: HSM key group. This parameter is vendor specific (see Utimaco docs).
+:rootKeyGroup: HSM key group for the root certificate key. This parameter is vendor specific (see Utimaco docs).
+
+:networkMapKeyGroup: HSM key group for the network map certificate key. This parameter is vendor specific (see Utimaco docs).
+
+:doormanKeyGroup: HSM key group for the doorman certificate key. This parameter is vendor specific (see Utimaco docs).
 
 :keySpecifier: HSM key specifier. This parameter is vendor specific (see Utimaco docs). Default value: 1.
 

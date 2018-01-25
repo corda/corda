@@ -19,7 +19,7 @@ class AutoAuthenticator(providerConfig: CryptoServerProviderConfig,
     fun connectAndAuthenticate(block: (CryptoServerProvider) -> Unit) {
         try {
             for (userConfig in userConfigs) {
-                when(userConfig.authMode) {
+                when (userConfig.authMode) {
                     AuthMode.PASSWORD -> provider.loginPassword(userConfig.username, userConfig.authToken)
                     AuthMode.CARD_READER -> provider.loginSign(userConfig.username, ":cs2:cyb:USB0", null)
                     AuthMode.KEY_FILE -> provider.loginSign(userConfig.username, userConfig.keyFilePassword, userConfig.authToken)
