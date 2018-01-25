@@ -29,13 +29,19 @@ class BFTNotaryCordform : CordformDefinition() {
         node {
             name(ALICE_NAME)
             p2pPort(10002)
-            rpcPort(10003)
+            rpcSettings {
+                address("localhost:10003")
+                adminAddress("localhost:10103")
+            }
             rpcUsers(notaryDemoUser)
         }
         node {
             name(BOB_NAME)
             p2pPort(10005)
-            rpcPort(10006)
+            rpcSettings {
+                address("localhost:10006")
+                adminAddress("localhost:10106")
+            }
         }
         val clusterAddresses = (0 until clusterSize).map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
@@ -45,19 +51,31 @@ class BFTNotaryCordform : CordformDefinition() {
         }
         notaryNode(0) {
             p2pPort(10009)
-            rpcPort(10010)
+            rpcSettings {
+                address("localhost:10010")
+                adminAddress("localhost:10110")
+            }
         }
         notaryNode(1) {
             p2pPort(10013)
-            rpcPort(10014)
+            rpcSettings {
+                address("localhost:10014")
+                adminAddress("localhost:10114")
+            }
         }
         notaryNode(2) {
             p2pPort(10017)
-            rpcPort(10018)
+            rpcSettings {
+                address("localhost:10018")
+                adminAddress("localhost:10118")
+            }
         }
         notaryNode(3) {
             p2pPort(10021)
-            rpcPort(10022)
+            rpcSettings {
+                address("localhost:10022")
+                adminAddress("localhost:10122")
+            }
         }
     }
 
