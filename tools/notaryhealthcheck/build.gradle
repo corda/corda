@@ -45,17 +45,17 @@ publishing {
 
 task runTest(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.notarytest.MainKt'
+    main = 'net.corda.notaryhealthcheck.MainKt'
 }
 
-task deployHealthCheck(type: Cordform, dependsOn: 'jar') {
-    definitionClass = 'net.corda.notarytest.HealthCheckCordform'
+task deployNodes(type: Cordform, dependsOn: 'jar') {
+    definitionClass = 'net.corda.notaryhealthcheck.HealthCheckCordform'
 }
 
 jar {
     manifest {
         attributes(
-                'Automatic-Module-Name': 'net.corda.notarytest'
+                'Automatic-Module-Name': 'net.corda.notaryhealthcheck'
         )
     }
 }
