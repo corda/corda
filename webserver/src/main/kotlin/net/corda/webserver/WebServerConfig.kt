@@ -18,7 +18,7 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
     val myLegalName: String by config
     val rpcAddress: NetworkHostAndPort by lazy {
         if (config.hasPath("rpcSettings.address")) {
-            return@lazy NetworkHostAndPort.parse(config.getString("rpcSettings.address"))
+            return@lazy NetworkHostAndPort.parse(config.getConfig("rpcSettings").getString("address"))
         }
         if (config.hasPath("rpcAddress")) {
             return@lazy NetworkHostAndPort.parse(config.getString("rpcAddress"))

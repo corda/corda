@@ -95,6 +95,9 @@ public class CordformNode implements NodeDefinition {
      */
     @Nullable
     public String getRpcAddress() {
+        if (config.hasPath("rpcSettings.address")) {
+            return config.getConfig("rpcSettings").getString("address");
+        }
         return getOptionalString("rpcAddress");
     }
 
@@ -138,6 +141,13 @@ public class CordformNode implements NodeDefinition {
      */
     public void webAddress(String webAddress) {
         setValue("webAddress", webAddress);
+    }
+
+    /**
+     * Specifies RPC settings for the node.
+     */
+    public void rpcSettings(RpcSettings settings) {
+        config = settings.addTo("rpcSettings", config);
     }
 
     /**

@@ -167,7 +167,7 @@ class Node(private val project: Project) : CordformNode() {
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
         val tmpDir = File(project.buildDir, "tmp")
         Files.createDirectories(tmpDir.toPath())
-        var fileName = "${nodeDir.getName()}.conf"
+        var fileName = "${nodeDir.name}.conf"
         val tmpConfFile = File(tmpDir, fileName)
         Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
         return tmpConfFile
