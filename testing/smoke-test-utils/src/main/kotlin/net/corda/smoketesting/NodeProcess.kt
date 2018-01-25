@@ -11,6 +11,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.common.internal.asContextEnv
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -51,8 +52,13 @@ class NodeProcess(
     // as a CorDapp for the nodes.
     class Factory(
             val buildDirectory: Path = Paths.get("build"),
-            val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())
+            val cordaJarUrl: URL? = this::class.java.getResource("/corda.jar")
     ) {
+        val cordaJar: Path by lazy {
+            require(cordaJarUrl != null, { "corda.jar could not be found in classpath" })
+            Paths.get(cordaJarUrl!!.toURI())
+        }
+
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
