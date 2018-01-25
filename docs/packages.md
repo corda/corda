@@ -23,7 +23,7 @@ is complete.
 # Package net.corda.core.contracts
 
 This package contains the base data types for smarts contracts implemented in Corda. To implement a new contract start
-with [Contract], or see the examples in [net.corda.finance.contracts].
+with [Contract], or see the examples in `net.corda.finance.contracts`.
 
 Corda smart contracts are a combination of state held on the distributed ledger, and verification logic which defines
 which transformations of state are valid.
