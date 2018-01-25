@@ -17,14 +17,13 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
 import net.corda.core.serialization.SerializationContext.UseCase.Storage
-import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.core.transactions.*
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -495,8 +494,7 @@ object X509CertificateSerializer : Serializer<X509Certificate>() {
     }
 }
 
-fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializationContextKey) as? SerializeAsTokenContext
-
+fun <V : Any> Kryo.serializationProperty(key: SerializationPropertyKey<V>): V? = uncheckedCast(context.get(key))
 /**
  * For serializing instances if [Throwable] honoring the fact that [java.lang.Throwable.suppressedExceptions]
  * might be un-initialized/empty.

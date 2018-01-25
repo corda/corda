@@ -5,6 +5,7 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import org.apache.qpid.proton.codec.Data
 import java.beans.IndexedPropertyDescriptor
 import java.beans.Introspector
@@ -317,9 +318,7 @@ internal fun suitableForObjectReference(type: Type): Boolean {
 /**
  * Common properties that are to be used in the [SerializationContext.properties] to alter serialization behavior/content
  */
-internal enum class CommonPropertyNames {
-    IncludeInternalInfo,
-}
+internal object IncludeInternalInfoKey : SerializationPropertyKey<Boolean>
 
 /**
  * Utility function which helps tracking the path in the object graph when exceptions are thrown.

@@ -8,6 +8,7 @@ import net.corda.core.context.Trace.SessionId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Id
 import net.corda.core.utilities.Try
@@ -79,7 +80,7 @@ object RPCApi {
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_ADDED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
 
-    object RpcRequestOrObservableIdKey
+    object RpcRequestOrObservableIdKey : SerializationPropertyKey<InvocationId>
 
     private fun ClientMessage.getBodyAsByteArray(): ByteArray {
         return ByteArray(bodySize).apply { bodyBuffer.readBytes(this) }

@@ -39,7 +39,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
 
     private fun shouldIncludeInternalInfo(): Boolean {
         val currentContext = SerializationFactory.currentFactory?.currentContext
-        val includeInternalInfo = currentContext?.properties?.get(CommonPropertyNames.IncludeInternalInfo)
+        val includeInternalInfo = currentContext?.properties?.get(IncludeInternalInfoKey)
         return true == includeInternalInfo
     }
 

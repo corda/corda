@@ -127,7 +127,7 @@ class StateMachineManagerImpl(
     // Context for tokenized services in checkpoints
     private lateinit var tokenizableServices: List<Any>
     private val serializationContext by lazy {
-        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
+        SerializeAsTokenContextImpl(SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, tokenizableServices)
     }
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
@@ -410,7 +410,7 @@ class StateMachineManagerImpl(
 
     private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
         return try {
-            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply {
+            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext).withProperty(AttachmentStorageKey, serviceHub.attachments)).apply {
                 fromCheckpoint = true
             }
         } catch (t: Throwable) {

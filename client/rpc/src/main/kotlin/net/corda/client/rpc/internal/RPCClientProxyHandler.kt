@@ -21,6 +21,7 @@ import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -29,6 +30,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.ArtemisConsumer
 import net.corda.nodeapi.ArtemisProducer
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.serialization.kryo.serializationProperty
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -414,7 +416,7 @@ data class ObservableContext(
  * A [Serializer] to deserialise Observables once the corresponding Kryo instance has been provided with an [ObservableContext].
  */
 object RpcClientObservableSerializer : Serializer<Observable<*>>() {
-    private object RpcObservableContextKey
+    private object RpcObservableContextKey : SerializationPropertyKey<ObservableContext>
 
     fun createContext(serializationContext: SerializationContext, observableContext: ObservableContext): SerializationContext {
         return serializationContext.withProperty(RpcObservableContextKey, observableContext)
@@ -434,7 +436,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<Observable<*>>): Observable<Any> {
-        val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
+        val observableContext = kryo.serializationProperty(RpcObservableContextKey)!!
         val observableId = input.readInvocationId() ?: throw IllegalStateException("Unable to read invocationId from Input.")
         val observable = UnicastSubject.create<Notification<*>>()
         require(observableContext.observableMap.getIfPresent(observableId) == null) {
@@ -465,7 +467,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     }
 
     private fun getRpcCallSite(kryo: Kryo, observableContext: ObservableContext): Throwable? {
-        val rpcRequestOrObservableId = kryo.context[RPCApi.RpcRequestOrObservableIdKey] as InvocationId
+        val rpcRequestOrObservableId = kryo.serializationProperty(RPCApi.RpcRequestOrObservableIdKey)!!
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)
     }
 }

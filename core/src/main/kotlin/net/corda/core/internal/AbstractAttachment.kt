@@ -3,8 +3,8 @@ package net.corda.core.internal
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.MissingAttachmentsException
-import net.corda.core.serialization.SerializeAsTokenContext
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -15,9 +15,9 @@ import java.util.jar.JarInputStream
 
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
-        fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
+        fun AttachmentStorage.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
-                val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
+                val a = openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
                 (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
             }
         }

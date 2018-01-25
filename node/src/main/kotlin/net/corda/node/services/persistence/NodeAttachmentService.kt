@@ -10,12 +10,16 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.AttachmentStorageKey
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.NonSingletonSerializeAsToken
+import net.corda.core.serialization.internal.SerializationToken
+import net.corda.core.serialization.internal.SerializationProperties
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
@@ -168,19 +172,18 @@ class NodeAttachmentService(
             }
     }
 
-    private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean) : AbstractAttachment(dataLoader), SerializeAsToken {
+    private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean) : AbstractAttachment(dataLoader), NonSingletonSerializeAsToken {
         override fun open(): InputStream {
             val stream = super.open()
             // This is just an optional safety check. If it slows things down too much it can be disabled.
             return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
         }
 
-        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(id, context.attachmentDataLoader(id), checkOnLoad)
+        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean) : SerializationToken<AttachmentImpl> {
+            override fun fromToken(properties: SerializationProperties) = AttachmentImpl(id, properties[AttachmentStorageKey]!!.attachmentDataLoader(id), checkOnLoad)
         }
 
-        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad)
-
+        override fun toToken() = Token(id, checkOnLoad)
     }
 
 

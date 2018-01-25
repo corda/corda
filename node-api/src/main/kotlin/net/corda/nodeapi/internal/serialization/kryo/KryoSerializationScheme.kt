@@ -16,6 +16,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.serialization.*
 import net.corda.core.internal.LazyPool
+import net.corda.core.serialization.internal.SerializationProperties
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.SerializationScheme
 import java.security.PublicKey
@@ -34,6 +36,7 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
     override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
+internal object SerializationPropertiesKey
 abstract class AbstractKryoSerializationScheme : SerializationScheme {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
 
@@ -74,8 +77,11 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     }
 
     private fun <T : Any> withContext(kryo: Kryo, context: SerializationContext, block: (Kryo) -> T): T {
-        kryo.context.ensureCapacity(context.properties.size)
+        kryo.context.ensureCapacity(context.properties.size + 1)
         context.properties.forEach { kryo.context.put(it.key, it.value) }
+        kryo.context.put(SerializationPropertiesKey, object : SerializationProperties {
+            override fun <V : Any> get(key: SerializationPropertyKey<V>) = kryo.serializationProperty(key)
+        })
         try {
             return block(kryo)
         } finally {
