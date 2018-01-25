@@ -81,10 +81,8 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_STATE = 64
         const val MAX_LENGTH_ORGANISATION_UNIT = 64
         const val MAX_LENGTH_COMMON_NAME = 64
-
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
         private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries() + unspecifiedCountry)
-
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
             val x500Name = X500Name.getInstance(principal.encoded)
@@ -106,13 +104,10 @@ data class CordaX500Name(val commonName: String?,
 
             val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
-            val O = attrsMap[BCStyle.O]?.toString()
-                    ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
-            val L = attrsMap[BCStyle.L]?.toString()
-                    ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
+            val O = attrsMap[BCStyle.O]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
+            val L = attrsMap[BCStyle.L]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
             val ST = attrsMap[BCStyle.ST]?.toString()
-            val C = attrsMap[BCStyle.C]?.toString()
-                    ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
+            val C = attrsMap[BCStyle.C]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
 
@@ -131,6 +126,14 @@ data class CordaX500Name(val commonName: String?,
 
     override fun toString(): String = x500Principal.toString()
 
+    /** This will attempt to find a unique representation of this x500 name
+     * uniqueness is checked against a supplied set of other names.
+     * It will attempt to provide the shortest possible unique name by appending more fields till uniqueness
+     * Extra fields are added in the order of CN,O,OU,C,L,S
+     * @param others the names to check uniqueness against
+     * @return the shortest possible unique [String] representation of this name
+     * @throws [IllegalStateException] if no unique name is possible
+     */
     fun toUniqueDisplayName(others: Set<CordaX500Name>): String {
         return toUniqueName(others,
                 NameSelector.COMMON_NAME,
@@ -172,8 +175,6 @@ data class CordaX500Name(val commonName: String?,
                 return x500name.state
             }
         };
-
-
         internal abstract fun extract(x500name: CordaX500Name): String?
     }
 
@@ -181,12 +182,12 @@ data class CordaX500Name(val commonName: String?,
     @VisibleForTesting
     internal fun toUniqueName(others: Set<CordaX500Name>, vararg selectors: CordaX500Name.NameSelector): String {
         var currentSelectorIndex = 0;
-        val allNodes = HashSet(others)
+        val otherNamesToCompareTo = HashSet(others)
         while (currentSelectorIndex < selectors.size) {
             val selectorsToUse = selectors.toList().subList(0, ++currentSelectorIndex)
             val displayCandidate = selectorsToUse.map { it.extract(this) }.joinToString(", ")
             val uniqueTrackingMap = HashMap<String, MutableList<CordaX500Name>>()
-            allNodes.forEach { nodeX500 ->
+            otherNamesToCompareTo.forEach { nodeX500 ->
                 val nodeDisplayName = selectorsToUse.map { it.extract(nodeX500) }.joinToString(", ")
                 uniqueTrackingMap.computeIfAbsent(nodeDisplayName, { _ -> ArrayList() }).add(nodeX500)
             }
@@ -195,7 +196,7 @@ data class CordaX500Name(val commonName: String?,
                 //this is the case where there is multiple entries for the candidate
                 //remove all non possible candidates
                 //loopdiloop
-                uniqueTrackingMap.values.flatMap { it }.forEach { allNodes.remove(it) }
+                uniqueTrackingMap.values.flatMap { it }.forEach { otherNamesToCompareTo.remove(it) }
             } else {
                 return displayCandidate
             }

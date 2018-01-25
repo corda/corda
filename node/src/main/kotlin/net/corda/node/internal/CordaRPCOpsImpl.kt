@@ -44,7 +44,7 @@ internal class CordaRPCOpsImpl(
 ) : CordaRPCOps {
 
 
-    override fun displayNameFromParty(party: Party): String {
+    fun displayNameFromParty(party: Party): String {
         return displayNameFromX500(party.name)
     }
 

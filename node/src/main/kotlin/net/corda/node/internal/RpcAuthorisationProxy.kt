@@ -19,10 +19,8 @@ import java.io.InputStream
 import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
+// TODO implement this using reflective proxy or K-Delegation
 class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext) : CordaRPCOps {
-    override fun displayNameFromParty(party: Party): String {
-        return implementation.displayNameFromParty(party)
-    }
 
     override fun displayNameFromX500(x500Name: CordaX500Name): String {
         return implementation.displayNameFromX500(x500Name)
