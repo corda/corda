@@ -8,26 +8,20 @@ import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignatureScheme
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.getSupportedKey
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Instant
-import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
-import kotlin.system.exitProcess
 
 data class NetworkMapStartParams(val signer: LocalSigner?, val updateNetworkParameters: NetworkParameters?, val config: NetworkMapConfig)
 
@@ -84,7 +78,7 @@ fun main(args: Array<String>) {
                         caPrivateKeyPassword)
                 Mode.DOORMAN -> {
                     initialiseSerialization()
-                    val database = configureDatabase(dataSourceProperties)
+                    val persistence = configureDatabase(dataSourceProperties, database)
                     // TODO: move signing to signing server.
                     val csrAndNetworkMap = processKeyStore(this)
 
@@ -103,7 +97,7 @@ fun main(args: Array<String>) {
                         NetworkMapStartParams(csrAndNetworkMap?.second, networkParameters, it)
                     }
 
-                    networkManagementServer.start(NetworkHostAndPort(host, port), database, csrAndNetworkMap?.first, doormanConfig, networkMapStartParams)
+                    networkManagementServer.start(NetworkHostAndPort(host, port), persistence, csrAndNetworkMap?.first, doormanConfig, networkMapStartParams)
 
                     Runtime.getRuntime().addShutdownHook(thread(start = false) {
                         networkManagementServer.close()

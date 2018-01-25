@@ -7,6 +7,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -15,7 +16,7 @@ data class NetworkManagementServerParameters(// TODO: Move local signing to sign
         val host: String,
         val port: Int,
         val dataSourceProperties: Properties,
-        val databaseProperties: Properties? = null,
+        val database: DatabaseConfig = DatabaseConfig(),
         val mode: Mode,
 
         val doormanConfig: DoormanConfig?,

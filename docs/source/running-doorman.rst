@@ -35,7 +35,7 @@ Allowed parameters are:
 
 :approveAll: Whether to approve all request (defaults to false), this is for debug only.
 
-:databaseProperties: database properties
+:database: database properties. The same (including its default value) as for node configuration (see :doc:`corda-configuration-file`).
 
 :dataSourceProperties: datasource properties
 

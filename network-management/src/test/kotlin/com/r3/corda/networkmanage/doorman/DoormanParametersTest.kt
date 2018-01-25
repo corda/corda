@@ -10,6 +10,7 @@ import java.lang.reflect.InvocationTargetException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DoormanParametersTest {
     private val validOverrideNetworkConfigPath = File("network-parameters.conf").absolutePath
@@ -48,12 +49,9 @@ class DoormanParametersTest {
     }
 
     @Test
-    fun `should parse jira config correctly`() {
-        val parameter = parseParameters(*validArgs).doormanConfig!!
-        assertEquals("https://doorman-jira-host.com/", parameter.jiraConfig?.address)
-        assertEquals("TD", parameter.jiraConfig?.projectCode)
-        assertEquals("username", parameter.jiraConfig?.username)
-        assertEquals("password", parameter.jiraConfig?.password)
+    fun `should parse database config correctly`() {
+        val parameter = parseParameters(*validArgs).database
+        assertTrue(parameter.runMigration)
     }
 
     @Test
