@@ -484,8 +484,8 @@ class DriverDSLImpl(
             when (it.cluster) {
                 null -> startSingleNotary(it, localNetworkMap)
                 is ClusterSpec.Raft,
-                    // DummyCluster is used for testing the notary communication path, and it does not matter
-                    // which underlying consensus algorithm is used, so we just stick to Raft
+                // DummyCluster is used for testing the notary communication path, and it does not matter
+                // which underlying consensus algorithm is used, so we just stick to Raft
                 is DummyClusterSpec -> startRaftNotaryCluster(it, localNetworkMap)
                 else -> throw IllegalArgumentException("BFT-SMaRt not supported")
             }
