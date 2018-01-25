@@ -7,6 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.User
 import net.corda.node.services.Permissions
 import net.corda.notaryhealthcheck.flows.HealthCheckFlow
+import java.util.concurrent.TimeUnit
 
 fun main(args: Array<String>) {
     val addresses = listOf(NetworkHostAndPort("localhost", 10003))
@@ -22,6 +23,6 @@ fun main(args: Array<String>) {
 fun healthCheck(rpc: CordaRPCOps) {
     val notary = rpc.notaryIdentities().first()
     print("Running health check for notary cluster ${notary.name}... ")
-    rpc.startFlow(::HealthCheckFlow, notary, true).returnValue.get()
+    rpc.startFlow(::HealthCheckFlow, notary, true).returnValue.get(30, TimeUnit.SECONDS)
     println("Done.")
 }
