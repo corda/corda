@@ -45,8 +45,6 @@ fun main(args: Array<String>) {
     }
     println("Started ${startedProcesses.size} processes")
     println("Finished starting nodes")
-
-
 }
 
 private abstract class JarType(private val jarName: String) {
@@ -71,7 +69,6 @@ private abstract class JarType(private val jarName: String) {
         } else {
             return getLauncherBasedOnOsAndEnvironment(jarName, dir, debugPort, monitoringPort, javaArgs, jvmArgs)
         }
-
     }
 }
 
@@ -103,7 +100,7 @@ private abstract class Launcher(
     internal val javaCommand: List<String> = mutableListOf<String>().apply {
         add(getJavaPath())
         addAll(jvmArgs)
-        add("-Dname=$\"$nodeName\"")
+        add("-Dname=\"$nodeName\"")
         val jvmArgs: MutableList<String> = mutableListOf()
         null != debugPort && jvmArgs.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
         null != monitoringPort && jvmArgs.add("-javaagent:drivers/$jolokiaJar=port=$monitoringPort")
@@ -116,7 +113,6 @@ private abstract class Launcher(
         addAll(args.filter { it != HEADLESS_FLAG && it != CAPSULE_DEBUG_FLAG && it != SCREEN_FLAG })
     }
 
-    //    internal abstract fun toProcessBuilder(): ProcessBuilder
     internal abstract fun toProcess(dir: File): RunningProcess
 
     fun unixCommand() = javaCommand.map(::quotedFormOf).joinToString(" ")
@@ -144,7 +140,6 @@ private fun getLauncherBasedOnOsAndEnvironment(jarName: String, dir: File, debug
             return WindowsLauncher(jarName, dir, debugPort, monitoringPort, args, jvmArgs)
         }
     }
-
 }
 
 private class HeadlessLauncher(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
@@ -154,8 +149,9 @@ private class HeadlessLauncher(jarName: String, dir: File, debugPort: Int?, moni
         val processBuilder = toProcessBuilder()
         return RunningProcess(processBuilder.start(), processBuilder.command().joinToString(" "))
     }
-
 }
+
+
 
 private class OSXTabbingLauncher(jarName: String, dir: File, debugPort: Int?, monitoringPort: Int?, args: List<String>, jvmArgs: List<String>)
     : Launcher(jarName, dir, debugPort, monitoringPort, "${dir.name}-$jarName", {}, args, jvmArgs) {
@@ -164,19 +160,21 @@ private class OSXTabbingLauncher(jarName: String, dir: File, debugPort: Int?, mo
             tell app "Terminal"
             activate
             delay 0.5
-            """
-        val newTabCode = """
             tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
+            delay 0.5
+            do script "${buildOsXShellString(dir, javaCommand)}" in selected tab of the front window
             end tell
             """
         val terminalActivateProcess = ProcessBuilder(listOf("osascript", "-e", terminalActivateCode))
-        val newTabProcesses = ProcessBuilder(listOf("osascript", "-e", newTabCode))
-        listOf(terminalActivateProcess, newTabProcesses).forEach { it.inheritIO().start().waitFor() }
-        val processCommand = listOf("osascript", "-e",
-                """"do script "bash -c 'cd \"$dir\" ; \"${javaCommand.joinToString("""\" \"""")}\" && exit'" in selected tab of the front window""")
-        print("Sleeping for 1000 millis to allow OSX terminal to catch up")
-        Thread.sleep(1000)
-        return RunningProcess(ProcessBuilder(processCommand).directory(dir).start(), processCommand.joinToString(" "));
+        Thread.sleep(1200)
+        return RunningProcess(terminalActivateProcess.inheritIO().directory(dir).start(), listOf("osascript", "-e", terminalActivateCode).joinToString(" "));
+    }
+
+    private fun buildOsXShellString(dir: File, javaCommand: List<String>): String {
+        return """
+        bash -c 'cd \"$dir\" && \
+        ${javaCommand.map { it.replace("\"", "\\\"") }.joinToString(" ")} && exit'
+    """.trimIndent()
     }
 }
 
