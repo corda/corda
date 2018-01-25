@@ -17,7 +17,7 @@ if:
 
 We will deploy the CorDapp on 4 test nodes:
 
-* **Controller**, which hosts a validating notary service
+* **NetworkMapAndNotary**, which hosts a validating notary service
 * **PartyA**
 * **PartyB**
 * **PartyC**
@@ -252,7 +252,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
     Fri Jul 07 10:33:47 BST 2017>>>
 
-For every node except the controller, the script also creates a webserver terminal tab/window:
+For every node except the network map/notary, the script also creates a webserver terminal tab/window:
 
 .. sourcecode:: none
 
@@ -276,7 +276,7 @@ IntelliJ
 
   The node driver defined in ``/src/test/kotlin/com/example/Main.kt`` allows you to specify how many nodes you would like
   to run and the configuration settings for each node. For the example CorDapp, the driver starts up four nodes
-  and adds an RPC user for all but the "Controller" node (which serves as the notary):
+  and adds an RPC user for all but the network map/notary node:
 
   .. sourcecode:: kotlin
 
@@ -284,7 +284,7 @@ IntelliJ
           // No permissions required as we are not invoking flows.
           val user = User("user1", "test", permissions = setOf())
           driver(isDebug = true, waitForNodesToFinish = true) {
-              startNode(getX500Name(O="Controller",L="London",C='GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
+              startNode(getX500Name(O="NetworkMapAndNotary",L="London",C='GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
               val (nodeA, nodeB, nodeC) = Futures.allAsList(
                       startNode(getX500Name(O="PartyA",L="London",C="GB"), rpcUsers = listOf(user)),
                       startNode(getX500Name(O="PartyB",L="New York",C="US"), rpcUsers = listOf(user)),
@@ -475,15 +475,15 @@ The nodes can be split across machines and configured to communicate across the 
 
 After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and move some of the individual
 node folders to a different machine (e.g. using a USB key). It is important that none of the nodes - including the
-controller node - end up on more than one machine. Each computer should also have a copy of ``runnodes`` and
+network map/notary node - end up on more than one machine. Each computer should also have a copy of ``runnodes`` and
 ``runnodes.bat``.
 
 For example, you may end up with the following layout:
 
-* Machine 1: ``controller``, ``nodea``, ``runnodes``, ``runnodes.bat``
-* Machine 2: ``nodeb``, ``nodec``, ``runnodes``, ``runnodes.bat``
+* Machine 1: ``NetworkMapAndNotary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
+* Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
 
-You must now edit the configuration file for each node, including the controller. Open each node's config file,
+You must now edit the configuration file for each node, including the network map/notary. Open each node's config file,
 and make the following changes:
 
 * Change the Artemis messaging address to the machine's IP address (e.g. ``p2pAddress="10.18.0.166:10006"``)
@@ -504,7 +504,7 @@ Debugging is done via IntelliJ as follows:
         // No permissions required as we are not invoking flows.
         val user = User("user1", "test", permissions = setOf())
         driver(isDebug = true, waitForNodesToFinish = true) {
-            startNode(getX500Name(O="Controller",L="London",C="GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
+            startNode(getX500Name(O="NetworkMapAndNotary",L="London",C="GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
             val (nodeA, nodeB, nodeC) = Futures.allAsList(
                     startNode(getX500Name(O="PartyA",L=London,C=GB"), rpcUsers = listOf(user)),
                     startNode(getX500Name(O="PartyB",L=New York,C=US"), rpcUsers = listOf(user)),

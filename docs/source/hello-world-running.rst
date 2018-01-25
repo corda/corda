@@ -13,7 +13,7 @@ Deploying our CorDapp
 ---------------------
 Let's take a look at the nodes we're going to deploy. Open the project's ``build.gradle`` file and scroll down to the
 ``task deployNodes`` section. This section defines three nodes. There are two standard nodes (``PartyA`` and
-``PartyB``), plus a special Controller node that is running the network map service and advertises a validating notary
+``PartyB``), plus a special network map/notary node that is running the network map service and advertises a validating notary
 service.
 
 .. code:: bash
@@ -21,7 +21,7 @@ service.
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
         node {
-            name "O=Controller,L=London,C=GB"
+            name "O=NetworkMapAndNotary,L=London,C=GB"
             notary = [validating : true]
             p2pPort 10002
             rpcPort 10003
@@ -142,7 +142,7 @@ The vaults of PartyA and PartyB should both display the following output:
           - "C=GB,L=London,O=PartyA"
           - "C=US,L=New York,O=PartyB"
         contract: "com.template.contract.IOUContract"
-        notary: "C=GB,L=London,O=Controller,CN=corda.notary.validating"
+        notary: "C=GB,L=London,O=NetworkMapAndNotary,CN=corda.notary.validating"
         encumbrance: null
         constraint:
           attachmentId: "F578320232CAB87BB1E919F3E5DB9D81B7346F9D7EA6D9155DC0F7BA8E472552"
@@ -157,7 +157,7 @@ The vaults of PartyA and PartyB should both display the following output:
       recordedTime: 1506415268.875000000
       consumedTime: null
       status: "UNCONSUMED"
-      notary: "C=GB,L=London,O=Controller,CN=corda.notary.validating"
+      notary: "C=GB,L=London,O=NetworkMapAndNotary,CN=corda.notary.validating"
       lockId: null
       lockUpdateTime: 1506415269.548000000
     totalStatesAvailable: -1
