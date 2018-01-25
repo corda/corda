@@ -15,6 +15,9 @@ UNRELEASED
   the table name for the `participants` collection.
   For an example on how the mapping can be done, see: DummyDealStateSchemaV1.PersistentDummyDealState
 
+* JDBC drivers for SQL server and PostgresSQL are no longer bundled as part of Corda releases. If you are running a node
+  on such databases you need to provide the associated driver as described in :doc:`node-database`.
+
 R3 Corda 3.0 Developer Preview
 ------------------------------
 

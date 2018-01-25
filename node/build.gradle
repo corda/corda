@@ -51,6 +51,13 @@ processTestResources {
     from file("$rootDir/config/test/jolokia-access.xml")
 }
 
+// Map DB provider to driver artifact imported as runtime dependency in integration tests.
+def jdbcRuntimeDependency = [
+        'integration-sql-server': "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8",
+        'integration-azure-sql' : "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8",
+        'integration-postgres'  : "org.postgresql:postgresql:${postgresql_version}"
+]
+
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
@@ -122,12 +129,6 @@ dependencies {
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
 
-    //TODO remove once we can put driver jar into a predefined directory
-    //JDBC driver can be passed to the Node at startup using setting the jarDirs property in the Node configuration file.
-    //For Postgres database support in persistence
-    compile "org.postgresql:postgresql:$postgresql_version"
-    //For Azure SQL and SQL Server support in persistence
-    compile 'com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8'
     // For the MySQLUniquenessProvider
     compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
 
@@ -194,6 +195,17 @@ dependencies {
     testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // Add runtime-only dependency on the JDBC driver for the specified DB provider
+    def DB_PROVIDER = System.getProperty("databaseProvider")
+    if (DB_PROVIDER != null) {
+        final driverDependency = jdbcRuntimeDependency[DB_PROVIDER]
+        if (driverDependency != null) {
+            integrationTestRuntimeOnly driverDependency
+        } else {
+            throw new GradleException('Unsupported DB provider: ' + DB_PROVIDER)
+        }
+    }
 
     // Jolokia JVM monitoring agent
     runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"

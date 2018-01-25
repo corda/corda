@@ -15,7 +15,8 @@ class NodeConfig(
         val webPort: Int,
         val isNotary: Boolean,
         val users: List<User>,
-        val runMigration: Boolean = true
+        val runMigration: Boolean = true,
+        val jarDirs: List<String> = emptyList()
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -37,6 +38,7 @@ class NodeConfig(
                 .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
                 .withValue("database", valueFor(mapOf("runMigration" to runMigration)))
                 .withValue("useTestClock", valueFor(true))
+                .withValue("jarDirs", valueFor(jarDirs))
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
         } else {

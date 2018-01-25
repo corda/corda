@@ -49,7 +49,8 @@ public class StandaloneCordaRPCJavaClientTest {
             port.getAndIncrement(),
             true,
             Collections.singletonList(rpcUser),
-            true
+            true,
+            Collections.emptyList()
     );
 
     @Before

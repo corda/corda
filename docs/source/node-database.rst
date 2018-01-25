@@ -36,18 +36,19 @@ Standalone database
 To run a node against a remote database modify node JDBC connection properties in `dataSourceProperties` entry
 and Hibernate properties in `database` entry - see :ref:`Node configuration <database_properties_ref>`.
 
-.. _sql_server_ref:
+Corda will search for valid JDBC drivers either under the ``./plugins`` subdirectory of the node base directory or in one
+of the paths specified by the ``jarDirs`` field of the node configuration. Please make sure a ``jar`` file containing drivers
+supporting the database in use is present in one of these locations.
 
 SQL Azure and SQL Server
 ````````````````````````
-Corda supports SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8).
+Corda has been tested with SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8), using Microsoft JDBC Driver 6.2.
 The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'READ_COMMITTED'.
 The property ``database.schema`` is optional.
-Corda ships with Microsoft JDBC Driver 6.2 for SQLServer out-of-the-box.
 
 Example node configuration for SQL Azure:
 
-.. sourcecode:: none
+.. sourcecode:: groovy
 
     dataSourceProperties {
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
@@ -60,21 +61,17 @@ Example node configuration for SQL Azure:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-
-.. _postgres_ref:
+    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
 
 PostgreSQL
 ````````````````````````
-
-Corda supports PostgreSQL 9.6 database preliminarily.
-The property ``database.schema`` is optional. Currently only lowercase value is supported,
-please ensure your database setup uses lowercase schema names (Corda sends an unquoted schema name
-and PostgresSQL interprets the value as a lowercase one e.g. `AliceCorp` becomes `alicecorp`).
-Corda ships with PostgreSQL JDBC Driver 42.1.4 out-of-the-box.
+Corda has been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 42.1.4.
+The property ``database.schema`` is optional. The value of ``database.schema`` is automatically wrapped in double quotes
+to preserve case-sensitivity (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`).
 
 Example node configuration for PostgreSQL:
 
-.. sourcecode:: none
+.. sourcecode:: groovy
 
     dataSourceProperties = {
         dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
@@ -86,3 +83,4 @@ Example node configuration for PostgreSQL:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
+    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]

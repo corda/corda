@@ -4,6 +4,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.internal.copyTo
+import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -11,6 +12,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.common.internal.asContextEnv
+import java.io.File
+import java.nio.file.Files.createDirectories
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -51,7 +54,9 @@ class NodeProcess(
     // as a CorDapp for the nodes.
     class Factory(
             val buildDirectory: Path = Paths.get("build"),
-            val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())
+            val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI()),
+            val extraJvmArgs: Array<out String> = emptyArray(),
+            val redirectConsoleTo: File? = null
     ) {
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
@@ -91,6 +96,13 @@ class NodeProcess(
             return NodeProcess(config, nodeDir, process, client)
         }
 
+        fun setupPlugins(config: NodeConfig, jarPaths: List<String>): Factory {
+            (baseDirectory(config) / "plugins").createDirectories().also {
+                jarPaths.forEach { jar -> Paths.get(jar).copyToDirectory(it) }
+            }
+            return this
+        }
+
         private fun waitForNode(process: Process, config: NodeConfig, client: CordaRPCClient) {
             val executor = Executors.newSingleThreadScheduledExecutor()
             try {
@@ -121,11 +133,16 @@ class NodeProcess(
         }
 
         private fun startNode(nodeDir: Path): Process {
+            val redirectTo = redirectConsoleTo?.let {
+                ProcessBuilder.Redirect.appendTo(it)
+            } ?: ProcessBuilder.Redirect.INHERIT
+
             val builder = ProcessBuilder()
-                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString())
+                    .command(javaPath.toString(), "-Dcapsule.log=verbose",
+                            "-jar", cordaJar.toString(), *extraJvmArgs)
                     .directory(nodeDir.toFile())
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(redirectTo)
+                    .redirectOutput(redirectTo)
 
             builder.environment().putAll(mapOf(
                     "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()

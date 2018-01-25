@@ -84,6 +84,7 @@ import java.security.KeyStoreException
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.sql.Connection
+import java.sql.DriverManager
 import java.time.Clock
 import java.time.Duration
 import java.util.*
@@ -616,6 +617,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
     protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
+        log.debug {
+            val driverClasses = DriverManager.getDrivers().asSequence().map { it.javaClass.name }
+            "Available JDBC drivers: $driverClasses"
+        }
+
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
             val database = configureDatabase(props, configuration.database, identityService, schemaService)
