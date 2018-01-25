@@ -10,11 +10,11 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
@@ -264,8 +264,13 @@ class PersistentIdentityServiceTests {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public)
         val txKey = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_LEGAL_IDENTITY, issuer.certificate, issuerKeyPair, x500Name.x500Principal, txKey.public)
-        val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert) + issuer.certPath.certificates)
+        val txCert = X509Utilities.createCertificate(
+                CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
+                issuer.certificate,
+                issuerKeyPair,
+                x500Name.x500Principal,
+                txKey.public)
+        val txCertPath = X509Utilities.buildCertPath(txCert, issuer.certPath.x509Certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 

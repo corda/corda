@@ -10,6 +10,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.*
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.core.*
 import net.corda.testing.node.internal.NodeBasedTest
 import org.junit.Before
 import org.junit.ClassRule

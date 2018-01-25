@@ -18,6 +18,8 @@ import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.TestIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

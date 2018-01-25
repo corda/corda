@@ -1,6 +1,7 @@
 package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
+import com.google.common.cache.Weigher
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
@@ -16,12 +17,17 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
+import net.corda.node.utilities.NonInvalidatingCache
+import net.corda.node.utilities.NonInvalidatingWeightBasedCache
+import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.io.*
 import java.nio.file.Paths
 import java.time.Instant
+import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -30,7 +36,12 @@ import javax.persistence.*
  * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
-class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, SingletonSerializeAsToken() {
+class NodeAttachmentService(
+        metrics: MetricRegistry,
+        attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
+        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+) : AttachmentStorage, SingletonSerializeAsToken(
+) {
 
     companion object {
         private val log = contextLogger()
@@ -172,11 +183,67 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
     }
 
-    override fun openAttachment(id: SecureHash): Attachment? {
+
+    // slightly complex 2 level approach to attachment caching:
+    // On the first level we cache attachment contents loaded from the DB by their key. This is a weight based
+    // cache (we don't want to waste too  much memory on this) and could be evicted quite aggressively. If we fail
+    // to load an attachment from the db, the loader will insert a non present optional - we invalidate this
+    // immediately as we definitely want to retry whether the attachment was just delayed.
+    // On the second level, we cache Attachment implementations that use the first cache to load their content
+    // when required. As these are fairly small, we can cache quite a lot of them, this will make checking
+    // repeatedly whether an attachment exists fairly cheap. Here as well, we evict non-existent entries immediately
+    // to force a recheck if required.
+    // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
+    // a problem somewhere else or this needs to be revisited.
+
+    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<ByteArray>>(
+            maxWeight = attachmentContentCacheSize,
+            concurrencyLevel = defaultCordaCacheConcurrencyLevel,
+            weigher = object : Weigher<SecureHash, Optional<ByteArray>> {
+                override fun weigh(key: SecureHash, value: Optional<ByteArray>): Int {
+                    return key.size + if (value.isPresent) value.get().size else 0
+                }
+            },
+            loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
+    )
+
+    private fun loadAttachmentContent(id: SecureHash): ByteArray? {
         val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-        attachment?.let {
-            return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
+        return attachment?.content
+    }
+
+
+    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
+            attachmentCacheBound,
+            defaultCordaCacheConcurrencyLevel,
+            { key -> Optional.ofNullable(createAttachment(key)) }
+    )
+
+    private fun createAttachment(key: SecureHash): Attachment? {
+        val content = attachmentContentCache.get(key)
+        if (content.isPresent) {
+            return AttachmentImpl(
+                    key,
+                    {
+                        attachmentContentCache
+                                .get(key)
+                                .orElseThrow {
+                                    IllegalArgumentException("No attachement impl should have been created for non existent content")
+                                }
+                    },
+                    checkAttachmentsOnLoad)
         }
+        // if no attachement has been found, we don't want to cache that - it might arrive later
+        attachmentContentCache.invalidate(key)
+        return null
+    }
+
+    override fun openAttachment(id: SecureHash): Attachment? {
+        val attachment = attachmentCache.get(id)
+        if (attachment.isPresent) {
+            return attachment.get()
+        }
+        attachmentCache.invalidate(id)
         return null
     }
 

@@ -11,6 +11,7 @@ CorDapps
    cordapp-build-systems
    building-against-master
    corda-api
+   secure-coding-guidelines
    flow-cookbook
    cheat-sheet
    building-a-cordapp-samples

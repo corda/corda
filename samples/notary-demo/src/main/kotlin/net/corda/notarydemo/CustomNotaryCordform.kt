@@ -4,7 +4,9 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.node.services.config.NotaryConfig
 import net.corda.testing.node.internal.demorun.*
-import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = CustomNotaryCordform().deployNodes()
@@ -15,18 +17,27 @@ class CustomNotaryCordform : CordformDefinition() {
         node {
             name(ALICE_NAME)
             p2pPort(10002)
-            rpcPort(10003)
+            rpcSettings {
+                address("localhost:10003")
+                adminAddress("localhost:10103")
+            }
             rpcUsers(notaryDemoUser)
         }
         node {
             name(BOB_NAME)
             p2pPort(10005)
-            rpcPort(10006)
+            rpcSettings {
+                address("localhost:10006")
+                adminAddress("localhost:10106")
+            }
         }
         node {
             name(DUMMY_NOTARY_NAME)
             p2pPort(10009)
-            rpcPort(10010)
+            rpcSettings {
+                address("localhost:10010")
+                adminAddress("localhost:10110")
+            }
             notary(NotaryConfig(validating = true, custom = true))
         }
     }

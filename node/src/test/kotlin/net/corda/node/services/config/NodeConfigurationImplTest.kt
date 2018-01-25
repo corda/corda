@@ -1,15 +1,17 @@
 package net.corda.node.services.config
 
 import com.zaxxer.hikari.HikariConfig
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Paths
 import java.util.*
 import kotlin.test.assertEquals
+import java.util.*
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -59,7 +61,7 @@ class NodeConfigurationImplTest {
         HikariConfig(testConf.dataSourceProperties)
     }
 
-    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?) : NodeConfiguration {
+    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
@@ -67,22 +69,36 @@ class NodeConfigurationImplTest {
         return testConfiguration.copy(dataSourceProperties = dataSourceProperties)
     }
 
-    private val testConfiguration = NodeConfigurationImpl(
-            baseDirectory = Paths.get("."),
-            myLegalName = ALICE_NAME,
-            emailAddress = "",
-            keyStorePassword = "cordacadevpass",
-            trustStorePassword = "trustpass",
-            dataSourceProperties = makeTestDataSourceProperties(ALICE_NAME.organisation),
-            rpcUsers = emptyList(),
-            verifierType = VerifierType.InMemory,
-            p2pAddress = NetworkHostAndPort("localhost", 0),
-            rpcAddress = NetworkHostAndPort("localhost", 1),
-            messagingServerAddress = null,
-            notary = null,
-            certificateChainCheckPolicies = emptyList(),
-            devMode = true,
-            activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
-            relay = null,
-            enterpriseConfiguration = EnterpriseConfiguration((MutualExclusionConfiguration(false, "", 20000, 40000))))
+    private val testConfiguration = testNodeConfiguration()
+
+    private fun testNodeConfiguration(): NodeConfigurationImpl {
+        val baseDirectory = Paths.get(".")
+        val keyStorePassword = "cordacadevpass"
+        val trustStorePassword = "trustpass"
+        val rpcSettings = NodeRpcSettings(
+                address = NetworkHostAndPort("localhost", 1),
+                adminAddress = NetworkHostAndPort("localhost", 2),
+                standAloneBroker = false,
+                useSsl = false,
+                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+        return NodeConfigurationImpl(
+                baseDirectory = baseDirectory,
+                myLegalName = ALICE_NAME,
+                emailAddress = "",
+                keyStorePassword = keyStorePassword,
+                trustStorePassword = trustStorePassword,
+                dataSourceProperties = makeTestDataSourceProperties(ALICE_NAME.organisation),
+                rpcUsers = emptyList(),
+                verifierType = VerifierType.InMemory,
+                p2pAddress = NetworkHostAndPort("localhost", 0),
+                messagingServerAddress = null,
+                notary = null,
+                certificateChainCheckPolicies = emptyList(),
+                devMode = true,
+                activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
+                rpcSettings = rpcSettings,
+                relay = null,
+                enterpriseConfiguration = EnterpriseConfiguration((MutualExclusionConfiguration(false, "", 20000, 40000)))
+        )
+    }
 }

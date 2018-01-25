@@ -36,6 +36,10 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters

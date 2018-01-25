@@ -19,8 +19,8 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.User
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
@@ -29,7 +29,7 @@ import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.node.internal.rpcTestUser
 import net.corda.testing.node.internal.startRpcClient
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.singleIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before

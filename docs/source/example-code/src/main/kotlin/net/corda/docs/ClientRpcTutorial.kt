@@ -17,7 +17,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 import org.graphstream.graph.Edge

@@ -4,8 +4,8 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.driver.PortAllocation

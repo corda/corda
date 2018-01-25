@@ -15,9 +15,9 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.BasicConstraints
@@ -222,7 +222,8 @@ class X509UtilitiesTest {
         val clientSocketFactory = context.socketFactory
 
         val serverSocket = serverSocketFactory.createServerSocket(0) as SSLServerSocket // use 0 to get first free socket
-        val serverParams = SSLParameters(CIPHER_SUITES, arrayOf("TLSv1.2"))
+        val serverParams = SSLParameters(CIPHER_SUITES,
+                arrayOf("TLSv1.2"))
         serverParams.wantClientAuth = true
         serverParams.needClientAuth = true
         serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
@@ -230,7 +231,8 @@ class X509UtilitiesTest {
         serverSocket.useClientMode = false
 
         val clientSocket = clientSocketFactory.createSocket() as SSLSocket
-        val clientParams = SSLParameters(CIPHER_SUITES, arrayOf("TLSv1.2"))
+        val clientParams = SSLParameters(CIPHER_SUITES,
+                arrayOf("TLSv1.2"))
         clientParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
         clientSocket.sslParameters = clientParams
         clientSocket.useClientMode = true
@@ -264,10 +266,10 @@ class X509UtilitiesTest {
         assertTrue(clientSocket.isConnected)
 
         // Double check hostname manually
-        val peerChain = clientSocket.session.peerCertificates
-        val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
+        val peerChain = clientSocket.session.peerCertificates.x509
+        val peerX500Principal = peerChain[0].subjectX500Principal
         assertEquals(MEGA_CORP.name.x500Principal, peerX500Principal)
-        X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA), *peerChain)
+        X509Utilities.validateCertificateChain(rootCa.certificate, peerChain)
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")
         var timeout = 0
@@ -336,7 +338,7 @@ class X509UtilitiesTest {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB_NAME.x500Principal, BOB.publicKey)
-        val expected = X509CertificateFactory().generateCertPath(certificate, rootCACert)
+        val expected = X509Utilities.buildCertPath(certificate, rootCACert)
         val serialized = expected.serialize(factory, context).bytes
         val actual: CertPath = serialized.deserialize(factory, context)
         assertEquals(expected, actual)

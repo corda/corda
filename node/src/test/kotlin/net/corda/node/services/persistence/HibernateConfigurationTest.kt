@@ -37,7 +37,7 @@ import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.DummyDealStateSchemaV1
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1

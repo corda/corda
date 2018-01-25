@@ -20,7 +20,7 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -61,7 +61,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     override fun setUp() {
         super.setUp()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 

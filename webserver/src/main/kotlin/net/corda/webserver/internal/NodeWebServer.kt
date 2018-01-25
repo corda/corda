@@ -55,22 +55,6 @@ class NodeWebServer(val config: WebServerConfig) {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
         val handlerCollection = HandlerCollection()
 
-        // Export JMX monitoring statistics and data over REST/JSON.
-        if (config.exportJMXto.split(',').contains("http")) {
-            val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
-            val warpath = classpath.firstOrNull { it.contains("jolokia-war") && it.endsWith(".war") }
-            if (warpath != null) {
-                handlerCollection.addHandler(WebAppContext().apply {
-                    // Find the jolokia WAR file on the classpath.
-                    contextPath = "/monitoring/json"
-                    setInitParameter("mimeType", MediaType.APPLICATION_JSON)
-                    war = warpath
-                })
-            } else {
-                log.warn("Unable to locate Jolokia WAR on classpath")
-            }
-        }
-
         // API, data upload and download to services (attachments, rates oracles etc)
         handlerCollection.addHandler(buildServletContextHandler(localRpc))
 

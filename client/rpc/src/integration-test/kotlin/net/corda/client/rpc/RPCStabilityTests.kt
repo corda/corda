@@ -17,6 +17,8 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.internal.toDatabaseSchemaNames
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.internal.*
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After

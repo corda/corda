@@ -37,6 +37,7 @@ object CommercialPaperSchemaV1 : MappedSchema(
             var issuancePartyHash: String,
 
             @Column(name = "issuance_ref")
+            @Type(type = "corda-wrapper-binary")
             var issuanceRef: ByteArray,
 
             @Column(name = "owner_key_hash", length = MAX_HASH_HEX_SIZE)

@@ -61,7 +61,14 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
         override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), nameForType(clazz))}")
-        private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(clazz), null, emptyList(), SerializerFactory.nameForType(superClassSerializer.type), Descriptor(typeDescriptor), emptyList())
+        private val typeNotation: TypeNotation = RestrictedType(
+                SerializerFactory.nameForType(clazz),
+                null,
+                emptyList(),
+                SerializerFactory.nameForType(superClassSerializer.type),
+                Descriptor(typeDescriptor),
+                emptyList())
+
         override fun writeClassInfo(output: SerializationOutput) {
             output.writeTypeNotations(typeNotation)
         }
@@ -132,8 +139,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
             val proxy = toProxy(obj)
             data.withList {
-                for (property in proxySerializer.propertySerializers.getters) {
-                    property.writeProperty(proxy, this, output)
+                proxySerializer.propertySerializers.serializationOrder.forEach {
+                    it.getter.writeProperty(proxy, this, output)
                 }
             }
         }

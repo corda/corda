@@ -7,7 +7,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test

@@ -12,6 +12,7 @@ class NodeConfig(
         val legalName: CordaX500Name,
         val p2pPort: Int,
         val rpcPort: Int,
+        val rpcAdminPort: Int,
         val webPort: Int,
         val isNotary: Boolean,
         val users: List<User>,
@@ -34,7 +35,10 @@ class NodeConfig(
                 .withValue("myLegalName", valueFor(legalName.toString()))
                 .withValue("p2pAddress", addressValueFor(p2pPort))
                 .withValue("webAddress", addressValueFor(webPort))
-                .withValue("rpcAddress", addressValueFor(rpcPort))
+                .withValue("rpcSettings", empty()
+                        .withValue("address", addressValueFor(rpcPort))
+                        .withValue("adminAddress", addressValueFor(rpcAdminPort))
+                        .root())
                 .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
                 .withValue("database", valueFor(mapOf("runMigration" to runMigration)))
                 .withValue("useTestClock", valueFor(true))

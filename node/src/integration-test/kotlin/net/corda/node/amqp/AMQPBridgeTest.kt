@@ -9,14 +9,12 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.protonwrapper.netty.AMQPServer
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.crypto.loadKeyStore
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -164,7 +162,6 @@ class AMQPBridgeTest {
         artemisServer.stop()
         artemisLegacyClient.stop()
         artemisLegacyServer.stop()
-
     }
 
     private fun createArtemis(sourceQueueName: String?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
@@ -173,6 +170,7 @@ class AMQPBridgeTest {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(true).whenever(it).useAMQPBridges
@@ -182,8 +180,7 @@ class AMQPBridgeTest {
             doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
             doReturn(listOf(NodeInfo(listOf(amqpAddress), listOf(BOB.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
-        val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, networkMap, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
@@ -201,6 +198,7 @@ class AMQPBridgeTest {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(false).whenever(it).useAMQPBridges
@@ -211,8 +209,7 @@ class AMQPBridgeTest {
             doReturn(Observable.never<NetworkMapCache.MapChange>()).whenever(it).changed
             doReturn(listOf(NodeInfo(listOf(artemisAddress), listOf(ALICE.identity), 1, 1L))).whenever(it).getNodesByOwningKeyIndex(any())
         }
-        val userService = rigorousMock<RPCSecurityManager>()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort2, networkMap, MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress2, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
@@ -231,16 +228,14 @@ class AMQPBridgeTest {
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val serverTruststore = loadKeyStore(serverConfig.trustStoreFile, serverConfig.trustStorePassword)
-        val serverKeystore = loadKeyStore(serverConfig.sslKeystore, serverConfig.keyStorePassword)
-        val amqpServer = AMQPServer("0.0.0.0",
+        return AMQPServer("0.0.0.0",
                 amqpPort,
                 ArtemisMessagingComponent.PEER_USER,
                 ArtemisMessagingComponent.PEER_USER,
-                serverKeystore,
+                serverConfig.loadSslKeyStore().internal,
                 serverConfig.keyStorePassword,
-                serverTruststore,
-                trace = true)
-        return amqpServer
+                serverConfig.loadTrustStore().internal,
+                trace = true
+        )
     }
 }

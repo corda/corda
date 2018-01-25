@@ -21,7 +21,7 @@ object DummyLinearStateSchemaV2 : MappedSchema(schemaFamily = DummyLinearStateSc
 
             @ElementCollection
             @Column(name = "participants")
-            @CollectionTable(name = "dummy_linear_states_v2_participants", joinColumns = arrayOf(
+            @CollectionTable(name = "dummy_linear_states_v2_parts", joinColumns = arrayOf(
                     JoinColumn(name = "output_index", referencedColumnName = "output_index"),
                     JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             override var participants: MutableSet<AbstractParty>? = null,

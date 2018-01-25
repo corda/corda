@@ -11,9 +11,9 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.*
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
@@ -41,7 +41,7 @@ class NetworkMapTest : IntegrationTest() {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val cacheTimeout = 1.seconds
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = PortAllocation.RandomFree
 
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
