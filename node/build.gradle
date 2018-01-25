@@ -201,7 +201,7 @@ dependencies {
     if (DB_PROVIDER != null) {
         final driverDependency = jdbcRuntimeDependency[DB_PROVIDER]
         if (driverDependency != null) {
-            integrationTestRuntimeOnly driverDependency
+            runtime driverDependency
         } else {
             throw new GradleException('Unsupported DB provider: ' + DB_PROVIDER)
         }
