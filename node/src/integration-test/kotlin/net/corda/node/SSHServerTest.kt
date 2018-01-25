@@ -140,8 +140,9 @@ class SSHServerTest {
 
             val response = String(Streams.readAll(channel.inputStream))
 
+            val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
             // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-            assertThat(response.lines()).filteredOn( { it.contains("Done")}).hasSize(1)
+            assertThat(linesWithDoneCount).hasSize(1)
         }
     }
 
