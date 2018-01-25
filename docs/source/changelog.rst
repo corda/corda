@@ -165,6 +165,9 @@ UNRELEASED
 * The ability for CordaServices to register callbacks so they can be notified of shutdown and clean up resource such as
   open ports.
 
+* Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
+  This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
+
 .. _changelog_v1:
 
 Release 1.0

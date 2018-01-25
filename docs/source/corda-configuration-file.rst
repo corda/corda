@@ -188,9 +188,6 @@ path to the node's base directory.
 :exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
     Default Jolokia access url is http://127.0.0.1:7005/jolokia/
 
-:useAMQPBridges: Optionally can be set to ``false`` to use Artemis CORE Bridges for peer-to-peer communications.
-        Otherwise, defaults to ``true`` and the AMQP 1.0 protocol will be used for message transfer between nodes.
-
 :transactionCacheSizeMegaBytes: Optionally specify how much memory should be used for caching of ledger transactions in memory.
             Otherwise defaults to 8MB plus 5% of all heap memory above 300MB.
 

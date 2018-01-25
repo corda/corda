@@ -402,6 +402,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
     private fun encodePayloadBytes(msg: SendableMessageImpl): ByteBuf {
         val message = Proton.message() as ProtonJMessage
         message.body = Data(Binary(msg.payload))
+        message.isDurable = true
         message.properties = Properties()
         val appProperties = HashMap(msg.applicationProperties)
         //TODO We shouldn't have to do this, but Artemis Server doesn't set the header on AMQP packets.
