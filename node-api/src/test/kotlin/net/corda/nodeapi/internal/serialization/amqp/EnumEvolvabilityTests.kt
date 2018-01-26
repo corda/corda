@@ -392,6 +392,7 @@ class EnumEvolvabilityTests {
         val f = sf.javaClass.getDeclaredField("transformsCache")
         f.isAccessible = true
 
+        @Suppress("UNCHECKED_CAST")
         val transformsCache = f.get(sf) as ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
 
         assertEquals(0, transformsCache.size)

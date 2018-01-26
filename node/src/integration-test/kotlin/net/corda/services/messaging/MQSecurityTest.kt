@@ -126,6 +126,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertTempQueueCreationAttackFails(queue: String) {
         assertAttackFails(queue, "CREATE_NON_DURABLE_QUEUE") {
+            @Suppress("DEPRECATION")
             attacker.session.createTemporaryQueue(queue, queue)
         }
         // Double-check
@@ -143,6 +144,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     fun assertNonTempQueueCreationAttackFails(queue: String, durable: Boolean) {
         val permission = if (durable) "CREATE_DURABLE_QUEUE" else "CREATE_NON_DURABLE_QUEUE"
         assertAttackFails(queue, permission) {
+            @Suppress("DEPRECATION")
             attacker.session.createQueue(queue, queue, durable)
         }
         // Double-check

@@ -207,6 +207,12 @@ allprojects {
             exclude module: 'isolated'
         }
     }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            allWarningsAsErrors = true
+        }
+    }
 }
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to

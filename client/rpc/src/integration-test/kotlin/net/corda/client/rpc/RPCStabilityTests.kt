@@ -437,6 +437,7 @@ class RPCStabilityTests {
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
+            @Suppress("DEPRECATION")
             session.createTemporaryQueue(myQueue, myQueue)
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {

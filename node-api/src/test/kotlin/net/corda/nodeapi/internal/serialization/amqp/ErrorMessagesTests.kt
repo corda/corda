@@ -55,10 +55,8 @@ class ErrorMessagesTests {
 
         val sf = testDefaultFactory()
 
-        val testname = "${javaClass.name}\$${testName()}"
-
         val bytes = TestSerializationOutput(VERBOSE, sf).serialize(C(1, 2))
-        val c = DeserializationInput(sf).deserialize(bytes)
+        DeserializationInput(sf).deserialize(bytes)
     }
 
     // Java allows this to be set at the class level yet Kotlin doesn't for some reason

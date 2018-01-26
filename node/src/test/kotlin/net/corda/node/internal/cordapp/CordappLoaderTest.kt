@@ -13,13 +13,6 @@ class DummyFlow : FlowLogic<Unit>() {
     }
 }
 
-@InitiatedBy(DummyFlow::class)
-class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-    }
-}
-
 @SchedulableFlow
 class DummySchedulableFlow : FlowLogic<Unit>() {
     @Suspendable

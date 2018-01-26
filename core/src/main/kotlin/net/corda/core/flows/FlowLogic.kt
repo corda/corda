@@ -152,6 +152,7 @@ abstract class FlowLogic<out T> {
      */
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
+        @Suppress("DEPRECATION")
         return sendAndReceive(R::class.java, otherParty, payload)
     }
 
@@ -203,6 +204,7 @@ abstract class FlowLogic<out T> {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      */
+    @Suppress("DEPRECATION")
     @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> = receive(R::class.java, otherParty)
 

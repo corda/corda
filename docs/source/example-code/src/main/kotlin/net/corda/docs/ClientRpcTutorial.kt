@@ -40,6 +40,7 @@ enum class PrintOrVisualise {
     Visualise
 }
 
+@Suppress("DEPRECATION")
 fun main(args: Array<String>) {
     require(args.isNotEmpty()) { "Usage: <binary> [Print|Visualise]" }
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
@@ -63,6 +64,7 @@ fun main(args: Array<String>) {
         }
         // END 2
 
+        // TODO: Remove usage of deprecated internalVerifiedTransactionFeed.
         // START 3
         val (transactions: List<SignedTransaction>, futureTransactions: Observable<SignedTransaction>) = proxy.internalVerifiedTransactionsFeed()
         // END 3
@@ -75,7 +77,7 @@ fun main(args: Array<String>) {
                     transaction.tx.inputs.forEach { (txhash) ->
                         println("EDGE $txhash ${transaction.id}")
                     }
-                }
+                } as Any
             }
         // END 4
         // START 5

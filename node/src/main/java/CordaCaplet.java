@@ -131,10 +131,14 @@ public class CordaCaplet extends Capsule {
     private void augmentClasspath(List<Path> classpath, File dir) {
         if (dir.exists()) {
             File[] files = dir.listFiles();
-            for (File file : files) {
-                if (file.isFile() && isJAR(file)) {
-                    classpath.add(file.toPath().toAbsolutePath());
+            if(files != null) {
+                for (File file : files) {
+                    if (file.isFile() && isJAR(file)) {
+                        classpath.add(file.toPath().toAbsolutePath());
+                    }
                 }
+            } else {
+                log(LOG_QUIET, "Directory " + dir.getAbsolutePath() + " not found when augmenting classpath");
             }
         }
     }

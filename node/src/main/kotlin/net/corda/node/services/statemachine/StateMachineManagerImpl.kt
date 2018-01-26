@@ -490,7 +490,7 @@ class StateMachineManagerImpl(
         }
     }
 
-    private fun FlowSessionInternal.endSession(context: InvocationContext, exception: Throwable?, propagated: Boolean) {
+    private fun FlowSessionInternal.endSession(@Suppress("UNUSED_PARAMETER") context: InvocationContext, exception: Throwable?, propagated: Boolean) {
         val initiatedState = state as? FlowSessionState.Initiated ?: return
         val sessionEnd = if (exception == null) {
             EndSessionMessage

@@ -53,8 +53,10 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
         implementation.vaultTrackBy(criteria, paging, sorting, contractStateType)
     }
 
+    @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun internalVerifiedTransactionsSnapshot() = guard("internalVerifiedTransactionsSnapshot", implementation::internalVerifiedTransactionsSnapshot)
 
+    @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun internalVerifiedTransactionsFeed() = guard("internalVerifiedTransactionsFeed", implementation::internalVerifiedTransactionsFeed)
 
     override fun stateMachineRecordedTransactionMappingSnapshot() = guard("stateMachineRecordedTransactionMappingSnapshot", implementation::stateMachineRecordedTransactionMappingSnapshot)

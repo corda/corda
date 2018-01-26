@@ -187,7 +187,7 @@ class NodeTerminalView : Fragment() {
 
     private fun initialise(config: NodeConfigWrapper, ops: CordaRPCOps) {
         try {
-            val (txInit, txNext) = ops.internalVerifiedTransactionsFeed()
+            val (txInit, txNext) = @Suppress("DEPRECATION") ops.internalVerifiedTransactionsFeed()
             val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
 
             txCount = txInit.size

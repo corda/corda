@@ -69,7 +69,7 @@ private class PrettyPrint(arr : Arrangement) {
         }
     }
 
-    fun prettyPrint(per: Perceivable<Boolean>, x: Boolean? = null) {
+    fun prettyPrint(per: Perceivable<Boolean>, @Suppress("UNUSED_PARAMETER") x: Boolean? = null) {
         when (per) {
             is Const -> print("\"${per.value}\"")
             is PerceivableOr -> {
@@ -84,7 +84,7 @@ private class PrettyPrint(arr : Arrangement) {
             }
             is TimePerceivable -> {
                 when (per.cmp) {
-                    Comparison.GT, Comparison.GTE ->  {
+                    Comparison.GT, Comparison.GTE -> {
                         print("after(")
                         prettyPrint(per.instant)
                         print(")")
@@ -98,9 +98,9 @@ private class PrettyPrint(arr : Arrangement) {
             }
             is PerceivableComparison<*> -> {
                 when (per.type) {
-                    BigDecimal::class.java -> prettyPrint(per.left as Perceivable<BigDecimal>)
-                    Instant::class.java -> prettyPrint(per.left as Perceivable<Instant>)
-                    Boolean::class.java -> prettyPrint(per.left as Perceivable<Boolean>)
+                    BigDecimal::class.java -> prettyPrint(per.left.asType<BigDecimal>())
+                    Instant::class.java -> prettyPrint(per.left.asType<Instant>())
+                    Boolean::class.java -> prettyPrint(per.left.asType<Boolean>())
                 }
                 when (per.cmp) {
                     Comparison.GT -> print(" > ")
@@ -109,9 +109,9 @@ private class PrettyPrint(arr : Arrangement) {
                     Comparison.LTE -> print(" <= ")
                 }
                 when (per.type) {
-                    BigDecimal::class.java -> prettyPrint(per.right as Perceivable<BigDecimal>)
-                    Instant::class.java -> prettyPrint(per.right as Perceivable<Instant>)
-                    Boolean::class.java -> prettyPrint(per.right as Perceivable<Boolean>)
+                    BigDecimal::class.java -> prettyPrint(per.right.asType<BigDecimal>())
+                    Instant::class.java -> prettyPrint(per.right.asType<Instant>())
+                    Boolean::class.java -> prettyPrint(per.right.asType<Boolean>())
                 }
             }
             is TerminalEvent -> print("TerminalEvent(${partyMap[per.reference.owningKey]}, \"${per.source}\")")
@@ -120,7 +120,7 @@ private class PrettyPrint(arr : Arrangement) {
         }
     }
 
-    fun prettyPrint(per: Perceivable<Instant>, x: Instant? = null) {
+    fun prettyPrint(per: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") x: Instant? = null) {
         when (per) {
             is Const -> print("\"${per.value}\"")
             is StartDate -> print("startDate")
@@ -129,7 +129,7 @@ private class PrettyPrint(arr : Arrangement) {
         }
     }
 
-    fun prettyPrint(per: Perceivable<BigDecimal>, x: BigDecimal? = null) {
+    fun prettyPrint(per: Perceivable<BigDecimal>, @Suppress("UNUSED_PARAMETER") x: BigDecimal? = null) {
         when (per) {
             is PerceivableOperation<BigDecimal> -> {
                 prettyPrint(per.left)
@@ -138,7 +138,6 @@ private class PrettyPrint(arr : Arrangement) {
                     Operation.MINUS -> print(" - ")
                     Operation.DIV -> print(" / ")
                     Operation.TIMES -> print(" * ")
-                    else -> print(per.op)
                 }
                 prettyPrint(per.right)
             }
@@ -208,6 +207,10 @@ private class PrettyPrint(arr : Arrangement) {
     override fun toString(): String {
         return sb.toString()
     }
+
+    // Convenience function to remove unchecked cast warnings
+    @Suppress("UNCHECKED_CAST")
+    private fun<T> Perceivable<*>.asType() = this as Perceivable<T>
 }
 
 fun prettyPrint(arr: Arrangement): String {

@@ -99,7 +99,7 @@ class NodeMonitorModel {
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions
-        val (transactions, newTransactions) = proxy.internalVerifiedTransactionsFeed()
+        val (transactions, newTransactions) = @Suppress("DEPRECATION") proxy.internalVerifiedTransactionsFeed()
         newTransactions.startWith(transactions).subscribe(transactionsSubject)
 
         // SM -> TX mapping

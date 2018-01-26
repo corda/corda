@@ -83,15 +83,15 @@ class IRS {
                     rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
                         actions {
                             (acmeCorp or highStreetBank) may {
-                                val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
-                                val fixed = interest(notional, "act/365", 0.5.bd, start, end)
+                                val floatingLeg = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
+                                val fixedLeg = interest(notional, "act/365", 0.5.bd, start, end)
 
                                 "pay floating" anytime {
-                                    highStreetBank.owes(acmeCorp, floating - fixed, currency)
+                                    highStreetBank.owes(acmeCorp, floatingLeg - fixedLeg, currency)
                                     next()
                                 }
                                 "pay fixed" anytime {
-                                    highStreetBank.owes(acmeCorp, fixed - floating, currency)
+                                    highStreetBank.owes(acmeCorp, fixedLeg - floatingLeg, currency)
                                     next()
                                 }
                             }

@@ -1,3 +1,6 @@
+// TODO: Remove usage of deprecated functions and classes.
+@file:Suppress("DEPRECATION")
+
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture

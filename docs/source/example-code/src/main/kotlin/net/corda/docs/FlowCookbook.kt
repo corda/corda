@@ -574,7 +574,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // DOCEND 10
 
         // DOCSTART FlowSession porting
-        send(regulator, Any()) // Old API
+        regulatorSession.send(Any())
         // becomes
         val session = initiateFlow(regulator)
         session.send(Any())

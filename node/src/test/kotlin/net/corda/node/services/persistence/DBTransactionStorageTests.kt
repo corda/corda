@@ -198,6 +198,7 @@ class DBTransactionStorageTests {
     }
 
     private fun newTransaction(): SignedTransaction {
+        @Suppress("DEPRECATION")
         val wtx = WireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
