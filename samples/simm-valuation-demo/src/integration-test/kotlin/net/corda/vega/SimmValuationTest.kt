@@ -3,7 +3,9 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest

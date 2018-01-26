@@ -18,10 +18,10 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.testing.chooseIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
+import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.MockNetwork

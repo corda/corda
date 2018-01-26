@@ -4,7 +4,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.EUR
 import net.corda.finance.USD
-import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas

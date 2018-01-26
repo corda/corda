@@ -154,7 +154,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
     @Entity
     @Table(name = "vault_transaction_notes",
-            indexes = arrayOf(Index(name = "transaction_id_index", columnList = "transaction_id")))
+            indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
+                    Index(name = "transaction_id_index", columnList = "transaction_id")))
     class VaultTxnNote(
             @Id
             @GeneratedValue

@@ -12,13 +12,14 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.DEV_ROOT_CA
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -154,7 +155,7 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
         val (certPath, name) = createSignedClientCertificate(
                 certificationRequest,
                 rootCertAndKeyPair.keyPair,
-                arrayOf(rootCertAndKeyPair.certificate))
+                listOf(rootCertAndKeyPair.certificate))
         require(!name.organisation.contains("\\s".toRegex())) { "Whitespace in the organisation name not supported" }
         certPaths[name.organisation] = certPath
         return Response.ok(name.organisation).build()
@@ -183,17 +184,17 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
 
     private fun createSignedClientCertificate(certificationRequest: PKCS10CertificationRequest,
                                               caKeyPair: KeyPair,
-                                              caCertPath: Array<Certificate>): Pair<CertPath, CordaX500Name> {
+                                              caCertPath: List<X509Certificate>): Pair<CertPath, CordaX500Name> {
         val request = JcaPKCS10CertificationRequest(certificationRequest)
         val name = CordaX500Name.parse(request.subject.toString())
         val nodeCaCert = X509Utilities.createCertificate(
                 CertificateType.NODE_CA,
-                caCertPath[0] as X509Certificate ,
+                caCertPath[0],
                 caKeyPair,
                 name.x500Principal,
                 request.publicKey,
                 nameConstraints = null)
-        val certPath = X509CertificateFactory().generateCertPath(nodeCaCert, *caCertPath)
+        val certPath = X509Utilities.buildCertPath(nodeCaCert, caCertPath)
         return Pair(certPath, name)
     }
 }

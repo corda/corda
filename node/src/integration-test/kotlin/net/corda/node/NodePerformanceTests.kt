@@ -13,10 +13,10 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.DUMMY_NOTARY_NAME
-import net.corda.testing.TestIdentity
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -31,19 +31,11 @@ import net.corda.testing.node.internal.InternalDriverDSL
 import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
 import net.corda.testing.node.internal.performance.startReporter
 import net.corda.testing.node.internal.performance.startTightLoopInjector
-import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-
-private fun checkQuasarAgent() {
-    if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
-        throw IllegalStateException("No quasar agent")
-    }
-}
 
 @Ignore("Run these locally")
 class NodePerformanceTests : IntegrationTest() {
@@ -65,11 +57,6 @@ class NodePerformanceTests : IntegrationTest() {
             val flowPerSecond: Double,
             val averageMs: Double
     )
-
-    @Before
-    fun before() {
-        checkQuasarAgent()
-    }
 
     @Test
     fun `empty flow per second`() {

@@ -9,8 +9,9 @@ import net.corda.core.internal.readLines
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
-import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -32,13 +33,13 @@ class DriverTests : IntegrationTest() {
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
         fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
-            val hostAndPort = nodeInfo.addresses.first()
+            val hostAndPort = nodeInfo.addresses.single()
             // Check that the port is bound
             addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
         }
 
         fun nodeMustBeDown(handle: NodeHandle) {
-            val hostAndPort = handle.nodeInfo.addresses.first()
+            val hostAndPort = handle.nodeInfo.addresses.single()
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }

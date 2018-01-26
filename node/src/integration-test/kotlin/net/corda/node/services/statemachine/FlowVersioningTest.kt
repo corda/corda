@@ -10,8 +10,11 @@ import net.corda.core.utilities.unwrap
 import net.corda.testing.*
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.startFlow
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test

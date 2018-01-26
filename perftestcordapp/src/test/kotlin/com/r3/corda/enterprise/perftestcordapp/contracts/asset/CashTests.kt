@@ -25,8 +25,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter

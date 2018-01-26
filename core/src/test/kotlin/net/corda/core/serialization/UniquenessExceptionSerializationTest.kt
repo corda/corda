@@ -7,7 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals

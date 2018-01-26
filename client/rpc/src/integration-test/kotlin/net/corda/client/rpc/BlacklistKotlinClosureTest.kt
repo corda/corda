@@ -7,7 +7,8 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas

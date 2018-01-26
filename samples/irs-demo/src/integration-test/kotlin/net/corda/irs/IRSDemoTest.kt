@@ -22,7 +22,10 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.test.spring.springDriver
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -106,7 +109,7 @@ class IRSDemoTest : IntegrationTest() {
     }
 
     private fun getFixingDateObservable(config: NodeConfiguration): Observable<LocalDate?> {
-        val client = CordaRPCClient(config.rpcAddress!!)
+        val client = CordaRPCClient(config.rpcOptions.address!!)
         val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 

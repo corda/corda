@@ -11,10 +11,9 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.DEV_INTERMEDIATE_CA
-import net.corda.testing.DEV_ROOT_CA
+import net.corda.testing.core.DEV_INTERMEDIATE_CA
+import net.corda.testing.core.DEV_ROOT_CA
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
@@ -31,11 +30,11 @@ class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKe
                 nodeCertificateAndKeyPair.keyPair,
                 nodeCertificateAndKeyPair.certificate.subjectX500Principal,
                 identityKeyPair.public)
-        val certPath = X509CertificateFactory()
-                .generateCertPath(identityCert,
-                        nodeCertificateAndKeyPair.certificate,
-                        intermediateAndRoot.first.certificate,
-                        intermediateAndRoot.second)
+        val certPath = X509Utilities.buildCertPath(
+                identityCert,
+                nodeCertificateAndKeyPair.certificate,
+                intermediateAndRoot.first.certificate,
+                intermediateAndRoot.second)
         return Pair(PartyAndCertificate(certPath), identityKeyPair.private).also {
             identitiesAndPrivateKeys += it
         }

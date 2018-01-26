@@ -46,7 +46,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter

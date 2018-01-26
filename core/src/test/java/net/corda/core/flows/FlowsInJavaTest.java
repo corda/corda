@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.node.internal.StartedNode;
-import net.corda.testing.TestConstants;
+import net.corda.testing.core.TestConstants;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static java.util.Collections.emptyList;
-import static net.corda.testing.CoreTestUtils.singleIdentity;
+import static net.corda.testing.core.TestUtils.singleIdentity;
 import static net.corda.testing.node.NodeTestUtils.startFlow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;

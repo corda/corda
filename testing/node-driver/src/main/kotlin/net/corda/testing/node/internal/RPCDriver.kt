@@ -23,7 +23,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
-import net.corda.testing.MAX_MESSAGE_SIZE
+import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec

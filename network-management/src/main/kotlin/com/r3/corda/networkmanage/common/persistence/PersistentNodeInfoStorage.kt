@@ -8,6 +8,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.security.cert.CertPath
@@ -19,7 +20,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
     override fun putNodeInfo(nodeInfoWithSigned: NodeInfoWithSigned): SecureHash {
         val nodeInfo = nodeInfoWithSigned.nodeInfo
         val signedNodeInfo = nodeInfoWithSigned.signedNodeInfo
-        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
+        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.x509Certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
         return database.transaction {
             // TODO Move these checks out of data access layer
             val request = nodeCaCert?.let {

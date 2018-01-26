@@ -18,8 +18,8 @@ import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.assertThat

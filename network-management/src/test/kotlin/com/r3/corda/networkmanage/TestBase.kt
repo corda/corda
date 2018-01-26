@@ -6,7 +6,7 @@ import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import net.corda.core.crypto.SecureHash
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.junit.Rule
 import java.security.cert.CertPath

@@ -13,15 +13,16 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
 import net.corda.testing.node.internal.demorun.*
-import net.corda.testing.BOC_NAME
+import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.User
 import java.util.*
 import kotlin.system.exitProcess
 
 val BIGCORP_NAME = CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US")
 private val NOTARY_NAME = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH")
-private val BOC_RPC_PORT = 10006
-private val BOC_WEB_PORT = 10007
+private const val BOC_RPC_PORT = 10006
+private const val BOC_RPC_ADMIN_PORT = 10015
+private const val BOC_WEB_PORT = 10007
 
 class BankOfCordaCordform : CordformDefinition() {
     init {
@@ -30,20 +31,29 @@ class BankOfCordaCordform : CordformDefinition() {
             name(NOTARY_NAME)
             notary(NotaryConfig(validating = true))
             p2pPort(10002)
-            rpcPort(10003)
+            rpcSettings {
+                address("localhost:10003")
+                adminAddress("localhost:10004")
+            }
         }
         node {
             name(BOC_NAME)
             extraConfig = mapOf("issuableCurrencies" to listOf("USD"))
             p2pPort(10005)
-            rpcPort(BOC_RPC_PORT)
+            rpcSettings {
+                address("localhost:$BOC_RPC_PORT")
+                adminAddress("localhost:$BOC_RPC_ADMIN_PORT")
+            }
             webPort(BOC_WEB_PORT)
             rpcUsers(User("bankUser", "test", setOf(all())))
         }
         node {
             name(BIGCORP_NAME)
             p2pPort(10008)
-            rpcPort(10009)
+            rpcSettings {
+                address("localhost:10009")
+                adminAddress("localhost:10011")
+            }
             webPort(10010)
             rpcUsers(User("bigCorpUser", "test", setOf(all())))
         }

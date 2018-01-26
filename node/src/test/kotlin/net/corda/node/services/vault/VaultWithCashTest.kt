@@ -23,7 +23,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.*

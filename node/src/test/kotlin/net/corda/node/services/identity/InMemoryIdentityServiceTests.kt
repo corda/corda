@@ -8,9 +8,9 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.*
+import net.corda.nodeapi.internal.crypto.x509Certificates
+import net.corda.testing.core.*
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -169,7 +169,7 @@ class InMemoryIdentityServiceTests {
         val txKeyPair = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_LEGAL_IDENTITY, issuer.certificate, issuerKeyPair, x500Name.x500Principal,
                 txKeyPair.public)
-        val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert) + issuer.certPath.certificates)
+        val txCertPath = X509Utilities.buildCertPath(txCert, issuer.certPath.x509Certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 

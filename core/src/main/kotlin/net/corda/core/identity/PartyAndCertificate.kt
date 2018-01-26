@@ -1,6 +1,7 @@
 package net.corda.core.identity
 
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
@@ -45,15 +46,16 @@ class PartyAndCertificate(val certPath: CertPath) {
         // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
         // an all-null chain is in theory valid.
         var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)
-        for (certIdx in (0 until certPath.certificates.size).reversed()) {
-            val certificate = certPath.certificates[certIdx]
+        val certChain: List<X509Certificate> = uncheckedCast(certPath.certificates)
+        for (certIdx in (0 until certChain.size).reversed()) {
+            val certificate = certChain[certIdx]
             val role = CertRole.extract(certificate)
             if (parentRole != null) {
                 if (role == null) {
                     throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
                 }
                 if (!role.isValidParent(parentRole)) {
-                    val certificateString = (certificate as? X509Certificate)?.subjectDN?.toString() ?: certificate.toString()
+                    val certificateString = certificate.subjectDN.toString()
                     throw CertPathValidatorException("The issuing certificate for $certificateString has role $parentRole, expected one of ${role.validParents}")
                 }
             }

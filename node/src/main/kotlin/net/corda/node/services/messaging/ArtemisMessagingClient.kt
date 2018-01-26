@@ -37,7 +37,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration, private val s
             isUseGlobalPools = nodeSerializationEnv != null
         }
         val sessionFactory = locator.createSessionFactory()
-        // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)
+        // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
         // using our TLS certificate.
         // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
         // size of 1MB is acknowledged.

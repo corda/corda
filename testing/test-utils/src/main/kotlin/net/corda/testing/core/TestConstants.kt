@@ -1,6 +1,6 @@
 @file:JvmName("TestConstants")
 
-package net.corda.testing
+package net.corda.testing.core
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData

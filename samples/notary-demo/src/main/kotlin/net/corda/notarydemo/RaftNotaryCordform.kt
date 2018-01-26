@@ -8,8 +8,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RaftConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
@@ -29,13 +29,19 @@ class RaftNotaryCordform : CordformDefinition() {
         node {
             name(ALICE_NAME)
             p2pPort(10002)
-            rpcPort(10003)
+            rpcSettings {
+                address("localhost:10003")
+                adminAddress("localhost:10103")
+            }
             rpcUsers(notaryDemoUser)
         }
         node {
             name(BOB_NAME)
             p2pPort(10005)
-            rpcPort(10006)
+            rpcSettings {
+                address("localhost:10006")
+                adminAddress("localhost:10106")
+            }
         }
         fun notaryNode(index: Int, nodePort: Int, clusterPort: Int? = null, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[index])
@@ -45,15 +51,24 @@ class RaftNotaryCordform : CordformDefinition() {
         }
         notaryNode(0, 10008) {
             p2pPort(10009)
-            rpcPort(10010)
+            rpcSettings {
+                address("localhost:10010")
+                adminAddress("localhost:10110")
+            }
         }
         notaryNode(1, 10012, 10008) {
             p2pPort(10013)
-            rpcPort(10014)
+            rpcSettings {
+                address("localhost:10014")
+                adminAddress("localhost:10114")
+            }
         }
         notaryNode(2, 10016, 10008) {
             p2pPort(10017)
-            rpcPort(10018)
+            rpcSettings {
+                address("localhost:10018")
+                adminAddress("localhost:10118")
+            }
         }
     }
 

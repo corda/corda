@@ -12,12 +12,15 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.*
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.startFlow

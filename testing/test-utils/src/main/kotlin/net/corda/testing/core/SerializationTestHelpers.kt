@@ -1,10 +1,16 @@
-package net.corda.testing
+package net.corda.testing.core
 
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doAnswer
+import com.nhaarman.mockito_kotlin.doNothing
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal._globalSerializationEnv
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
@@ -42,7 +48,10 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 
-    lateinit var env: SerializationEnvironment
+    private lateinit var env: SerializationEnvironment
+    val serializationFactory get() = env.serializationFactory
+    val checkpointContext get() = env.checkpointContext
+
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())
         return object : Statement() {

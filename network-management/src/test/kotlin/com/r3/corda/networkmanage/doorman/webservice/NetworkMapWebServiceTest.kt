@@ -23,8 +23,8 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
-import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.*

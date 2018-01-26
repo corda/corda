@@ -140,25 +140,28 @@ Applies to both gradle deployNodes tasks and/or corda node configuration (node.c
 
     notary = [validating : true]
 
-* For existing contract ORM schemas that extend from `CommonSchemaV1.LinearState` or `CommonSchemaV1.FungibleState`,
-  you will need to explicitly map the `participants` collection to a database table. Previously this mapping was done in the
-  superclass, but that makes it impossible to properly configure the table name.
-  The required change is to add the ``override var participants: MutableSet<AbstractParty>? = null`` field to your class, and
-  add JPA mappings. For ex., see this example:
+* For existing contract ORM schemas that extend from ``CommonSchemaV1.LinearState`` or ``CommonSchemaV1.FungibleState``,
+  you will need to explicitly map the ``participants`` collection to a database table. Previously this mapping was done
+  in the superclass, but that makes it impossible to properly configure the table name. The required changes are to:
 
-.. sourcecode:: kotlin
+  * Add the ``override var participants: MutableSet<AbstractParty>? = null`` field to your class, and
+  * Add JPA mappings
 
-    @Entity
-    @Table(name = "cash_states_v2",
-            indexes = arrayOf(Index(name = "ccy_code_idx2", columnList = "ccy_code")))
-    class PersistentCashState(
+  For example:
 
-            @ElementCollection
-            @Column(name = "participants")
-            @CollectionTable(name="cash_states_v2_participants", joinColumns = arrayOf(
-                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
-            override var participants: MutableSet<AbstractParty>? = null,
+    .. sourcecode:: kotlin
+
+        @Entity
+        @Table(name = "cash_states_v2",
+                indexes = arrayOf(Index(name = "ccy_code_idx2", columnList = "ccy_code")))
+        class PersistentCashState(
+
+                @ElementCollection
+                @Column(name = "participants")
+                @CollectionTable(name="cash_states_v2_participants", joinColumns = arrayOf(
+                        JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                        JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+                override var participants: MutableSet<AbstractParty>? = null,
 
 Testing
 ^^^^^^^
@@ -236,11 +239,13 @@ Contract tests
 Flow tests
 ~~~~~~~~~~
 
-* The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed.
+* The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed:
 
-  It is now done via the ``cordappPackages`` constructor parameter of MockNetwork. This takes a list of ``String``
-  values which should be the package names of the CorDapps containing the contract verification code you wish to load.
-  The ``unsetCordappPackages`` method is now redundant and has been removed.
+  * CorDapp registration is now done via the ``cordappPackages`` constructor parameter of MockNetwork.
+  This parameter
+    is a list of ``String`` values which should be the
+  package names of the CorDapps containing the contract verification code you wish to load
+  *The ``unsetCordappPackages`` method is now redundant and has been removed
 
 * Creation of Notaries in ``MockNetwork`` unit tests has changed.
 
@@ -395,13 +400,13 @@ Finance
 V1.0 to V2.0
 ------------
 
-You only need to update the ``corda_release_version`` identifier in your project gradle file. The
-corda_gradle_plugins_version should remain at 1.0.0:
+* You need to update the ``corda_release_version`` identifier in your project gradle file. The
+  corda_gradle_plugins_version should remain at 1.0.0:
 
-.. sourcecode:: shell
+    .. sourcecode:: shell
 
-    ext.corda_release_version = '2.0.0'
-    ext.corda_gradle_plugins_version = '1.0.0'
+        ext.corda_release_version = '2.0.0'
+        ext.corda_gradle_plugins_version = '1.0.0'
 
 Public Beta (M12) to V1.0
 -------------------------
@@ -417,143 +422,145 @@ Build
   A new test driver module dependency needs to be including in your project: ``corda-node-driver``. To continue using the
   mock network for testing, add the following entry to your gradle build file:
 
-.. sourcecode:: shell
+    .. sourcecode:: shell
 
-  testCompile "$corda_release_distribution:corda-node-driver:$corda_release_version"
+      testCompile "$corda_release_distribution:corda-node-driver:$corda_release_version"
 
-.. note::  you may only need `testCompile "$corda_release_distribution:corda-test-utils:$corda_release_version"` if not using the Driver DSL.
+    .. note:: You may only need ``testCompile "$corda_release_distribution:corda-test-utils:$corda_release_version"`` if not using the Driver
+       DSL
 
 Configuration
 ^^^^^^^^^^^^^
 
-* ``CordaPluginRegistry`` has been removed.
-  The one remaining configuration item ``customizeSerialisation``, which defined a optional whitelist of types for use in
-  object serialization, has been replaced with the ``SerializationWhitelist`` interface which should be implemented to
-  define a list of equivalent whitelisted classes.
-  You will need to rename your services resource file to the new class name:
-  'resources/META-INF/services/net.corda.core.node.CordaPluginRegistry' becomes 'resources/META-INF/services/net.corda.core.serialization.SerializationWhitelist'
-  An associated property on ``MockNode`` was renamed from ``testPluginRegistries`` to ``testSerializationWhitelists``.
-  In general, the ``@CordaSerializable`` annotation is the preferred method for whitelisting as described in :doc:`serialization`
+* ``CordaPluginRegistry`` has been removed:
+
+  * The one remaining configuration item ``customizeSerialisation``, which defined a optional whitelist of types for
+    use in object serialization, has been replaced with the ``SerializationWhitelist`` interface which should be
+    implemented to define a list of equivalent whitelisted classes
+
+  * You will need to rename your services resource file. 'resources/META-INF/services/net.corda.core.node.CordaPluginRegistry'
+    becomes 'resources/META-INF/services/net.corda.core.serialization.SerializationWhitelist'
+
+  * ``MockNode.testPluginRegistries`` was renamed to ``MockNode.testSerializationWhitelists``
+
+  * In general, the ``@CordaSerializable`` annotation is the preferred method for whitelisting, as described in
+    :doc:`serialization`
 
 Missing imports
 ^^^^^^^^^^^^^^^
 
-Use the automatic imports feature of IntelliJ to intelligently resolve the new imports.
+Use IntelliJ's automatic imports feature to intelligently resolve the new imports:
 
-* Missing imports for contract types.
+* Missing imports for contract types:
+
+  * CommercialPaper and Cash are now contained within the ``finance`` module, as are associated helpers functions. For
+    example:
 
   CommercialPaper and Cash are now contained within the ``finance`` module, as are associated helpers functions.
   For example:
     ``import net.corda.contracts.ICommercialPaperState`` becomes ``import net.corda.finance.contracts.ICommercialPaperState``
 
-    ``import net.corda.contracts.asset.sumCashBy`` becomes ``import net.corda.finance.utils.sumCashBy``
+    * ``import net.corda.contracts.asset.sumCashBy`` becomes ``import net.corda.finance.utils.sumCashBy``
 
-    ``import net.corda.core.contracts.DOLLARS`` becomes ``import net.corda.finance.DOLLARS``
+    * ``import net.corda.core.contracts.DOLLARS`` becomes ``import net.corda.finance.DOLLARS``
 
-    ``import net.corda.core.contracts.issued by`` becomes ``import net.corda.finance.issued by``
+    * ``import net.corda.core.contracts.issued by`` becomes ``import net.corda.finance.issued by``
 
-    ``import net.corda.contracts.asset.Cash`` becomes ``import net.corda.finance.contracts.asset.Cash``
+    * ``import net.corda.contracts.asset.Cash`` becomes ``import net.corda.finance.contracts.asset.Cash``
 
-* Missing imports for utility functions.
+* Missing imports for utility functions:
 
-  Many common types and helper methods have been consolidated into ``net.corda.core.utilities`` package.
-  For example:
-    ``import net.corda.core.crypto.commonName`` becomes ``import net.corda.core.utilities.commonName``
+  * Many common types and helper methods have been consolidated into ``net.corda.core.utilities`` package. For example:
 
-    ``import net.corda.core.crypto.toBase58String`` becomes ``import net.corda.core.utilities.toBase58String``
+    * ``import net.corda.core.crypto.commonName`` becomes ``import net.corda.core.utilities.commonName``
 
-    ``import net.corda.core.getOrThrow`` becomes ``import net.corda.core.utilities.getOrThrow``
+    * ``import net.corda.core.crypto.toBase58String`` becomes ``import net.corda.core.utilities.toBase58String``
 
-* Missing flow imports.
+    * ``import net.corda.core.getOrThrow`` becomes ``import net.corda.core.utilities.getOrThrow``
 
-  In general all reusable library flows are contained within the **core** API `net.corda.core.flows` package.
-  Financial domain library flows are contained within the **finance** module `net.corda.finance.flows` package.
-  Other flows that have moved include:
+* Missing flow imports:
 
-  ``import net.corda.core.flows.ResolveTransactionsFlow`` becomes ``import net.corda.core.internal.ResolveTransactionsFlow``
+  * In general, all reusable library flows are contained within the **core** API ``net.corda.core.flows`` package
+
+  * Financial domain library flows are contained within the **finance** module ``net.corda.finance.flows`` package
+
+  * Other flows that have moved include ``import net.corda.core.flows.ResolveTransactionsFlow``, which becomes
+    ``import net.corda.core.internal.ResolveTransactionsFlow``
 
 Core data structures
 ^^^^^^^^^^^^^^^^^^^^
 
-* Missing Contract override.
+* Missing ``Contract`` override:
 
-  The contract interace attribute ``legalContractReference`` has been removed, and replaced by
-  the optional annotation ``@LegalProseReference(uri = "<URI>")``
+  * ``Contract.legalContractReference`` has been removed, and replaced by the optional annotation
+    ``@LegalProseReference(uri = "<URI>")``
 
-* Unresolved reference.
+* Unresolved reference:
 
-  Calls to ``AuthenticatedObject`` are replaced by ``CommandWithParties``
+  * ``AuthenticatedObject`` was renamed to ``CommandWithParties``
 
-* Overrides nothing: ``isRelevant`` in ``LinearState``.
+* Overrides nothing:
 
-  Removed the concept of relevancy from ``LinearState``. A ``ContractState``'s relevance to the vault is now resolved
-  internally; the vault will process any transaction from a flow which is not derived from transaction resolution verification.
-  The notion of relevancy is subject to further improvements to enable a developer to control what state the vault thinks
-  are relevant.
+  * ``LinearState.isRelevant`` was removed. Whether a node stores a ``LinearState`` in its vault depends on whether the
+    node is one of the state's ``participants``
 
-* Calls to ``txBuilder.toLedgerTransaction()`` now requires a serviceHub parameter.
-
-  Used by the new Contract Constraints functionality to validate and resolve attachments.   
+  * ``txBuilder.toLedgerTransaction`` now requires a ``ServiceHub`` parameter. This is used by the new Contract
+    Constraints functionality to validate and resolve attachments
 
 Flow framework
 ^^^^^^^^^^^^^^
 
-* Flow session deprecations
+* ``FlowLogic`` communication has been upgraded to use explicit ``FlowSession`` instances to communicate between nodes:
 
-  ``FlowLogic`` communication has been upgraded to use functions on ``FlowSession`` as the base for communication
-  between nodes.
-
-  * Calls to ``send()``, ``receive()`` and ``sendAndReceive()`` on FlowLogic should be replaced with calls
-    to the function of the same name on ``FlowSession``. Note that the replacement functions do not take in a destination
-    parameter, as this is defined in the session.
+  * ``FlowLogic.send``/``FlowLogic.receive``/``FlowLogic.sendAndReceive`` has been replaced by ``FlowSession.send``/
+    ``FlowSession.receive``/``FlowSession.sendAndReceive``. The replacement functions do not take a destination
+    parameter, as this is defined implictly by the session used
 
   * Initiated flows now take in a ``FlowSession`` instead of ``Party`` in their constructor. If you need to access the
-    counterparty identity, it is in the ``counterparty`` property of the flow session.
-
-  See ``FlowSession`` for step by step instructions on porting existing flows to use the new mechanism.
+    counterparty identity, it is in the ``counterparty`` property of the flow session
 
 * ``FinalityFlow`` now returns a single ``SignedTransaction``, instead of a ``List<SignedTransaction>``
 
-* ``TransactionKeyFlow`` renamed to ``SwapIdentitiesFlow``
+* ``TransactionKeyFlow`` was renamed to ``SwapIdentitiesFlow``
 
-  Note that ``SwapIdentitiesFlow`` must be imported from the *confidential-identities** package ''net.corda.confidential''
+* ``SwapIdentitiesFlow`` must be imported from the *confidential-identities* package ``net.corda.confidential``
 
 Node services (ServiceHub)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * VaultQueryService: unresolved reference to ``vaultQueryService``.
 
-  Replace all references to ``<services>.vaultQueryService`` with ``<services>.vaultService``.
-  Previously there were two vault APIs. Now there is a single unified API with the same functions: ``VaultService``.
+  * Replace all references to ``<services>.vaultQueryService`` with ``<services>.vaultService``
 
-* ``serviceHub.myInfo.legalIdentity`` no longer exists; use the ``ourIdentity`` property of the flow instead.
+  * Previously there were two vault APIs. Now there is a single unified API with the same functions: ``VaultService``.
 
-  ``FlowLogic.ourIdentity`` has been introduced as a shortcut for retrieving our identity in a flow
+* ``FlowLogic.ourIdentity`` has been introduced as a shortcut for retrieving our identity in a flow
 
-* ``getAnyNotary`` is gone - use ``serviceHub.networkMapCache.notaryIdentities[0]`` instead
+* ``serviceHub.myInfo.legalIdentity`` no longer exists
 
-   Note: ongoing work to support multiple notary identities is still in progress.
+* ``getAnyNotary`` has been removed. Use ``serviceHub.networkMapCache.notaryIdentities[0]`` instead
 
 * ``ServiceHub.networkMapUpdates`` is replaced by ``ServiceHub.networkMapFeed``
 
 * ``ServiceHub.partyFromX500Name`` is replaced by ``ServiceHub.wellKnownPartyFromX500Name``
-  Note: A "well known" party is one that isn't anonymous and this change was motivated by the confidential identities work.
+
+  * A "well known" party is one that isn't anonymous. This change was motivated by the confidential identities work
 
 RPC Client
 ^^^^^^^^^^
 
-* Missing API methods on ``CordaRPCOps`` interface.
+* Missing API methods on the ``CordaRPCOps`` interface:
 
-  * Calls to ``verifiedTransactionsFeed()`` and ``verifiedTransactions()`` have been replaced with:
-    ``internalVerifiedTransactionsSnapshot()`` and ``internalVerifiedTransactionsFeed()`` respectively
+  * ``verifiedTransactionsFeed`` has been replaced by ``internalVerifiedTransactionsFeed``
 
-    This is in preparation for the planned integration of Intel SGX™, which will encrypt the transactions feed.
-    Apps that use this API will not work on encrypted ledgers: you should probably be using the vault query API instead.
+  * ``verifiedTransactions`` has been replaced by ``internalVerifiedTransactionsSnapshot``
 
   * Accessing the ``networkMapCache`` via ``services.nodeInfo().legalIdentities`` returns a list of identities.
     The first element in the list is the Party object referring to a node's single identity.
 
-    This is in preparation for allowing a node to host multiple separate identities in future.
+  * Accessing the ``networkMapCache`` via ``services.nodeInfo().legalIdentities`` returns a list of identities
+
+    * This change is in preparation for allowing a node to host multiple separate identities in the future
 
 Testing
 ^^^^^^^
@@ -561,26 +568,22 @@ Testing
 Please note that ``Clauses`` have been removed completely as of V1.0.
 We will be revisiting this capability in a future release.
 
-* CorDapps must be explicitly registered in ``MockNetwork`` unit tests.
+* CorDapps must be explicitly registered in ``MockNetwork`` unit tests:
 
   This is done by calling ``setCordappPackages``, an extension helper function in the ``net.corda.testing`` package,
   on the first line of your ``@Before`` method. This takes a variable number of ``String`` arguments which should be the
   package names of the CorDapps containing the contract verification code you wish to load.
   You should unset CorDapp packages in your ``@After`` method by using ``unsetCordappPackages()`` after ``stopNodes()``.
 
-* CorDapps must be explicitly registered in ``DriverDSL`` and ``RPCDriverDSL`` integration tests.
+* CorDapps must be explicitly registered in ``DriverDSL`` and ``RPCDriverDSL`` integration tests:
 
-  Similarly, you must also register package names of the CorDapps containing the contract verification code you wish to load
-  using the ``extraCordappPackagesToScan: List<String>`` constructor parameter of the driver DSL.
+  * You must register package names of the CorDapps containing the contract verification code you wish to load using
+    the ``extraCordappPackagesToScan: List<String>`` constructor parameter of the driver DSL
 
 Finance
 ^^^^^^^
 
-* ``FungibleAsset`` interface simplification.
-
-  The ``FungibleAsset`` interface has been made simpler. The ``Commands`` grouping interface
-  that included the ``Move``, ``Issue`` and ``Exit`` interfaces have all been removed, while the ``move`` function has
-  been renamed to ``withNewOwnerAndAmount`` to be consistent with the ``withNewOwner`` function of the ``OwnableState``.
+* ``FungibleAsset`` interface simplification:
 
   The following errors may be reported:
 
@@ -595,20 +598,20 @@ Miscellaneous
 
 * ``args[0].parseNetworkHostAndPort()`` becomes ``NetworkHostAndPort.parse(args[0])``
 
-* There is no longer a ``NodeInfo.advertisedServices`` property.
+* There is no longer a ``NodeInfo.advertisedServices`` property
 
-  The concept of advertised services has been removed from Corda. This is because it was vaguely defined and real world
-  apps would not typically select random, unknown counterparties from the network map based on self-declared capabilities.
-  We will introduce a replacement for this functionality, business networks, in a future release.
-
-  For now, your should retrieve the service by legal name using ``NetworkMapCache.getNodeByLegalName``.
+  * The concept of advertised services has been removed from Corda. This is because it was vaguely defined and
+    real-world apps would not typically select random, unknown counterparties from the network map based on
+    self-declared capabilities
+  * We will introduce a replacement for this functionality, business networks, in a future release
+  * For now, services should be retrieved by legal name using ``NetworkMapCache.getNodeByLegalName``
 
 Gotchas
 ^^^^^^^
 
-* Beware to use the correct identity when issuing cash:
+* Be sure to use the correct identity when issuing cash:
 
-  The 3rd parameter to ``CashIssueFlow`` should be the ** notary ** (not the ** node identity **)
+  * The third parameter to ``CashIssueFlow`` should be the *notary* (and not the *node identity*)
 
 
 :ref:`From Milestone 13 <changelog_m13>`
@@ -617,67 +620,71 @@ Gotchas
 Core data structures
 ^^^^^^^^^^^^^^^^^^^^
 
-* ``TransactionBuilder`` changes.
+* ``TransactionBuilder`` changes:
 
-  Use convenience class ``StateAndContract`` instead of ``TransactionBuilder.withItems()`` for passing
-  around a state and its contract.
+  * Use convenience class ``StateAndContract`` instead of ``TransactionBuilder.withItems`` for passing
+    around a state and its contract.
 
-* Transaction building DSL changes:
+* Transaction builder DSL changes:
 
   * now need to explicitly pass the ContractClassName into all inputs and outputs.
   * ``ContractClassName`` refers to the class containing the “verifier” method.
 
-* Contract verify method signature change.
+    * ``ContractClassName`` is the name of the ``Contract`` subclass used to verify the transaction
 
-  ``override fun verify(tx: TransactionForContract)`` becomes ``override fun verify(tx: LedgerTransaction)``
+* Contract verify method signature change:
 
-* No longer need to override Contract ``contract()`` function.
+  * ``override fun verify(tx: TransactionForContract)`` becomes ``override fun verify(tx: LedgerTransaction)``
+
+* You no longer need to override ``ContractState.contract`` function
 
 Node services (ServiceHub)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ServiceHub API method changes.
+* ServiceHub API method changes:
 
-  ``services.networkMapUpdates().justSnapshot`` becomes ``services.networkMapSnapshot()``
+  * ``services.networkMapUpdates().justSnapshot`` becomes ``services.networkMapSnapshot()``
 
 Configuration
 ^^^^^^^^^^^^^
 
-* No longer need to define ``CordaPluginRegistry`` and configure ``requiredSchemas``
+* No longer need to define ``CordaPluginRegistry`` and configure ``requiredSchemas``:
 
-  Custom contract schemas are automatically detected at startup time by class path scanning.
-  For testing purposes, use the ``SchemaService`` method to register new custom schemas:
-  eg. ``services.schemaService.registerCustomSchemas(setOf(YoSchemaV1))``
+  * Custom contract schemas are automatically detected at startup time by class path scanning
+
+  * For testing purposes, use the ``SchemaService`` method to register new custom schemas (e.g.
+    ``services.schemaService.registerCustomSchemas(setOf(YoSchemaV1))``)
 
 Identity
 ^^^^^^^^
 
-* Party names are now ``CordaX500Name``, not ``X500Name``
+* Party names are now ``CordaX500Name``, not ``X500Name``:
 
-  ``CordaX500Name`` specifies a predefined set of mandatory (organisation, locality, country)
-  and optional fields (commonName, organisationUnit, state) with validation checking.
-  Use new builder CordaX500Name.build(X500Name(target)) or, preferably, explicitly define X500Name parameters using
-  ``CordaX500Name`` constructor.
+  * ``CordaX500Name`` specifies a predefined set of mandatory (organisation, locality, country) and optional fields
+    (common name, organisation unit, state) with validation checking
+  * Use new builder ``CordaX500Name.build(X500Name(target))`` or explicitly define the X500Name parameters using the
+    ``CordaX500Name`` constructors
 
 Testing
 ^^^^^^^
 
-* MockNetwork Testing.
+* MockNetwork testing:
 
-  Mock nodes in node tests are now of type ``StartedNode<MockNode>``, rather than ``MockNode``
-  MockNetwork now returns a BasketOf(<StartedNode<MockNode>>)
-  Must call internals on StartedNode to get MockNode:
-    a = nodes.partyNodes[0].internals
-    b = nodes.partyNodes[1].internals
+  * Mock nodes in node tests are now of type ``StartedNode<MockNode>``, rather than ``MockNode``
 
-* Host and Port change.
+  * ``MockNetwork`` now returns a ``BasketOf(<StartedNode<MockNode>>)``
 
-  Use string helper function ``parseNetworkHostAndPort()`` to parse a URL on startup.
-   eg. ``val hostAndPort = args[0].parseNetworkHostAndPort()``
+  * You must call internals on ``StartedNode`` to get ``MockNode`` (e.g. ``a = nodes.partyNodes[0].internals``)
 
-* The node driver parameters for starting a node have been reordered, and the node’s name needs to be given as an
-  ``CordaX500Name``, instead of using ``getX509Name``
+* Host and port changes:
 
+  * Use string helper function ``parseNetworkHostAndPort`` to parse a URL on startup (e.g.
+    ``val hostAndPort = args[0].parseNetworkHostAndPort()``)
+
+* Node driver parameter changes:
+
+  * The node driver parameters for starting a node have been reordered
+  * The node’s name needs to be given as an ``CordaX500Name``, instead of using ``getX509Name``
 
 :ref:`From Milestone 12 (First Public Beta) <changelog_m12>`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -685,17 +692,17 @@ Testing
 Core data structures
 ^^^^^^^^^^^^^^^^^^^^
 
-* Transaction building
+* Transaction building:
 
-  You no longer need to specify the type of a ``TransactionBuilder`` as ``TransactionType.General``
-  ``TransactionType.General.Builder(notary)`` becomes ``TransactionBuilder(notary)``
+  * You no longer need to specify the type of a ``TransactionBuilder`` as ``TransactionType.General``
+  * ``TransactionType.General.Builder(notary)`` becomes ``TransactionBuilder(notary)``
 
 Build 
 ^^^^^
 
-* Gradle dependency reference changes.
+* Gradle dependency reference changes:
 
-  Module name has changed to include ``corda`` in the artifacts jar name:
+  * Module names have changed to include ``corda`` in the artifacts' JAR names:
 
 .. sourcecode:: shell
 
@@ -708,25 +715,32 @@ Build
 Node services (ServiceHub)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ServiceHub API changes.
+* ``ServiceHub`` API changes:
 
-  ``services.networkMapUpdates()`` becomes ``services.networkMapFeed()``
-  ``services.getCashBalances()`` becomes a helper method within the **finance** module contracts package: ``net.corda.finance.contracts.getCashBalances``
+  * ``services.networkMapUpdates`` becomes ``services.networkMapFeed``
+
+  * ``services.getCashBalances`` becomes a helper method in the *finance* module contracts package
+    (``net.corda.finance.contracts.getCashBalances``)
 
 Finance
 ^^^^^^^
 
-* Financial asset contracts (Cash, CommercialPaper, Obligations) are now a standalone CorDapp within the **finance** module.
+* Financial asset contracts (``Cash``, ``CommercialPaper``, ``Obligations``) are now a standalone CorDapp within the
+  ``finance`` module:
 
-  Need to import from respective package within ``finance`` module:
-    eg. ``net.corda.finance.contracts.asset.Cash``
+  * You need to import them from their respective packages within the ``finance`` module (e.g.
+    ``net.corda.finance.contracts.asset.Cash``)
 
-  Likewise, need to import associated asset flows from respective package within ``finance`` module:
-    eg. ``net.corda.finance.flows.CashIssueFlow``
-        ``net.corda.finance.flows.CashIssueAndPaymentFlow``
-        ``net.corda.finance.flows.CashExitFlow``
+  * You need to import the associated asset flows from their respective packages within ``finance`` module. For
+    example:
 
-* Moved ``finance`` gradle project files into a ``net.corda.finance`` package namespace.
+    * ``net.corda.finance.flows.CashIssueFlow``
+    * ``net.corda.finance.flows.CashIssueAndPaymentFlow``
+    * ``net.corda.finance.flows.CashExitFlow``
 
   This may require adjusting imports of Cash flow references and also of ``StartFlow`` permission in ``gradle.build`` files.
   Associated flows (``Cash*Flow``, ``TwoPartyTradeFlow``, ``TwoPartyDealFlow``) must now be imported from this package.
+
+  * Adjust imports of Cash flow references
+  * Adjust the ``StartFlow`` permission in ``gradle.build`` files
+  * Adjust imports of the associated flows (``Cash*Flow``, ``TwoPartyTradeFlow``, ``TwoPartyDealFlow``)

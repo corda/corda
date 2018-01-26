@@ -16,7 +16,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.node.services.statemachine.*
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import rx.Scheduler

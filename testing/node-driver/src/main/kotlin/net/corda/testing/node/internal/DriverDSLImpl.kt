@@ -34,16 +34,14 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
-import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
-import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -51,12 +49,12 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
-import net.corda.testing.setGlobalSerialization
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Observable
 import rx.observables.ConnectableObservable
 import rx.schedulers.Schedulers
+import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
@@ -145,14 +143,18 @@ class DriverDSLImpl(
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
-        val rpcAddress = config.corda.rpcAddress!!
-        val client = CordaRPCClient(rpcAddress)
+        val rpcAddress = config.corda.rpcOptions.address!!
+        val client = if (config.corda.rpcOptions.useSsl) {
+            CordaRPCClient(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
+        } else {
+            CordaRPCClient(rpcAddress)
+        }
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
             } catch (e: Exception) {
                 if (processDeathFuture.isDone) throw e
-                log.error("Exception $e, Retrying RPC connection at $rpcAddress")
+                log.error("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
                 null
             }
         }
@@ -202,6 +204,7 @@ class DriverDSLImpl(
                                     maximumHeapSize: String = "200m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
+        val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
@@ -212,7 +215,8 @@ class DriverDSLImpl(
                         "database" to mapOf("runMigration" to "true"),
                         "myLegalName" to name.toString(),
                         "p2pAddress" to p2pAddress.toString(),
-                        "rpcAddress" to rpcAddress.toString(),
+                        "rpcSettings.address" to rpcAddress.toString(),
+                        "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
                         "webAddress" to webAddress.toString(),
                         "useTestClock" to useTestClock,
                         "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
@@ -235,9 +239,8 @@ class DriverDSLImpl(
         ))
 
         config.corda.certificatesDirectory.createDirectories()
-        loadOrCreateKeyStore(config.corda.trustStoreFile, config.corda.trustStorePassword).apply {
-            addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
-            save(config.corda.trustStoreFile, config.corda.trustStorePassword)
+        config.corda.loadTrustStore(createNew = true).update {
+            setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
         }
 
         return if (startNodesInProcess) {
@@ -314,7 +317,23 @@ class DriverDSLImpl(
     private fun startCordformNode(cordform: CordformNode, localNetworkMap: LocalNetworkMap): CordaFuture<NodeHandle> {
         val name = CordaX500Name.parse(cordform.name)
         // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
-        val rpcAddress = if (cordform.rpcAddress == null) mapOf("rpcAddress" to portAllocation.nextHostAndPort().toString()) else emptyMap()
+        val rpcAddress = if (cordform.rpcAddress == null) {
+            val overrides = mutableMapOf<String, Any>("rpcSettings.address" to portAllocation.nextHostAndPort().toString())
+            cordform.config.apply {
+                if (!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) {
+                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
+                }
+            }
+            overrides
+        } else {
+            val overrides = mutableMapOf<String, Any>()
+            cordform.config.apply {
+                if ((!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) && !hasPath("rpcSettings.adminAddress")) {
+                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
+                }
+            }
+            overrides
+        }
         val webAddress = cordform.webAddress?.let { NetworkHostAndPort.parse(it) } ?: portAllocation.nextHostAndPort()
         val notary = if (cordform.notary != null) mapOf("notary" to cordform.notary) else emptyMap()
         val rpcUsers = cordform.rpcUsers
@@ -718,6 +737,9 @@ class DriverDSLImpl(
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
+                if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
+                    throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
+                }
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe)
                 // TODO pass the version in?

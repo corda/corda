@@ -10,7 +10,7 @@ import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import com.spotify.docker.client.messages.RegistryAuth
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.freeLocalHostAndPort
+import net.corda.testing.core.freeLocalHostAndPort
 import org.junit.Assume.assumeFalse
 import org.junit.rules.ExternalResource
 

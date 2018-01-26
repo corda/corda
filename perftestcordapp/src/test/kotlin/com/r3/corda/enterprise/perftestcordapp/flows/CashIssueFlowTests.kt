@@ -7,7 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.testing.BOC_NAME
+import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode

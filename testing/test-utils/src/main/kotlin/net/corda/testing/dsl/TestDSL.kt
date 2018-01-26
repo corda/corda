@@ -15,7 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.services.MockCordappProvider
-import net.corda.testing.dummyCommand
+import net.corda.testing.core.dummyCommand
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
@@ -233,7 +233,11 @@ data class TestLedgerDSLInterpreter private constructor(
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
         if (fillTransaction) fillTransaction(transactionBuilder)
         // Create the WireTransaction
-        val wireTransaction = transactionInterpreter.toWireTransaction()
+        val wireTransaction = try {
+            transactionInterpreter.toWireTransaction()
+        } catch (e: IllegalStateException) {
+            throw IllegalStateException("A transaction-DSL block that is part of a test ledger must return a valid transaction.", e)
+        }
         // Record the output states
         transactionInterpreter.labelToIndexMap.forEach { label, index ->
             if (label in labelToOutputStateAndRefs) {

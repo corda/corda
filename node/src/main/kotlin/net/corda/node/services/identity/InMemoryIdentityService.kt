@@ -9,7 +9,8 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -45,24 +46,24 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
+        val identityCertChain = identity.certPath.x509Certificates
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
             log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
             log.warn("Certificate path :")
-            identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
+            identityCertChain.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
-                log.warn("$space${(certificate as X509Certificate).subjectX500Principal}")
+                log.warn("$space${certificate.subjectX500Principal}")
             }
             throw e
         }
 
         // Ensure we record the first identity of the same name, first
-        val wellKnownCert: Certificate = identity.certPath.certificates.single { CertRole.extract(it)?.isWellKnown ?: false }
+        val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
         if (wellKnownCert != identity.certificate) {
-            val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(wellKnownCert)
-            val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
+            val idx = identityCertChain.lastIndexOf(wellKnownCert)
+            val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 
@@ -70,7 +71,7 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
         keyToParties[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.computeIfAbsent(identity.name) { identity }
-        return keyToParties[identity.certPath.certificates[1].publicKey]
+        return keyToParties[identityCertChain[1].publicKey]
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
@@ -103,7 +104,7 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
         val results = LinkedHashSet<Party>()
         for ((x500name, partyAndCertificate) in principalToParties) {
             val party = partyAndCertificate.party
-            val components = listOf(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country).filterNotNull()
+            val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
             components.forEach { component ->
                 if (exactMatch && component == query) {
                     results += party

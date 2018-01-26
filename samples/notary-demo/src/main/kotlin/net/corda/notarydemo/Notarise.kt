@@ -11,7 +11,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.testing.BOB_NAME
+import net.corda.testing.core.BOB_NAME
 import java.util.concurrent.Future
 
 fun main(args: Array<String>) {

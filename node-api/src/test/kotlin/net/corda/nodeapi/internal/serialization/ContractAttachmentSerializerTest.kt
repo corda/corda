@@ -3,8 +3,8 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.*
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
@@ -25,10 +25,11 @@ class ContractAttachmentSerializerTest {
     private lateinit var context: SerializationContext
     private lateinit var contextWithToken: SerializationContext
     private val mockServices = MockServices(emptyList(), rigorousMock(), CordaX500Name("MegaCorp", "London", "GB"))
+
     @Before
     fun setup() {
-        factory = testSerialization.env.serializationFactory
-        context = testSerialization.env.checkpointContext
+        factory = testSerialization.serializationFactory
+        context = testSerialization.checkpointContext
         contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl(Any(), factory, context, mockServices))
     }
 

@@ -3,9 +3,7 @@ package net.corda.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -21,12 +19,10 @@ import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -78,46 +74,6 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @Test
-    fun `consume message from P2P queue`() {
-        assertConsumeAttackFails("$P2P_PREFIX${alice.info.chooseIdentity().owningKey.toStringShort()}")
-    }
-
-    @Test
-    fun `consume message from peer queue`() {
-        val bobParty = startBobAndCommunicateWithAlice()
-        assertConsumeAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
-    }
-
-    @Test
-    fun `send message to address of peer which has been communicated with`() {
-        val bobParty = startBobAndCommunicateWithAlice()
-        assertSendAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
-    }
-
-    @Test
-    fun `create queue for peer which has not been communicated with`() {
-        val bob = startNode(BOB_NAME)
-        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toStringShort()}")
-    }
-
-    @Test
-    fun `create queue for unknown peer`() {
-        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toStringShort()}"
-        assertAllQueueCreationAttacksFail(invalidPeerQueue)
-    }
-
-    @Test
-    fun `consume message from RPC requests queue`() {
-        assertConsumeAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
-    }
-
-    @Test
-    fun `consume message from logged in user's RPC queue`() {
-        val user1Queue = loginToRPCAndGetClientQueue()
-        assertConsumeAttackFails(user1Queue)
-    }
-
-    @Test
     fun `create queue for valid RPC user`() {
         val user1Queue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.${random63BitValue()}"
         assertTempQueueCreationAttackFails(user1Queue)
@@ -158,9 +114,9 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        loginToRPC(alice.internals.configuration.rpcAddress!!, rpcUser)
+        loginToRPC(alice.internals.configuration.rpcOptions.address!!, rpcUser)
         val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
-        val client = clientTo(alice.internals.configuration.rpcAddress!!)
+        val client = clientTo(alice.internals.configuration.rpcOptions.address!!)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
@@ -179,6 +135,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {
             attacker.session.createConsumer(queue)
         }
+    }
+
+    fun assertAttackFailsNonexistent(queue: String, attack: () -> Unit) {
+        assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java)
+                .isThrownBy(attack)
+                .withMessageContaining(queue)
     }
 
     fun assertNonTempQueueCreationAttackFails(queue: String, durable: Boolean) {
@@ -211,6 +173,15 @@ abstract class MQSecurityTest : NodeBasedTest() {
         }
     }
 
+    fun assertConsumeAttackFailsNonexistent(queue: String) {
+        assertAttackFailsNonexistent(queue) {
+            attacker.session.createConsumer(queue)
+        }
+        assertAttackFailsNonexistent(queue) {
+            attacker.session.createConsumer(queue, true)
+        }
+    }
+
     fun assertAttackFails(queue: String, permission: String, attack: () -> Unit) {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java)
                 .isThrownBy(attack)
@@ -218,7 +189,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
                 .withMessageContaining(permission)
     }
 
-    private fun startBobAndCommunicateWithAlice(): Party {
+    protected fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB_NAME)
         bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.chooseIdentity()

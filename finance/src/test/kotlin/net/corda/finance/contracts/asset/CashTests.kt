@@ -1,9 +1,5 @@
 package net.corda.finance.contracts.asset
 
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -21,16 +17,14 @@ import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashBy
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
@@ -47,41 +41,25 @@ import kotlin.test.*
 class CashTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
-        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).publicKey
+        val bob = TestIdentity(BOB_NAME, 80)
         val charlie = TestIdentity(CHARLIE_NAME, 90)
-        val DUMMY_CASH_ISSUER_IDENTITY = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).identity
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
-        val ALICE get() = alice.party
-        val ALICE_PUBKEY get() = alice.publicKey
-        val CHARLIE get() = charlie.party
-        val CHARLIE_IDENTITY get() = charlie.identity
-        val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_IDENTITY get() = dummyNotary.identity
-        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
-        val MEGA_CORP get() = megaCorp.party
-        val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_KEY get() = megaCorp.keyPair
-        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
-        val MINI_CORP get() = miniCorp.party
-        val MINI_CORP_IDENTITY get() = miniCorp.identity
-        val MINI_CORP_KEY get() = miniCorp.keyPair
-        val MINI_CORP_PUBKEY get() = miniCorp.publicKey
     }
 
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val defaultRef = OpaqueBytes.of(1)
-    private val defaultIssuer = MEGA_CORP.ref(defaultRef)
+    private val defaultIssuer = megaCorp.ref(1)
     private val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
-            owner = AnonymousParty(ALICE_PUBKEY)
+            owner = AnonymousParty(alice.publicKey)
     )
     // Input state held by the issuer
     private val issuerInState = inState.copy(owner = defaultIssuer.party)
-    private val outState = issuerInState.copy(owner = AnonymousParty(BOB_PUBKEY))
+    private val outState = issuerInState.copy(owner = AnonymousParty(bob.publicKey))
 
     private fun Cash.State.editDepositRef(ref: Byte) = copy(
             amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
@@ -96,48 +74,42 @@ class CashTests {
 
     private lateinit var ourIdentity: AbstractParty
     private lateinit var miniCorpAnonymised: AnonymousParty
-    private val CHARLIE_ANONYMISED = CHARLIE_IDENTITY.party.anonymise()
+    private lateinit var cashStates: List<StateAndRef<Cash.State>>
 
-    private lateinit var WALLET: List<StateAndRef<Cash.State>>
-
+    // TODO: Optimise this so that we don't throw away and rebuild state that can be shared across tests.
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"), rigorousMock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
-        }, MINI_CORP.name, MINI_CORP_KEY)
-        val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        megaCorpServices = MockServices(megaCorp)
+        miniCorpServices = MockServices(miniCorp)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
-                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
-                TestIdentity(CordaX500Name("Me", "London", "GB")))
+                makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity),
+                TestIdentity(CordaX500Name("Me", "London", "GB"))
+        )
         database = databaseAndServices.first
         ourServices = databaseAndServices.second
 
         // Set up and register identities
         ourIdentity = ourServices.myInfo.singleIdentity()
         miniCorpAnonymised = miniCorpServices.myInfo.singleIdentityAndCert().party.anonymise()
-        (miniCorpServices.myInfo.legalIdentitiesAndCerts + megaCorpServices.myInfo.legalIdentitiesAndCerts + notaryServices.myInfo.legalIdentitiesAndCerts).forEach { identity ->
-            ourServices.identityService.verifyAndRegisterIdentity(identity) // TODO: Configure a mock identity service instead.
-        }
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
-            val vaultFiller = VaultFiller(ourServices, dummyNotary, rngFactory = ::Random)
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
-            vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
-            vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
-            vaultFiller.fillWithSomeTestCash(80.SWISS_FRANCS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
+            val vaultFiller = VaultFiller(ourServices, dummyNotary)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, megaCorp.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, megaCorp.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, miniCorp.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.SWISS_FRANCS, miniCorpServices, 1, miniCorp.ref(1), ourIdentity)
         }
         database.transaction {
             vaultStatesUnconsumed = ourServices.vaultService.queryBy<Cash.State>().states
         }
-        WALLET = listOf(
-            makeCash(100.DOLLARS, MEGA_CORP),
-            makeCash(400.DOLLARS, MEGA_CORP),
-            makeCash(80.DOLLARS, MINI_CORP),
-            makeCash(80.SWISS_FRANCS, MINI_CORP, 2)
+        cashStates = listOf(
+            makeCash(100.DOLLARS, megaCorp.party),
+            makeCash(400.DOLLARS, megaCorp.party),
+            makeCash(80.DOLLARS, miniCorp.party),
+            makeCash(80.SWISS_FRANCS, miniCorp.party, 2)
         )
     }
 
@@ -146,13 +118,8 @@ class CashTests {
         database.close()
     }
 
-    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-        MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
-            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-            doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
-            doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
-            doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
-        }, MEGA_CORP.name).transaction(DUMMY_NOTARY, script)
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) {
+        MockServices(megaCorp).transaction(dummyNotary.party, script)
     }
 
     @Test
@@ -162,30 +129,30 @@ class CashTests {
             input(Cash.PROGRAM_ID, inState)
             tweak {
                 output(Cash.PROGRAM_ID, outState.copy(amount = 2000.DOLLARS `issued by` defaultIssuer))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(alice.publicKey, Cash.Commands.Move())
                 this `fails with` "the amounts balance"
             }
             tweak {
                 output(Cash.PROGRAM_ID, outState)
-                command(ALICE_PUBKEY, DummyCommandData)
+                command(alice.publicKey, DummyCommandData)
                 // Invalid command
                 this `fails with` "required net.corda.finance.contracts.asset.Cash.Commands.Move command"
             }
             tweak {
                 output(Cash.PROGRAM_ID, outState)
-                command(BOB_PUBKEY, Cash.Commands.Move())
+                command(bob.publicKey, Cash.Commands.Move())
                 this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
                 output(Cash.PROGRAM_ID, outState)
-                output(Cash.PROGRAM_ID, outState issuedBy MINI_CORP)
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                output(Cash.PROGRAM_ID, outState issuedBy miniCorp.party)
+                command(alice.publicKey, Cash.Commands.Move())
                 this `fails with` "at least one cash input"
             }
             // Simple reallocation works.
             tweak {
                 output(Cash.PROGRAM_ID, outState)
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(alice.publicKey, Cash.Commands.Move())
                 this.verifies()
             }
         }
@@ -198,7 +165,7 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, DummyState())
             output(Cash.PROGRAM_ID, outState)
-            command(MINI_CORP_PUBKEY, Cash.Commands.Move())
+            command(miniCorp.publicKey, Cash.Commands.Move())
             this `fails with` "there is at least one cash input for this group"
         }
     }
@@ -210,16 +177,16 @@ class CashTests {
         transaction {
             attachment(Cash.PROGRAM_ID)
             output(Cash.PROGRAM_ID, outState)
-            command(ALICE_PUBKEY, Cash.Commands.Issue())
+            command(alice.publicKey, Cash.Commands.Issue())
             this `fails with` "output states are issued by a command signer"
         }
         transaction {
             attachment(Cash.PROGRAM_ID)
             output(Cash.PROGRAM_ID,
                 Cash.State(
-                        amount = 1000.DOLLARS `issued by` MINI_CORP.ref(12, 34),
-                        owner = AnonymousParty(ALICE_PUBKEY)))
-            command(MINI_CORP_PUBKEY, Cash.Commands.Issue())
+                        amount = 1000.DOLLARS `issued by` miniCorp.ref(12, 34),
+                        owner = AnonymousParty(alice.publicKey)))
+            command(miniCorp.publicKey, Cash.Commands.Issue())
             this.verifies()
         }
     }
@@ -228,23 +195,23 @@ class CashTests {
     fun generateIssueRaw() {
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
-            Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
+            Cash().generateIssue(this, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = AnonymousParty(alice.publicKey), notary = dummyNotary.party)
         }.toWireTransaction(miniCorpServices)
         assertTrue(tx.inputs.isEmpty())
         val s = tx.outputsOfType<Cash.State>().single()
-        assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
-        assertEquals(MINI_CORP as AbstractParty, s.amount.token.issuer.party)
-        assertEquals(AnonymousParty(ALICE_PUBKEY), s.owner)
+        assertEquals(100.DOLLARS `issued by` miniCorp.ref(12, 34), s.amount)
+        assertEquals(miniCorp.party as AbstractParty, s.amount.token.issuer.party)
+        assertEquals(AnonymousParty(alice.publicKey), s.owner)
         assertTrue(tx.commands[0].value is Cash.Commands.Issue)
-        assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
+        assertEquals(miniCorp.publicKey, tx.commands[0].signers[0])
     }
 
     @Test
     fun generateIssueFromAmount() {
         // Test issuance from an issued amount
-        val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
+        val amount = 100.DOLLARS `issued by` miniCorp.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
-            Cash().generateIssue(this, amount, owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
+            Cash().generateIssue(this, amount, owner = AnonymousParty(alice.publicKey), notary = dummyNotary.party)
         }.toWireTransaction(miniCorpServices)
         assertTrue(tx.inputs.isEmpty())
         assertEquals(tx.outputs[0], tx.outputs[0])
@@ -259,13 +226,13 @@ class CashTests {
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount * 2))
             // Move fails: not allowed to summon money.
             tweak {
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(alice.publicKey, Cash.Commands.Move())
                 this `fails with` "the amounts balance"
             }
 
             // Issue works.
             tweak {
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
+                command(megaCorp.publicKey, Cash.Commands.Issue())
                 this.verifies()
             }
         }
@@ -275,7 +242,7 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount.splitEvenly(2).first()))
-            command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
+            command(megaCorp.publicKey, Cash.Commands.Issue())
             this `fails with` "output values sum to more than the inputs"
         }
 
@@ -284,7 +251,7 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, inState)
-            command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
+            command(megaCorp.publicKey, Cash.Commands.Issue())
             this `fails with` "output values sum to more than the inputs"
         }
 
@@ -293,9 +260,9 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount * 2))
-            command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
+            command(megaCorp.publicKey, Cash.Commands.Issue())
             tweak {
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
+                command(megaCorp.publicKey, Cash.Commands.Issue())
                 this `fails with` "there is only a single issue command"
             }
             this.verifies()
@@ -309,15 +276,15 @@ class CashTests {
     @Test(expected = IllegalStateException::class)
     fun `reject issuance with inputs`() {
         // Issue some cash
-        var ptx = TransactionBuilder(DUMMY_NOTARY)
+        var ptx = TransactionBuilder(dummyNotary.party)
 
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = miniCorp.party, notary = dummyNotary.party)
         val tx = miniCorpServices.signInitialTransaction(ptx)
 
         // Include the previously issued cash in a new issuance command
-        ptx = TransactionBuilder(DUMMY_NOTARY)
+        ptx = TransactionBuilder(dummyNotary.party)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = miniCorp.party, notary = dummyNotary.party)
     }
 
     @Test
@@ -325,7 +292,7 @@ class CashTests {
         // Splitting value works.
         transaction {
             attachment(Cash.PROGRAM_ID)
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             tweak {
                 input(Cash.PROGRAM_ID, inState)
                 val splits4 = inState.amount.splitEvenly(4)
@@ -356,7 +323,7 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
             input(Cash.PROGRAM_ID, inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "zero sized inputs"
         }
         transaction {
@@ -364,7 +331,7 @@ class CashTests {
             input(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "zero sized outputs"
         }
     }
@@ -375,8 +342,8 @@ class CashTests {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
-            output(Cash.PROGRAM_ID, outState issuedBy MINI_CORP)
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            output(Cash.PROGRAM_ID, outState issuedBy miniCorp.party)
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "the amounts balance"
         }
         // Can't change deposit reference when splitting.
@@ -385,7 +352,7 @@ class CashTests {
             val splits2 = inState.amount.splitEvenly(2)
             input(Cash.PROGRAM_ID, inState)
             for (i in 0..1) output(Cash.PROGRAM_ID, outState.copy(amount = splits2[i]).editDepositRef(i.toByte()))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
@@ -394,7 +361,7 @@ class CashTests {
             input(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, outState.copy(amount = 800.DOLLARS `issued by` defaultIssuer))
             output(Cash.PROGRAM_ID, outState.copy(amount = 200.POUNDS `issued by` defaultIssuer))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "the amounts balance"
         }
         transaction {
@@ -403,18 +370,18 @@ class CashTests {
             input(Cash.PROGRAM_ID,
                 inState.copy(
                         amount = 150.POUNDS `issued by` defaultIssuer,
-                        owner = AnonymousParty(BOB_PUBKEY)))
+                        owner = AnonymousParty(bob.publicKey)))
             output(Cash.PROGRAM_ID, outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
-            input(Cash.PROGRAM_ID, inState issuedBy MINI_CORP)
+            input(Cash.PROGRAM_ID, inState issuedBy miniCorp.party)
             output(Cash.PROGRAM_ID, outState)
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
@@ -423,7 +390,7 @@ class CashTests {
             input(Cash.PROGRAM_ID, inState)
             input(Cash.PROGRAM_ID, inState.editDepositRef(3))
             output(Cash.PROGRAM_ID, outState.copy(amount = inState.amount * 2).editDepositRef(3))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "for reference [01]"
         }
     }
@@ -436,17 +403,17 @@ class CashTests {
             input(Cash.PROGRAM_ID, issuerInState)
             output(Cash.PROGRAM_ID, issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)))
             tweak {
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer))
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                command(megaCorp.publicKey, Cash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer))
+                command(megaCorp.publicKey, Cash.Commands.Move())
                 this `fails with` "the amounts balance"
             }
 
             tweak {
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer))
+                command(megaCorp.publicKey, Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer))
                 this `fails with` "required net.corda.finance.contracts.asset.Cash.Commands.Move command"
 
                 tweak {
-                    command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                    command(megaCorp.publicKey, Cash.Commands.Move())
                     this.verifies()
                 }
             }
@@ -459,14 +426,14 @@ class CashTests {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, issuerInState)
-            input(Cash.PROGRAM_ID, issuerInState.copy(owner = MINI_CORP) issuedBy MINI_CORP)
-            output(Cash.PROGRAM_ID, issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) issuedBy MINI_CORP)
-            output(Cash.PROGRAM_ID, issuerInState.copy(owner = MINI_CORP, amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)))
-            command(listOf(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY), Cash.Commands.Move())
+            input(Cash.PROGRAM_ID, issuerInState.copy(owner = miniCorp.party) issuedBy miniCorp.party)
+            output(Cash.PROGRAM_ID, issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) issuedBy miniCorp.party)
+            output(Cash.PROGRAM_ID, issuerInState.copy(owner = miniCorp.party, amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)))
+            command(listOf(megaCorp.publicKey, miniCorp.publicKey), Cash.Commands.Move())
             this `fails with` "the amounts balance"
-            command(MEGA_CORP_PUBKEY, Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer))
+            command(megaCorp.publicKey, Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer))
             this `fails with` "the amounts balance"
-            command(MINI_CORP_PUBKEY, Cash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)))
+            command(miniCorp.publicKey, Cash.Commands.Exit(200.DOLLARS `issued by` miniCorp.ref(1)))
             this.verifies()
         }
     }
@@ -478,8 +445,8 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
             output(Cash.PROGRAM_ID, outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)))
-            command(MEGA_CORP_PUBKEY, Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer))
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            command(megaCorp.publicKey, Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer))
+            command(alice.publicKey, Cash.Commands.Move())
             this `fails with` "the amounts balance"
         }
     }
@@ -490,23 +457,23 @@ class CashTests {
             attachment(Cash.PROGRAM_ID)
             // Gather 2000 dollars from two different issuers.
             input(Cash.PROGRAM_ID, inState)
-            input(Cash.PROGRAM_ID, inState issuedBy MINI_CORP)
-            command(ALICE_PUBKEY, Cash.Commands.Move())
+            input(Cash.PROGRAM_ID, inState issuedBy miniCorp.party)
+            command(alice.publicKey, Cash.Commands.Move())
             // Can't merge them together.
             tweak {
-                output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(BOB_PUBKEY), amount = 2000.DOLLARS `issued by` defaultIssuer))
+                output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(bob.publicKey), amount = 2000.DOLLARS `issued by` defaultIssuer))
                 this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(BOB_PUBKEY)))
-                output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(BOB_PUBKEY)))
+                output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(bob.publicKey)))
+                output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(bob.publicKey)))
                 this `fails with` "the amounts balance"
             }
 
             // This works.
-            output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(BOB_PUBKEY)))
-            output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(BOB_PUBKEY)) issuedBy MINI_CORP)
+            output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(bob.publicKey)))
+            output(Cash.PROGRAM_ID, inState.copy(owner = AnonymousParty(bob.publicKey)) issuedBy miniCorp.party)
             this.verifies()
         }
     }
@@ -516,12 +483,12 @@ class CashTests {
         // Check we can do an atomic currency trade tx.
         transaction {
             attachment(Cash.PROGRAM_ID)
-            val pounds = Cash.State(658.POUNDS `issued by` MINI_CORP.ref(3, 4, 5), AnonymousParty(BOB_PUBKEY))
-            input(Cash.PROGRAM_ID, inState ownedBy AnonymousParty(ALICE_PUBKEY))
+            val pounds = Cash.State(658.POUNDS `issued by` miniCorp.ref(3, 4, 5), AnonymousParty(bob.publicKey))
+            input(Cash.PROGRAM_ID, inState ownedBy AnonymousParty(alice.publicKey))
             input(Cash.PROGRAM_ID, pounds)
-            output(Cash.PROGRAM_ID, inState ownedBy AnonymousParty(BOB_PUBKEY))
-            output(Cash.PROGRAM_ID, pounds ownedBy AnonymousParty(ALICE_PUBKEY))
-            command(listOf(ALICE_PUBKEY, BOB_PUBKEY), Cash.Commands.Move())
+            output(Cash.PROGRAM_ID, inState ownedBy AnonymousParty(bob.publicKey))
+            output(Cash.PROGRAM_ID, pounds ownedBy AnonymousParty(alice.publicKey))
+            command(listOf(alice.publicKey, bob.publicKey), Cash.Commands.Move())
             this.verifies()
         }
     }
@@ -532,7 +499,7 @@ class CashTests {
 
     private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
             StateAndRef(
-                    TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY),
+                    TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, dummyNotary.party),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
@@ -540,15 +507,15 @@ class CashTests {
      * Generate an exit transaction, removing some amount of cash from the ledger.
      */
     private fun makeExit(serviceHub: ServiceHub, amount: Amount<Currency>, issuer: Party, depositRef: Byte = 1): WireTransaction {
-        val tx = TransactionBuilder(DUMMY_NOTARY)
-        val payChangeTo = serviceHub.keyManagementService.freshKeyAndCert(MINI_CORP_IDENTITY, false).party
-        Cash().generateExit(tx, Amount(amount.quantity, Issued(issuer.ref(depositRef), amount.token)), WALLET, payChangeTo)
+        val tx = TransactionBuilder(dummyNotary.party)
+        val payChangeTo = serviceHub.keyManagementService.freshKeyAndCert(miniCorp.identity, false).party
+        Cash().generateExit(tx, Amount(amount.quantity, Issued(issuer.ref(depositRef), amount.token)), cashStates, payChangeTo)
         return tx.toWireTransaction(serviceHub)
     }
 
     private fun makeSpend(services: ServiceHub, amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val ourIdentity = services.myInfo.singleIdentityAndCert()
-        val tx = TransactionBuilder(DUMMY_NOTARY)
+        val tx = TransactionBuilder(dummyNotary.party)
         database.transaction {
             Cash.generateSpend(services, tx, amount, ourIdentity, dest)
         }
@@ -560,12 +527,12 @@ class CashTests {
      */
     @Test
     fun generateSimpleExit() {
-        val wtx = makeExit(miniCorpServices, 100.DOLLARS, MEGA_CORP, 1)
-        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        val wtx = makeExit(miniCorpServices, 100.DOLLARS, megaCorp.party, 1)
+        assertEquals(cashStates[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
 
         val expectedMove = Cash.Commands.Move()
-        val expectedExit = Cash.Commands.Exit(Amount(10000, Issued(MEGA_CORP.ref(1), USD)))
+        val expectedExit = Cash.Commands.Exit(Amount(10000, Issued(megaCorp.ref(1), USD)))
 
         assertEquals(listOf(expectedMove, expectedExit), wtx.commands.map { it.value })
     }
@@ -575,15 +542,15 @@ class CashTests {
      */
     @Test
     fun generatePartialExit() {
-        val wtx = makeExit(miniCorpServices, 50.DOLLARS, MEGA_CORP, 1)
+        val wtx = makeExit(miniCorpServices, 50.DOLLARS, megaCorp.party, 1)
         val actualInput = wtx.inputs.single()
         // Filter the available inputs and confirm exactly one has been used
-        val expectedInputs = WALLET.filter { it.ref == actualInput }
+        val expectedInputs = cashStates.filter { it.ref == actualInput }
         assertEquals(1, expectedInputs.size)
         val inputState = expectedInputs.single()
         val actualChange = wtx.outputs.single().data as Cash.State
         val expectedChangeAmount = inputState.state.data.amount.quantity - 50.DOLLARS.quantity
-        val expectedChange = WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.copy(quantity = expectedChangeAmount), owner = actualChange.owner)
+        val expectedChange = cashStates[0].state.data.copy(amount = cashStates[0].state.data.amount.copy(quantity = expectedChangeAmount), owner = actualChange.owner)
         assertEquals(expectedChange, wtx.getOutput(0))
     }
 
@@ -592,7 +559,7 @@ class CashTests {
      */
     @Test
     fun generateAbsentExit() {
-        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, megaCorp.party, 1) }
     }
 
     /**
@@ -600,7 +567,7 @@ class CashTests {
      */
     @Test
     fun generateInvalidReferenceExit() {
-        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 2) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, megaCorp.party, 2) }
     }
 
     /**
@@ -608,7 +575,7 @@ class CashTests {
      */
     @Test
     fun generateInsufficientExit() {
-        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, MEGA_CORP, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, megaCorp.party, 1) }
     }
 
     /**
@@ -616,7 +583,7 @@ class CashTests {
      */
     @Test
     fun generateOwnerWithNoStatesExit() {
-        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, CHARLIE, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, charlie.party, 1) }
     }
 
     /**
@@ -625,8 +592,8 @@ class CashTests {
     @Test
     fun generateExitWithEmptyVault() {
         assertFailsWith<IllegalArgumentException> {
-            val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList(), ourIdentity)
+            val tx = TransactionBuilder(dummyNotary.party)
+            Cash().generateExit(tx, Amount(100, Issued(charlie.ref(1), GBP)), emptyList(), ourIdentity)
         }
     }
 
@@ -647,9 +614,8 @@ class CashTests {
     @Test
     fun generateSimpleSpendWithParties() {
         database.transaction {
-
-            val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), ALICE, setOf(MINI_CORP))
+            val tx = TransactionBuilder(dummyNotary.party)
+            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -737,9 +703,9 @@ class CashTests {
      */
     @Test
     fun aggregation() {
-        val fiveThousandDollarsFromMega = Cash.State(5000.DOLLARS `issued by` MEGA_CORP.ref(2), MEGA_CORP)
-        val twoThousandDollarsFromMega = Cash.State(2000.DOLLARS `issued by` MEGA_CORP.ref(2), MINI_CORP)
-        val oneThousandDollarsFromMini = Cash.State(1000.DOLLARS `issued by` MINI_CORP.ref(3), MEGA_CORP)
+        val fiveThousandDollarsFromMega = Cash.State(5000.DOLLARS `issued by` megaCorp.ref(2), megaCorp.party)
+        val twoThousandDollarsFromMega = Cash.State(2000.DOLLARS `issued by` megaCorp.ref(2), miniCorp.party)
+        val oneThousandDollarsFromMini = Cash.State(1000.DOLLARS `issued by` miniCorp.ref(3), megaCorp.party)
 
         // Obviously it must be possible to aggregate states with themselves
         assertEquals(fiveThousandDollarsFromMega.amount.token, fiveThousandDollarsFromMega.amount.token)
@@ -753,7 +719,7 @@ class CashTests {
 
         // States cannot be aggregated if the currency differs
         assertNotEquals(oneThousandDollarsFromMini.amount.token,
-                Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP).amount.token)
+                Cash.State(1000.POUNDS `issued by` miniCorp.ref(3), megaCorp.party).amount.token)
 
         // States cannot be aggregated if the reference differs
         assertNotEquals(fiveThousandDollarsFromMega.amount.token, (fiveThousandDollarsFromMega withDeposit defaultIssuer).amount.token)
@@ -763,20 +729,20 @@ class CashTests {
     @Test
     fun `summing by owner`() {
         val states = listOf(
-                Cash.State(1000.DOLLARS `issued by` defaultIssuer, MINI_CORP),
-                Cash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(1000.DOLLARS `issued by` defaultIssuer, miniCorp.party),
+                Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
+                Cash.State(4000.DOLLARS `issued by` defaultIssuer, megaCorp.party)
         )
-        assertEquals(6000.DOLLARS `issued by` defaultIssuer, states.sumCashBy(MEGA_CORP))
+        assertEquals(6000.DOLLARS `issued by` defaultIssuer, states.sumCashBy(megaCorp.party))
     }
 
     @Test(expected = UnsupportedOperationException::class)
     fun `summing by owner throws`() {
         val states = listOf(
-                Cash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
+                Cash.State(4000.DOLLARS `issued by` defaultIssuer, megaCorp.party)
         )
-        states.sumCashBy(MINI_CORP)
+        states.sumCashBy(miniCorp.party)
     }
 
     @Test
@@ -795,9 +761,9 @@ class CashTests {
     @Test
     fun `summing a single currency`() {
         val states = listOf(
-                Cash.State(1000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                Cash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(1000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
+                Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
+                Cash.State(4000.DOLLARS `issued by` defaultIssuer, megaCorp.party)
         )
         // Test that summing everything produces the total number of dollars
         val expected = 7000.DOLLARS `issued by` defaultIssuer
@@ -808,8 +774,8 @@ class CashTests {
     @Test(expected = IllegalArgumentException::class)
     fun `summing multiple currencies`() {
         val states = listOf(
-                Cash.State(1000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                Cash.State(4000.POUNDS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(1000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
+                Cash.State(4000.POUNDS `issued by` defaultIssuer, megaCorp.party)
         )
         // Test that summing everything fails because we're mixing units
         states.sumCash()
@@ -818,23 +784,20 @@ class CashTests {
     // Double spend.
     @Test
     fun chainCashDoubleSpendFailsWith() {
-        val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
-            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-        }, MEGA_CORP.name, MEGA_CORP_KEY)
-        mockService.ledger(DUMMY_NOTARY) {
+        MockServices(megaCorp).ledger(dummyNotary.party) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",
                     Cash.State(
-                            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                            owner = MEGA_CORP))
+                            amount = 1000.DOLLARS `issued by` megaCorp.ref(1, 1),
+                            owner = megaCorp.party))
             }
 
             transaction {
                 attachment(Cash.PROGRAM_ID)
                 input("MEGA_CORP cash")
-                output(Cash.PROGRAM_ID, "MEGA_CORP cash 2", "MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(ALICE_PUBKEY)))
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash 2", "MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(alice.publicKey)))
+                command(megaCorp.publicKey, Cash.Commands.Move())
                 this.verifies()
             }
 
@@ -843,8 +806,8 @@ class CashTests {
                     attachment(Cash.PROGRAM_ID)
                     input("MEGA_CORP cash")
                     // We send it to another pubkey so that the transaction is not identical to the previous one
-                    output(Cash.PROGRAM_ID, "MEGA_CORP cash 3", "MEGA_CORP cash".output<Cash.State>().copy(owner = ALICE))
-                    command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                    output(Cash.PROGRAM_ID, "MEGA_CORP cash 3", "MEGA_CORP cash".output<Cash.State>().copy(owner = alice.party))
+                    command(megaCorp.publicKey, Cash.Commands.Move())
                     this.verifies()
                 }
                 this.fails()
@@ -856,11 +819,11 @@ class CashTests {
 
     @Test
     fun multiSpend() {
-        val tx = TransactionBuilder(DUMMY_NOTARY)
+        val tx = TransactionBuilder(dummyNotary.party)
         database.transaction {
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
-                    PartyAndAmount(CHARLIE_ANONYMISED, 150.DOLLARS)
+                    PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
             )
             Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
@@ -871,9 +834,9 @@ class CashTests {
         assertEquals(320.DOLLARS, out(1).amount.withoutIssuer())
         assertEquals(150.DOLLARS, out(2).amount.withoutIssuer())
         assertEquals(30.DOLLARS, out(3).amount.withoutIssuer())
-        assertEquals(MINI_CORP, out(0).amount.token.issuer.party)
-        assertEquals(MEGA_CORP, out(1).amount.token.issuer.party)
-        assertEquals(MEGA_CORP, out(2).amount.token.issuer.party)
-        assertEquals(MEGA_CORP, out(3).amount.token.issuer.party)
+        assertEquals(miniCorp.party, out(0).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(1).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(2).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(3).amount.token.issuer.party)
     }
 }

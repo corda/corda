@@ -2,7 +2,7 @@ package net.corda.core.flows;
 
 import net.corda.core.serialization.SerializationDefaults;
 import net.corda.core.serialization.SerializationFactory;
-import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Rule;
 import org.junit.Test;
 

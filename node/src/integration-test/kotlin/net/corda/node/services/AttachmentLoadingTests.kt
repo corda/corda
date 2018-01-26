@@ -20,7 +20,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver

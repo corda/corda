@@ -8,7 +8,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
@@ -46,11 +46,11 @@ class TraderDemoTest : IntegrationTest() {
             ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
             nodeA.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-                val client = CordaRPCClient(it.internals.configuration.rpcAddress!!)
+                val client = CordaRPCClient(it.internals.configuration.rpcOptions.address!!)
                 client.start(demoUser.username, demoUser.password).proxy
             }
             val nodeBankRpc = let {
-                val client = CordaRPCClient(bankNode.internals.configuration.rpcAddress!!)
+                val client = CordaRPCClient(bankNode.internals.configuration.rpcOptions.address!!)
                 client.start(bankUser.username, bankUser.password).proxy
             }
 

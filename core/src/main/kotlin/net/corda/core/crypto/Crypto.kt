@@ -497,6 +497,7 @@ object Crypto {
      * It returns true if it succeeds, but it always throws an exception if verification fails.
      * Strategy on identifying the actual signing scheme is based on the [PublicKey] type, but if the schemeCodeName is known,
      * then better use doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray).
+     *
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
      * @param clearData the clear data/message that was signed (usually the Merkle root).
