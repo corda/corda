@@ -1304,7 +1304,7 @@ public @interface net.corda.core.flows.InitiatingFlow
   @org.jetbrains.annotations.NotNull public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.NotaryError$TimeWindowInvalid extends net.corda.core.flows.NotaryError
-  public static final net.corda.core.flows.NotaryError$TimeWindowInvalid INSTANCE
+  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.flows.NotaryError$TimeWindowInvalid INSTANCE
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.NotaryError$TransactionInvalid extends net.corda.core.flows.NotaryError
   public <init>(Throwable)
@@ -1885,7 +1885,7 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
   public <init>()
   public final void commitInputStates(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party)
   @org.jetbrains.annotations.NotNull protected org.slf4j.Logger getLog()
-  @org.jetbrains.annotations.NotNull protected abstract net.corda.core.node.services.TimeWindowChecker getTimeWindowChecker()
+  @org.jetbrains.annotations.NotNull protected net.corda.core.node.services.TimeWindowChecker getTimeWindowChecker()
   @org.jetbrains.annotations.NotNull protected abstract net.corda.core.node.services.UniquenessProvider getUniquenessProvider()
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.TransactionSignature sign(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.DigitalSignature$WithKey sign(byte[])
