@@ -191,6 +191,9 @@ R3 Corda 3.0 Developer Preview
 
 * Enterprise Corda only: Compatibility with PostgreSQL 9.6 database.
 
+* Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
+  This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
+
 .. _changelog_v2:
 
 Corda 2.0

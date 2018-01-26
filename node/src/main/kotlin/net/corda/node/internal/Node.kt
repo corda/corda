@@ -137,6 +137,7 @@ open class Node(configuration: NodeConfiguration,
     override lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     private var messageBroker: ArtemisMessagingServer? = null
+    private var bridgeControlListener: BridgeControlListener? = null
     private var rpcBroker: ArtemisBroker? = null
 
     private var shutdownHook: ShutdownHook? = null
@@ -152,6 +153,7 @@ open class Node(configuration: NodeConfiguration,
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
         val advertisedAddress = info.addresses.single()
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
         rpcServerAddresses?.let {
@@ -171,6 +173,7 @@ open class Node(configuration: NodeConfiguration,
                 serviceIdentity,
                 serverThread,
                 database,
+                services.networkMapCache,
                 advertisedAddress,
                 networkParameters.maxMessageSize)
     }
@@ -194,7 +197,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, services.networkMapCache, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -255,6 +258,11 @@ open class Node(configuration: NodeConfiguration,
         }
         rpcBroker?.apply {
             runOnStop += this::close
+            start()
+        }
+        // Start P2P bridge service
+        bridgeControlListener?.apply {
+            runOnStop += this::stop
             start()
         }
         // Start up the MQ clients.

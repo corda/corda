@@ -25,6 +25,8 @@ class ArtemisMessagingComponent {
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers." //TODO Come up with better name for common peers/services queue
         const val P2P_PREFIX = "p2p.inbound."
+        const val BRIDGE_CONTROL = "${INTERNAL_PREFIX}bridge.control"
+        const val BRIDGE_NOTIFY = "${INTERNAL_PREFIX}bridge.notify"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
     }
 
