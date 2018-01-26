@@ -58,7 +58,7 @@ buildscript {
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.16-eap-2'
     ext.eddsa_version = '0.2.0'
-    ext.dependency_checker_version = '3.0.1'
+    ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
     ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
