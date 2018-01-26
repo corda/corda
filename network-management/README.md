@@ -12,7 +12,7 @@ The built file will appear in:
 network-management/capsule/build/libs/doorman-<version>.jar
 ```
 ## HSM signing server
-To build a fat jar containing all the HSM signer code you can simply invoke:
+To build a fat jar containing all the HSM signing server code you can simply invoke:
 ```
     ./gradlew network-management:capsule-hsm:buildHsmJAR
 ```
