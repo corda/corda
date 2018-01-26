@@ -20,6 +20,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
@@ -69,7 +70,7 @@ import javax.security.auth.spi.LoginModule
 @ThreadSafe
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
-                             val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
@@ -137,9 +138,9 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
         isPersistIDCache = true
         isPopulateValidatedUser = true
-        journalBufferSize_NIO = maxMessageSize // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
-        journalBufferSize_AIO = maxMessageSize // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
-        journalFileSize = maxMessageSize // The size of each journal file in bytes. Artemis default is 10MiB.
+        journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
+        journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+        journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
 
         // JMX enablement

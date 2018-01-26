@@ -5,6 +5,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -41,7 +42,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
             // would be the default and the two lines below can be deleted.
             connectionTTL = -1
             clientFailureCheckPeriod = -1
-            minLargeMessageSize = maxMessageSize
+            minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
             isUseGlobalPools = nodeSerializationEnv != null
         }
         val sessionFactory = locator.createSessionFactory()

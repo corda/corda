@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArtemisMessagingTest {
     companion object {
@@ -130,6 +131,25 @@ class ArtemisMessagingTest {
 
         val actual: Message = receivedMessages.take()
         assertEquals("first msg", String(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+
+    @Test
+    fun `client should fail if massage exceed maxMessageSize limit`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(MAX_MESSAGE_SIZE).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE + 1))
+        assertThatThrownBy {
+            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Message is larger then the maximum size limit")
+
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
