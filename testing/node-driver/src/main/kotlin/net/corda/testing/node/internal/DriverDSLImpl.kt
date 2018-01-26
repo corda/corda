@@ -252,7 +252,10 @@ class DriverDSLImpl(
                 config
             }
         } else {
-            startOutOfProcessMiniNode(config, "--initial-registration").map { config }
+            startOutOfProcessMiniNode(config,
+                    "--initial-registration",
+                    "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
+                    "--network-root-truststore-password=$rootTruststorePassword").map { config }
         }
     }
 
@@ -601,7 +604,7 @@ class DriverDSLImpl(
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
-    private fun startOutOfProcessMiniNode(config: NodeConfig, extraCmdLineFlag: String): CordaFuture<Unit> {
+    private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
         val process = startOutOfProcessNode(
@@ -613,7 +616,7 @@ class DriverDSLImpl(
                 systemProperties,
                 cordappPackages,
                 "200m",
-                extraCmdLineFlag
+                *extraCmdLineFlag
         )
 
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
@@ -657,7 +660,7 @@ class DriverDSLImpl(
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize, null)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForNodesToFinish) {
                 state.locked {
                     processes += process
@@ -768,7 +771,7 @@ class DriverDSLImpl(
                 overriddenSystemProperties: Map<String, String>,
                 cordappPackages: List<String>,
                 maximumHeapSize: String,
-                extraCmdLineFlag: String?
+                vararg extraCmdLineFlag: String
         ): Process {
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
                     "debug port is " + (debugPort ?: "not enabled") + ", " +
@@ -806,7 +809,7 @@ class DriverDSLImpl(
                     "--base-directory=${config.corda.baseDirectory}",
                     "--logging-level=$loggingLevel",
                     "--no-local-shell").also {
-                if (extraCmdLineFlag != null) {
+                if (extraCmdLineFlag.isNotEmpty()) {
                     it += extraCmdLineFlag
                 }
             }.toList()
