@@ -1,0 +1,1 @@
+Please refer to the documentation in <corda-root>/doc/build/html/running-a-node.html#cordformation.

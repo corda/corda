@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Allow the script to be run from outside the nodes directory.
+basedir=$( dirname "$0" )
+cd "$basedir"
+
+if which osascript >/dev/null; then
+    /usr/libexec/java_home -v 1.8 --exec java -jar runnodes.jar "$@"
+else
+    "${JAVA_HOME:+$JAVA_HOME/bin/}java" -jar runnodes.jar "$@"
+fi
