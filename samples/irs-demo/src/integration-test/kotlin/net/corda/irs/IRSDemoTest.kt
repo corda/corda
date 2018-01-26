@@ -11,6 +11,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.toFuture
@@ -56,7 +57,8 @@ class IRSDemoTest {
         ) {
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = rpcUsers),
-                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers)
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers),
+                    startNode(providedName = CordaX500Name("Regulator", "Moscow", "RU"))
             ).map { it.getOrThrow() }
             val controller = defaultNotaryNode.getOrThrow()
 
