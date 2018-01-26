@@ -195,8 +195,10 @@ class NodeSchedulerService(private val clock: CordaClock,
         val removedAction = scheduledStates.remove(ref)
         mutex.locked {
             if (removedAction != null) {
-                scheduledStatesQueue.remove(removedAction)
-                unfinishedSchedules.countDown()
+                val wasRemoved = scheduledStatesQueue.remove(removedAction)
+                if (wasRemoved) {
+                    unfinishedSchedules.countDown()
+                }
                 if (removedAction == scheduledStatesQueue.peek()) {
                     rescheduleWakeUp()
                 }
