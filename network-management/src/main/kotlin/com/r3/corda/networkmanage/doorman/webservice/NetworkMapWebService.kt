@@ -14,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkParameters
 import java.io.InputStream
@@ -35,7 +36,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
                            private val config: NetworkMapConfig) {
 
     companion object {
-        val log = contextLogger()
+        val logger = contextLogger()
         const val NETWORK_MAP_PATH = "network-map"
     }
 
@@ -51,8 +52,10 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         return try {
             // Store the NodeInfo
             val nodeInfoWithSignature = NodeInfoWithSigned(signedNodeInfo)
+            logger.trace { "Processing 'publish' request from '${nodeInfoWithSignature.nodeInfo.legalIdentities.first().name.organisation}'" }
             verifyNodeInfo(nodeInfoWithSignature.nodeInfo)
             nodeInfoStorage.putNodeInfo(nodeInfoWithSignature)
+            logger.trace { "Stored 'publish' request from '${nodeInfoWithSignature.nodeInfo.legalIdentities.first().name.organisation}'" }
             ok()
         } catch (e: Exception) {
             // Catch exceptions thrown by signature verification.
@@ -60,8 +63,11 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
                 is NetworkMapNotInitialisedException -> status(Response.Status.SERVICE_UNAVAILABLE).entity(e.message)
                 is InvalidPlatformVersionException -> status(Response.Status.BAD_REQUEST).entity(e.message)
                 is IllegalArgumentException, is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
-                else -> throw e
+            // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+                else -> {
+                    logger.error("Unexpected error encountered while processing request.", e)
+                    throw e
+                }
             }
         }.build()
     }
@@ -73,6 +79,8 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     @Path("node-info/{nodeInfoHash}")
     fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
         val signedNodeInfo = nodeInfoStorage.getNodeInfo(SecureHash.parse(nodeInfoHash))
+        logger.trace { "Precessed node info request for hash: '$nodeInfoHash'" }
+        logger.trace { "Node Info: ${signedNodeInfo?.verified()}" }
         return createResponse(signedNodeInfo)
     }
 
@@ -80,23 +88,29 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     @Path("network-parameters/{hash}")
     fun getNetworkParameters(@PathParam("hash") hash: String): Response {
         val signedNetParams = networkMapStorage.getSignedNetworkParameters(SecureHash.parse(hash))
+        logger.trace { "Precessed network parameter request for hash: '$hash'" }
+        logger.trace { "Network parameter : ${signedNetParams?.verified()}" }
         return createResponse(signedNetParams)
     }
 
     @GET
     @Path("my-ip")
     fun myIp(@Context request: HttpServletRequest): Response {
-        return ok(request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}").build()
+        val ip = request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}"
+        logger.trace { "Precessed ip request from client, IP: '$ip'" }
+        return ok(ip).build()
     }
 
     private fun verifyNodeInfo(nodeInfo: NodeInfo) {
         val minimumPlatformVersion = networkMapCache.get(true).second?.minimumPlatformVersion
         if (minimumPlatformVersion == null) {
-            log.error("Network parameters have not been initialised")
+            logger.error("Error processing request from node '${nodeInfo.legalIdentities.first().name.organisation}' : Network parameters have not been initialised")
+            logger.trace { "$nodeInfo" }
             throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
         }
         if (nodeInfo.platformVersion < minimumPlatformVersion) {
-            log.error("Minimum platform version is $minimumPlatformVersion")
+            logger.error("Error processing request from node '${nodeInfo.legalIdentities.first().name.organisation}' : Minimum platform version is $minimumPlatformVersion")
+            logger.trace { "$nodeInfo" }
             throw InvalidPlatformVersionException("Minimum platform version is $minimumPlatformVersion")
         }
     }
