@@ -206,6 +206,16 @@ allprojects {
         mavenCentral()
         jcenter()
         maven { url 'https://jitpack.io' }
+        maven {
+            // For integrationTest task when running against Oracle database the JDBC driver is in Oracle Maven repository with login access only,
+            // setup an account on https://login.oracle.com/oaam_server/login.do
+            // provide credentials to Gradle task by -PmavenOracleUsername=... -PmavenOraclePassword=...
+            url "https://www.oracle.com/content/secure/maven/content"
+            credentials {
+                username = project.findProperty("mavenOracleUsername") ?: ""
+                password = project.findProperty("mavenOraclePassword") ?: ""
+            }
+        }
     }
 
     configurations {

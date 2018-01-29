@@ -45,8 +45,8 @@ class DriverTests : IntegrationTest() {
         }
 
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME, DUMMY_REGULATOR_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
+                DUMMY_REGULATOR_NAME.toDatabaseSchemaName())
     }
 
     @Test

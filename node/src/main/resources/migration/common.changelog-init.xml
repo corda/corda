@@ -16,5 +16,8 @@
     <changeSet author="R3.Corda" id="1511451595465-1.3" dbms="postgresql">
         <createSequence sequenceName="hibernate_sequence" minValue="1"/>
     </changeSet>
+    <changeSet author="tudormalene (generated)" id="1511451595465-1.0" dbms="oracle">
+        <createSequence sequenceName="hibernate_sequence" minValue="1"/>
+    </changeSet>
 
 </databaseChangeLog>

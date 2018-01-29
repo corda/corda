@@ -32,7 +32,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
-            @CollectionTable(name = "dummy_linear_state_participants", joinColumns = arrayOf(
+            @CollectionTable(name = "dummy_linear_state_parts", joinColumns = arrayOf(
                     JoinColumn(name = "output_index", referencedColumnName = "output_index"),
                     JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             var participants: MutableSet<AbstractParty>,

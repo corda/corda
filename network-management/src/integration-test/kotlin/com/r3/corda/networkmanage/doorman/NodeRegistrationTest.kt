@@ -46,8 +46,7 @@ class NodeRegistrationTest : IntegrationTest() {
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
 
-        @ClassRule
-        @JvmField
+        @ClassRule @JvmField
         val databaseSchemas = IntegrationTestSchemas(notaryName.organisation, aliceName.organisation, genevieveName.organisation)
 
         private val timeoutMillis = 5.seconds.toMillis()

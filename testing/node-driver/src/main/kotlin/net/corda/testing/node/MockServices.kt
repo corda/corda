@@ -28,6 +28,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.configOf
+import net.corda.node.services.config.parseToDbSchemaFriendlyName
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
 import net.corda.node.services.keys.getSigner
@@ -360,12 +361,11 @@ fun databaseProviderDataSourceConfig(nodeName: String? = null, postfix: String? 
     val fixedOverride = ConfigFactory.parseString("baseDirectory = \"\"")
 
     //implied property nodeOrganizationName to fill the potential placeholders in db schema/ db user properties
-    val standardizedNodeName = nodeName?.replace(" ", "")?.replace("-", "_")
-    val nodeOrganizationNameConfig = if (standardizedNodeName != null) configOf("nodeOrganizationName" to standardizedNodeName) else ConfigFactory.empty()
+    val nodeOrganizationNameConfig = if (nodeName != null) configOf("nodeOrganizationName" to parseToDbSchemaFriendlyName(nodeName)) else ConfigFactory.empty()
 
     //defaults to H2
     //for H2 the same db instance runs for all integration tests, so adding additional variable postfix create a unique database each time
-    val defaultConfig = inMemoryH2DataSourceConfig(standardizedNodeName, postfix)
+    val defaultConfig = inMemoryH2DataSourceConfig(nodeName, postfix)
 
     return systemConfigOverride.withFallback(databaseConfig)
             .withFallback(fixedOverride)

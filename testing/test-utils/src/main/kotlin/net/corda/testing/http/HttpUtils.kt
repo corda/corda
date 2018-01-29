@@ -16,7 +16,7 @@ object HttpUtils {
     private val client by lazy {
         OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS).build()
+                .readTimeout(90, TimeUnit.SECONDS).build()
     }
 
     val defaultMapper: ObjectMapper by lazy {

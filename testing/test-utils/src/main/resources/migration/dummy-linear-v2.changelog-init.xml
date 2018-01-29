@@ -24,7 +24,7 @@
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_E"
                        tableName="dummy_linear_states_v2"/>
 
-        <createTable tableName="dummy_linear_states_v2_participants">
+        <createTable tableName="dummy_linear_states_v2_parts">
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
@@ -35,7 +35,7 @@
         </createTable>
 
         <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
-                                 baseTableName="dummy_linear_states_v2_participants"
+                                 baseTableName="dummy_linear_states_v2_parts"
                                  constraintName="FKlfb5dvtmuadsllckeghmjlckk"
                                  referencedColumnNames="output_index,transaction_id"
                                  referencedTableName="dummy_linear_states_v2"/>

@@ -115,8 +115,7 @@
             <column name="PID" type="NVARCHAR(255)"/>
             <column name="MUTUAL_EXCLUSION_TIMESTAMP" type="timestamp"/>
         </createTable>
-        <addPrimaryKey columnNames="mutual_exclusion_id" constraintName="node_mutual_exclusion_pkey"
-                       tableName="node_mutual_exclusion"/>
+        <addPrimaryKey columnNames="mutual_exclusion_id" constraintName="node_mutual_exclusion_pkey" tableName="node_mutual_exclusion"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-30">
         <addPrimaryKey columnNames="att_id" constraintName="node_attachments_pkey" tableName="node_attachments"/>
@@ -163,6 +162,11 @@
                                  referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
     </changeSet>
     <changeSet author="R3.Corda" id="add index att_id">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <dbms type="oracle"/>
+            </not>
+        </preConditions>
         <createIndex tableName="node_attachments" indexName="att_id_idx">
             <column name="att_id"/>
         </createIndex>

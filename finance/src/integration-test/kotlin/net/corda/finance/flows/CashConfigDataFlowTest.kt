@@ -10,7 +10,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaNames
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test
@@ -18,8 +18,8 @@ import org.junit.Test
 class CashConfigDataFlowTest : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
-                .map { it.toDatabaseSchemaNames("", "_10000", "_10003") }.flatten().toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }
     @Test
     fun `issuable currencies are read in from node config`() {

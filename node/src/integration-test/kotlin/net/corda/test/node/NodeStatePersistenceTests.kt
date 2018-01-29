@@ -25,7 +25,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
-import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.node.User
 import org.junit.Assume.assumeFalse
 import org.junit.ClassRule
@@ -40,9 +39,8 @@ import kotlin.test.assertNotNull
 class NodeStatePersistenceTests : IntegrationTest() {
     companion object {
         @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
-                .map { it.toDatabaseSchemaNames("", "_10000", "_10003", "_10006") }.flatten().toTypedArray(),
-                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
     @Test
     fun `persistent state survives node restart`() {

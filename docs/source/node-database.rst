@@ -63,6 +63,29 @@ Example node configuration for SQL Azure:
     }
     jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
 
+Oracle
+````````````````````````
+Corda supports Oracle 11g RC2 and Oracle 12c with ojdbc6.jar driver..
+The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'READ_COMMITTED'.
+The property ``database.schema`` is optional.
+
+Example node configuration for Oracle:
+
+.. sourcecode:: none
+
+    dataSourceProperties = {
+        dataSourceClassName = "oracle.jdbc.pool.OracleDataSource"
+        dataSource.url = "jdbc:oracle:thin:@[IP]:[PORT]:xe"
+        dataSource.user = [USER]
+        dataSource.password = [PASSWORD]
+    }
+    database = {
+        transactionIsolationLevel = READ_COMMITTED
+        schema = [SCHEMA]
+    }
+    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
+.. _postgres_ref:
+
 PostgreSQL
 ````````````````````````
 Corda has been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 42.1.4.

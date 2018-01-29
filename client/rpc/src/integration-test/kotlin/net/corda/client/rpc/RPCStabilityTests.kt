@@ -12,20 +12,13 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import rx.Observable
@@ -38,7 +31,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-class RPCStabilityTests : IntegrationTest() {
+class RPCStabilityTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -46,12 +39,6 @@ class RPCStabilityTests : IntegrationTest() {
     @After
     fun shutdown() {
         pool.shutdown()
-    }
-
-    companion object {
-        @ClassRule @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
-                .map { it.toDatabaseSchemaNames("", "_10000", "_10003", "_10012") }.flatten().toTypedArray())
     }
 
     object DummyOps : RPCOps {

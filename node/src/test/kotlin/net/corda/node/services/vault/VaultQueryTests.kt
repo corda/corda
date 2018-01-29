@@ -41,6 +41,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.test.assertTrue
 
 open class VaultQueryTests {
     private companion object {

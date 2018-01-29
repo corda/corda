@@ -26,7 +26,6 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.DummyClusterSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.util.*

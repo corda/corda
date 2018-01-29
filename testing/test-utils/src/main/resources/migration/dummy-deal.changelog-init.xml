@@ -21,7 +21,7 @@
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="PK_dummy_deal_states"
                        tableName="dummy_deal_states"/>
 
-        <createTable tableName="dummy_deal_states_participants">
+        <createTable tableName="dummy_deal_states_parts">
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
@@ -32,7 +32,7 @@
         </createTable>
 
         <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
-                                 baseTableName="dummy_deal_states_participants"
+                                 baseTableName="dummy_deal_states_parts"
                                  constraintName="FKg6ab1fhx6aesnmhlo62o4dnrt"
                                  referencedColumnNames="output_index,transaction_id"
                                  referencedTableName="dummy_deal_states"/>

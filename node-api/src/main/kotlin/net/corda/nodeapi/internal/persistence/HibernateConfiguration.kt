@@ -39,9 +39,9 @@ class HibernateConfiguration(
                 // to avoid OOM when large blobs might get logged.
                 applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
                 applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
-                // When connecting to SqlServer (and only then) do we need to tell hibernate to use
+                // When connecting to SqlServer or Oracle, do we need to tell hibernate to use
                 // nationalised (i.e. Unicode) strings by default
-                val forceUnicodeForSqlServer = jdbcUrl.contains(":sqlserver:", ignoreCase = true)
+                val forceUnicodeForSqlServer = listOf(":oracle:", ":sqlserver:").any { jdbcUrl.contains(it, ignoreCase = true) }
                 enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
                 return build()
             }

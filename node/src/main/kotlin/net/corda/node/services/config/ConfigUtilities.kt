@@ -9,7 +9,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
@@ -31,23 +30,12 @@ object ConfigHelper {
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider")+".conf", parseOptions.setAllowMissing(true))
 
-        //typesafe workaround: a system property with placeholder is passed as value (inside quotes),
-        //undo adding the quotes for a fixed placeholder ${nodeOrganizationName}
-        //https://github.com/lightbend/config/issues/265
-        var systemUnquotedPlaceholders: Config = ConfigFactory.empty()
-        ConfigFactory.systemProperties().toProperties().forEach { name, value ->
-            if (value.toString().contains("\${nodeOrganizationName}")) {
-                var unquotedPlaceholder = "\"" + value.toString().replace("\${nodeOrganizationName}","\"\${nodeOrganizationName}\"") + "\""
-                systemUnquotedPlaceholders = systemUnquotedPlaceholders.withFallback(ConfigFactory.parseString(name.toString() + " = " + unquotedPlaceholder))
-            }
-        }
         val finalConfig = configOverrides
                 // Add substitution values here
-                .withFallback(systemUnquotedPlaceholders)
-                .withFallback(configOf("nodeOrganizationName" to baseDirectory.fileName.toString().replace(" ","").replace("-","_")))
-                .withFallback(ConfigFactory.systemProperties())
-                .withFallback( configOf("baseDirectory" to baseDirectory.toString()))
-                .withFallback(databaseConfig)
+                .withFallback(configOf("nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName.toString()))) //for database integration tests
+                .withFallback(ConfigFactory.systemProperties()) //for database integration tests
+                .withFallback(configOf("baseDirectory" to baseDirectory.toString()))
+                .withFallback(databaseConfig) //for database integration tests
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
@@ -88,3 +76,6 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
         }
     }
 }
+/** Parse a value to be database schema name friendly and removes the last part if it matches a port ("_" followed by at least 5 digits) */
+fun parseToDbSchemaFriendlyName(value: String) =
+        value.replace(" ", "").replace("-", "_").replace(Regex("_\\d{5,}$"),"")

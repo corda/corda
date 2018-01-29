@@ -7,7 +7,6 @@ import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_CLASSNAME
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_PASSWORD
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_URL
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_USER
-import org.apache.commons.logging.LogFactory
 import org.springframework.core.io.ClassPathResource
 import org.springframework.core.io.support.EncodedResource
 import org.springframework.jdbc.datasource.DriverManagerDataSource
@@ -19,7 +18,7 @@ import java.sql.SQLWarning
 import java.util.*
 
 object DbScriptRunner {
-    private val log = loggerFor<DbScriptRunner>()
+    private val logger = loggerFor<DbScriptRunner>()
 
     // System properties set in main 'corda-project' build.gradle
     private const val TEST_DB_ADMIN_USER = "test.db.admin.user"
@@ -50,10 +49,10 @@ object DbScriptRunner {
                 val encodedResource = EncodedResource(initSchema)
                 val inputString = encodedResource.inputStream.bufferedReader().use { it.readText().split("\n") }
                 val resolvedScripts = merge(inputString, databaseSchemas)
-                log.info("Executing DB Script for schemas $databaseSchemas with ${resolvedScripts.size} statements.")
+                logger.info("Executing DB Script for schemas $databaseSchemas with ${resolvedScripts.size} statements.")
                 DatabasePopulatorUtils.execute(ListPopulator(false, true, resolvedScripts),
                         createDataSource(dbProvider))
-            } else log.warn("DB Script missing: $initSchema")
+            } else logger.warn("DB Script missing: $initSchema")
         }
     }
 
@@ -68,15 +67,11 @@ object DbScriptRunner {
 class ListPopulator(private val continueOnError: Boolean,
                     private val ignoreFailedDrops: Boolean,
                     private val statements: List<String>) : DatabasePopulator {
-    private val logger = LogFactory.getLog(ScriptUtils::class.java)
-
+    private val logger = loggerFor<DbScriptRunner>()
     override fun populate(connection: Connection) {
         try {
-            if (logger.isInfoEnabled) {
-                logger.info("Executing SQL script  " )
-            }
+            logger.info("Executing SQL script")
             val startTime = System.currentTimeMillis()
-            val resource = statements.toString().substring(0,30) + " [...]"
             var stmtNumber = 0
             val stmt = connection.createStatement()
             try {
@@ -97,9 +92,14 @@ class ListPopulator(private val continueOnError: Boolean,
                         }
                     } catch (ex: SQLException) {
                         val dropStatement = StringUtils.startsWithIgnoreCase(statement.trim { it <= ' ' }, "drop")
-                        if (continueOnError || dropStatement && ignoreFailedDrops) {
-                            if (logger.isDebugEnabled) {
-                                logger.debug(ex)
+                        if ((continueOnError || dropStatement && ignoreFailedDrops)) {
+                            val dropUserStatement = StringUtils.startsWithIgnoreCase(statement.trim { it <= ' ' }, "drop user ")
+                            if (dropUserStatement) { // log to help spotting a node still logged on database after test has finished (happens on Oracle db)
+                                logger.warn("SQLException for $statement: SQL state '" + ex.sqlState +
+                                        "', error code '" + ex.errorCode +
+                                        "', message [" + ex.message + "]")
+                            } else {
+                                logger.debug("SQLException for $statement", ex)
                             }
                         } else {
                             throw ex
@@ -113,12 +113,9 @@ class ListPopulator(private val continueOnError: Boolean,
                     logger.debug("Could not close JDBC Statement", ex)
                 }
             }
-
             val elapsedTime = System.currentTimeMillis() - startTime
-            if (logger.isInfoEnabled) {
-                logger.info("Executed SQL script from $resource in $elapsedTime ms.")
-            }
-            logger.info("Executed SQL script  $resource" )
+            val resource = if (statements.isNotEmpty()) statements[0] + " [...]" else ""
+            logger.info("Executed ${statements.size} SQL statements ($resource) in $elapsedTime ms.")
         } catch (ex: Exception) {
             if (ex is ScriptException) {
                 throw ex
