@@ -55,25 +55,23 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
         val signedNetworkMap = connection.responseAs<SignedDataWithCert<NetworkMap>>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
         val timeout = CacheControl.parse(Headers.of(connection.headerFields.filterKeys { it != null }.mapValues { it.value[0] })).maxAgeSeconds().seconds
-        logger.trace { "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} node info hashes." }
+        logger.trace { "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} node info hashes. Node Info hashes: ${networkMap.nodeInfoHashes}" }
         return NetworkMapResponse(networkMap, timeout)
     }
 
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo {
         val url = URL("$networkMapUrl/node-info/$nodeInfoHash")
-        logger.trace { "Fetching node info : '$nodeInfoHash' from $url." }
+        logger.trace { "Fetching node info: '$nodeInfoHash' from $url." }
         val verifiedNodeInfo = url.openHttpConnection().responseAs<SignedNodeInfo>().verified()
-        logger.trace { "Fetched node info: '$nodeInfoHash' successfully." }
-        logger.trace { "$verifiedNodeInfo" }
+        logger.trace { "Fetched node info: '$nodeInfoHash' successfully. Node Info: $verifiedNodeInfo" }
         return verifiedNodeInfo
     }
 
     fun getNetworkParameters(networkParameterHash: SecureHash): SignedDataWithCert<NetworkParameters> {
         val url = URL("$networkMapUrl/network-parameters/$networkParameterHash")
-        logger.trace { "Fetching network parameters : '$networkParameterHash' from $url." }
+        logger.trace { "Fetching network parameters: '$networkParameterHash' from $url." }
         val networkParameter = url.openHttpConnection().responseAs<SignedDataWithCert<NetworkParameters>>()
-        logger.trace { "Fetched network parameters: '$networkParameterHash' successfully." }
-        logger.trace { "$networkParameter" }
+        logger.trace { "Fetched network parameters: '$networkParameterHash' successfully. Network Parameters: $networkParameter" }
         return networkParameter
     }
 
