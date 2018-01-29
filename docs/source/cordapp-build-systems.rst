@@ -79,7 +79,7 @@ ways to add another CorDapp as a dependency in your CorDapp's ``build.gradle`` f
 * ``cordapp project(":another-cordapp")`` (use this if the other CorDapp is defined in a module in the same project)
 * ``cordapp "net.corda:another-cordapp:1.0"`` (use this otherwise)
 
-The ``cordapp`` gradle configuration servers two purposes:
+The ``cordapp`` gradle configuration serves two purposes:
 
 * When using the ``cordformation`` Gradle plugin, the ``cordapp`` configuration indicates that this JAR should be
   included on your node as a CorDapp
