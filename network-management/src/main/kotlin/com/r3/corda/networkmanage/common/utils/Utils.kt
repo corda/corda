@@ -8,6 +8,7 @@ import joptsimple.OptionParser
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
 import java.security.KeyPair
@@ -50,9 +51,11 @@ fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Un
 
 class ShowHelpException(val parser: OptionParser, val errorMessage: String? = null) : Exception()
 
-fun buildCertPath(vararg certificates: X509Certificate): CertPath = X509CertificateFactory().generateCertPath(certificates.asList())
-
 fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())
+
+fun X509KeyStore.getCertPathAndKey(alias: String, privateKeyPassword: String): CertPathAndKey {
+    return CertPathAndKey(getCertificateChain(alias), getPrivateKey(alias, privateKeyPassword))
+}
 
 private fun String.toCamelcase(): String {
     return if (contains('_') || contains('-')) {

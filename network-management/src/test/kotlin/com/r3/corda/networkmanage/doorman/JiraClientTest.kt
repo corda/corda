@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -10,6 +9,7 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.net.URI
+import javax.security.auth.x500.X500Principal
 
 @Ignore
 // This is manual test for testing Jira API.
@@ -41,8 +41,10 @@ class JiraClientTest {
     @Test
     fun updateSignedRequests() {
         val requests = jiraClient.getApprovedRequests()
-        val selfSignedCA = X509Utilities.createSelfSignedCACertificate(CordaX500Name("test", "london", "GB").x500Principal, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        jiraClient.updateSignedRequests(requests.map { it.requestId to buildCertPath(selfSignedCA) }.toMap())
+        val selfSignedCaCertPath = X509Utilities.buildCertPath(X509Utilities.createSelfSignedCACertificate(
+                X500Principal("O=test,L=london,C=GB"),
+                Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)))
+        jiraClient.updateSignedRequests(requests.associateBy({ it.requestId }, { selfSignedCaCertPath }))
     }
 
     @Test

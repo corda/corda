@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -71,7 +70,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         requestStorage.putCertificatePath(
                 requestId,
-                buildCertPath(nodeCaCert, intermediateCa.certificate, rootCaCert),
+                X509Utilities.buildCertPath(nodeCaCert, intermediateCa.certificate, rootCaCert),
                 listOf(CertificationRequestStorage.DOORMAN_SIGNATURE))
 
         val storedCertPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString()))

@@ -3,14 +3,13 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.internal.createDevNodeCaCertPath
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.internal.createDevNodeCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -228,9 +227,8 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     private fun generateSignedCertPath(csr: PKCS10CertificationRequest, keyPair: KeyPair): CertPath {
         return JcaPKCS10CertificationRequest(csr).run {
-            // TODO We need a utility in InternalUtils for converting X500Name -> CordaX500Name
             val (rootCa, intermediateCa, nodeCa) = createDevNodeCaCertPath(CordaX500Name.build(X500Principal(subject.encoded)), keyPair)
-            buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
+            X509Utilities.buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCa.certificate)
         }
     }
 

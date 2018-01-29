@@ -6,20 +6,18 @@ import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.r3.corda.networkmanage.common.utils.getCertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.getSupportedKey
-import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import java.security.cert.X509Certificate
 import java.time.Instant
 import kotlin.concurrent.thread
 
@@ -33,17 +31,9 @@ private fun processKeyStore(parameters: NetworkManagementServerParameters): Pair
     // Get password from console if not in config.
     val keyStorePassword = parameters.keystorePassword ?: readPassword("Key store password: ")
     val privateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("Private key password: ")
-    val keyStore = loadOrCreateKeyStore(parameters.keystorePath, keyStorePassword)
-
-    val csrCertPathAndKey = keyStore.run {
-        CertPathAndKey(
-                keyStore.getCertificateChain(DEFAULT_CSR_CERTIFICATE_NAME).map { it as X509Certificate },
-                keyStore.getSupportedKey(DEFAULT_CSR_CERTIFICATE_NAME, privateKeyPassword)
-        )
-    }
-
+    val keyStore = X509KeyStore.fromFile(parameters.keystorePath, keyStorePassword)
+    val csrCertPathAndKey = keyStore.getCertPathAndKey(DEFAULT_CSR_CERTIFICATE_NAME, privateKeyPassword)
     val networkMapSigner = LocalSigner(keyStore.getCertificateAndKeyPair(CORDA_NETWORK_MAP, privateKeyPassword))
-
     return Pair(csrCertPathAndKey, networkMapSigner)
 }
 

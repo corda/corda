@@ -24,8 +24,6 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import java.math.BigInteger
 import java.security.*
-import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.X509EncodedKeySpec
 import java.time.Instant
@@ -34,7 +32,7 @@ import java.util.*
 
 object HsmX509Utilities {
 
-    val SIGNATURE_ALGORITHM = "SHA256withECDSA"
+    const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
 
     /**
      * Create a de novo root self-signed X509 v3 CA cert for the specified [KeyPair].
@@ -45,27 +43,26 @@ object HsmX509Utilities {
      * @param provider provider to be used during the certificate signing process
      * @param crlDistPoint url to the certificate revocation list of this certificate
      * @param crlIssuer issuer of the certificate revocation list of this certificate
-     * @return an instance of [CertificateAndKeyPair] class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
+     * @return the new root cert.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
-    fun createSelfSignedCACert(type: CertificateType,
-                               subject: X500Name,
-                               keyPair: KeyPair,
-                               validDays: Int,
-                               provider: Provider,
-                               crlDistPoint: String? = null,
-                               crlIssuer: String? = null): CertificateAndKeyPair {
-        // TODO this needs to be chaneged
+    fun createSelfSignedCert(type: CertificateType,
+                             subject: X500Name,
+                             keyPair: KeyPair,
+                             validDays: Int,
+                             provider: Provider,
+                             crlDistPoint: String? = null,
+                             crlIssuer: X500Name? = null): X509Certificate {
+        // TODO this needs to be changed
         val serial = BigInteger.valueOf(random63BitValue(provider))
-        val pubKey = keyPair.public
 
         // Ten year certificate validity
         // TODO how do we manage certificate expiry, revocation and loss
         val window = getCertificateValidityWindow(0, validDays)
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { type.purposes.forEach { add(it) } })
 
-        val builder = JcaX509v3CertificateBuilder(subject, serial, window.first, window.second, subject, pubKey)
-        builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(pubKey))
+        val builder = JcaX509v3CertificateBuilder(subject, serial, window.first, window.second, subject, keyPair.public)
+        builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(keyPair.public))
         builder.addExtension(Extension.basicConstraints, true, BasicConstraints(type.isCA))
         builder.addExtension(Extension.keyUsage, false, type.keyUsage)
         builder.addExtension(Extension.extendedKeyUsage, false, keyPurposes)
@@ -77,52 +74,33 @@ object HsmX509Utilities {
 
         val cert = signCertificate(builder, keyPair.private, provider)
 
-        cert.checkValidity(Date())
-        cert.verify(pubKey)
+        cert.checkValidity()
+        cert.verify(keyPair.public)
 
-        return CertificateAndKeyPair(cert, KeyPair(pubKey, keyPair.private))
+        return cert
     }
 
     /**
      * This is a helper function, which purpose is to workaround a bug in the bouncycastle library
      * that is associated with the incorrect encoded byte production when the EC algorithm is used with the passed keys.
      * @param publicKey public key
-     * @param privateKey private key
-     * @return cleaned [KeyPair] instance
+     * @return cleaned [PublicKey] instance
      */
-    fun getCleanEcdsaKeyPair(publicKey: PublicKey, privateKey: PrivateKey): KeyPair {
-        val rawPublicKeyBytes = publicKey.encoded
-        val kf = KeyFactory.getInstance("EC")
-        val cleanPublicKey = kf.generatePublic(X509EncodedKeySpec(rawPublicKeyBytes))
-        return KeyPair(cleanPublicKey, privateKey)
+    fun cleanEcdsaPublicKey(publicKey: PublicKey): PublicKey {
+        return KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(publicKey.encoded))
     }
 
     /**
-     * Retrieves a certificate and keys from the given key store. Also, the keys retrieved are cleaned in a sense of the
-     * [getCleanEcdsaKeyPair] method.
-     * @param certificateKeyName certificate and key name (alias) to be used when querying the key store.
+     * Retrieves key pair and certificate from the given key store. Also, the keys retrieved are cleaned in a sense of the
+     * [cleanEcdsaPublicKey] method.
+     * @param alias certificate and key name (alias) to be used when querying the key store.
      * @param keyStore key store that holds the certificate with its keys.
-     * @return instance of [CertificateAndKeyPair] holding the retrieved certificate with its keys.
+     * @return instance of [CertificateAndKeyPair] holding the key pair and the certificate.
      */
-    fun retrieveCertificateAndKeys(certificateKeyName: String, keyStore: KeyStore): CertificateAndKeyPair {
-        val privateKey = keyStore.getKey(certificateKeyName, null) as PrivateKey
-        val publicKey = keyStore.getCertificate(certificateKeyName).publicKey
-        val certificate = keyStore.getX509Certificate(certificateKeyName)
-        return CertificateAndKeyPair(certificate, getCleanEcdsaKeyPair(publicKey, privateKey))
-    }
-
-    /**
-     * Retrieves key pair and certificate chain from the given key store. Also, the keys retrieved are cleaned in a sense of the
-     * [getCleanEcdsaKeyPair] method.
-     * @param certificateKeyName certificate and key name (alias) to be used when querying the key store.
-     * @param keyStore key store that holds the certificate with its keys.
-     * @return instance of [KeyPairAndCertificateChain] holding the key pair and the certificate chain.
-     */
-    fun retrieveKeysAndCertificateChain(certificateKeyName: String, keyStore: KeyStore): KeyPairAndCertificateChain {
-        val privateKey = keyStore.getKey(certificateKeyName, null) as PrivateKey
-        val publicKey = keyStore.getCertificate(certificateKeyName).publicKey
-        val certificateChain = keyStore.getCertificateChain(certificateKeyName).map { it as X509Certificate }
-        return KeyPairAndCertificateChain(getCleanEcdsaKeyPair(publicKey, privateKey), certificateChain.toTypedArray())
+    fun retrieveCertAndKeyPair(alias: String, keyStore: KeyStore): CertificateAndKeyPair {
+        val privateKey = keyStore.getKey(alias, null) as PrivateKey
+        val certificate = keyStore.getX509Certificate(alias)
+        return CertificateAndKeyPair(certificate, KeyPair(cleanEcdsaPublicKey(certificate.publicKey), privateKey))
     }
 
     /**
@@ -145,7 +123,7 @@ object HsmX509Utilities {
                                validDays: Int,
                                provider: Provider,
                                crlDistPoint: String?,
-                               crlIssuer: String?): CertificateAndKeyPair {
+                               crlIssuer: X500Name?): CertificateAndKeyPair {
 
         val issuer = X509CertificateHolder(certificateAuthority.certificate.encoded).subject
         val serial = BigInteger.valueOf(random63BitValue(provider))
@@ -192,7 +170,7 @@ object HsmX509Utilities {
                                 validDays: Int,
                                 provider: Provider,
                                 crlDistPoint: String?,
-                                crlIssuer: String?): Certificate {
+                                crlIssuer: X500Name?): X509Certificate {
         val jcaRequest = JcaPKCS10CertificationRequest(request)
         // This can be adjusted more to our future needs.
         val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = null).x500Name))), arrayOf())
@@ -250,13 +228,6 @@ object HsmX509Utilities {
     }
 
     /**
-     * A utility method for transforming number of certificates into the [CertPath] instance.
-     * The certificates passed should be ordered starting with the leaf certificate and ending with the root one.
-     * @param certificates ordered certficates
-     */
-    fun buildCertPath(vararg certificates: Certificate) = CertificateFactory.getInstance("X509").generateCertPath(certificates.asList())
-
-    /**
      * Creates and initializes a key store from the given crypto server provider.
      * @param provider crypto server provider to be used for the key store creation
      * @return created key store instance
@@ -312,11 +283,11 @@ object HsmX509Utilities {
         return certificateBuilder.build(signer).toJca()
     }
 
-    private fun addCrlInfo(builder: X509v3CertificateBuilder, crlDistPoint: String?, crlIssuer: String?) {
+    private fun addCrlInfo(builder: X509v3CertificateBuilder, crlDistPoint: String?, crlIssuer: X500Name?) {
         if (crlDistPoint != null) {
             val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
             val crlIssuerGeneralNames = crlIssuer?.let {
-                GeneralNames(GeneralName(CordaX500Name.parse(crlIssuer).x500Name))
+                GeneralNames(GeneralName(crlIssuer))
             }
             // The second argument is flag that allows you to define what reason of certificate revocation is served by this distribution point see [ReasonFlags].
             // The idea is that you have different revocation per revocation reason. Since we won't go into such a granularity, we can skip that parameter.
@@ -327,5 +298,3 @@ object HsmX509Utilities {
         }
     }
 }
-
-data class KeyPairAndCertificateChain(val keyPair: KeyPair, val certificateChain: Array<X509Certificate>)

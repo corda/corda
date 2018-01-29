@@ -14,8 +14,7 @@ import java.security.Signature
 /**
  * Signer which connects to a HSM using the given [authenticator] to sign bytes.
  */
-// TODO Rename this to HsmSigner
-class HsmNetworkMapSigner(private val authenticator: Authenticator) : Signer {
+class HsmSigner(private val authenticator: Authenticator) : Signer {
     /**
      * Signs given data using [CryptoServerJCE.CryptoServerProvider], which connects to the underlying HSM.
      */

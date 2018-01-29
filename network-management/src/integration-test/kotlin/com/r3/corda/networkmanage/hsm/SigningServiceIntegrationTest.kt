@@ -2,7 +2,6 @@ package com.r3.corda.networkmanage.hsm
 
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.doorman.DoormanConfig
 import com.r3.corda.networkmanage.doorman.NetworkManagementServer
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
@@ -19,7 +18,9 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.createDevNodeCa
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -76,7 +77,7 @@ class SigningServiceIntegrationTest {
                 for (approvedRequest in approvedRequests) {
                     JcaPKCS10CertificationRequest(approvedRequest.request).run {
                         val nodeCa = createDevNodeCa(intermediateCa, CordaX500Name.parse(subject.toString()))
-                        approvedRequest.certPath = buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCaCert)
+                        approvedRequest.certPath = X509Utilities.buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCaCert)
                     }
                 }
                 storage.store(approvedRequests, listOf("TEST"))

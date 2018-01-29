@@ -4,11 +4,11 @@ import com.r3.corda.networkmanage.common.persistence.CertificateData
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
+import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.SecureHash
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.envers.Audited
 import java.security.cert.CertPath
-import java.security.cert.CertificateFactory
 import java.time.Instant
 import javax.persistence.*
 
@@ -114,5 +114,5 @@ class CertificateDataEntity(
         )
     }
 
-    private fun toCertificatePath(): CertPath = CertificateFactory.getInstance("X.509").generateCertPath(certificatePathBytes.inputStream())
+    private fun toCertificatePath(): CertPath = buildCertPath(certificatePathBytes)
 }

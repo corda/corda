@@ -94,6 +94,7 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
     val configFile = if (argConfig.hasPath("configFile")) {
         Paths.get(argConfig.getString("configFile"))
     } else {
+        // TODO Remove this default
         Paths.get(".") / "network-management.conf"
     }
     require(configFile.isRegularFile()) { "Config file $configFile does not exist" }

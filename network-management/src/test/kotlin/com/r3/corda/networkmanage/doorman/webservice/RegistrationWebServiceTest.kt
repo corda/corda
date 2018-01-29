@@ -3,7 +3,6 @@ package com.r3.corda.networkmanage.doorman.webservice
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.doorman.NetworkManagementWebServer
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
 import net.corda.core.crypto.Crypto
@@ -109,7 +108,7 @@ class RegistrationWebServiceTest : TestBase() {
                             intermediateCa.keyPair,
                             X500Principal(subject.encoded),
                             publicKey)
-                    buildCertPath(tlsCert, intermediateCa.certificate, rootCaCert)
+                    X509Utilities.buildCertPath(tlsCert, intermediateCa.certificate, rootCaCert)
                 }
                 null
             }
@@ -157,7 +156,7 @@ class RegistrationWebServiceTest : TestBase() {
                             X500Principal(subject.encoded),
                             publicKey,
                             nameConstraints = nameConstraints)
-                    buildCertPath(clientCert, intermediateCa.certificate, rootCaCert)
+                    X509Utilities.buildCertPath(clientCert, intermediateCa.certificate, rootCaCert)
                 }
                 true
             }

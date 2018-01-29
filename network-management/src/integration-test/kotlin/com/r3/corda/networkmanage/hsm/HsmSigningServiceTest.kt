@@ -6,7 +6,7 @@ import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.r3.corda.networkmanage.hsm.generator.run
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
-import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
+import com.r3.corda.networkmanage.hsm.signer.HsmSigner
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.identity.CordaX500Name.Companion.parse
@@ -48,7 +48,7 @@ class HsmSigningServiceTest : HsmCertificateTest() {
         val userInput = givenHsmUserAuthenticationInput()
 
         // given HSM network map signer
-        val signer = HsmNetworkMapSigner(Authenticator(
+        val signer = HsmSigner(Authenticator(
                 provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.networkMapKeyGroup),
                 inputReader = userInput))
 

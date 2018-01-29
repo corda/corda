@@ -29,14 +29,17 @@ class DefaultCsrHandlerTest : TestBase() {
 
         val requestStorage: CertificationRequestStorage = mock {
             on { getRequest("New") }.thenReturn(certificateSigningRequest())
-            on { getRequest("Signed") }.thenReturn(certificateSigningRequest(status = RequestStatus.SIGNED, certData = certificateData(CertificateStatus.VALID, buildCertPath(cert))))
+            on { getRequest("Signed") }.thenReturn(certificateSigningRequest(
+                    status = RequestStatus.SIGNED,
+                    certData = certificateData(CertificateStatus.VALID, X509Utilities.buildCertPath(cert))
+            ))
             on { getRequest("Rejected") }.thenReturn(certificateSigningRequest(status = RequestStatus.REJECTED, remark = "Random reason"))
         }
         val requestProcessor = DefaultCsrHandler(requestStorage, null)
 
         assertEquals(CertificateResponse.NotReady, requestProcessor.getResponse("random"))
         assertEquals(CertificateResponse.NotReady, requestProcessor.getResponse("New"))
-        assertEquals(CertificateResponse.Ready(buildCertPath(cert)), requestProcessor.getResponse("Signed"))
+        assertEquals(CertificateResponse.Ready(X509Utilities.buildCertPath(cert)), requestProcessor.getResponse("Signed"))
         assertEquals(CertificateResponse.Unauthorised("Random reason"), requestProcessor.getResponse("Rejected"))
     }
 

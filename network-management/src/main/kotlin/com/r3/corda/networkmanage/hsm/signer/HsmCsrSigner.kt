@@ -3,11 +3,13 @@ package com.r3.corda.networkmanage.hsm.signer
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
-import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.buildCertPath
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createClientCertificate
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
-import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveCertificateAndKeys
+import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveCertAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getX509Certificate
+import org.bouncycastle.asn1.x500.X500Name
 
 /**
  * Encapsulates certificate signing logic
@@ -33,20 +35,19 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
     override fun sign(toSign: List<ApprovedCertificateRequestData>) {
         authenticator.connectAndAuthenticate { provider, rootProvider, signers ->
             val rootKeyStore = getAndInitializeKeyStore(rootProvider!!)
-            // This should be changed once we allow for more certificates in the chain. Preferably we should use
-            // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
-            val rootCert = rootKeyStore.getCertificate(rootCertAlias)
+            val rootCert = rootKeyStore.getX509Certificate(rootCertAlias)
             val keyStore = getAndInitializeKeyStore(provider)
-            val doormanCertAndKey = retrieveCertificateAndKeys(intermediateCertAlias, keyStore)
+            val doormanCertAndKey = retrieveCertAndKeyPair(intermediateCertAlias, keyStore)
             toSign.forEach {
-                it.certPath = buildCertPath(createClientCertificate(
+                val nodeCaCert = createClientCertificate(
                         CertificateType.NODE_CA,
                         doormanCertAndKey,
                         it.request,
-                        validDays, 
+                        validDays,
                         provider,
                         csrCertCrlDistPoint,
-                        csrCertCrlIssuer), doormanCertAndKey.certificate, rootCert)
+                        csrCertCrlIssuer?.let { X500Name(it) })
+                it.certPath = X509Utilities.buildCertPath(nodeCaCert, doormanCertAndKey.certificate, rootCert)
             }
             storage.store(toSign, signers)
             println("The following certificates have been signed by $signers:")

@@ -11,8 +11,8 @@ import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 import kotlin.system.exitProcess
 
-private val cordaX500Name = "OU=Corda,O=R3 Ltd,L=London,C=GB"
-
+// TODO The cert subjects need to be configurable
+private const val CORDA_X500_BASE = "O=R3 HoldCo LLC,OU=Corda,L=New York,C=US"
 const val NETWORK_ROOT_TRUSTSTORE_FILENAME = "network-root-truststore.jks"
 
 /** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
@@ -32,10 +32,10 @@ fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPriv
     val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
     // Ensure folder exists.
     rootStoreFile.parent.createDirectories()
-    val rootStore = loadOrCreateKeyStore(rootStoreFile, rootKeystorePassword)
+    val rootStore = X509KeyStore.fromFile(rootStoreFile, rootKeystorePassword, createNew = true)
     val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root Private Key Password: ")
 
-    if (rootStore.containsAlias(X509Utilities.CORDA_ROOT_CA)) {
+    if (X509Utilities.CORDA_ROOT_CA in rootStore) {
         println("${X509Utilities.CORDA_ROOT_CA} already exists in keystore, process will now terminate.")
         println(rootStore.getCertificate(X509Utilities.CORDA_ROOT_CA))
         exitProcess(1)
@@ -43,22 +43,24 @@ fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPriv
 
     val selfSignKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     // TODO Make the cert subject configurable
-    val selfSignCert = X509Utilities.createSelfSignedCACertificate(
-            X500Principal("CN=Corda Root CA,$cordaX500Name"),
+    val rootCert = X509Utilities.createSelfSignedCACertificate(
+            X500Principal("CN=Corda Root CA,$CORDA_X500_BASE"),
             selfSignKey)
-    rootStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
-    rootStore.save(rootStoreFile, rootKeystorePassword)
+    rootStore.update {
+        setPrivateKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, listOf(rootCert), rootPrivateKeyPassword)
+    }
 
     val trustStorePath = (rootStoreFile.parent / "distribute-nodes").createDirectories() / NETWORK_ROOT_TRUSTSTORE_FILENAME
 
     val networkRootTrustPassword = networkRootTrustPass ?: readPassword("Network Root Trust Store Password: ")
-    val networkRootTrustStore = loadOrCreateKeyStore(trustStorePath, networkRootTrustPassword)
-    networkRootTrustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, selfSignCert)
-    networkRootTrustStore.save(trustStorePath, networkRootTrustPassword)
-    println("Trust store for distribution to nodes created in $networkRootTrustStore")
 
+    X509KeyStore.fromFile(trustStorePath, networkRootTrustPassword, createNew = true).update {
+        setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
+    }
+
+    println("Trust store for distribution to nodes created in $trustStorePath")
     println("Root CA keypair and certificate stored in ${rootStoreFile.toAbsolutePath()}.")
-    println(selfSignCert)
+    println(rootCert)
 }
 
 fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
@@ -66,7 +68,7 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
     // Get password from console if not in config.
     val rootKeystorePassword = rootKeystorePass ?: readPassword("Root key store password: ")
     val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root private key password: ")
-    val rootKeyStore = loadKeyStore(rootStoreFile, rootKeystorePassword)
+    val rootKeyStore = X509KeyStore.fromFile(rootStoreFile, rootKeystorePassword)
 
     val rootKeyPairAndCert = rootKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, rootPrivateKeyPassword)
 
@@ -74,10 +76,10 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
     val privateKeyPassword = caPrivateKeyPass ?: readPassword("Private key Password: ")
     // Ensure folder exists.
     keystoreFile.parent.createDirectories()
-    val keyStore = loadOrCreateKeyStore(keystoreFile, keyStorePassword)
+    val keyStore = X509KeyStore.fromFile(keystoreFile, keyStorePassword, createNew = true)
 
     fun storeCertIfAbsent(alias: String, certificateType: CertificateType, subject: X500Principal, signatureScheme: SignatureScheme) {
-        if (keyStore.containsAlias(alias)) {
+        if (alias in keyStore) {
             println("$alias already exists in keystore:")
             println(keyStore.getCertificate(alias))
             return
@@ -91,13 +93,10 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
                 subject,
                 keyPair.public
         )
-        keyStore.addOrReplaceKey(
-                alias,
-                keyPair.private,
-                privateKeyPassword.toCharArray(),
-                arrayOf(cert, rootKeyPairAndCert.certificate)
-        )
-        keyStore.save(keystoreFile, keyStorePassword)
+
+        keyStore.update {
+            setPrivateKey(alias, keyPair.private, listOf(cert, rootKeyPairAndCert.certificate), privateKeyPassword)
+        }
 
         println("$certificateType key pair and certificate stored in $keystoreFile.")
         println(cert)
@@ -106,12 +105,12 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
     storeCertIfAbsent(
             DEFAULT_CSR_CERTIFICATE_NAME,
             CertificateType.INTERMEDIATE_CA,
-            X500Principal("CN=Corda Intermediate CA,$cordaX500Name"),
+            X500Principal("CN=Corda Doorman CA,$CORDA_X500_BASE"),
             X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
 
     storeCertIfAbsent(
             CORDA_NETWORK_MAP,
             CertificateType.NETWORK_MAP,
-            X500Principal("CN=Corda Network Map,$cordaX500Name"),
+            X500Principal("CN=Corda Network Map,$CORDA_X500_BASE"),
             Crypto.EDDSA_ED25519_SHA512)
 }

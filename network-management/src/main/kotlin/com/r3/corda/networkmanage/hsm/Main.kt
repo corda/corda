@@ -15,7 +15,7 @@ import com.r3.corda.networkmanage.hsm.menu.Menu
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
-import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
+import com.r3.corda.networkmanage.hsm.signer.HsmSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.core.utilities.minutes
 import org.apache.logging.log4j.LogManager
@@ -56,7 +56,7 @@ fun run(parameters: Parameters) {
         checkNotNull(dataSourceProperties)
         val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
-        val hsmSigner = HsmNetworkMapSigner(
+        val hsmSigner = HsmSigner(
                 Authenticator(
                         AuthMode.KEY_FILE,
                         autoUsername,
@@ -123,7 +123,7 @@ fun run(parameters: Parameters) {
 }
 
 private fun startNetworkingMapSigningPolling(networkMapStorage: NetworkMapStorage,
-                                             signer: HsmNetworkMapSigner,
+                                             signer: HsmSigner,
                                              executor: ScheduledExecutorService,
                                              signingPeriod: Duration) {
     val networkMapSigner = NetworkMapSigner(networkMapStorage, signer)
