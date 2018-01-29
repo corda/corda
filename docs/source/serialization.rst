@@ -1,14 +1,38 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Object serialization
 ====================
 
 .. contents::
 
-What is serialization (and deserialization)?
---------------------------------------------
+Introduction
+------------
 
 Object serialization is the process of converting objects into a stream of bytes and, deserialization, the reverse
 process of creating objects from a stream of bytes.  It takes place every time nodes pass objects to each other as
 messages, when objects are sent to or from RPC clients from the node, and when we store transactions in the database.
+
+Corda pervasively uses a custom form of type safe binary serialisation. This stands in contrast to some other systems that use
+weakly or untyped string-based serialisation schemes like JSON or XML. The primary drivers for this were:
+
+    *  A desire to have a schema describing what has been serialized alongside the actual data:
+        #.  To assist with versioning, both in terms of being able to interpret data archived long ago (e.g. trades from
+            a decade ago, long after the code has changed) and between differing code versions.
+        #.  To make it easier to write generic code e.g. user interfaces that can navigate the serialized form of data.
+        #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted.
+    *  A desire to use a documented and static wire format that is platform independent, and is not subject to change with
+       3rd party library upgrades, etc.
+    *  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
+       and the subclasses do not need to be defined in the schema *upfront*. This is key to many Corda concepts, such as states.
+    *  Increased security by constructing deserialized objects through supported constructors, rather than having
+       data inserted directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
+       supposed invariants.
+    *  Binary formats work better with digital signatures than text based formats, as there's much less scope for
+       changes that modify syntax but not semantics.
 
 Whitelisting
 ------------
@@ -44,46 +68,28 @@ It's reproduced here as an example of both ways you can do this for a couple of 
    ``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
 
 AMQP
-====
+----
 
-Originally Corda used a ``Kryo``-based serialization scheme throughout for all serialization contexts. However, it was realised there
-was a compelling use case for the definition and development of a custom format based upon AMQP 1.0. The primary drivers for this were:
+Corda uses an extended form of AMQP 1.0 as its binary wire protocol.
 
-    #.  A desire to have a schema describing what has been serialized alongside the actual data:
+Corda serialisation is currently used for:
 
-        #.  To assist with versioning, both in terms of being able to interpret data archived long ago (e.g. trades from
-            a decade ago, long after the code has changed) and between differing code versions
-        #.  To make it easier to write user interfaces that can navigate the serialized form of data
-        #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted
-    #.  A desire to use a documented and static wire format that is platform independent, and is not subject to change with
-        3rd party library upgrades, etc.
-    #.  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
-        and the subclasses do not need to be defined in the schema *upfront*. This is key to many Corda concepts, such as states.
-    #.  Increased security by constructing deserialized objects through supported constructors, rather than having
-        data inserted directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
-        supposed invariants
+    #.  Peer-to-peer networking.
+    #.  Persisted messages, like signed transactions and states.
 
-Delivering this is an ongoing effort by the Corda development team. At present, the ``Kryo``-based format is still used by the RPC framework on
-both the client and server side. However, it is planned that the RPC framework will move to the AMQP framework when ready.
+.. note:: At present, the Kryo-based format is still used by the RPC framework on both the client and server side. However, it is planned that the RPC framework will move to the AMQP framework soon.
 
-The AMQP framework is currently used for:
-
-    #.  The peer-to-peer context, representing inter-node communication
-    #.  The persistence layer, representing contract states persisted into the vault
-
-Finally, for the checkpointing of flows, Corda will continue to use the existing ``Kryo`` scheme.
+For the checkpointing of flows Corda uses a private scheme that is subject to change. It is currently based on the Kryo
+framework, but this may not be true in future.
 
 This separation of serialization schemes into different contexts allows us to use the most suitable framework for that context rather than
-attempting to force a one-size-fits-all approach. ``Kryo`` is more suited to the serialization of a program's stack frames, as it is more flexible
+attempting to force a one-size-fits-all approach. Kryo is more suited to the serialization of a program's stack frames, as it is more flexible
 than our AMQP framework in what it can construct and serialize. However, that flexibility makes it exceptionally difficult to make secure. Conversely,
 our AMQP framework allows us to concentrate on a secure framework that can be reasoned about and thus made safer, with far fewer
 security holes.
 
-.. note:: Selection of serialization context should, for the most part, be opaque to CorDapp developers, the Corda framework selecting
-    the correct context as configured.
-
-.. note:: For information on our choice of AMQP 1.0, see :doc:`amqp-choice`.  For detail on how we utilise AMQP 1.0 and represent
-   objects in AMQP types, see :doc:`amqp-format`.
+Selection of serialization context should, for the most part, be opaque to CorDapp developers, the Corda framework selecting
+the correct context as configured.
 
 This document describes what is currently and what will be supported in the Corda AMQP format from the perspective
 of CorDapp developers, to allow CorDapps to take into consideration the future state.  The AMQP serialization format will
@@ -97,8 +103,9 @@ This section describes the classes and interfaces that the AMQP serialization fo
 Collection Types
 ````````````````
 
-The following collection types are supported.  Any implementation of the following will be mapped to *an* implementation of the interface or class on the other end.
-For example, if you use a Guava implementation of a collection, it will deserialize as the primitive collection type.
+The following collection types are supported.  Any implementation of the following will be mapped to *an* implementation
+of the interface or class on the other end. For example, if you use a Guava implementation of a collection, it will
+deserialize as the primitive collection type.
 
 The declared types of properties should only use these types, and not any concrete implementation types (e.g.
 Guava implementations). Collections must specify their generic type, the generic type parameters will be included in
@@ -233,7 +240,7 @@ General Rules
 
         .. note:: In circumstances where classes cannot be recompiled, such as when using a third-party library, a
            proxy serializer can be used to avoid this problem. Details on creating such an object can be found on the
-            :doc:`cordapp-custom-serializers` page.
+           :doc:`cordapp-custom-serializers` page.
 
     #.  The class must be annotated with ``@CordaSerializable``
     #.  The declared types of constructor arguments, getters, and setters must be supported, and where generics are used, the
@@ -304,21 +311,28 @@ For example:
 
 .. container:: codeset
 
-    .. sourcecode:: Java
+   .. sourcecode:: kotlin
 
-        class Example {
-            private int a;
-            private int b;
-            private int c;
+      class Example(var a: Int, var b: Int, var c: Int)
 
-            public int getA() { return a; }
-            public int getB() { return b; }
-            public int getC() { return c; }
+   .. sourcecode:: java
 
-            public void setA(int a) { this.a = a; }
-            public void setB(int b) { this.b = b; }
-            public void setC(int c) { this.c = c; }
-        }
+      class Example {
+          private int a;
+          private int b;
+          private int c;
+
+          public int getA() { return a; }
+          public int getB() { return b; }
+          public int getC() { return c; }
+
+          public void setA(int a) { this.a = a; }
+          public void setB(int b) { this.b = b; }
+          public void setC(int c) { this.c = c; }
+      }
+
+.. warning:: We do not recommend this pattern! Corda tries to use immutable data structures throughout, and if you
+   rely heavily on mutable JavaBean style objects then you may sometimes find the API behaves in unintuitive ways.
 
 Inaccessible Private Properties
 ```````````````````````````````
@@ -328,30 +342,26 @@ accessible getter methods, this development idiom is strongly discouraged.
 
 For example.
 
-    .. container:: codeset
+.. container:: codeset
 
-        Kotlin:
+    .. sourcecode:: kotlin
 
-        .. sourcecode:: kotlin
+       class C(val a: Int, private val b: Int)
 
-            data class C(val a: Int, private val b: Int)
+    .. sourcecode:: java
 
-        Java:
+       class C {
+           public Integer a;
+           private Integer b;
 
-        .. sourcecode:: Java
+           public C(Integer a, Integer b) {
+               this.a = a;
+               this.b = b;
+           }
+       }
 
-            class C {
-                public Integer a;
-                private Integer b;
-
-                C(Integer a, Integer b) {
-                    this.a = a;
-                    this.b = b;
-                }
-            }
-
-When designing stateful objects, is should be remembered that they are not, despite appearances, traditional
-programmatic constructs. They are signed over, transformed, serialised, and relationally mapped. As such,
+When designing Corda states, it should be remembered that they are not, despite appearances, traditional
+OOP style objects. They are signed over, transformed, serialised, and relationally mapped. As such,
 all elements should be publicly accessible by design.
 
 .. warning:: IDEs will indicate erroneously that properties can be given something other than public visibility. Ignore
@@ -359,40 +369,38 @@ all elements should be publicly accessible by design.
 
 Providing a public getter, as per the following example, is acceptable:
 
-    .. container:: codeset
+.. container:: codeset
 
-        Kotlin:
+   .. sourcecode:: kotlin
 
-        .. sourcecode:: kotlin
+      class C(val a: Int, b: Int) {
+          var b: Int = b
+             private set
+      }
 
-            data class C(val a: Int, private val b: Int) {
-                public fun getB() = b
-            }
+   .. sourcecode:: java
 
-        Java:
+      class C {
+          public Integer a;
+          private Integer b;
 
-        .. sourcecode:: Java
+          C(Integer a, Integer b) {
+              this.a = a;
+              this.b = b;
+          }
 
-            class C {
-                public Integer a;
-                private Integer b;
-
-                C(Integer a, Integer b) {
-                    this.a = a;
-                    this.b = b;
-                }
-
-                public Integer getB() {
-                    return b;
-                }
-            }
+          public Integer getB() {
+              return b;
+          }
+      }
 
 
 Enums
 `````
 
-    #.  All enums are supported, provided they are annotated with ``@CordaSerializable``
-
+All enums are supported, provided they are annotated with ``@CordaSerializable``. Corda supports interoperability of
+enumerated type versions. This allows such types to be changed over time without breaking backward (or forward)
+compatibility. The rules and mechanisms for doing this are discussed in :doc:`serialization-enum-evolution`.
 
 Exceptions
 ``````````
@@ -407,24 +415,23 @@ The following rules apply to supported ``Throwable`` implementations.
 Kotlin Objects
 ``````````````
 
-    #.  Kotlin's non-anonymous ``object`` s (i.e. constructs like ``object foo : Contract {...}``) are singletons and
-        treated differently.  They are recorded into the stream with no properties, and deserialize back to the
-        singleton instance. Currently, the same is not true of Java singletons, which will deserialize to new instances
-        of the class
-    #.  Kotlin's anonymous ``object`` s (i.e. constructs like ``object : Contract {...}``) are not currently supported
-        and will not serialize correctly. They need to be re-written as an explicit class declaration
+Kotlin's non-anonymous ``object`` s (i.e. constructs like ``object foo : Contract {...}``) are singletons and
+treated differently.  They are recorded into the stream with no properties, and deserialize back to the
+singleton instance. Currently, the same is not true of Java singletons, which will deserialize to new instances
+of the class. This is hard to fix because there's no perfectly standard idiom for Java singletons.
 
-The Carpenter
-`````````````
+Kotlin's anonymous ``object`` s (i.e. constructs like ``object : Contract {...}``) are not currently supported
+and will not serialize correctly. They need to be re-written as an explicit class declaration.
 
-We support a class carpenter that can dynamically manufacture classes from the supplied schema when deserializing,
-without the supporting classes being present on the classpath.  This can be useful where other components might expect to
-be able to use reflection over the deserialized data, and also for ensuring classes not on the classpath can be
-deserialized without loading potentially malicious code dynamically without security review outside of a fully sandboxed
-environment.  A more detailed discussion of the carpenter will be provided in a future update to the documentation.
+Class synthesis
+---------------
 
-Future Enhancements
-```````````````````
+Corda serialization supports dynamically synthesising classes from the supplied schema when deserializing,
+without the supporting classes being present on the classpath.  This can be useful where generic code might expect to
+be able to use reflection over the deserialized data, for scripting languages that run on the JVM, and also for
+ensuring classes not on the classpath can be deserialized without loading potentially malicious code.
+
+Possible future enhancements include:
 
     #.  Java singleton support.  We will add support for identifying classes which are singletons and identifying the
         static method responsible for returning the singleton instance
@@ -441,11 +448,6 @@ all versions of the class. This ensures an object serialized with an older idea 
 and a version of the current state of the class instantiated.
 
 More detail can be found in :doc:`serialization-default-evolution`.
-
-Enum Evolution
-``````````````
-Corda supports interoperability of enumerated type versions. This allows such types to be changed over time without breaking
-backward (or forward) compatibility. The rules and mechanisms for doing this are discussed in :doc:`serialization-enum-evolution``.
 
 
 
