@@ -1,5 +1,6 @@
 package net.corda.irs
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
@@ -13,7 +14,8 @@ fun main(args: Array<String>) {
     driver(useTestClock = true, isDebug = true, waitForAllNodesToFinish = true) {
         val (nodeA, nodeB) = listOf(
                 startNode(providedName = DUMMY_BANK_A_NAME),
-                startNode(providedName = DUMMY_BANK_B_NAME)
+                startNode(providedName = DUMMY_BANK_B_NAME),
+                startNode(providedName = CordaX500Name("Regulator", "Moscow", "RU"))
         ).map { it.getOrThrow() }
         val controller = defaultNotaryNode.getOrThrow()
 
