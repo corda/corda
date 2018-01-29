@@ -44,7 +44,7 @@
             <connectTime>true</connectTime>
           </value>
         </objProp>
-        <stringProp name="filename"></stringProp>
+        <stringProp name="filename">BatchNotarise2TPS.csv</stringProp>
         <boolProp name="ResultCollector.success_only_logging">true</boolProp>
       </ResultCollector>
       <hashTree/>
@@ -54,7 +54,7 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">3</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time"></stringProp>
         <longProp name="ThreadGroup.start_time">1509455820000</longProp>
         <longProp name="ThreadGroup.end_time">1509455820000</longProp>
@@ -68,7 +68,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="label" elementType="Argument">
                 <stringProp name="Argument.name">label</stringProp>
-                <stringProp name="Argument.value">${___samplerName}</stringProp>
+                <stringProp name="Argument.value">${__samplerName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="host" elementType="Argument">
@@ -78,32 +78,32 @@
               </elementProp>
               <elementProp name="port" elementType="Argument">
                 <stringProp name="Argument.name">port</stringProp>
-                <stringProp name="Argument.value">10004</stringProp>
+                <stringProp name="Argument.value">10003</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="username" elementType="Argument">
                 <stringProp name="Argument.name">username</stringProp>
-                <stringProp name="Argument.value">perf</stringProp>
+                <stringProp name="Argument.value">default</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="password" elementType="Argument">
                 <stringProp name="Argument.name">password</stringProp>
-                <stringProp name="Argument.value">perf</stringProp>
+                <stringProp name="Argument.value">default</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="notaryName" elementType="Argument">
                 <stringProp name="Argument.name">notaryName</stringProp>
-                <stringProp name="Argument.value">O=Notary Service,L=Zurich,C=CH,CN=corda.notary.simple</stringProp>
+                <stringProp name="Argument.value">O=Notary Service,L=Zurich,C=CH</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="numStates" elementType="Argument">
                 <stringProp name="Argument.name">numStates</stringProp>
-                <stringProp name="Argument.value">100</stringProp>
+                <stringProp name="Argument.value">10</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="numIterations" elementType="Argument">
                 <stringProp name="Argument.name">numIterations</stringProp>
-                <stringProp name="Argument.value">1</stringProp>
+                <stringProp name="Argument.value">10</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="enableLog" elementType="Argument">
@@ -113,7 +113,7 @@
               </elementProp>
               <elementProp name="transactionsPerSecond" elementType="Argument">
                 <stringProp name="Argument.name">transactionsPerSecond</stringProp>
-                <stringProp name="Argument.value">1.0</stringProp>
+                <stringProp name="Argument.value">2.0</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="repeatInvoke" elementType="Argument">
@@ -131,7 +131,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="label" elementType="Argument">
                 <stringProp name="Argument.name">label</stringProp>
-                <stringProp name="Argument.value"></stringProp>
+                <stringProp name="Argument.value">${__samplerName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="host" elementType="Argument">
@@ -175,7 +175,7 @@
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -258,7 +258,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="label" elementType="Argument">
                 <stringProp name="Argument.name">label</stringProp>
-                <stringProp name="Argument.value"></stringProp>
+                <stringProp name="Argument.value">${__samplerName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="host" elementType="Argument">

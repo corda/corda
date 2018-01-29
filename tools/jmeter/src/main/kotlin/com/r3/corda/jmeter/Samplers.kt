@@ -67,24 +67,27 @@ class CashIssueAndPaySampler : AbstractSampler() {
     companion object JMeterProperties {
         val otherParty = Argument("otherPartyName", "", "<meta>", "The X500 name of the payee.")
         val coinSelection = Argument("useCoinSelection", "true", "<meta>", "True to use coin selection and false (or anything else) to avoid coin selection.")
+        val anonymousIdentities = Argument("anonymousIdentities", "true", "<meta>", "True to use anonymous identities and false (or anything else) to use well known identities.")
     }
 
     lateinit var counterParty: Party
     var useCoinSelection: Boolean = true
+    var useAnonymousIdentities: Boolean = true
 
     override fun setupTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
         getNotaryIdentity(rpcProxy,testContext)
         counterParty = getIdentity(rpcProxy, testContext, otherParty)
         useCoinSelection = testContext.getParameter(coinSelection.name, coinSelection.value).toBoolean()
+        useAnonymousIdentities = testContext.getParameter(anonymousIdentities.name, anonymousIdentities.value).toBoolean()
     }
 
 
     override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*> {
         val amount = 2_000_000.POUNDS
         if (useCoinSelection) {
-            return FlowInvoke<CashIssueAndPaymentFlow>(CashIssueAndPaymentFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, true, notaryIdentity))
+            return FlowInvoke<CashIssueAndPaymentFlow>(CashIssueAndPaymentFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, useAnonymousIdentities, notaryIdentity))
         } else {
-            return FlowInvoke<CashIssueAndPaymentNoSelection>(CashIssueAndPaymentNoSelection::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, true, notaryIdentity))
+            return FlowInvoke<CashIssueAndPaymentNoSelection>(CashIssueAndPaymentNoSelection::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, useAnonymousIdentities, notaryIdentity))
         }
     }
 
@@ -92,7 +95,7 @@ class CashIssueAndPaySampler : AbstractSampler() {
     }
 
     override val additionalArgs: Set<Argument>
-        get() = setOf(notary, otherParty, coinSelection)
+        get() = setOf(notary, otherParty, coinSelection, anonymousIdentities)
 }
 
 /**

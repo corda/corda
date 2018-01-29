@@ -31,7 +31,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="label" elementType="Argument">
                 <stringProp name="Argument.name">label</stringProp>
-                <stringProp name="Argument.value">${___samplerName}</stringProp>
+                <stringProp name="Argument.value">${__samplerName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="host" elementType="Argument">

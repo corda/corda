@@ -31,7 +31,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="label" elementType="Argument">
                 <stringProp name="Argument.name">label</stringProp>
-                <stringProp name="Argument.value">${___samplerName}</stringProp>
+                <stringProp name="Argument.value">${__samplerName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="host" elementType="Argument">
@@ -41,22 +41,22 @@
               </elementProp>
               <elementProp name="port" elementType="Argument">
                 <stringProp name="Argument.name">port</stringProp>
-                <stringProp name="Argument.value">10004</stringProp>
+                <stringProp name="Argument.value">10003</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="username" elementType="Argument">
                 <stringProp name="Argument.name">username</stringProp>
-                <stringProp name="Argument.value">perf</stringProp>
+                <stringProp name="Argument.value">default</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="password" elementType="Argument">
                 <stringProp name="Argument.name">password</stringProp>
-                <stringProp name="Argument.value">perf</stringProp>
+                <stringProp name="Argument.value">default</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="notaryName" elementType="Argument">
                 <stringProp name="Argument.name">notaryName</stringProp>
-                <stringProp name="Argument.value">O=Notary Service,L=Zurich,C=CH,CN=corda.notary.simple</stringProp>
+                <stringProp name="Argument.value">O=Notary Service,L=Zurich,C=CH</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="otherPartyName" elementType="Argument">
