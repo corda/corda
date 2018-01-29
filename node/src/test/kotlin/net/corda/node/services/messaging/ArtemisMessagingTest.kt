@@ -2,7 +2,6 @@ package net.corda.node.services.messaging
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.concurrent.CordaFuture
 import com.codahale.metrics.MetricRegistry
@@ -10,8 +9,6 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
-import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -59,7 +56,6 @@ class ArtemisMessagingTest {
 
     private lateinit var config: NodeConfiguration
     private lateinit var database: CordaPersistence
-    private lateinit var securityManager: RPCSecurityManager
     private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
 
@@ -67,7 +63,6 @@ class ArtemisMessagingTest {
 
     @Before
     fun setUp() {
-        securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
         abstract class AbstractNodeConfiguration : NodeConfiguration
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
@@ -78,7 +73,6 @@ class ArtemisMessagingTest {
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(5).whenever(it).messageRedeliveryDelaySeconds
-            doReturn(true).whenever(it).useAMQPBridges
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock())
@@ -181,6 +175,7 @@ class ArtemisMessagingTest {
                     null,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
+                    networkMapCache,
                     maxMessageSize = maxMessageSize).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
@@ -189,7 +184,7 @@ class ArtemisMessagingTest {
     }
 
     private fun createMessagingServer(local: Int = serverPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, networkMapCache, maxMessageSize).apply {
+        return ArtemisMessagingServer(config, local, maxMessageSize).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

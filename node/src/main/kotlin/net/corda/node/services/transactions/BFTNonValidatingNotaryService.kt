@@ -13,7 +13,6 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
-import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
@@ -54,8 +53,7 @@ class BFTNonValidatingNotaryService(
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
                 configHandle.use {
-                    val timeWindowChecker = TimeWindowChecker(services.clock)
-                    val replica = Replica(it, replicaId, { createMap() }, services, notaryIdentityKey, timeWindowChecker)
+                    val replica = Replica(it, replicaId, { createMap() }, services, notaryIdentityKey)
                     replicaHolder.set(replica)
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
@@ -131,8 +129,7 @@ class BFTNonValidatingNotaryService(
                           replicaId: Int,
                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
-                          notaryIdentityKey: PublicKey,
-                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey, timeWindowChecker) {
+                          notaryIdentityKey: PublicKey) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
@@ -146,7 +143,7 @@ class BFTNonValidatingNotaryService(
                 val id = ftx.id
                 val inputs = ftx.inputs
                 val notary = ftx.notary
-                validateTimeWindow(ftx.timeWindow)
+                NotaryService.validateTimeWindow(services.clock, ftx.timeWindow)
                 if (notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity)
                 log.debug { "Inputs committed successfully, signing $id" }

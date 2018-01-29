@@ -1,10 +1,13 @@
 package net.corda.node.services.messaging
 
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -12,6 +15,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.FlowMessagingImpl
@@ -19,6 +23,11 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.BridgeControl
+import net.corda.nodeapi.internal.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
@@ -27,6 +36,8 @@ import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import rx.Subscription
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -73,6 +84,7 @@ class P2PMessagingClient(config: NodeConfiguration,
                          private val serviceIdentity: PublicKey?,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                          private val database: CordaPersistence,
+                         private val networkMap: NetworkMapCacheInternal,
                          advertisedAddress: NetworkHostAndPort = serverAddress,
                          maxMessageSize: Int
 ) : SingletonSerializeAsToken(), MessagingService {
@@ -133,6 +145,8 @@ class P2PMessagingClient(config: NodeConfiguration,
         var running = false
         var p2pConsumer: ClientConsumer? = null
         var serviceConsumer: ClientConsumer? = null
+        var bridgeNotifyConsumer: ClientConsumer? = null
+        var networkChangeSubscription: Subscription? = null
     }
 
     private val messagesToRedeliver = database.transaction {
@@ -147,12 +161,13 @@ class P2PMessagingClient(config: NodeConfiguration,
     private val cordaVendor = SimpleString(versionInfo.vendor)
     private val releaseVersion = SimpleString(versionInfo.releaseVersion)
     /** An executor for sending messages */
-    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
+    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging ${myIdentity.toStringShort()}", 1)
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
     private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
     private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     private val state = ThreadBox(InnerState())
+    private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
@@ -189,11 +204,13 @@ class P2PMessagingClient(config: NodeConfiguration,
         state.locked {
             val session = artemis.start().session
             val inbox = RemoteInboxAddress(myIdentity).queueName
+            val inboxes = mutableListOf(inbox)
             // Create a queue, consumer and producer for handling P2P network messages.
             createQueueIfAbsent(inbox)
             p2pConsumer = session.createConsumer(inbox)
             if (serviceIdentity != null) {
                 val serviceAddress = RemoteInboxAddress(serviceIdentity).queueName
+                inboxes += serviceAddress
                 createQueueIfAbsent(serviceAddress)
                 val serviceHandler = session.createConsumer(serviceAddress)
                 serviceHandler.setMessageHandler { msg ->
@@ -202,9 +219,94 @@ class P2PMessagingClient(config: NodeConfiguration,
                         deliver(msg, message)
                 }
             }
+            registerBridgeControl(session, inboxes)
+            enumerateBridges(session, inboxes)
         }
 
         resumeMessageRedelivery()
+    }
+
+    private fun InnerState.registerBridgeControl(session: ClientSession, inboxes: List<String>) {
+        val bridgeNotifyQueue = "$BRIDGE_NOTIFY.${myIdentity.toStringShort()}"
+        session.createTemporaryQueue(BRIDGE_NOTIFY, RoutingType.MULTICAST, bridgeNotifyQueue)
+        val bridgeConsumer = session.createConsumer(bridgeNotifyQueue)
+        bridgeNotifyConsumer = bridgeConsumer
+        bridgeConsumer.setMessageHandler { msg ->
+            val data: ByteArray = ByteArray(msg.bodySize).apply { msg.bodyBuffer.readBytes(this) }
+            val notifyMessage = data.deserialize<BridgeControl>(context = SerializationDefaults.P2P_CONTEXT)
+            log.info(notifyMessage.toString())
+            when (notifyMessage) {
+                is BridgeControl.BridgeToNodeSnapshotRequest -> enumerateBridges(session, inboxes)
+                else -> log.error("Unexpected Bridge Control message type on notify topc $notifyMessage")
+            }
+            msg.acknowledge()
+        }
+        networkChangeSubscription = networkMap.changed.subscribe { updateBridgesOnNetworkChange(it) }
+    }
+
+    private fun sendBridgeControl(message: BridgeControl) {
+        val client = artemis.started!!
+        val controlPacket = message.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
+        val artemisMessage = client.session.createMessage(false)
+        artemisMessage.writeBodyBufferBytes(controlPacket)
+        client.producer.send(BRIDGE_CONTROL, artemisMessage)
+    }
+
+    private fun updateBridgesOnNetworkChange(change: NetworkMapCache.MapChange) {
+        log.info("Updating bridges on network map change: ${change.node}")
+        fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
+            return node.legalIdentitiesAndCerts.map {
+                val messagingAddress = NodeAddress(it.party.owningKey, node.addresses.first())
+                BridgeEntry(messagingAddress.queueName, node.addresses, listOf(it.party.name))
+            }.filter { artemis.started!!.session.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
+        }
+
+        fun deployBridges(node: NodeInfo) {
+            gatherAddresses(node)
+                    .forEach {
+                        sendBridgeControl(BridgeControl.Create(myIdentity.toStringShort(), it))
+                    }
+        }
+
+        fun destroyBridges(node: NodeInfo) {
+            gatherAddresses(node)
+                    .forEach {
+                        sendBridgeControl(BridgeControl.Delete(myIdentity.toStringShort(), it))
+                    }
+        }
+
+        when (change) {
+            is NetworkMapCache.MapChange.Added -> {
+                deployBridges(change.node)
+            }
+            is NetworkMapCache.MapChange.Removed -> {
+                destroyBridges(change.node)
+            }
+            is NetworkMapCache.MapChange.Modified -> {
+                destroyBridges(change.previousNode)
+                deployBridges(change.node)
+            }
+        }
+    }
+
+    private fun enumerateBridges(session: ClientSession, inboxes: List<String>) {
+        val requiredBridges = mutableListOf<BridgeEntry>()
+        fun createBridgeEntry(queueName: SimpleString) {
+            val keyHash = queueName.substring(PEERS_PREFIX.length)
+            val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
+            for (node in peers) {
+                val bridge = BridgeEntry(queueName.toString(), node.addresses, node.legalIdentities.map { it.name })
+                requiredBridges += bridge
+                knownQueues += queueName.toString()
+            }
+        }
+
+        val queues = session.addressQuery(SimpleString("$PEERS_PREFIX#")).queueNames
+        for (queue in queues) {
+            createBridgeEntry(queue)
+        }
+        val startupMessage = BridgeControl.NodeToBridgeSnapshot(myIdentity.toStringShort(), inboxes, requiredBridges)
+        sendBridgeControl(startupMessage)
     }
 
     private fun resumeMessageRedelivery() {
@@ -343,9 +445,15 @@ class P2PMessagingClient(config: NodeConfiguration,
             check(artemis.started != null)
             val prevRunning = running
             running = false
+            networkChangeSubscription?.unsubscribe()
             val c = p2pConsumer ?: throw IllegalStateException("stop can't be called twice")
             try {
                 c.close()
+            } catch (e: ActiveMQObjectClosedException) {
+                // Ignore it: this can happen if the server has gone away before we do.
+            }
+            try {
+                bridgeNotifyConsumer!!.close()
             } catch (e: ActiveMQObjectClosedException) {
                 // Ignore it: this can happen if the server has gone away before we do.
             }
@@ -357,6 +465,7 @@ class P2PMessagingClient(config: NodeConfiguration,
                 // Ignore it: this can happen if the server has gone away before we do.
             }
             serviceConsumer = null
+            knownQueues.clear()
             prevRunning
         }
         if (running && !nodeExecutor.isOnThread) {
@@ -468,13 +577,25 @@ class P2PMessagingClient(config: NodeConfiguration,
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
     private fun createQueueIfAbsent(queueName: String) {
-        state.alreadyLocked {
-            val session = artemis.started!!.session
-            val queueQuery = session.queueQuery(SimpleString(queueName))
-            if (!queueQuery.isExists) {
-                log.info("Create fresh queue $queueName bound on same address")
-                session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+        if (!knownQueues.contains(queueName)) {
+            state.alreadyLocked {
+                val session = artemis.started!!.session
+                val queueQuery = session.queueQuery(SimpleString(queueName))
+                if (!queueQuery.isExists) {
+                    log.info("Create fresh queue $queueName bound on same address")
+                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+                    if (queueName.startsWith(PEERS_PREFIX)) {
+                        val keyHash = queueName.substring(PEERS_PREFIX.length)
+                        val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
+                        for (node in peers) {
+                            val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
+                            val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
+                            sendBridgeControl(createBridgeMessage)
+                        }
+                    }
+                }
             }
+            knownQueues += queueName
         }
     }
 
