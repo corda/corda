@@ -59,4 +59,35 @@ communicated with.
 
 ## Recommendation and justification
 
-This is a key decision for Technical Design and will be discussed during next Business Network working group meeting.
+As per meeting held on Fri, 26-Jan-2018 by @vkolomeyko, @josecoll, @mikehearn and @davejh69
+we agreed that it would make sense for all the new CorDapps written post BN implementation
+to know which BN they operate on.
+Such that they will be able to make BN specific membership checks and work with "Additional Information" that may be provided by BNO.
+"Additional Information" may incorporate BN specific information like Roles (E.g. "Agent" and "Lender")
+or transaction limits, reference data, etc.
+We will provide flexibility such that BN designers will be able to hold/distribute information that they feel relevant for their BN.
+
+All the pre-BN CorDapps will work as before with BN membership enforced on a Node level. Configuration details TBC.
+So it is not the case of Option #1 vs. Option #2 decision, but a form of hybrid approach.
+
+
+
+### In terms of addressing BN Privacy requirement:
+
+Unfortunately, we will have to supply information of **every** node into Global Network Map(GNM) regardless whether it is part of BN or not.
+This is necessary to protect against non-member on member attack when content of a GNM is used on TLS handshake phase to prevent
+connection with IP addresses that are not part of Compatibility Zone(CZ).
+Also GNP will be a key point where certification revocation will be enforced.
+
+In order to prevent non-members of BN from discovering content of a BN within CZ, when membership check fails, the node is meant to reply as if CorDapp is not installed at all on this node.
+This will make use cases:
+-	I am not talking to you because you are not part of my BN;
+
+and
+
+-	I do not know which flow you are talking about;
+
+un-distinguishable from attacker point of view.
+
+BN composition will be represented by a set which will be distributed to all the members.
+Fetching of "Additional Information" will be a separate operation which new style CorDapps may, but not have to, use.

@@ -10,7 +10,7 @@ DOCUMENT MANAGEMENT
 | Title                |                                          |
 | -------------------- | ---------------------------------------- |
 | Date                 | 14-Dec-2017                              |
-| Authors              | David Lee and Viktor Kolomeyko           |
+| Authors              | David Lee, Viktor Kolomeyko, Jose Coll, Mike Hearn  |
 | Distribution         | Design Review Board, Product Management, Services - Technical (Consulting), Platform Delivery |
 | Corda target version | Enterprise |
 | JIRA reference       | [Sample Business Network implementation](https://r3-cev.atlassian.net/browse/R3NET-546) |
@@ -21,7 +21,7 @@ DOCUMENT MANAGEMENT
 
 | Author            |                                          |
 | ----------------- | ---------------------------------------- |
-| Reviewer(s)       | David Lee, Viktor Kolomeyko, Mike Hearn and James Carlyle |
+| Reviewer(s)       | David Lee, Viktor Kolomeyko, Mike Hearn, Jose Coll, Dave Hudson  and James Carlyle |
 | Final approver(s) | Richard G. Brown |
 
 
@@ -35,8 +35,7 @@ even know of each other existence.
 
 The key concept of Business Network is **Business Network Operator ('BNO') node** as a mean for BNOs to serve reference data to members 
 of their business network(s), as required by CorDapp(s) specific to that business network. This includes allowing BNO 
-nodes to supplement the `NodeInfo`-vending capabilities of the global network map, serving network map entries which are
-not listed in the global network map. This allows BNOs to ensure strict privacy of their members and control which IP addresses are used in relation to which CorDapps.
+nodes to vend additional information associated with Business Network participant like roles, transaction limits, etc.
 
 ## Background
 
@@ -48,7 +47,7 @@ In order to address those privacy concerns Business Networks were introduced as 
 based on a need-to-know principle. 
 
 This design document reflects on what was previously discussed on this Confluence page
-[Business Network Membership](https://r3-cev.atlassian.net/wiki/spaces/CCD/pages/131972363/Business+Network+Membership)
+[Business Network Membership](https://r3-cev.atlassian.net/wiki/spaces/CCD/pages/131972363/Business+Network+Membership).
 
 ## Scope
 
@@ -106,7 +105,7 @@ The following requirements are addressed as follows:
 | Description                              | Recommendation  | Approval               |
 | ---------------------------------------- | --------------- | ----------------------- |
 | [TLS vs. Membership](decisions/tlsVsMembership.md) | Proceed with Membership | Mike Hearn |
-| [BN membership: Node vs. CorDapp](decisions/nodeVsCorDapp.md) | TBD | TBD |
+| [BN membership: Node vs. CorDapp](decisions/nodeVsCorDapp.md) | Hybrid approach for options #1 and #2 | Mike Hearn |
 
 * Per [New Network Map](https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/127710793/New+Network+Map):
    * R3 will serve a file containing NetworkParameters to all members of the Corda Connect Compatibility Zone, made publicly available via CDN. 
@@ -114,24 +113,14 @@ The following requirements are addressed as follows:
    * The network map file will continue to serve references to downloadable entries 
    (Signed `NodeInfo` file with the node's certificate chain, IP addresses etc. for a given node) for any nodes which wish to be publicly discoverable by all CZ members.
 
-* Nodes **may individually choose** to publish to the global network map by posting their entry to an R3-provided endpoint, 
-but are **not required to do so**.
-
 * BNO nodes expose a range of services to their membership over normal Corda flows (via a custom BNO CorDapp deployed on their BNO node).
 The BNO is free to define whatever services apply in the context of their business network; these will typically include:     
    * Managing requests to join/leave the business network;
-   * Accepting uploads of network map entries (signed `NodeInfos`) from business network members.
-   *A node may choose to publish different `NodeInfos` to different business networks in order to indicate that they want 
-   to be addressed on a given IP in relation to a given set of traffic.*
    * Vending a membership list of distinguished names (DNs) that a given party within the business network is allowed 
    to see / transact with, for use in 'address book' / 'drop-down' type UI functionality. 
    *The structure of the membership list may be tailored according to the needs of the BNO and, according to the needs 
-   of the CorDapp, it may either be expressed as a subclass of the `NetworkMapCache` itself or as a standalone data structure in its own right.*
-   * Vending `NodeInfos` in response to lookup requests by a business network member for a particular DN 
-   (more sophisticated query options may also be offered), which are integrated into the node's local `NetworkMapCache`.
-   *A node may acquire multiple `NodeInfos` in relation to the same DN via its association with multiple business networks
-   and needs a mechanism to (a) retain distinctions between them, (b) when initiating a flow by a specific CorDapp, 
-   preferentially address messages to the IP(s) referenced in the `NodeInfo` served by the associated business network.* 
+   of the CorDapp, it may either be expressed as a standalone data structure in its own right.*
+   * Vending `AdditionalInformation` for a Business Network Participant which may include roles associated with it, trading limits, etc.
 
 * For each **Business Network-specific CorDapp**, the CorDapp developer will include features to restrict such that the
 CorDapp cannot be used to transact with non-members. Namely:
@@ -140,16 +129,14 @@ CorDapp cannot be used to transact with non-members. Namely:
 
 ## Target Solution
 
-*Illustration of services exposed by both network map and BNO node. Interface names shown are indicative and may be changed as needed.*
-
 ![Business Network diagram](businessNetwork.png)
 
 ## Complementary solutions
 
 * No requirement to change the Network Map design currently proposed in
-[New Network Map](https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/127710793/New+Network+Map);
-* Data model for `NetworkMapCache` needs to be able to manage potential conflicts between `NodeInfos` downloaded from different
-network maps, and supply the correct one when needed. 
+[New Network Map](https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/127710793/New+Network+Map).
+
+* [Cash business network requirements](https://r3-cev.atlassian.net/wiki/spaces/CCD/pages/198443424/Cash+business+network+requirements)
 
 ## Final recommendation
 
