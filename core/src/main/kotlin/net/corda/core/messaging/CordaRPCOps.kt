@@ -222,13 +222,14 @@ interface CordaRPCOps : RPCOps {
     fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
 
     /**
-     * Accept network parameters with given hash, usually hash is obtained through [newNetworkMapParameters] method.
+     * Accept network parameters with given hash, hash is obtained through [newNetworkMapParameters] method.
      * On approval, new network parameters are saved in node's base directory as `network-parameters-update` file.
      * Information is sent back to the zone operator that the node accepted the parameters update - this process cannot be
      * revoked.
      * Only parameters that are scheduled for update can be accepted, if different hash is provided this method will fail.
+     * @throws IllegalArgumentException if network map advertises update with different parameters hash (node's operator needs to accept the newest version)
+     * @throws IllegalStateException if compatibility zone wasn't configured
      */
-    @Throws(IllegalArgumentException::class)
     fun acceptNewNetworkParameters(parametersHash: SecureHash)
 
     /**
