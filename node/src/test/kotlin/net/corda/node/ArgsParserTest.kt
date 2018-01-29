@@ -113,11 +113,11 @@ class ArgsParserTest {
 
     @Test
     fun `initial-registration`() {
-        val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "/truststore/file.jks", "--network-root-truststore-password", "password-test")
+        val truststorePath = Paths.get("truststore") / "file.jks"
+        val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
         assertThat(cmdLineOptions.isRegistration).isTrue()
-        assertEquals(Paths.get("/truststore/file.jks"), cmdLineOptions.networkRootTruststorePath)
+        assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.networkRootTruststorePath)
         assertEquals("password-test", cmdLineOptions.networkRootTruststorePassword)
-
     }
 
     @Test
