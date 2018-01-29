@@ -55,7 +55,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
         val signedNetworkMap = connection.responseAs<SignedDataWithCert<NetworkMap>>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
         val timeout = CacheControl.parse(Headers.of(connection.headerFields.filterKeys { it != null }.mapValues { it.value[0] })).maxAgeSeconds().seconds
-        logger.trace { "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} node info hashes. Node Info hashes: ${networkMap.nodeInfoHashes}" }
+        logger.trace { "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} node info hashes. Node Info hashes: ${networkMap.nodeInfoHashes.joinToString("\n")}" }
         return NetworkMapResponse(networkMap, timeout)
     }
 
