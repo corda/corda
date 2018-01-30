@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
@@ -6,7 +6,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 
 /**
- * Provides an internal interface that the [ArtemisMessagingServer] delegates to for Bridge activities.
+ * Provides an internal interface that the [BridgeControlListener] delegates to for Bridge activities.
  */
 @VisibleForTesting
 interface BridgeManager : AutoCloseable {

@@ -33,6 +33,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme

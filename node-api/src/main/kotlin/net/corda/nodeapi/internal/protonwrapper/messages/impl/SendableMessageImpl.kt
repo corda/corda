@@ -1,11 +1,11 @@
-package net.corda.node.internal.protonwrapper.messages.impl
+package net.corda.nodeapi.internal.protonwrapper.messages.impl
 
 import io.netty.buffer.ByteBuf
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.protonwrapper.messages.MessageStatus
-import net.corda.node.internal.protonwrapper.messages.SendableMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
+import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 
 /**
  * An internal packet management class that allows handling of the encoded buffers and

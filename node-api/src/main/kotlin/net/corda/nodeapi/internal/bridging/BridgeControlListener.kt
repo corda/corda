@@ -1,25 +1,25 @@
-package net.corda.node.services.messaging
+package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.internal.BridgeControl
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import java.util.*
 
-internal class BridgeControlListener(val config: NodeConfiguration,
-                                     val p2pAddress: NetworkHostAndPort,
-                                     val maxMessageSize: Int) : AutoCloseable {
+class BridgeControlListener(val config: NodeSSLConfiguration,
+                            val p2pAddress: NetworkHostAndPort,
+                            val maxMessageSize: Int) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private val bridgeManager: BridgeManager = AMQPBridgeManager(config, p2pAddress, maxMessageSize)
     private val validInboundQueues = mutableSetOf<String>()

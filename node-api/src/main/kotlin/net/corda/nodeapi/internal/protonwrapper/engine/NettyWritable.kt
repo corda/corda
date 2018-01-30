@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.engine
+package net.corda.nodeapi.internal.protonwrapper.engine
 
 import io.netty.buffer.ByteBuf
 import org.apache.qpid.proton.codec.WritableBuffer

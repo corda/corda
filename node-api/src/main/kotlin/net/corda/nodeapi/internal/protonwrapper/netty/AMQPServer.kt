@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.netty
+package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.Channel
@@ -14,9 +14,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.node.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.node.internal.protonwrapper.messages.SendableMessage
-import net.corda.node.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import org.apache.qpid.proton.engine.Delivery
 import rx.Observable
 import rx.subjects.PublishSubject

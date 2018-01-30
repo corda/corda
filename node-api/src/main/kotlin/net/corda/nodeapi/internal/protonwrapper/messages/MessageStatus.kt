@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.messages
+package net.corda.nodeapi.internal.protonwrapper.messages
 
 /**
  * The processing state of a message.

@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.netty
+package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelDuplexHandler
@@ -10,11 +10,11 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import io.netty.util.ReferenceCountUtil
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.debug
-import net.corda.node.internal.protonwrapper.engine.EventProcessor
-import net.corda.node.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.node.internal.protonwrapper.messages.impl.ReceivedMessageImpl
-import net.corda.node.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.protonwrapper.engine.EventProcessor
+import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import org.apache.qpid.proton.engine.ProtonJTransport
 import org.apache.qpid.proton.engine.Transport
 import org.apache.qpid.proton.engine.impl.ProtocolTracer

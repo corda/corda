@@ -1,9 +1,9 @@
-package net.corda.node.internal.protonwrapper.messages.impl
+package net.corda.nodeapi.internal.protonwrapper.messages.impl
 
 import io.netty.channel.Channel
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.protonwrapper.messages.MessageStatus
-import net.corda.node.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
+import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import org.apache.qpid.proton.engine.Delivery
 
 /**

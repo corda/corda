@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.netty
+package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.handler.ssl.SslHandler
 import net.corda.core.utilities.NetworkHostAndPort
