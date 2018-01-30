@@ -14,17 +14,11 @@ import rx.Observable
  * Thread-safe storage of transactions.
  */
 @DoNotImplement
-interface TransactionStorage : StateLoader {
+interface TransactionStorage {
     /**
      * Return the transaction with the given [id], or null if no such transaction exists.
      */
     fun getTransaction(id: SecureHash): SignedTransaction?
-
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
-    }
 
     /**
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
