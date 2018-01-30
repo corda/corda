@@ -1,6 +1,7 @@
 package net.corda.testing.internal
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -40,17 +41,18 @@ class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKe
         }
     }
 
-    fun build(serial: Long = 1, platformVersion: Int = 1): NodeInfo {
+    fun build(serial: Long = 1, platformVersion: Int = 1, acceptedParametersHash: SecureHash? = null): NodeInfo {
         return NodeInfo(
                 listOf(NetworkHostAndPort("my.${identitiesAndPrivateKeys[0].first.party.name.organisation}.com", 1234)),
                 identitiesAndPrivateKeys.map { it.first },
                 platformVersion,
-                serial
+                serial,
+                acceptedParametersHash
         )
     }
 
-    fun buildWithSigned(serial: Long = 1, platformVersion: Int = 1): Pair<NodeInfo, SignedNodeInfo> {
-        val nodeInfo = build(serial, platformVersion)
+    fun buildWithSigned(serial: Long = 1, platformVersion: Int = 1, acceptedParametersHash: SecureHash? = null): Pair<NodeInfo, SignedNodeInfo> {
+        val nodeInfo = build(serial, platformVersion, acceptedParametersHash)
         val privateKeys = identitiesAndPrivateKeys.map { it.second }
         return Pair(nodeInfo, nodeInfo.signWith(privateKeys))
     }
@@ -60,10 +62,10 @@ class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKe
     }
 }
 
-fun createNodeInfoAndSigned(vararg names: CordaX500Name, serial: Long = 1, platformVersion: Int = 1): Pair<NodeInfo, SignedNodeInfo> {
+fun createNodeInfoAndSigned(vararg names: CordaX500Name, serial: Long = 1, platformVersion: Int = 1, acceptedParametersHash: SecureHash? = null): Pair<NodeInfo, SignedNodeInfo> {
     val nodeInfoBuilder = TestNodeInfoBuilder()
     names.forEach { nodeInfoBuilder.addIdentity(it) }
-    return nodeInfoBuilder.buildWithSigned(serial, platformVersion)
+    return nodeInfoBuilder.buildWithSigned(serial, platformVersion, acceptedParametersHash)
 }
 
 fun NodeInfo.signWith(keys: List<PrivateKey>): SignedNodeInfo {

@@ -311,7 +311,8 @@ open class PersistentNetworkMapCache(
                     NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
                 },
                 platformVersion = nodeInfo.platformVersion,
-                serial = nodeInfo.serial
+                serial = nodeInfo.serial,
+                acceptedParametersHash = nodeInfo.acceptedParametersHash?.toString()
         )
     }
 

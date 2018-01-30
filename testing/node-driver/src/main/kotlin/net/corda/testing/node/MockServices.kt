@@ -193,7 +193,7 @@ open class MockServices private constructor(
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo
         get() {
-            return NodeInfo(emptyList(), listOf(initialIdentity.identity), 1, serial = 1L)
+            return NodeInfo(emptyList(), listOf(initialIdentity.identity), 1, serial = 1L, acceptedParametersHash = null)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)

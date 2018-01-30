@@ -7,10 +7,7 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -221,10 +218,13 @@ class NetworkMapUpdaterTest {
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
-        val keyPair = Crypto.generateKeyPair()
-        updater.acceptNewNetworkParameters(newHash,
-                { hash -> SignedData(hash.serialize(), keyPair.private.sign(hash.serialize().bytes, keyPair.public)) })
-        verify(networkMapClient).ackNetworkParametersUpdate(any())
+        val nodeInfoBuilder = TestNodeInfoBuilder()
+        nodeInfoBuilder.addIdentity(ALICE_NAME)
+        val (nodeInfo, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(1, 1, newHash)
+        updater.acceptNewNetworkParameters(nodeInfo,  { signedNodeInfo })
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapClient).publish(signedNodeInfo)
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         assertTrue(updateFile.exists())
         val signedNetworkParams = updateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
@@ -252,10 +252,6 @@ class NetworkMapUpdaterTest {
             on { getNetworkParameters(any()) }.then {
                 val paramsHash: SecureHash = uncheckedCast(it.arguments[0])
                 networkParamsMap[paramsHash]?.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
-            }
-            on { ackNetworkParametersUpdate(any()) }.then {
-                val signedHash: SignedData<SecureHash> = uncheckedCast(it.arguments[0])
-                Unit
             }
         }
     }

@@ -1,9 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
-import net.corda.core.crypto.sign
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
@@ -97,6 +94,8 @@ class NetworkMapClientTest {
 
     @Test
     fun `handle parameters update`() {
+        val (_, signedNodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
+        networkMapClient.publish(signedNodeInfo)
         val nextParameters = testNetworkParameters(emptyList(), epoch = 2)
         val hash1 = server.networkParameters.serialize().hash
         val hash2 = nextParameters.serialize().hash
@@ -110,8 +109,5 @@ class NetworkMapClientTest {
         val params2 = networkMapClient.getNetworkParameters(hash2).verified()
         assertEquals(params1, server.networkParameters)
         assertEquals(params2, nextParameters)
-        val keyPair = Crypto.generateKeyPair()
-        val signedHash = SignedData(hash2.serialize(), keyPair.private.sign(hash2.serialize().bytes, keyPair.public))
-        networkMapClient.ackNetworkParametersUpdate(signedHash)
     }
 }

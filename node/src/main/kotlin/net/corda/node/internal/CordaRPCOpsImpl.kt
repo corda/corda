@@ -5,8 +5,8 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -28,7 +28,9 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.signNodeInfo
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -55,11 +57,13 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
-        services.networkMapUpdater.acceptNewNetworkParameters(
-                parametersHash,
-                // TODO When multiple identities design will be better specified this should be signature from node operator.
-                { hash -> SignedData(hash.serialize(), services.keyManagementService.sign(hash.serialize().bytes, services.myInfo.legalIdentities[0].owningKey)) }
-        )
+        // TODO When multiple identities design will be better specified this should be signature from node operator not all identities on node.
+        val info = services.myInfo.copy(acceptedParametersHash = parametersHash, serial = services.clock.instant().toEpochMilli())
+        services.networkMapUpdater.acceptNewNetworkParameters(info) {
+            signNodeInfo(it) { publicKey, serialised ->
+                services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
+            }
+        }
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {

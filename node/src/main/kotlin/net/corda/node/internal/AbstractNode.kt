@@ -61,6 +61,7 @@ import net.corda.nodeapi.internal.crypto.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.signNodeInfo
 import net.corda.nodeapi.internal.storeLegalIdentity
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
@@ -165,14 +166,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         validateKeystore()
     }
 
-    private inline fun signNodeInfo(nodeInfo: NodeInfo, sign: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
-        // For now we exclude any composite identities, see [SignedNodeInfo]
-        val owningKeys = nodeInfo.legalIdentities.map { it.owningKey }.filter { it !is CompositeKey }
-        val serialised = nodeInfo.serialize()
-        val signatures = owningKeys.map { sign(it, serialised) }
-        return SignedNodeInfo(serialised, signatures)
-    }
-
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
@@ -202,11 +195,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        retrieveNetworkParameters(identityService.trustRoot)
+        val parametersUpdate = getParametersUpdate(identityService.trustRoot)
+        retrieveNetworkParameters(identityService.trustRoot, parametersUpdate)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
-            val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
+            val acceptedParametersHash = (parametersUpdate ?: networkParameters).serialize().hash
+            val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair, acceptedParametersHash)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
@@ -283,7 +278,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
                              identity: PartyAndCertificate,
-                             identityKeyPair: KeyPair): Pair<Set<KeyPair>, NodeInfo> {
+                             identityKeyPair: KeyPair,
+                             acceptedParametersHash: SecureHash? = null): Pair<Set<KeyPair>, NodeInfo> {
         val keyPairs = mutableSetOf(identityKeyPair)
 
         myNotaryIdentity = configuration.notary?.let {
@@ -301,7 +297,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 myAddresses(),
                 setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
-                platformClock.instant().toEpochMilli()
+                platformClock.instant().toEpochMilli(),
+                acceptedParametersHash
         )
         // Check if we have already stored a version of 'our own' NodeInfo, this is to avoid regenerating it with
         // a different timestamp.
@@ -646,7 +643,17 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return verifiedParams
     }
 
-    private fun retrieveNetworkParameters(trustRoot: X509Certificate) {
+    private fun getParametersUpdate(trustRoot: X509Certificate): NetworkParameters? {
+        val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+        if (!parametersUpdateFile.exists()) return null
+        return try {
+            parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun retrieveNetworkParameters(trustRoot: X509Certificate, parametersUpdate: NetworkParameters?) {
         val advertisedParametersHash = networkMapClient?.getNetworkMap()?.networkMap?.networkParameterHash
         val networkParamsFile = configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME
         val parametersFromFile = if (networkParamsFile.exists()) {
@@ -660,20 +667,18 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             else if (parametersFromFile.serialize().hash == advertisedParametersHash) { // Restarted with the same parameters.
                 parametersFromFile
             } else { // Update case.
-                val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-                if (!parametersUpdateFile.exists()) {
+                if (parametersUpdate == null)
                     throw IllegalArgumentException("Node uses parameters with hash: ${parametersFromFile.serialize().hash} " +
                             "but network map is advertising: ${advertisedParametersHash}.\n" +
                             "Please update node to use correct network parameters file.")
-                }
-                val parameterUpdate = parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
-                if (parameterUpdate.serialize().hash != advertisedParametersHash) {
+                if (parametersUpdate.serialize().hash != advertisedParametersHash) {
                     throw IllegalArgumentException("Both network parameters and network parameters update files don't match" +
                             "parameters advertised by network map.\n" +
                             "Please update node to use correct network parameters file.")
                 }
+                val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
                 parametersUpdateFile.moveTo(networkParamsFile, StandardCopyOption.REPLACE_EXISTING)
-                parameterUpdate
+                parametersUpdate
             }
         } else {
             parametersFromFile ?: throw IllegalArgumentException("Couldn't find network parameters file and compatibility zone wasn't configured")

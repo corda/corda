@@ -204,7 +204,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
     private fun handleUpdateNetworkParameters(update: ParametersUpdate) {
         if (update.newParametersHash != newNetworkParameters?.first?.newParametersHash) {
-            //TODO Have error response if for example parameters with this hash were not found
             val newParameters = networkMapClient?.getNetworkParameters(update.newParametersHash)
             if (newParameters != null) {
                 logger.info("Downloaded new network parameters: $newParameters from the update: $update")
@@ -216,34 +215,20 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         }
     }
 
-    fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
+    fun acceptNewNetworkParameters(newInfo: NodeInfo, signNodeInfo: (NodeInfo) -> SignedNodeInfo) {
         checkNotNull(networkMapClient) { "Network parameters updates are not support without compatibility zone configured" }
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them. Add persisting of newest parameters from update.
-        val (update, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: $parametersHash")
+        val (update, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: ${newInfo.acceptedParametersHash}")
         val newParametersHash = update.newParametersHash
-        if (parametersHash == newParametersHash) {
+        if (newInfo.acceptedParametersHash == newParametersHash) {
             // The latest parameters have priority.
             newParams.serialize()
                     .open()
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
-            tryAckNetworkParametersUpdateAsync(sign(parametersHash), networkMapClient!!)
+            val signedNodeInfo = signNodeInfo(newInfo)
+            tryPublishNodeInfoAsync(signedNodeInfo, networkMapClient!!)
         } else {
-            throw IllegalArgumentException("Refused to accept parameters with hash: $parametersHash because network map advertises update with hash: $newParametersHash, please check newest version")
+            throw IllegalArgumentException("Refused to accept parameters with hash: ${newInfo.acceptedParametersHash} because network map advertises update with hash: $newParametersHash, please check newest version")
         }
-    }
-
-    private fun tryAckNetworkParametersUpdateAsync(signedParametersHash: SignedData<SecureHash>, networkMapClient: NetworkMapClient) {
-        val task = object : Runnable {
-            override fun run() {
-                try {
-                    networkMapClient.ackNetworkParametersUpdate(signedParametersHash)
-                } catch (t: Throwable) {
-                    logger.warn("Error encountered while acknowledging network parameters update, will retry in ${retryInterval.seconds} seconds.", t)
-                    // TODO: Exponential backoff?
-                    executor.schedule(this, retryInterval.toMillis(), TimeUnit.MILLISECONDS)
-                }
-            }
-        }
-        executor.submit(task)
     }
 }
