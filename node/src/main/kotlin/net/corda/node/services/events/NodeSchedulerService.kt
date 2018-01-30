@@ -3,7 +3,7 @@ package net.corda.node.services.events
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
@@ -252,7 +252,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                     if (scheduledFlow != null) {
                         flowName = scheduledFlow.javaClass.name
                         // TODO refactor the scheduler to store and propagate the original invocation context
-                        val context = InvocationContext.newInstance(Origin.Scheduled(scheduledState))
+                        val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
                         val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                         future.then {
                             unfinishedSchedules.countDown()

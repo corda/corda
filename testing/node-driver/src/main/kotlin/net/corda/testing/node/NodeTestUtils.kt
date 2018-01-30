@@ -5,7 +5,7 @@ package net.corda.testing.node
 import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -62,7 +62,7 @@ fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company
 
 /**
  * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]
- * has origin [Origin.RPC] and actor with id "Only For Testing".
+ * has origin [InvocationOrigin.RPC] and actor with id "Only For Testing".
  */
 fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
 

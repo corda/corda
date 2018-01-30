@@ -4,7 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -27,8 +27,6 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
-private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
-
 /**
  * Represents information about a flow (the name "state machine" is legacy, Kotlin users can use the [FlowInfo] type
  * alias). You can access progress tracking, information about why the flow was started and so on.
@@ -47,27 +45,8 @@ data class StateMachineInfo @JvmOverloads constructor(
         /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
         val progressTrackerStepAndUpdates: DataFeed<String, String>?,
         /** An [InvocationContext] describing why and by whom the flow was started. */
-        val invocationContext: InvocationContext = contextFrom(initiator)
+        val invocationContext: InvocationContext = initiator.invocationContext
 ) {
-    companion object {
-        private fun contextFrom(initiator: FlowInitiator): InvocationContext {
-            var actor: Actor? = null
-            val origin: Origin
-            when (initiator) {
-                is FlowInitiator.RPC -> {
-                    actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
-                    origin = Origin.RPC(actor)
-                }
-                is FlowInitiator.Peer -> origin = Origin.Peer(initiator.party.name)
-                is FlowInitiator.Service -> origin = Origin.Service(initiator.serviceClassName, unknownName)
-                FlowInitiator.Shell -> origin = Origin.Shell
-                is FlowInitiator.Scheduled -> origin = Origin.Scheduled(initiator.scheduledState)
-            }
-            return InvocationContext.newInstance(origin = origin, actor = actor)
-        }
-    }
-
-
     @Suppress("DEPRECATION")
     fun copy(id: StateMachineRunId = this.id,
              flowLogicClassName: String = this.flowLogicClassName,

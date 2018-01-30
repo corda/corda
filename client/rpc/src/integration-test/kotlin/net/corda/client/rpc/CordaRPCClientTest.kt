@@ -167,12 +167,12 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 
 private fun checkShellNotification(info: StateMachineInfo) {
     val context = info.invocationContext
-    assertThat(context.origin).isInstanceOf(Origin.Shell::class.java)
+    assertThat(context.origin).isInstanceOf(InvocationOrigin.Shell::class.java)
 }
 
 private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, historicalIds: MutableSet<Trace.InvocationId>, externalTrace: Trace?, impersonatedActor: Actor?) {
     val context = info.invocationContext
-    assertThat(context.origin).isInstanceOf(Origin.RPC::class.java)
+    assertThat(context.origin).isInstanceOf(InvocationOrigin.RPC::class.java)
     assertThat(context.externalTrace).isEqualTo(externalTrace)
     assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
     assertThat(context.actor?.id?.value).isEqualTo(rpcUsername)

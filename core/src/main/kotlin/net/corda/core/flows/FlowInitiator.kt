@@ -1,17 +1,22 @@
 package net.corda.core.flows
 
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ScheduledStateRef
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.security.Principal
 
 /**
+ * Please note that [FlowInitiator] has been superceded by [net.corda.core.context.InvocationContext], which offers
+ * more detail for the same event.
+ *
  * FlowInitiator holds information on who started the flow. We have different ways of doing that: via [FlowInitiator.RPC],
  * communication started by peer nodes ([FlowInitiator.Peer]), scheduled flows ([FlowInitiator.Scheduled])
  * or via the Corda Shell ([FlowInitiator.Shell]).
- *
- * Please note that [FlowInitiator] has been superceded by [net.corda.core.context.InvocationContext], which offers
- * more detail around the same information.
  */
 @CordaSerializable
 sealed class FlowInitiator : Principal {
@@ -38,5 +43,27 @@ sealed class FlowInitiator : Principal {
     // TODO When proper ssh access enabled, add username/use RPC?
     object Shell : FlowInitiator() {
         override fun getName(): String = "Shell User"
+    }
+
+    /**
+     * Returns an [InvocationContext], which is equivalent to this object but expressed using the successor to this
+     * class hierarchy (which is now deprecated). The returned object has less information than it could have, so
+     * prefer to use fetch an invocation context directly if you can (e.g. in [net.corda.core.messaging.StateMachineInfo])
+     */
+    val invocationContext: InvocationContext get() {
+        val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
+        var actor: Actor? = null
+        val origin: InvocationOrigin
+        when (this) {
+            is FlowInitiator.RPC -> {
+                actor = Actor(Actor.Id(this.username), AuthServiceId("UNKNOWN"), unknownName)
+                origin = InvocationOrigin.RPC(actor)
+            }
+            is FlowInitiator.Peer -> origin = InvocationOrigin.Peer(this.party.name)
+            is FlowInitiator.Service -> origin = InvocationOrigin.Service(this.serviceClassName, unknownName)
+            FlowInitiator.Shell -> origin = InvocationOrigin.Shell
+            is FlowInitiator.Scheduled -> origin = InvocationOrigin.Scheduled(this.scheduledState)
+        }
+        return InvocationContext.newInstance(origin = origin, actor = actor)
     }
 }

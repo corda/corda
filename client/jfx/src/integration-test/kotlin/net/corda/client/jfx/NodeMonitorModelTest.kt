@@ -2,7 +2,7 @@ package net.corda.client.jfx
 
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.isFulfilledBy
@@ -149,7 +149,7 @@ class NodeMonitorModelTest {
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
                         val context = add.stateMachineInfo.invocationContext
-                        require(context.origin is Origin.RPC && context.principal().name == "user1")
+                        require(context.origin is InvocationOrigin.RPC && context.principal().name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -158,7 +158,7 @@ class NodeMonitorModelTest {
                     expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val context = add.stateMachineInfo.invocationContext
-                        require(context.origin is Origin.RPC && context.principal().name == "user1")
+                        require(context.origin is InvocationOrigin.RPC && context.principal().name == "user1")
                     },
                     expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
                     }
@@ -170,7 +170,7 @@ class NodeMonitorModelTest {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val context = add.stateMachineInfo.invocationContext
-                        require(context.origin is Origin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as Origin.Peer).party)))
+                        require(context.origin is InvocationOrigin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as InvocationOrigin.Peer).party)))
                     }
             )
         }
