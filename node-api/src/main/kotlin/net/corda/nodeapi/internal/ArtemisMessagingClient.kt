@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.nodeapi.internal
 
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort

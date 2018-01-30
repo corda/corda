@@ -24,12 +24,13 @@ import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.PersistentMap
+import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.internal.BridgeControl
-import net.corda.nodeapi.internal.BridgeEntry
+import net.corda.nodeapi.internal.bridging.BridgeControl
+import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
@@ -237,14 +238,16 @@ class P2PMessagingClient(config: NodeConfiguration,
         val bridgeConsumer = session.createConsumer(bridgeNotifyQueue)
         bridgeNotifyConsumer = bridgeConsumer
         bridgeConsumer.setMessageHandler { msg ->
-            val data: ByteArray = ByteArray(msg.bodySize).apply { msg.bodyBuffer.readBytes(this) }
-            val notifyMessage = data.deserialize<BridgeControl>(context = SerializationDefaults.P2P_CONTEXT)
-            log.info(notifyMessage.toString())
-            when (notifyMessage) {
-                is BridgeControl.BridgeToNodeSnapshotRequest -> enumerateBridges(session, inboxes)
-                else -> log.error("Unexpected Bridge Control message type on notify topc $notifyMessage")
+            state.locked {
+                val data: ByteArray = ByteArray(msg.bodySize).apply { msg.bodyBuffer.readBytes(this) }
+                val notifyMessage = data.deserialize<BridgeControl>(context = SerializationDefaults.P2P_CONTEXT)
+                log.info(notifyMessage.toString())
+                when (notifyMessage) {
+                    is BridgeControl.BridgeToNodeSnapshotRequest -> enumerateBridges(session, inboxes)
+                    else -> log.error("Unexpected Bridge Control message type on notify topc $notifyMessage")
+                }
+                msg.acknowledge()
             }
-            msg.acknowledge()
         }
         networkChangeSubscription = networkMap.changed.subscribe { updateBridgesOnNetworkChange(it) }
     }
@@ -262,7 +265,7 @@ class P2PMessagingClient(config: NodeConfiguration,
         fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
             return node.legalIdentitiesAndCerts.map {
                 val messagingAddress = NodeAddress(it.party.owningKey, node.addresses.first())
-                BridgeEntry(messagingAddress.queueName, node.addresses, listOf(it.party.name))
+                BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name })
             }.filter { artemis.started!!.session.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
         }
 

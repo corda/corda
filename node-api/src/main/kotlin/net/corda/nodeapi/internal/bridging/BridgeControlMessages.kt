@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal
+package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
