@@ -154,11 +154,11 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                     },
                     expect { update: StateMachineUpdate.Added ->
                         checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
-                        sessionId = update.stateMachineInfo.context().trace.sessionId
+                        sessionId = update.stateMachineInfo.invocationContext.trace.sessionId
                     },
                     expect { update: StateMachineUpdate.Added ->
                         checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
-                        assertThat(update.stateMachineInfo.context().trace.sessionId).isEqualTo(sessionId)
+                        assertThat(update.stateMachineInfo.invocationContext.trace.sessionId).isEqualTo(sessionId)
                     }
             )
         }
@@ -166,14 +166,12 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 }
 
 private fun checkShellNotification(info: StateMachineInfo) {
-
-    val context = info.context()
+    val context = info.invocationContext
     assertThat(context.origin).isInstanceOf(Origin.Shell::class.java)
 }
 
 private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, historicalIds: MutableSet<Trace.InvocationId>, externalTrace: Trace?, impersonatedActor: Actor?) {
-
-    val context = info.context()
+    val context = info.invocationContext
     assertThat(context.origin).isInstanceOf(Origin.RPC::class.java)
     assertThat(context.externalTrace).isEqualTo(externalTrace)
     assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)

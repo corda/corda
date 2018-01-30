@@ -148,7 +148,7 @@ class NodeMonitorModelTest {
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
-                        val context = add.stateMachineInfo.context()
+                        val context = add.stateMachineInfo.invocationContext
                         require(context.origin is Origin.RPC && context.principal().name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
@@ -157,7 +157,7 @@ class NodeMonitorModelTest {
                     // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
                     expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
-                        val context = add.stateMachineInfo.context()
+                        val context = add.stateMachineInfo.invocationContext
                         require(context.origin is Origin.RPC && context.principal().name == "user1")
                     },
                     expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
@@ -169,7 +169,7 @@ class NodeMonitorModelTest {
             sequence(
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
-                        val context = add.stateMachineInfo.context()
+                        val context = add.stateMachineInfo.invocationContext
                         require(context.origin is Origin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as Origin.Peer).party)))
                     }
             )
