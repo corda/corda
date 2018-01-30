@@ -8,16 +8,16 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.utilities.days
-import net.corda.testing.internal.rigorousMock
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.StateLoader
+import net.corda.core.utilities.days
 import net.corda.node.services.api.FlowStarter
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.internal.doLookup
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.TestClock
 import org.junit.Rule
 import org.junit.Test
@@ -165,7 +165,7 @@ class NodeSchedulerServiceTest {
         val eventA = schedule(mark + 1.days)
         val eventB = schedule(mark + 1.days)
         scheduler.unscheduleStateActivity(eventA.stateRef)
-        assertWaitingFor(eventA) // XXX: Shouldn't it be waiting for eventB now?
+        assertWaitingFor(eventB)
         testClock.advanceBy(1.days)
         assertStarted(eventB)
     }

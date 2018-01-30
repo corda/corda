@@ -61,7 +61,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val serverThread: Executor,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val log: Logger = staticLog,
-                           scheduledStates: MutableMap<StateRef, ScheduledStateRef> = createMap())
+                           private val scheduledStates: MutableMap<StateRef, ScheduledStateRef> = createMap())
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
@@ -153,13 +153,13 @@ class NodeSchedulerService(private val clock: CordaClock,
             var scheduledAt: Instant = Instant.now()
     )
 
-    private class InnerState(var scheduledStates: MutableMap<StateRef, ScheduledStateRef>) {
+    private class InnerState {
         var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
 
         var rescheduled: GuavaSettableFuture<Boolean>? = null
     }
 
-    private val mutex = ThreadBox(InnerState(scheduledStates))
+    private val mutex = ThreadBox(InnerState())
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
@@ -170,9 +170,9 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
+        val previousState = scheduledStates[action.ref]
+        scheduledStates[action.ref] = action
         mutex.locked {
-            val previousState = scheduledStates[action.ref]
-            scheduledStates[action.ref] = action
             val previousEarliest = scheduledStatesQueue.peek()
             scheduledStatesQueue.remove(previousState)
             scheduledStatesQueue.add(action)
@@ -192,12 +192,15 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     override fun unscheduleStateActivity(ref: StateRef) {
         log.trace { "Unschedule $ref" }
+        val removedAction = scheduledStates.remove(ref)
         mutex.locked {
-            val removedAction = scheduledStates.remove(ref)
             if (removedAction != null) {
-                scheduledStatesQueue.remove(removedAction)
-                unfinishedSchedules.countDown()
-                if (removedAction == scheduledStatesQueue.peek()) {
+                val wasNext = (removedAction == scheduledStatesQueue.peek())
+                val wasRemoved = scheduledStatesQueue.remove(removedAction)
+                if (wasRemoved) {
+                    unfinishedSchedules.countDown()
+                }
+                if (wasNext) {
                     rescheduleWakeUp()
                 }
             }
