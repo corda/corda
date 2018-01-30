@@ -126,10 +126,13 @@ class SigningServiceIntegrationTest {
                 }
             }
             config.certificatesDirectory.createDirectories()
-            val trustStore = X509KeyStore.fromFile(config.trustStoreFile, config.trustStorePassword, createNew = true)
-            trustStore.update {
+            val networkTrustStorePath = config.certificatesDirectory / "network-root-truststore.jks"
+            val networkTrustStorePassword = "network-trust-password"
+            val networkTrustStore = X509KeyStore.fromFile(networkTrustStorePath, networkTrustStorePassword, createNew = true)
+            networkTrustStore.update {
                 setCertificate(X509Utilities.CORDA_ROOT_CA, rootCaCert)
             }
+            val trustStore = X509KeyStore.fromFile(config.trustStoreFile, config.trustStorePassword, createNew = true)
             val nodeKeyStore = X509KeyStore.fromFile(config.nodeKeystore, config.keyStorePassword, createNew = true)
             val sslKeyStore = X509KeyStore.fromFile(config.sslKeystore, config.keyStorePassword, createNew = true)
             config.also {
@@ -137,7 +140,7 @@ class SigningServiceIntegrationTest {
                 doReturn(nodeKeyStore).whenever(it).loadNodeKeyStore(any())
                 doReturn(sslKeyStore).whenever(it).loadSslKeyStore(any())
             }
-            NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
+            NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!), networkTrustStorePath, networkTrustStorePassword).buildKeystore()
             verify(hsmSigner).sign(any())
         }
     }

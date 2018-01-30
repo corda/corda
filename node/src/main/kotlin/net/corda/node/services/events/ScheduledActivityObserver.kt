@@ -18,7 +18,7 @@ class ScheduledActivityObserver private constructor(private val schedulerService
         fun install(vaultService: VaultService, schedulerService: SchedulerService, flowLogicRefFactory: FlowLogicRefFactory) {
             val observer = ScheduledActivityObserver(schedulerService, flowLogicRefFactory)
             vaultService.rawUpdates.subscribe { (consumed, produced) ->
-                consumed.forEach { schedulerService.unscheduleStateActivity(it.ref) }
+                consumed.forEach { if (it.state.data is SchedulableState) schedulerService.unscheduleStateActivity(it.ref) }
                 produced.forEach { observer.scheduleStateActivity(it) }
             }
         }

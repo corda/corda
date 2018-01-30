@@ -94,6 +94,14 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = ext.rpcUsers
         useTestClock true
     }
+    node {
+        name "O=Regulator,L=Moscow,C=RU"
+        p2pPort 10010
+        rpcPort 10011
+        cordapps = ["${project.group}:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+        useTestClock true
+    }
 }
 
 task integrationTest(type: Test, dependsOn: []) {
