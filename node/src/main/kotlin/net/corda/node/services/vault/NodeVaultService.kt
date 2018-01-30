@@ -12,9 +12,7 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -50,6 +48,7 @@ class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
         private val stateLoader: StateLoader,
+        private val attachments: AttachmentStorage,
         hibernateConfig: HibernateConfiguration
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
@@ -108,41 +107,29 @@ class NodeVaultService(
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
+    /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
-        if (statesToRecord == StatesToRecord.NONE)
-            return
+        if (statesToRecord == StatesToRecord.NONE || !txns.any()) return
+        val batch = mutableListOf<CoreTransaction>()
 
-        // It'd be easier to just group by type, but then we'd lose ordering.
-        val regularTxns = mutableListOf<WireTransaction>()
-        val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
-
-        for (tx in txns) {
-            when (tx) {
-                is WireTransaction -> {
-                    regularTxns.add(tx)
-                    if (notaryChangeTxns.isNotEmpty()) {
-                        notifyNotaryChange(notaryChangeTxns.toList(), statesToRecord)
-                        notaryChangeTxns.clear()
-                    }
-                }
-                is NotaryChangeWireTransaction -> {
-                    notaryChangeTxns.add(tx)
-                    if (regularTxns.isNotEmpty()) {
-                        notifyRegular(regularTxns.toList(), statesToRecord)
-                        regularTxns.clear()
-                    }
-                }
-            }
+        fun flushBatch() {
+            val updates = makeUpdates(batch, statesToRecord)
+            processAndNotify(updates)
+            batch.clear()
         }
 
-        if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList(), statesToRecord)
-        if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList(), statesToRecord)
+        for (tx in txns) {
+            if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
+                flushBatch()
+            }
+            batch.add(tx)
+        }
+        flushBatch()
     }
 
-    private fun notifyRegular(txns: Iterable<WireTransaction>, statesToRecord: StatesToRecord) {
-        fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
+    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
+        fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
             val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
-
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, myKeys.toSet()) }
@@ -155,45 +142,48 @@ class NodeVaultService(
             // Is transaction irrelevant?
             if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
-                return Vault.NoUpdate
+                return null
             }
 
             return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
         }
 
-        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
-        processAndNotify(netDelta)
-    }
-
-    private fun notifyNotaryChange(txns: Iterable<NotaryChangeWireTransaction>, statesToRecord: StatesToRecord) {
-        fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
+        fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
             // We need to resolve the full transaction here because outputs are calculated from inputs
-            // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
-            // input positions
-            val ltx = tx.resolve(stateLoader, emptyList())
+            // We also can't do filtering beforehand, since for notary change transactions output encumbrance pointers
+            // get recalculated based on input positions.
+            val ltx: FullTransaction = when (tx) {
+                is NotaryChangeWireTransaction -> tx.resolve(stateLoader, emptyList())
+                is ContractUpgradeWireTransaction -> tx.resolve(stateLoader, attachments, emptyList())
+                else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
+            }
             val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
                     filter { (_, output) ->
-                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT)
-                            isRelevant(output.data, myKeys.toSet())
-                        else
-                            true
+                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) isRelevant(output.data, myKeys.toSet())
+                        else true
                     }.
                     unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
-
             if (consumedStateAndRefs.isEmpty() && producedStateAndRefs.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
-                return Vault.NoNotaryUpdate
+                return null
             }
 
-            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
+            val updateType = if (tx is ContractUpgradeWireTransaction) {
+                Vault.UpdateType.CONTRACT_UPGRADE
+            } else {
+                Vault.UpdateType.NOTARY_CHANGE
+            }
+            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType)
         }
 
-        val netDelta = txns.fold(Vault.NoNotaryUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
-        processAndNotify(netDelta)
+
+        return batch.mapNotNull {
+            if (it is WireTransaction) makeUpdate(it) else resolveAndMakeUpdate(it)
+        }
     }
 
     private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
@@ -202,13 +192,15 @@ class NodeVaultService(
         else emptySet()
     }
 
-    private fun processAndNotify(update: Vault.Update<ContractState>) {
-        if (!update.isEmpty()) {
-            recordUpdate(update)
+    private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
+        if (updates.isEmpty()) return
+        val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
+        if (!netUpdate.isEmpty()) {
+            recordUpdate(netUpdate)
             mutex.locked {
                 // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
-                val vaultUpdate = if (uuid != null) update.copy(flowId = uuid) else update
+                val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
                 updatesPublisher.onNext(vaultUpdate)
             }
         }
