@@ -48,6 +48,7 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
     init {
         require(issuer.reference.bytes.size <= MAX_ISSUER_REF_SIZE) { "Maximum issuer reference size is $MAX_ISSUER_REF_SIZE." }
     }
+
     override fun toString() = "$product issued by $issuer"
 }
 
@@ -248,12 +249,21 @@ annotation class LegalProseReference(val uri: String)
 
 /**
  * Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.
+ * The upgraded contract should specify the legacy contract class name, and provide an upgrade function that will convert
+ * legacy contract states into states defined by this contract.
+ *
+ * In addition to the legacy contract class name, you can also specify the legacy contract constraint by implementing
+ * [UpgradedContractWithLegacyConstraint] instead. Otherwise, the default [WhitelistedByZoneAttachmentConstraint] will
+ * be used for verifying the validity of an upgrade transaction.
  *
  * @param OldState the old contract state (can be [ContractState] or other common supertype if this supports upgrading
  * more than one state).
  * @param NewState the upgraded contract state.
  */
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
+    /**
+     * Name of the contract this is an upgraded version of, used as part of verification of upgrade transactions.
+     */
     val legacyContract: ContractClassName
     /**
      * Upgrade contract's state object to a new state object.
@@ -262,6 +272,17 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
      * that the class is incompatible, or that the data inside the state object cannot be upgraded for some reason.
      */
     fun upgrade(state: OldState): NewState
+}
+
+/**
+ * This interface allows specifying a custom legacy contract constraint for upgraded contracts. The default for [UpgradedContract]
+ * is [WhitelistedByZoneAttachmentConstraint].
+ */
+interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out NewState : ContractState> : UpgradedContract<OldState, NewState> {
+    /**
+     * A validator for the legacy (pre-upgrade) contract attachments on the transaction.
+     */
+    val legacyContractConstraint: AttachmentConstraint
 }
 
 /**
