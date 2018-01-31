@@ -29,4 +29,5 @@ CREATE LOGIN node_9 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN RAFTNotaryService_0 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN RAFTNotaryService_1 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN RAFTNotaryService_2 WITH PASSWORD = 'yourStrong(!)Password';
+CREATE LOGIN Regulator WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN RegulatorA WITH PASSWORD = 'yourStrong(!)Password';
