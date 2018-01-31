@@ -34,7 +34,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "javassist:javassist:$javaassist_version"
     compile "com.esotericsoftware:kryo:4.0.0"
-    compile "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
+    compile "com.github.corda.quasar:quasar-core:$quasar_version:jdk8"
 }
 
 jar {

@@ -207,6 +207,7 @@ class StateMachineManagerImpl(
         liveFibers.await()
         checkpointCheckerThread?.let { MoreExecutors.shutdownAndAwaitTermination(it, 5, SECONDS) }
         check(!unrestorableCheckpoints) { "Unrestorable checkpoints where created, please check the logs for details." }
+        scheduler.shutdown()
     }
 
     /**

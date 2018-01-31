@@ -13,7 +13,7 @@ class QuasarPlugin implements Plugin<Project> {
         project.configurations.create("quasar")
 //        To add a local .jar dependency:
 //        project.dependencies.add("quasar", project.files("${project.rootProject.projectDir}/lib/quasar.jar"))
-        project.dependencies.add("quasar", "co.paralleluniverse:quasar-core:${project.rootProject.ext.quasar_version}:jdk8@jar")
+        project.dependencies.add("quasar", "com.github.corda.quasar:quasar-core:${project.rootProject.ext.quasar_version}:jdk8@jar")
         project.dependencies.add("runtime", project.configurations.getByName("quasar"))
 
         project.tasks.withType(Test) {
