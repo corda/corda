@@ -6,6 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
+
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
 
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).

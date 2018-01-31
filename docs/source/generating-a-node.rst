@@ -63,7 +63,6 @@ The name must also obey the following constraints:
 * The organisation field of the name also obeys the following constraints:
 
     * No double-spacing
-    * Does not contain the words "node" or "server"
 
         * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
           character confusability attacks
