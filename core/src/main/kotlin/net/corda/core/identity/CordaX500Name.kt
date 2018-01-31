@@ -71,6 +71,8 @@ data class CordaX500Name(val commonName: String?,
     }
 
     companion object {
+        @Deprecated("Not Used")
+        const val LENGTH_COUNTRY = 2
         const val MAX_LENGTH_ORGANISATION = 128
         const val MAX_LENGTH_LOCALITY = 64
         const val MAX_LENGTH_STATE = 64
