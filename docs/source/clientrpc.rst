@@ -1,34 +1,37 @@
 Client RPC
 ==========
 
-There are multiple ways to interact with a node from a *client program*, but if your client is written in a JVM
-compatible language the easiest way to do so is using the client library. The library connects to your running
-node using a message queue protocol and then provides a simple RPC interface to interact with it. You make calls
-on a Java object as normal, and the marshalling back and forth is handled for you.
+.. contents::
 
-The starting point for the client library is the `CordaRPCClient`_ class. This provides a ``start`` method that
-returns a `CordaRPCConnection`_, holding an implementation of the `CordaRPCOps`_ that may be accessed with ``proxy``
-in Kotlin and ``getProxy()`` in Java. Observables that are returned by RPCs can be subscribed to in order to receive
-an ongoing stream of updates from the node. More detail on how to use this is provided in the docs for the proxy method.
+Overview
+--------
+Corda provides a client library that allows you to easily write clients in a JVM-compatible language to interact
+with a running node. The library connects to the node using a message queue protocol and then provides a simple RPC
+interface to interact with the node. You make calls on a Java object as normal, and the marshalling back and forth is
+handled for you.
+
+The starting point for the client library is the `CordaRPCClient`_ class. `CordaRPCClient`_ provides a ``start`` method
+that returns a `CordaRPCConnection`_. A `CordaRPCConnection`_ allows you to access an implementation of the
+`CordaRPCOps`_ interface with ``proxy`` in Kotlin or ``getProxy()`` in Java. The observables that are returned by RPC
+operations can be subscribed to in order to receive an ongoing stream of updates from the node. More detail on this
+functionality is provided in the docs for the ``proxy`` method.
 
 .. warning:: The returned `CordaRPCConnection`_ is somewhat expensive to create and consumes a small amount of
    server side resources. When you're done with it, call ``close`` on it. Alternatively you may use the ``use``
    method on `CordaRPCClient`_ which cleans up automatically after the passed in lambda finishes. Don't create
    a new proxy for every call you make - reuse an existing one.
 
-For a brief tutorial on how one can use the RPC API see :doc:`tutorial-clientrpc-api`.
+For a brief tutorial on using the RPC API, see :doc:`tutorial-clientrpc-api`.
 
 .. _rpc_security_mgmt_ref:
 
 RPC permissions
 ---------------
-If a node's owner needs to interact with their node via RPC (e.g. to read the contents of the node's storage), they
-must define one or more RPC users. Each user is authenticated with a username and password, and is assigned a set of
-permissions that RPC can use for fine-grain access control.
+For a node's owner to interact with their node via RPC, they must define one or more RPC users. Each user is
+authenticated with a username and password, and is assigned a set of permissions that control which RPC operations they
+can perform.
 
-These users are added to the node's ``node.conf`` file.
-
-The simplest way of adding an RPC user is to include it in the ``rpcUsers`` list:
+RPC users are created by adding them to the ``rpcUsers`` list in the node's ``node.conf`` file:
 
 .. container:: codeset
 
@@ -43,7 +46,12 @@ The simplest way of adding an RPC user is to include it in the ``rpcUsers`` list
             ...
         ]
 
-Users need permissions to invoke any RPC call. By default, nothing is allowed. These permissions are specified as follows:
+By default, RPC users are not permissioned to perform any RPC operations.
+
+Granting flow permissions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+You provide an RPC user with the permission to start a specific flow using the syntax
+``StartFlow.<fully qualified flow name>``:
 
 .. container:: codeset
 
@@ -61,14 +69,64 @@ Users need permissions to invoke any RPC call. By default, nothing is allowed. T
             ...
         ]
 
-Permissions Syntax
-^^^^^^^^^^^^^^^^^^
+You can also provide an RPC user with the permission to start any flow using the syntax
+``InvokeRpc.startFlow``:
 
-Fine grained permissions allow a user to invoke a specific RPC operation, or to start a specific flow. The syntax is:
+.. container:: codeset
 
-- to start a specific flow: ``StartFlow.<fully qualified flow name>`` e.g., ``StartFlow.net.corda.flows.ExampleFlow1``.
-- to invoke a RPC operation: ``InvokeRpc.<rpc method name>`` e.g., ``InvokeRpc.nodeInfo``.
-.. note:: Permission ``InvokeRpc.startFlow`` allows a user to initiate all flows.
+    .. sourcecode:: groovy
+
+        rpcUsers=[
+            {
+                username=exampleUser
+                password=examplePass
+                permissions=[
+                    "InvokeRpc.startFlow"
+                ]
+            }
+            ...
+        ]
+
+Granting other RPC permissions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You provide an RPC user with the permission to perform a specific RPC operation using the syntax
+``InvokeRpc.<rpc method name>``:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        rpcUsers=[
+            {
+                username=exampleUser
+                password=examplePass
+                permissions=[
+                    "InvokeRpc.nodeInfo",
+                    "InvokeRpc.networkMapSnapshot"
+                ]
+            }
+            ...
+        ]
+
+Granting all permissions
+~~~~~~~~~~~~~~~~~~~~~~~~
+You can provide an RPC user with the permission to perform any RPC operation (including starting any flow) using the
+``ALL`` permission:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        rpcUsers=[
+            {
+                username=exampleUser
+                password=examplePass
+                permissions=[
+                    "ALL"
+                ]
+            }
+            ...
+        ]
 
 .. _authentication_ref:
 
