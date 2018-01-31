@@ -1,12 +1,12 @@
-package net.corda.node.internal.protonwrapper.engine
+package net.corda.nodeapi.internal.protonwrapper.engine
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import net.corda.core.utilities.debug
-import net.corda.node.internal.protonwrapper.messages.MessageStatus
-import net.corda.node.internal.protonwrapper.messages.impl.ReceivedMessageImpl
-import net.corda.node.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import org.apache.qpid.proton.Proton
 import org.apache.qpid.proton.amqp.messaging.Accepted
 import org.apache.qpid.proton.amqp.messaging.Rejected
