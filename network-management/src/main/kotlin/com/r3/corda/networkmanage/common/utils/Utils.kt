@@ -7,10 +7,15 @@ import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -55,6 +60,15 @@ fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory()
 
 fun X509KeyStore.getCertPathAndKey(alias: String, privateKeyPassword: String): CertPathAndKey {
     return CertPathAndKey(getCertificateChain(alias), getPrivateKey(alias, privateKeyPassword))
+}
+
+fun initialiseSerialization() {
+    val context = AMQP_P2P_CONTEXT
+    nodeSerializationEnv = SerializationEnvironmentImpl(
+            SerializationFactoryImpl().apply {
+                registerScheme(AMQPClientSerializationScheme())
+            },
+            context)
 }
 
 private fun String.toCamelcase(): String {

@@ -1,5 +1,6 @@
 package com.r3.corda.networkmanage.doorman
 
+import com.r3.corda.networkmanage.common.makeTestDataSourceProperties
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
@@ -35,7 +36,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import java.net.URL
 import java.security.cert.X509Certificate
-import java.util.*
 import kotlin.streams.toList
 
 // This is the same test as the one in net.corda.node.utilities.registration but using the real doorman and with some
@@ -46,7 +46,8 @@ class NodeRegistrationTest : IntegrationTest() {
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(notaryName.organisation, aliceName.organisation, genevieveName.organisation)
 
         private val timeoutMillis = 5.seconds.toMillis()
@@ -58,16 +59,17 @@ class NodeRegistrationTest : IntegrationTest() {
 
     private val portAllocation = PortAllocation.Incremental(10000)
     private val serverAddress = portAllocation.nextHostAndPort()
-    private val dbId = random63BitValue().toString()
 
     private lateinit var rootCaCert: X509Certificate
     private lateinit var csrCa: CertificateAndKeyPair
     private lateinit var networkMapCa: CertificateAndKeyPair
 
     private var server: NetworkManagementServer? = null
+    private lateinit var dbName: String
 
     @Before
     fun init() {
+        dbName = random63BitValue().toString()
         val (rootCa, doormanCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.csrCa = doormanCa
@@ -140,7 +142,7 @@ class NodeRegistrationTest : IntegrationTest() {
         return NetworkManagementServer().apply {
             start(
                     serverAddress,
-                    configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)),
+                    configureDatabase(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true)),
                     CertPathAndKey(listOf(csrCa.certificate, rootCaCert), csrCa.keyPair.private),
                     DoormanConfig(approveAll = true, jiraConfig = null, approveInterval = timeoutMillis),
                     networkParameters?.let {
@@ -161,15 +163,5 @@ class NodeRegistrationTest : IntegrationTest() {
             assertThat(nodeInfosDir.list { it.toList() }).isEmpty()
         }
         assertThat(rpc.networkMapSnapshot()).containsOnlyElementsOf(nodes.map { it.nodeInfo })
-    }
-
-    // TODO Use the other dbs in the integration tests
-    private fun makeTestDataSourceProperties(): Properties {
-        val props = Properties()
-        props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-        props.setProperty("dataSource.url", "jdbc:h2:mem:${dbId}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-        props.setProperty("dataSource.user", "sa")
-        props.setProperty("dataSource.password", "")
-        return props
     }
 }

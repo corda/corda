@@ -3,20 +3,12 @@ package com.r3.corda.networkmanage.doorman
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
-import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
-import com.r3.corda.networkmanage.common.utils.CertPathAndKey
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
-import com.r3.corda.networkmanage.common.utils.getCertPathAndKey
+import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.time.Instant
 import kotlin.concurrent.thread
@@ -99,13 +91,4 @@ fun main(args: Array<String>) {
         e.errorMessage?.let(::println)
         e.parser.printHelpOn(System.out)
     }
-}
-
-private fun initialiseSerialization() {
-    val context = AMQP_P2P_CONTEXT
-    nodeSerializationEnv = SerializationEnvironmentImpl(
-            SerializationFactoryImpl().apply {
-                registerScheme(AMQPClientSerializationScheme())
-            },
-            context)
 }

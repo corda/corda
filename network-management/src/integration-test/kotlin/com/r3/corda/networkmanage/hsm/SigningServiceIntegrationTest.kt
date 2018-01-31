@@ -1,6 +1,8 @@
 package com.r3.corda.networkmanage.hsm
 
 import com.nhaarman.mockito_kotlin.*
+import com.r3.corda.networkmanage.common.HOST
+import com.r3.corda.networkmanage.common.HsmBaseTest
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.doorman.DoormanConfig
 import com.r3.corda.networkmanage.doorman.NetworkManagementServer
@@ -31,22 +33,13 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.util.*
 import javax.persistence.PersistenceException
 import kotlin.concurrent.scheduleAtFixedRate
 
-class SigningServiceIntegrationTest {
-    companion object {
-        private val HOST = "localhost"
-        private val DB_NAME = "test_db"
-    }
-
-    @Rule
-    @JvmField
-    val tempFolder = TemporaryFolder()
+class SigningServiceIntegrationTest : HsmBaseTest() {
 
     @Rule
     @JvmField
@@ -159,14 +152,5 @@ class SigningServiceIntegrationTest {
 //            doReturn(X509KeyStore.fromFile(it.sslKeystore, it.keyStorePassword, true)).whenever(it).loadSslKeyStore(any())
 //            doReturn(trustStore).whenever(it).loadTrustStore(any())
         }
-    }
-
-    private fun makeTestDataSourceProperties(): Properties {
-        val props = Properties()
-        props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-        props.setProperty("dataSource.url", "jdbc:h2:mem:${SigningServiceIntegrationTest.DB_NAME};DB_CLOSE_DELAY=-1")
-        props.setProperty("dataSource.user", "sa")
-        props.setProperty("dataSource.password", "")
-        return props
     }
 }

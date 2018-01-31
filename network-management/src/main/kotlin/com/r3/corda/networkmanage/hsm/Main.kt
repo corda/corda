@@ -6,6 +6,7 @@ import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
@@ -54,6 +55,7 @@ fun run(parameters: Parameters) {
 
         // Create DB connection.
         checkNotNull(dataSourceProperties)
+        initialiseSerialization()
         val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
         val hsmSigner = HsmSigner(

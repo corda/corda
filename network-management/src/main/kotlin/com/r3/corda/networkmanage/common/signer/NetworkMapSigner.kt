@@ -21,7 +21,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         // in current network map.
         val latestNetworkParameters = networkMapStorage.getLatestNetworkParameters()
         if (latestNetworkParameters == null) {
-            logger.debug("No network parameters present")
+            logger.info("No network parameters present")
             return
         }
         val currentNetworkParameters = networkMapStorage.getNetworkParametersOfNetworkMap()
