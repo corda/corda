@@ -1,40 +1,8 @@
-package net.corda.core.internal
+package net.corda.core.node
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import java.time.Instant
-
-const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
-const val NETWORK_PARAMS_UPDATE_FILE_NAME = "network-parameters-update"
-
-/**
- * Data structure representing the network map available from the HTTP network map service as a serialised blob.
- * @property nodeInfoHashes list of network participant's [NodeInfo] hashes
- * @property networkParameterHash hash of the current active [NetworkParameters]
- * @property parametersUpdate if present means that network operator has scheduled an update of the network parameters
- */
-@CordaSerializable
-data class NetworkMap(
-        val nodeInfoHashes: List<SecureHash>,
-        val networkParameterHash: SecureHash,
-        val parametersUpdate: ParametersUpdate?
-)
-
-/**
- * Data class representing scheduled network parameters update.
- * @property newParametersHash Hash of the new [NetworkParameters] which can be requested from the network map
- * @property description Short description of the update
- * @property updateDeadline deadline by which new network parameters need to be accepted, after this date network operator
- *          can switch to new parameters which will result in getting nodes with old parameters out of the network
- */
-@CordaSerializable
-data class ParametersUpdate(
-        val newParametersHash: SecureHash,
-        val description: String,
-        val updateDeadline: Instant
-)
 
 /**
  * @property minimumPlatformVersion Minimum version of Corda platform that is required for nodes in the network.

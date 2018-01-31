@@ -7,9 +7,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.config.NotaryConfig
-import net.corda.core.internal.NetworkParameters
+import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.core.internal.NotaryInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME

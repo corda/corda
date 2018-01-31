@@ -7,7 +7,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.NotaryInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.schemas.NodeInfoSchemaV1

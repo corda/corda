@@ -8,8 +8,6 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -55,9 +53,10 @@ import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
-import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration

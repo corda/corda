@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -20,7 +21,10 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.TestNodeInfoBuilder

@@ -1,7 +1,6 @@
 package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -10,9 +9,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.core.internal.NetworkMap
-import net.corda.core.internal.NetworkParameters
-import net.corda.core.internal.ParametersUpdate
+import net.corda.core.node.NetworkParameters
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.ParametersUpdate
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -23,7 +22,6 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
 import java.io.InputStream
 import java.net.InetSocketAddress
-import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant

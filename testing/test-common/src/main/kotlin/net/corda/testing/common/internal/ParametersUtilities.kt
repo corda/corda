@@ -1,7 +1,7 @@
 package net.corda.testing.common.internal
 
-import net.corda.core.internal.NetworkParameters
-import net.corda.core.internal.NotaryInfo
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import java.time.Instant
 
 fun testNetworkParameters(

@@ -392,9 +392,3 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
 }
 
 data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair)
-
-fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
-    require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
-    X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
-    return verified()
-}

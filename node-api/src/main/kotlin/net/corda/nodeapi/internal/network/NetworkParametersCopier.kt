@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.core.internal.*
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair

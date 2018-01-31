@@ -13,7 +13,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.NetworkParameters
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache

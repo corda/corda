@@ -8,11 +8,12 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.core.internal.NETWORK_PARAMS_FILE_NAME
-import net.corda.core.internal.NetworkParameters
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.crypto.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule

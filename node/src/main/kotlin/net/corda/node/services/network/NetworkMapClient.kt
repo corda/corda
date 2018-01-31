@@ -5,8 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
@@ -16,7 +16,10 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import okhttp3.CacheControl
 import okhttp3.Headers
 import rx.Subscription

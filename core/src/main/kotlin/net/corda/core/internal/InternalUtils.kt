@@ -14,6 +14,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -308,7 +309,7 @@ val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun <T: Any>  URL.post(serializedData: SerializedBytes<T>) {
+fun URL.post(serializedData: OpaqueBytes) {
     openHttpConnection().apply {
         doOutput = true
         requestMethod = "POST"

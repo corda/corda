@@ -5,7 +5,9 @@ import net.corda.cordform.CordformNode
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
