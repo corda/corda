@@ -178,7 +178,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
             persistentNetworkMapCache.start()
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-            val signedNodeInfo = signNodeInfo(info) { publicKey, serialised ->
+            val signedNodeInfo = info.signNodeInfo { publicKey, serialised ->
                 val privateKey = keyPairs.single { it.public == publicKey }.private
                 privateKey.sign(serialised.bytes)
             }
@@ -244,7 +244,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.updateNodeInfo(services.myInfo) {
-            signNodeInfo(it) { publicKey, serialised ->
+            it.signNodeInfo { publicKey, serialised ->
                 services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
             }
         }
@@ -645,10 +645,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     private fun getParametersUpdate(trustRoot: X509Certificate): NetworkParameters? {
         val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        if (!parametersUpdateFile.exists()) return null
-        return try {
+        return if (parametersUpdateFile.exists()) {
             parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
-        } catch (e: Exception) {
+        } else {
             null
         }
     }
@@ -658,12 +657,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val networkParamsFile = configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME
         val parametersFromFile = if (networkParamsFile.exists()) {
             networkParamsFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
-        } else null
+        } else {
+            null
+        }
         networkParameters = if (advertisedParametersHash != null) {
             // I feel it doesn't make sense, on one hand we have node starting without parameters and just accepting them by default,
             //  on the other we have parameters update process - it needs to be unified. Say you start the node, you don't have matching parameters,
             //  you get them from network map, but you have to run the acceptance step. TODO To be implemented in later stage?
-            if (parametersFromFile == null) downloadParameters(trustRoot, advertisedParametersHash) // Node joins for the first time.
+            if (parametersFromFile == null) { // Node joins for the first time.
+                downloadParameters(trustRoot, advertisedParametersHash)
+            }
             else if (parametersFromFile.serialize().hash == advertisedParametersHash) { // Restarted with the same parameters.
                 parametersFromFile
             } else { // Update case.

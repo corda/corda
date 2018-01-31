@@ -31,6 +31,7 @@ import org.junit.Rule
 import org.junit.Test
 import rx.schedulers.TestScheduler
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -196,12 +197,13 @@ class NetworkMapUpdaterTest {
         val updates = paramsFeed.updates.bufferUntilSubscribed()
         assertEquals(null, snapshot)
         val newParameters = testNetworkParameters(emptyList(), epoch = 2)
-        scheduleParametersUpdate(newParameters, "Test update")
+        val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
+        scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
         updater.subscribeToNetworkMap()
         updates.expectEvents(isStrict = false) {
             sequence(
                     expect { update: ParametersUpdateInfo ->
-                        require(update.flagDay == null)
+                        require(update.updateDeadline == updateDeadline)
                         require(update.description == "Test update")
                         require(update.hash == newParameters.serialize().hash)
                         require(update.parameters == newParameters)
@@ -232,9 +234,9 @@ class NetworkMapUpdaterTest {
         assertEquals(newParameters, paramsFromFile)
     }
 
-    private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, flagDay: Instant? = null) {
+    private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant = Instant.now()) {
         networkParamsMap[nextParameters.serialize().hash] = nextParameters
-        parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, flagDay)
+        parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, updateDeadline)
     }
 
     private fun createMockNetworkMapClient(): NetworkMapClient {

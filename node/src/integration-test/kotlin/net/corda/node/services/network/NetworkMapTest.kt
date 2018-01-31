@@ -32,7 +32,6 @@ import java.net.URL
 import java.time.Instant
 import kotlin.streams.toList
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 
 class NetworkMapTest {
     @Rule
@@ -80,7 +79,7 @@ class NetworkMapTest {
     }
 
     @Test
-    fun `node correcty goes through network parameters update process on the startup`() {
+    fun `node correctly goes through network parameters update process on startup`() {
         internalDriver(
                 startNodesInProcess = true,
                 portAllocation = portAllocation,
@@ -88,13 +87,12 @@ class NetworkMapTest {
                 initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
-            val aliceDir = baseDirectory(ALICE_NAME)
-            aliceDir.createDirectories()
+            val aliceDir = baseDirectory(ALICE_NAME).createDirectories()
             val oldParameters = testNetworkParameters(emptyList(), epoch = 1)
             NetworkParametersCopier(oldParameters).install(aliceDir)
-            NetworkParametersCopier(networkMapServer.networkParameters).install(aliceDir, update = true)
+            NetworkParametersCopier(networkMapServer.networkParameters, update = true).install(aliceDir)
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            assertFalse((aliceDir / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
+            assertThat(aliceDir / NETWORK_PARAMS_UPDATE_FILE_NAME).doesNotExist()
             val parametersFromFile = (aliceDir / NETWORK_PARAMS_FILE_NAME).readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
             assertEquals(networkMapServer.networkParameters, parametersFromFile)
             assertEquals(networkMapServer.networkParameters.serialize().hash, alice.nodeInfo.acceptedParametersHash)

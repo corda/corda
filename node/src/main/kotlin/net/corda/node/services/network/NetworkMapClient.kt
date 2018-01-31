@@ -2,7 +2,6 @@ package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -41,18 +40,8 @@ class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certifica
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
         logger.trace { "Publishing NodeInfo to $publishURL." }
-        doPost(publishURL, signedNodeInfo.serialize())
+        publishURL.post(signedNodeInfo.serialize())
         logger.trace { "Published NodeInfo to $publishURL successfully." }
-    }
-
-    private fun <T: Any> doPost(url: URL, serializedData: SerializedBytes<T>) {
-        url.openHttpConnection().apply {
-            doOutput = true
-            requestMethod = "POST"
-            setRequestProperty("Content-Type", "application/octet-stream")
-            outputStream.use { serializedData.open().copyTo(it) }
-            checkOkResponse()
-        }
     }
 
     fun getNetworkMap(): NetworkMapResponse {
@@ -106,7 +95,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
     fun track(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         val currentUpdateInfo = newNetworkParameters?.let {
-            ParametersUpdateInfo(it.first.newParametersHash, it.second.verified(), it.first.description, it.first.flagDay)
+            ParametersUpdateInfo(it.first.newParametersHash, it.second.verified(), it.first.description, it.first.updateDeadline)
         }
         return DataFeed(
                 currentUpdateInfo,
@@ -151,7 +140,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                     val (networkMap, cacheTimeout) = networkMapClient.getNetworkMap()
                     networkMap.parametersUpdate?.let { handleUpdateNetworkParameters(it) }
                     if (currentParametersHash != networkMap.networkParameterHash) {
-                        // TODO This needs special handling (node omitted update process/didn't accept new parameters or didn't restart on flagDay)
+                        // TODO This needs special handling (node omitted update process/didn't accept new parameters or didn't restart on updateDeadline)
                         logger.error("Node is using parameters with hash: $currentParametersHash but network map is advertising: ${networkMap.networkParameterHash}.\n" +
                                 "Please update node to use correct network parameters file.\"")
                         System.exit(1)
@@ -203,15 +192,16 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun handleUpdateNetworkParameters(update: ParametersUpdate) {
-        if (update.newParametersHash != newNetworkParameters?.first?.newParametersHash) {
-            val newParameters = networkMapClient?.getNetworkParameters(update.newParametersHash)
-            if (newParameters != null) {
-                logger.info("Downloaded new network parameters: $newParameters from the update: $update")
-                newNetworkParameters = Pair(update, newParameters)
-                parametersUpdatesTrack.onNext(ParametersUpdateInfo(update.newParametersHash, newParameters.verified(), update.description, update.flagDay))
-            } else {
-                logger.warn("Couldn't retrive network parameters from update: $update")
-            }
+        if (update.newParametersHash == newNetworkParameters?.first?.newParametersHash) {
+            logger.warn("Couldn't retrive network parameters from update: $update")
+            return
+        }
+        val newParameters = networkMapClient?.getNetworkParameters(update.newParametersHash)
+        if (newParameters != null) {
+            logger.info("Downloaded new network parameters: $newParameters from the update: $update")
+            newNetworkParameters = Pair(update, newParameters)
+            parametersUpdatesTrack.onNext(ParametersUpdateInfo(update.newParametersHash, newParameters.verified(), update.description, update.updateDeadline))
+
         }
     }
 

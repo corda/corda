@@ -21,6 +21,8 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.IOException
 import java.net.URL
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 
 class NetworkMapClientTest {
@@ -100,7 +102,7 @@ class NetworkMapClientTest {
         val hash1 = server.networkParameters.serialize().hash
         val hash2 = nextParameters.serialize().hash
         val description = "Test parameters"
-        server.scheduleParametersUpdate(nextParameters, description)
+        server.scheduleParametersUpdate(nextParameters, description, Instant.now().plus(1, ChronoUnit.DAYS))
         val (networkMap) = networkMapClient.getNetworkMap()
         assertEquals(networkMap.networkParameterHash, hash1)
         assertEquals(networkMap.parametersUpdate?.description, description)

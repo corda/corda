@@ -73,12 +73,16 @@ sealed class StateMachineUpdate {
     data class Removed(override val id: StateMachineRunId, val result: Try<*>) : StateMachineUpdate()
 }
 
+/**
+ * Data class containing information about the scheduled network parameters update. The info is emitted every time node
+ * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.newNetworkMapParameters] and [CordaRPCOps.acceptNewNetworkParameters].
+ */
 @CordaSerializable
 data class ParametersUpdateInfo(
         val hash: SecureHash,
         val parameters: NetworkParameters,
         val description: String,
-        val flagDay: Instant?
+        val updateDeadline: Instant
 )
 
 @CordaSerializable
@@ -216,7 +220,8 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Returns [DataFeed] object containing information on currently scheduled parameters update (null if none were scheduled)
-     * and observable with future update events.
+     * and observable with future update events. Any update that occurs before the deadline of the current one automatically cancels it.
+     * Only the latest update can be accepted, because node can store only one future parameters update at any given time.
      */
     @RPCReturnsObservables
     fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
@@ -225,10 +230,9 @@ interface CordaRPCOps : RPCOps {
      * Accept network parameters with given hash, hash is obtained through [newNetworkMapParameters] method.
      * On approval, new network parameters are saved in node's base directory as `network-parameters-update` file.
      * Information is sent back to the zone operator that the node accepted the parameters update - this process cannot be
-     * revoked.
+     * undone.
      * Only parameters that are scheduled for update can be accepted, if different hash is provided this method will fail.
-     * @throws IllegalArgumentException if network map advertises update with different parameters hash (node's operator needs to accept the newest version)
-     * @throws IllegalStateException if compatibility zone wasn't configured
+     * @throws IllegalArgumentException if network map advertises update with different parameters hash then the one accepted by node's operator
      */
     fun acceptNewNetworkParameters(parametersHash: SecureHash)
 

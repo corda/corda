@@ -85,9 +85,9 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         service.removeNodeInfo(nodeInfo)
     }
 
-    fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, flagDay: Instant? = null) {
+    fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant) {
         nextNetworkParameters = nextParameters
-        parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, flagDay)
+        parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, updateDeadline)
     }
 
     fun advertiseNewParameters() {

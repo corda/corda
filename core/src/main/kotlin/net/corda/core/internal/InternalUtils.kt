@@ -9,6 +9,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
@@ -306,6 +307,16 @@ fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, seri
 val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
+
+fun <T: Any>  URL.post(serializedData: SerializedBytes<T>) {
+    openHttpConnection().apply {
+        doOutput = true
+        requestMethod = "POST"
+        setRequestProperty("Content-Type", "application/octet-stream")
+        outputStream.use { serializedData.open().copyTo(it) }
+        checkOkResponse()
+    }
+}
 
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != 200) {

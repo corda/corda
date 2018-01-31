@@ -11,7 +11,9 @@ import java.nio.file.StandardCopyOption
 class NetworkParametersCopier(
         networkParameters: NetworkParameters,
         networkMapCa: CertificateAndKeyPair = createDevNetworkMapCa(),
-        overwriteFile: Boolean = false
+        overwriteFile: Boolean = false,
+        @VisibleForTesting
+        val update: Boolean = false
 ) {
     private val copyOptions = if (overwriteFile) arrayOf(StandardCopyOption.REPLACE_EXISTING) else emptyArray()
     private val serialisedSignedNetParams = networkParameters.signWithCert(
@@ -19,7 +21,7 @@ class NetworkParametersCopier(
             networkMapCa.certificate
     ).serialize()
 
-    fun install(nodeDir: Path, update: Boolean = false) {
+    fun install(nodeDir: Path) {
         val fileName = if (update) NETWORK_PARAMS_UPDATE_FILE_NAME else NETWORK_PARAMS_FILE_NAME
         try {
             serialisedSignedNetParams.open().copyTo(nodeDir / fileName, *copyOptions)

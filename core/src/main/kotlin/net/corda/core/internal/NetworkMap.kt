@@ -10,8 +10,10 @@ const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
 const val NETWORK_PARAMS_UPDATE_FILE_NAME = "network-parameters-update"
 
 /**
- * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
- * @property parametersUpdate if present means that network operator scheduled update of network parameters
+ * Data structure representing the network map available from the HTTP network map service as a serialised blob.
+ * @property nodeInfoHashes list of network participant's [NodeInfo] hashes
+ * @property networkParameterHash hash of the current active [NetworkParameters]
+ * @property parametersUpdate if present means that network operator has scheduled an update of the network parameters
  */
 @CordaSerializable
 data class NetworkMap(
@@ -21,16 +23,17 @@ data class NetworkMap(
 )
 
 /**
- * @property newParametersHash Hash of the new [NetworkParameters], which will be requested from network map
+ * Data class representing scheduled network parameters update.
+ * @property newParametersHash Hash of the new [NetworkParameters] which can be requested from the network map
  * @property description Short description of the update
- * @property flagDay initially set to null, when most of the participants of the network agree on the new parameters the network
- * operator decides when to switch to using new parameters
+ * @property updateDeadline deadline by which new network parameters need to be accepted, after this date network operator
+ *          can switch to new parameters which will result in getting nodes with old parameters out of the network
  */
 @CordaSerializable
 data class ParametersUpdate(
         val newParametersHash: SecureHash,
         val description: String,
-        val flagDay: Instant?
+        val updateDeadline: Instant
 )
 
 /**
