@@ -91,7 +91,8 @@ object LegalNameValidator {
                     CapitalLetterRule()
             )
             val legalNameRules: List<Rule<String>> = attributeRules + listOf(
-                    WordRule("node", "server"),
+                    // Removal of word restriction was requested in https://github.com/corda/corda/issues/2326
+                    // WordRule("node", "server"),
                     X500NameRule()
             )
             val legalNameFullRules: List<Rule<String>> = legalNameRules + listOf(
