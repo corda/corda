@@ -3,7 +3,6 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -28,7 +27,6 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration,
                                 networkRootTrustStorePath: Path,
                                 networkRootTruststorePassword: String) {
     private companion object {
-        val pollInterval = 10.seconds
         const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
     }
 
@@ -148,17 +146,18 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration,
      * Poll Certificate Signing Server for approved certificate,
      * enter a slow polling loop if server return null.
      * @param requestId Certificate signing request ID.
-     * @return Map of certificate chain.
+     * @return List of certificate chain.
      */
     private fun pollServerForCertificates(requestId: String): List<X509Certificate> {
         println("Start polling server for certificate signing approval.")
         // Poll server to download the signed certificate once request has been approved.
-        var certificates = certService.retrieveCertificates(requestId)
-        while (certificates == null) {
+        while (true) {
+            val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
+            if (certificates != null) {
+                return certificates
+            }
             Thread.sleep(pollInterval.toMillis())
-            certificates = certService.retrieveCertificates(requestId)
         }
-        return certificates
     }
 
     /**

@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.x500Name
+import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -158,7 +159,7 @@ class NetworkRegistrationHelperTest {
     private fun createRegistrationHelper(response: List<X509Certificate>): NetworkRegistrationHelper {
         val certService = rigorousMock<NetworkRegistrationService>().also {
             doReturn(requestId).whenever(it).submitRequest(any())
-            doReturn(response).whenever(it).retrieveCertificates(eq(requestId))
+            doReturn(CertificateResponse(5.seconds, response)).whenever(it).retrieveCertificates(eq(requestId))
         }
         return NetworkRegistrationHelper(config, certService, config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword)
     }
