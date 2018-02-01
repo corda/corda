@@ -126,9 +126,9 @@ fun AMQPField.getTypeAsClass(classloader: ClassLoader) = typeStrToType[Pair(type
     "*" -> if (requires.isEmpty()) Any::class.java else classloader.loadClass(requires[0])
     else -> {
         classloader.loadClass(
-                if (type.endsWith("<?>")) {
-                    type.substring(0, type.length-3)
-                } else type)
+        if (type.endsWith("?>")) {
+            type.substring(0, type.indexOf('<'))
+        } else type)
     }
 }
 

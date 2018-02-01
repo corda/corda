@@ -73,7 +73,12 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) = ifThrowsAppend({ declaredType.typeName }) {
+    override fun writeObject(
+            obj: Any,
+            data: Data,
+            type: Type,
+            output: SerializationOutput,
+            debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
         obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
@@ -81,8 +86,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             data.putMap()
             data.enter()
             for ((key, value) in obj as Map<*, *>) {
-                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], offset)
-                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], offset)
+                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], debugIndent)
+                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], debugIndent)
             }
             data.exit() // exit map
         }

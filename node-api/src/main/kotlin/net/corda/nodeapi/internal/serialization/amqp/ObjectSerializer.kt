@@ -52,13 +52,18 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, offset: Int) = ifThrowsAppend({ clazz.typeName }) {
+    override fun writeObject(
+            obj: Any,
+            data: Data,
+            type: Type,
+            output: SerializationOutput,
+            debugIndent: Int) = ifThrowsAppend({ clazz.typeName }) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             // Write list
             withList {
                 propertySerializers.serializationOrder.forEach { property ->
-                    property.getter.writeProperty(obj, this, output, offset+4)
+                    property.getter.writeProperty(obj, this, output, debugIndent+1)
                 }
             }
         }

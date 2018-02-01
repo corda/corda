@@ -27,7 +27,7 @@ class TestAttachmentConstraint : AttachmentConstraint {
 
 class GenericsTests {
     companion object {
-        val VERBOSE = false
+        val VERBOSE = true
 
         @Suppress("UNUSED")
         var localPath = projectRootDir.toUri().resolve(
@@ -365,7 +365,7 @@ class GenericsTests {
     }
 
     @Test
-    fun anotherTry() {
+    fun nestedGenericsWithBound() {
         open class BaseState(val a : Int)
         class DState(a: Int) : BaseState(a)
         data class LTransactionState<out T : BaseState> constructor(val data: T)
@@ -383,6 +383,122 @@ class GenericsTests {
         val des1 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser1.obj)
 
         assertEquals(state.data.a, des1.obj.state.data.a)
+    }
+
+    @Test
+    fun nestedMultiGenericsWithBound() {
+        open class BaseState(val a : Int)
+        class DState(a: Int) : BaseState(a)
+        class EState(a: Int, val msg: String) : BaseState(a)
+
+        data class LTransactionState<out T1 : BaseState, out T2: BaseState> (val data: T1, val context: T2)
+        data class StateWrapper<out T1 : BaseState, out T2: BaseState>(val state: LTransactionState<T1, T2>)
+
+        val factory1 = testDefaultFactoryNoEvolution()
+
+        val state = LTransactionState(DState(1020304), EState(5060708, msg = "thigns"))
+        val stateAndString = StateWrapper(state)
+
+        val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(stateAndString)
+
+        //val factory2 = testDefaultFactoryNoEvolution()
+        val factory2 = testDefaultFactory()
+        val des1 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser1.obj)
+
+        assertEquals(state.data.a, des1.obj.state.data.a)
+        assertEquals(state.context.a,  des1.obj.state.context.a)
+    }
+
+    @Test
+    fun nestedMultiGenericsNoBound() {
+        open class BaseState(val a : Int)
+        class DState(a: Int) : BaseState(a)
+        class EState(a: Int, val msg: String) : BaseState(a)
+
+        data class LTransactionState<out T1, out T2> (val data: T1, val context: T2)
+        data class StateWrapper<out T1, out T2>(val state: LTransactionState<T1, T2>)
+
+        val factory1 = testDefaultFactoryNoEvolution()
+
+        val state = LTransactionState(DState(1020304), EState(5060708, msg = "things"))
+        val stateAndString = StateWrapper(state)
+
+        val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(stateAndString)
+
+        //val factory2 = testDefaultFactoryNoEvolution()
+        val factory2 = testDefaultFactory()
+        val des1 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser1.obj)
+
+        assertEquals(state.data.a, des1.obj.state.data.a)
+        assertEquals(state.context.a, des1.obj.state.context.a)
+        assertEquals(state.context.msg, des1.obj.state.context.msg)
+    }
+
+    @Test
+    fun baseClassInheritedButNotOverriden() {
+        val factory1 = testDefaultFactoryNoEvolution()
+        val factory2 = testDefaultFactory()
+
+        open class BaseState<T1, T2>(open val a : T1, open val b: T2)
+        class DState<T1, T2>(a: T1, b: T2) : BaseState<T1, T2>(a, b)
+
+        val state = DState(100, "hello")
+        val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(state)
+        val des1 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser1.obj)
+
+        assertEquals(state.a, des1.obj.a)
+        assertEquals(state.b, des1.obj.b)
+
+        class DState2<T1, T2, T3>(a: T1, b: T2, val c: T3) : BaseState<T1, T2>(a, b)
+
+        val state2 = DState2(100, "hello", 100L)
+        val ser2 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(state2)
+        val des2 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser2.obj)
+
+        assertEquals(state2.a, des2.obj.a)
+        assertEquals(state2.b, des2.obj.b)
+        assertEquals(state2.c, des2.obj.c)
+    }
+
+    @Test
+    fun baseClassInheritedButNotOverridenBounded() {
+        val factory1 = testDefaultFactoryNoEvolution()
+        val factory2 = testDefaultFactory()
+
+        open class Bound(val a: Int)
+
+        open class BaseState<out T1 : Bound>(open val a: T1)
+        class DState<out T1: Bound>(a: T1) : BaseState<T1>(a)
+
+        val state = DState(Bound(100))
+        val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(state)
+        val des1 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser1.obj)
+
+        assertEquals(state.a.a, des1.obj.a.a)
+    }
+
+    @Test
+    fun nestedMultiGenericsAtBottomWithBound() {
+        open class BaseState<T1, T2>(val a : T1, val b: T2)
+        class DState<T1, T2>(a: T1, b: T2) : BaseState<T1, T2>(a, b)
+        class EState<T1, T2>(a: T1, b: T2, val c: Long) : BaseState<T1, T2>(a, b)
+
+        data class LTransactionState<T1, T2, T3 : BaseState<T1, T2>, out T4: BaseState<T1, T2>> (val data: T3, val context: T4)
+        data class StateWrapper<T1, T2, T3 : BaseState<T1, T2>, out T4: BaseState<T1, T2>>(val state: LTransactionState<T1, T2, T3, T4>)
+
+        val factory1 = testDefaultFactoryNoEvolution()
+
+        val state = LTransactionState(DState(1020304, "Hello"), EState(5060708, "thins", 100L))
+        val stateAndString = StateWrapper(state)
+
+        val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(stateAndString)
+
+        //val factory2 = testDefaultFactoryNoEvolution()
+        val factory2 = testDefaultFactory()
+        val des1 = DeserializationInput(factory2).deserializeAndReturnEnvelope(ser1.obj)
+
+        assertEquals(state.data.a, des1.obj.state.data.a)
+        assertEquals(state.context.a,  des1.obj.state.context.a)
     }
 
 }

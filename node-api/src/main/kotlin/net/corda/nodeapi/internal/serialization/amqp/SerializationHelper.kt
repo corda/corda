@@ -114,8 +114,8 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
                 val returnType = resolveTypeVariables(getter.genericReturnType, type)
                 if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
                     throw NotSerializableException(
-                            "Property type $returnType for $name of $clazz differs from constructor parameter "
-                                    + "type ${param.value.type.javaType}")
+                            "Property type '$returnType' for '$name' of '$clazz' differs from constructor parameter "
+                                    + "type '${param.value.type.javaType}'")
                 }
 
                 Pair(PublicPropertyReader(getter), returnType)
@@ -166,9 +166,20 @@ private fun propertiesForSerializationFromSetters(
     }
 }
 
-private fun constructorParamTakesReturnTypeOfGetter(getterReturnType: Type, rawGetterReturnType: Type, param: KParameter): Boolean {
-    val typeToken = TypeToken.of(param.type.javaType)
-    return typeToken.isSupertypeOf(getterReturnType) || typeToken.isSupertypeOf(rawGetterReturnType)
+private fun constructorParamTakesReturnTypeOfGetter(
+        getterReturnType: Type,
+        rawGetterReturnType: Type,
+        param: KParameter): Boolean {
+    val paramToken = TypeToken.of(param.type.javaType)
+    val rawParamType = TypeToken.of(paramToken.rawType)
+
+    return paramToken.isSupertypeOf(getterReturnType)
+            || paramToken.isSupertypeOf(rawGetterReturnType)
+            // cope with the case where the constructor parameter is a generic type (T etc) but we
+            // can discover it's raw type. When bounded this wil be the bounding type, unbounded
+            // generics this will be object
+            || rawParamType.isSupertypeOf(getterReturnType)
+            || rawParamType.isSupertypeOf(rawGetterReturnType)
 }
 
 private fun propertiesForSerializationFromAbstract(

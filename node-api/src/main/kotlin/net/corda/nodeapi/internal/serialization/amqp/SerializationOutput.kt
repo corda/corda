@@ -86,15 +86,15 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
         data.putObject(transformsSchema)
     }
 
-    internal fun writeObjectOrNull(obj: Any?, data: Data, type: Type, offset: Int) {
+    internal fun writeObjectOrNull(obj: Any?, data: Data, type: Type, debugIndent: Int) {
         if (obj == null) {
             data.putNull()
         } else {
-            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type, offset)
+            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type, debugIndent)
         }
     }
 
-    internal fun writeObject(obj: Any, data: Data, type: Type, offset: Int = 0) {
+    internal fun writeObject(obj: Any, data: Data, type: Type, debugIndent: Int = 0) {
         val serializer = serializerFactory.get(obj.javaClass, type)
         if (serializer !in serializerHistory) {
             serializerHistory.add(serializer)
@@ -103,7 +103,7 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
 
         val retrievedRefCount = objectHistory[obj]
         if (retrievedRefCount == null) {
-            serializer.writeObject(obj, data, type, this, offset)
+            serializer.writeObject(obj, data, type, this, debugIndent)
             // Important to do it after serialization such that dependent object will have preceding reference numbers
             // assigned to them first as they will be first read from the stream on receiving end.
             // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
