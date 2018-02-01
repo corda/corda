@@ -59,8 +59,6 @@ class AMQPBridgeTest {
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
-    // TODO: revisit upon Matthew Nesbitt return
-    @Ignore()
     @Test
     fun `test acked and nacked messages`() {
         // Create local queue

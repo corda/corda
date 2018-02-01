@@ -106,6 +106,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val database: CordaPersistence,
                          private val networkMap: NetworkMapCacheInternal,
                          private val metricRegistry: MetricRegistry,
+                         val legalName: String,
                          advertisedAddress: NetworkHostAndPort = serverAddress,
                          private val maxMessageSize: Int,
                          private val isDrainingModeOn: () -> Boolean,
@@ -170,6 +171,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val externalBridge: Boolean = config.enterpriseConfiguration.externalBridge ?: false
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
@@ -238,7 +240,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     this@P2PMessagingClient,
                     metricRegistry,
                     queueBound = config.enterpriseConfiguration.tuning.maximumMessagingBatchSize,
-                    ourSenderUUID = deduplicator.ourSenderUUID
+                    ourSenderUUID = deduplicator.ourSenderUUID,
+                    myLegalName = legalName
             )
             this@P2PMessagingClient.messagingExecutor = messagingExecutor
             messagingExecutor.start()
@@ -384,7 +387,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
             val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
-            val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
+            val user = requireNotNull(if (externalBridge) {
+                message.getStringProperty(P2PMessagingHeaders.bridgedCertificateSubject) ?: message.getStringProperty(HDR_VALIDATED_USER)
+            } else {
+                message.getStringProperty(HDR_VALIDATED_USER)
+            }) { "Message is not authenticated" }
+
             val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }

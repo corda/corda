@@ -49,7 +49,8 @@ class MessagingExecutor(
         val resolver: AddressToArtemisQueueResolver,
         metricRegistry: MetricRegistry,
         val ourSenderUUID: String,
-        queueBound: Int
+        queueBound: Int,
+        val myLegalName: String
 ) {
     private sealed class Job {
         data class Acknowledge(val message: ClientMessage) : Job()
@@ -164,6 +165,7 @@ class MessagingExecutor(
             putStringProperty(P2PMessagingHeaders.releaseVersionProperty, releaseVersion)
             putIntProperty(P2PMessagingHeaders.platformVersionProperty, versionInfo.platformVersion)
             putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString(message.topic))
+            putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, SimpleString(myLegalName))
             sendMessageSizeMetric.update(message.data.bytes.size)
             writeBodyBufferBytes(message.data.bytes)
             // Use the magic deduplication property built into Artemis as our message identity too

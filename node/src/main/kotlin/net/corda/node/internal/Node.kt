@@ -178,9 +178,11 @@ open class Node(configuration: NodeConfiguration,
         } else {
             startLocalRpcBroker(networkParameters)
         }
-        val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
-
+        val advertisedAddress = info.addresses.single()
+        val externalBridge = configuration.enterpriseConfiguration.externalBridge
+        if (externalBridge == null || !externalBridge) {
+            bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+        }
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
 
         val rpcServerConfiguration = RPCServerConfiguration.default.copy(
@@ -205,6 +207,7 @@ open class Node(configuration: NodeConfiguration,
                 database,
                 services.networkMapCache,
                 services.monitoringService.metrics,
+                info.legalIdentities[0].name.toString(),
                 advertisedAddress,
                 /*networkParameters.maxMessageSize*/MAX_FILE_SIZE,
                 nodeProperties.flowsDrainingMode::isEnabled,

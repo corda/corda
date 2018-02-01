@@ -33,7 +33,7 @@ class ArtemisMessagingClient(
         private val autoCommitSends: Boolean = true,
         private val autoCommitAcks: Boolean = true,
         private val confirmationWindowSize: Int = -1
-): ArtemisSessionProvider {
+)  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
     }
