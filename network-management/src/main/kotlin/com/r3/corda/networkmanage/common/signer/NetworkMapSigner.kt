@@ -25,13 +25,17 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
             return
         }
         val currentNetworkParameters = networkMapStorage.getNetworkParametersOfNetworkMap()
+        logger.debug("Retrieved network map parameters: $currentNetworkParameters")
         if (currentNetworkParameters?.verified() != latestNetworkParameters) {
             persistSignedNetworkParameters(latestNetworkParameters)
         }
         val currentSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
         val nodeInfoHashes = networkMapStorage.getNodeInfoHashes(CertificateStatus.VALID)
-        val serialisedNetworkMap = NetworkMap(nodeInfoHashes, latestNetworkParameters.serialize().hash).serialize()
+        logger.debug("Retrieved node info hashes: $nodeInfoHashes")
+        val newNetworkMap = NetworkMap(nodeInfoHashes, latestNetworkParameters.serialize().hash)
+        val serialisedNetworkMap = newNetworkMap.serialize()
         if (serialisedNetworkMap != currentSignedNetworkMap?.raw) {
+            logger.info("Signing a new network map: $newNetworkMap")
             val newSignedNetworkMap = SignedDataWithCert(serialisedNetworkMap, signer.signBytes(serialisedNetworkMap.bytes))
             networkMapStorage.saveNetworkMap(newSignedNetworkMap)
         }

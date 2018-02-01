@@ -77,7 +77,7 @@ Allowed parameters are:
 :authKeyFilePassword: Authentication key file password. It is used when the 'authMode' is set to "KEY_FILE"
         or for the automated signing process - e.g. network map, certificate revocation list. Default value: null
 
-:signInterval: Interval (in seconds) in which all automated signing happens. Default value: 600 seconds
+:signInterval: Interval (in milliseconds) in which all automated signing happens. Default value: 60000 milliseconds
 
 Expected behaviour and output upon the service start-up
 -------------------------------------------------------

@@ -63,9 +63,9 @@ class NodeRegistrationTest : IntegrationTest() {
     private lateinit var rootCaCert: X509Certificate
     private lateinit var csrCa: CertificateAndKeyPair
     private lateinit var networkMapCa: CertificateAndKeyPair
+    private lateinit var dbName: String
 
     private var server: NetworkManagementServer? = null
-    private lateinit var dbName: String
 
     @Before
     fun init() {

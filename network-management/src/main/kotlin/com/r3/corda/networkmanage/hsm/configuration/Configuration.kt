@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
+import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -49,7 +50,7 @@ data class Parameters(val dataSourceProperties: Properties,
         val DEFAULT_KEY_FILE_PATH: Path? = null //Paths.get("/Users/michalkit/WinDev1706Eval/Shared/TEST4.key")
         val DEFAULT_KEY_FILE_PASSWORD: String? = null
         val DEFAULT_AUTO_USERNAME: String? = null
-        val DEFAULT_SIGN_INTERVAL = 600L // in seconds (10 minutes)
+        val DEFAULT_SIGN_INTERVAL = 1.minutes.toMillis()
         val DEFAULT_CSR_CERT_CRL_ISSUER: String? = null
     }
 }

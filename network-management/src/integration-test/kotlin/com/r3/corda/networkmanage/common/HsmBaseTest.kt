@@ -40,6 +40,13 @@ abstract class HsmBaseTest {
     @JvmField
     val hsmSimulator: HsmSimulator = HsmSimulator()
 
+    private lateinit var dbName: String
+
+    @Before
+    fun generateRandomDbName() {
+        dbName = random63BitValue().toString()
+    }
+
     private fun createGeneratorParameters(certConfig: CertificateConfiguration): GeneratorParameters {
         return GeneratorParameters(
                 hsmHost = hsmSimulator.host,
@@ -49,13 +56,6 @@ abstract class HsmBaseTest {
                 userConfigs = HSM_USER_CONFIGS,
                 certConfig = certConfig
         )
-    }
-
-    protected lateinit var dbName: String
-
-    @Before
-    fun generateDbName() {
-        dbName = random63BitValue().toString()
     }
 
     protected fun createGeneratorParameters(keyGroup: String,

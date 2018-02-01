@@ -69,7 +69,7 @@ fun run(parameters: Parameters) {
 
         val networkMapStorage = PersistentNetworkMapStorage(database)
         val scheduler = Executors.newSingleThreadScheduledExecutor()
-        startNetworkingMapSigningPolling(networkMapStorage, hsmSigner, scheduler, 10.minutes)
+        startNetworkingMapSigningPolling(networkMapStorage, hsmSigner, scheduler, Duration.ofMillis(signInterval))
 
         val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
             val signer = HsmCsrSigner(
@@ -129,11 +129,12 @@ private fun startNetworkingMapSigningPolling(networkMapStorage: NetworkMapStorag
                                              executor: ScheduledExecutorService,
                                              signingPeriod: Duration) {
     val networkMapSigner = NetworkMapSigner(networkMapStorage, signer)
+    log.info("Starting the network map signing thread: sign interval ${signingPeriod.toMillis()} ms")
     executor.scheduleAtFixedRate({
         try {
             networkMapSigner.signNetworkMap()
         } catch (e: Exception) {
-            log.warn("Exception thrown while signing network map", e)
+            log.error("Exception thrown while signing network map", e)
         }
     }, signingPeriod.toMillis(), signingPeriod.toMillis(), MILLISECONDS)
 }
