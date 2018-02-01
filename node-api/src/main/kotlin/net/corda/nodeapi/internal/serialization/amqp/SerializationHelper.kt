@@ -70,18 +70,18 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
 internal fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
-        factory: SerializerFactory) = PropertySerializers.make (
-            if (kotlinConstructor != null) {
-                propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
-            } else {
-                propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
-            }.sortedWith(PropertyAccessor))
+        factory: SerializerFactory) = PropertySerializers.make(
+        if (kotlinConstructor != null) {
+            propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+        } else {
+            propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
+        }.sortedWith(PropertyAccessor))
 
 
 fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
 
 /**
- * Encapsulates the property of a class and it's potential getter and setter methods.
+ * Encapsulates the property of a class and its potential getter and setter methods.
  *
  * @property field a property of a class.
  * @property setter the method of a class that sets the field. Determined by locating
@@ -89,27 +89,44 @@ fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbs
  * @property getter the method of a class that returns a fields value. Determined by
  * locating a function named getXyz for the property named in field as xyz.
  */
-data class PropertyDescriptor (var field: Field?, var setter : Method?, var getter: Method?) {
-    override fun toString() = StringBuilder("Property - ${field?.name ?: "null field"}\n").apply {
+data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter: Method?) {
+    override fun toString() = StringBuilder("").apply {
+        appendln("Property - ${field?.name ?: "null field"}\n")
         appendln("  getter - ${getter?.name ?: "no getter"}")
         append("  setter - ${setter?.name ?: "no setter"}")
     }.toString()
 }
 
+object PropertyDescriptorsRegex {
+    val re = Regex("(?<type>get|set|is)(?<var>[A-Z].*)")
+}
+
 /**
  * Collate the properties of a class and match them with their getter and setter
  * methods as per a JavaBean.
+ *
+ * for a property
+ *      exampleProperty
+ *
+ * We look for methods
+ *      setExampleProperty
+ *      getExampleProperty
+ *      isExampleProperty
+ *
+ * Where setExampleProperty must return a type compatible with exampleProperty, getExampleProperty must
+ * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
+ * return a boolean
  */
-fun Class<out Any?>.propertyDescriptors() : Map<String, PropertyDescriptor> {
+fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
     val classProperties = mutableMapOf<String, PropertyDescriptor>()
 
-    var clazz : Class<out Any?>? = this
+    var clazz: Class<out Any?>? = this
     do {
         // get the properties declared on this instance of class
-        clazz?.declaredFields?.forEach { classProperties.put (it.name, PropertyDescriptor(it, null, null)) }
+        clazz!!.declaredFields.forEach { classProperties.put(it.name, PropertyDescriptor(it, null, null)) }
 
         // then pair them up with the declared getter and setter
-        // Note: It is possible for a class to have multple instaces of a function where the types
+        // Note: It is possible for a class to have multipleinstancess of a function where the types
         // differ. For example:
         //      interface I<out T> { val a: T }
         //      class D(override val a: String) : I<String>
@@ -117,8 +134,8 @@ fun Class<out Any?>.propertyDescriptors() : Map<String, PropertyDescriptor> {
         //      getA - returning a String (java.lang.String) and
         //      getA - returning an Object (java.lang.Object)
         // In this instance we take the most derived object
-        clazz?.declaredMethods?.map {
-            Regex("(?<type>get|set)(?<var>[A-Z].*)").find(it.name)?.apply {
+        clazz.declaredMethods?.map {
+            PropertyDescriptorsRegex.re.find(it.name)?.apply {
                 try {
                     classProperties.getValue(groups[2]!!.value.decapitalize()).apply {
                         when (groups[1]!!.value) {
@@ -132,6 +149,13 @@ fun Class<out Any?>.propertyDescriptors() : Map<String, PropertyDescriptor> {
                                 if (getter == null) getter = it
                                 else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(it.genericReturnType)) {
                                     getter = it
+                                }
+                            }
+                            "is" -> {
+                                val rtnType = TypeToken.of(it.genericReturnType)
+                                if ((rtnType == TypeToken.of(Boolean::class.java))
+                                        || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
+                                    if (getter == null) getter = it
                                 }
                             }
                         }
@@ -243,9 +267,9 @@ private fun propertiesForSerializationFromSetters(
                         "${property.value.field?.genericType!!}")
             }
 
-            this += PropertyAccessorGetterSetter (
+            this += PropertyAccessorGetterSetter(
                     idx++,
-                    PropertySerializer.make(property.value.field!!.name , PublicPropertyReader(getter),
+                    PropertySerializer.make(property.value.field!!.name, PublicPropertyReader(getter),
                             resolveTypeVariables(getter.genericReturnType, type), factory),
                     setter)
         }
@@ -274,15 +298,15 @@ private fun propertiesForSerializationFromAbstract(
         factory: SerializerFactory): List<PropertyAccessor> {
     val properties = clazz.propertyDescriptors()
 
-   return mutableListOf<PropertyAccessorConstructor>().apply {
-       properties.toList().withIndex().forEach {
-           val getter = it.value.second.getter ?: return@forEach
-           val returnType = resolveTypeVariables(getter.genericReturnType, type)
-           this += PropertyAccessorConstructor(
-                   it.index,
-                   PropertySerializer.make(it.value.first, PublicPropertyReader(getter), returnType, factory))
-       }
-   }
+    return mutableListOf<PropertyAccessorConstructor>().apply {
+        properties.toList().withIndex().forEach {
+            val getter = it.value.second.getter ?: return@forEach
+            val returnType = resolveTypeVariables(getter.genericReturnType, type)
+            this += PropertyAccessorConstructor(
+                    it.index,
+                    PropertySerializer.make(it.value.first, PublicPropertyReader(getter), returnType, factory))
+        }
+    }
 }
 
 internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> {

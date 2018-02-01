@@ -23,6 +23,86 @@ public class JavaPrivatePropertyTests {
         public String getA() { return a; }
     }
 
+    static class B {
+        private Boolean b;
+
+        B(Boolean b) { this.b = b; }
+
+        public Boolean isB() {
+            return this.b;
+        }
+    }
+
+    static class B2 {
+        private Boolean b;
+
+        public Boolean isB() {
+            return this.b;
+        }
+
+        public void setB(Boolean b) {
+            this.b = b;
+        }
+    }
+
+    static class C3 {
+        private Integer a;
+
+        public Integer getA() {
+            return this.a;
+        }
+
+        public Boolean isA() {
+            return this.a > 0;
+        }
+
+        public void setA(Integer a) {
+            this.a = a;
+        }
+    }
+
+    @Test
+    public void singlePrivateBooleanWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
+        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerializerGetter);
+        SerializationOutput ser = new SerializationOutput(factory);
+        DeserializationInput des = new DeserializationInput(factory);
+
+        B b = new B(true);
+        B b2 = des.deserialize(ser.serialize(b), B.class);
+        assertEquals (b.b, b2.b);
+    }
+
+    @Test
+    public void singlePrivateBooleanWithNoConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
+        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerializerGetter);
+        SerializationOutput ser = new SerializationOutput(factory);
+        DeserializationInput des = new DeserializationInput(factory);
+
+        B2 b = new B2();
+        b.setB(false);
+        B2 b2 = des.deserialize(ser.serialize(b), B2.class);
+        assertEquals (b.b, b2.b);
+    }
+
+    @Test
+    public void singlePrivateIntWithBoolean() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
+        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
+        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerializerGetter);
+        SerializationOutput ser = new SerializationOutput(factory);
+        DeserializationInput des = new DeserializationInput(factory);
+
+        C3 c = new C3();
+        c.setA(12345);
+        C3 c2 = des.deserialize(ser.serialize(c), C3.class);
+
+        assertEquals (c.a, c2.a);
+    }
+
     @Test
     public void singlePrivateWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
         EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();

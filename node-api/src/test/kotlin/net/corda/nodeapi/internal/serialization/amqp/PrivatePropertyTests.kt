@@ -32,6 +32,15 @@ class PrivatePropertyTests {
     }
 
     @Test
+    fun testWithOnePrivatePropertyBoolean() {
+        data class C(private val b: Boolean)
+
+        C(false).apply {
+            assertEquals(this, DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(this)))
+        }
+    }
+
+    @Test
     fun testWithOnePrivatePropertyNullableNotNull() {
         data class C(private val b: String?)
 
