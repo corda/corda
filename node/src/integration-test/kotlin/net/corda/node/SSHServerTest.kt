@@ -109,19 +109,13 @@ class SSHServerTest {
             channel.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
             channel.connect()
             val response = String(Streams.readAll(channel.inputStream))
-            assertThat(response).matches("(?s)User not authorized to perform RPC call .*")
 
             val flowNameEscaped = Pattern.quote("StartFlow.${SSHServerTest::class.qualifiedName}$${FlowICannotRun::class.simpleName}")
-            val channel2 = session.openChannel("exec") as ChannelExec
-            channel2.setCommand("start FlowICannotRun otherParty: \"${ALICE_NAME}\"")
-            channel2.connect()
-            val response2 = String(Streams.readAll(channel2.inputStream))
-            channel2.disconnect()
 
             channel.disconnect()
             session.disconnect()
 
-            assertThat(response2).matches("(?s)User not authorized to perform RPC call .*")
+            assertThat(response).matches("(?s)User not authorized to perform RPC call .*")
         }
     }
 
@@ -143,11 +137,17 @@ class SSHServerTest {
 
             val channel = session.openChannel("exec") as ChannelExec
             channel.setCommand("start FlowICanRun")
-            channel.connect()
+            channel.connect(5000)
+
+            assertTrue(channel.isConnected)
 
             val response = String(Streams.readAll(channel.inputStream))
 
             val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
+
+            channel.disconnect()
+            session.disconnect()
+
             // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
             assertThat(linesWithDoneCount).hasSize(1)
         }
