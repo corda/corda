@@ -36,10 +36,7 @@ import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
-import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
@@ -278,7 +275,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun getRxIoScheduler(): Scheduler
 
     open fun startShell(rpcOps: CordaRPCOps) {
-        InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
+        if (configuration.shouldInitCrashShell()) {
+            InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
+        }
     }
 
     private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
