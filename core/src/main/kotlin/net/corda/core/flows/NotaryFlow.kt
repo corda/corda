@@ -47,8 +47,18 @@ class NotaryFlow {
         @Suspendable
         @Throws(NotaryException::class)
         override fun call(): List<TransactionSignature> {
+            val notaryParty = checkTransaction()
             progressTracker.currentStep = REQUESTING
+            val response = notarise(notaryParty)
+            progressTracker.currentStep = VALIDATING
+            return validateResponse(response, notaryParty)
+        }
 
+        /**
+         * Checks that the transaction specifies a valid notary, and verifies that it contains all required signatures
+         * apart from the notary's.
+         */
+        protected fun checkTransaction(): Party {
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(serviceHub.networkMapCache.isNotary(notaryParty)) { "$notaryParty is not a notary on the network" }
             check(stx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
@@ -60,19 +70,18 @@ class NotaryFlow {
             } catch (ex: SignatureException) {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
+            return notaryParty
+        }
 
-            val response = try {
+        @Throws(NotaryException::class)
+        @Suspendable
+        protected fun notarise(notaryParty: Party): UntrustworthyData<List<TransactionSignature>> {
+            return try {
                 val session = initiateFlow(notaryParty)
                 if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                    subFlow(SendTransactionWithRetry(session, stx))
-                    session.receive<List<TransactionSignature>>()
+                    sendAndReceiveValidating(session)
                 } else {
-                    val tx: Any = if (stx.isNotaryChangeTransaction()) {
-                        stx.notaryChangeTx
-                    } else {
-                        stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
-                    }
-                    session.sendAndReceiveWithRetry(tx)
+                    sendAndReceiveNonValidating(notaryParty, session)
                 }
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
@@ -80,7 +89,25 @@ class NotaryFlow {
                 }
                 throw e
             }
+        }
 
+        @Suspendable
+        protected open fun sendAndReceiveValidating(session: FlowSession): UntrustworthyData<List<TransactionSignature>> {
+            subFlow(SendTransactionWithRetry(session, stx))
+            return session.receive()
+        }
+
+        @Suspendable
+        protected open fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession): UntrustworthyData<List<TransactionSignature>> {
+            val tx: Any = if (stx.isNotaryChangeTransaction()) {
+                stx.notaryChangeTx // Notary change transactions do not support filtering
+            } else {
+                stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+            }
+            return session.sendAndReceiveWithRetry(tx)
+        }
+
+        protected fun validateResponse(response: UntrustworthyData<List<TransactionSignature>>, notaryParty: Party): List<TransactionSignature> {
             return response.unwrap { signatures ->
                 signatures.forEach { validateSignature(it, stx.id, notaryParty) }
                 signatures
