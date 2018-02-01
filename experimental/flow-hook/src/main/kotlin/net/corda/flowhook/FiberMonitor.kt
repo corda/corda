@@ -3,6 +3,9 @@ package net.corda.flowhook
 import co.paralleluniverse.fibers.Fiber
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
+import net.corda.flowhook.FiberMonitor.correlator
+import net.corda.flowhook.FiberMonitor.inspect
+import net.corda.flowhook.FiberMonitor.newEvent
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.sql.Connection
 import java.time.Instant
@@ -10,11 +13,12 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
 data class MonitorEvent(val type: MonitorEventType, val keys: List<Any>, val extra: Any? = null)
 
 data class FullMonitorEvent(val timestamp: Instant, val trace: List<StackTraceElement>, val event: MonitorEvent) {
-    override fun toString() = event.toString()
+    override fun toString() = "$timestamp: ${event.type}"
 }
 
 enum class MonitorEventType {
@@ -25,6 +29,8 @@ enum class MonitorEventType {
 
     FiberStarted,
     FiberParking,
+    FiberParked,
+    FiberResuming,
     FiberException,
     FiberResumed,
     FiberEnded,
@@ -37,7 +43,12 @@ enum class MonitorEventType {
     SetThreadLocals,
     SetInheritableThreadLocals,
     GetThreadLocals,
-    GetInheritableThreadLocals
+    GetInheritableThreadLocals,
+
+    SendSessionMessage,
+
+    BrokerFlushStart,
+    BrokerFlushEnd
 }
 
 /**
@@ -58,11 +69,26 @@ object FiberMonitor {
     private val started = AtomicBoolean(false)
     private var executor: ScheduledExecutorService? = null
 
-    val correlator = MonitorEventCorrelator()
+    private val correlator = MonitorEventCorrelator()
+
+    private val eventsToDrop = setOf(
+            MonitorEventType.TransactionCreated,
+            MonitorEventType.ConnectionRequested,
+            MonitorEventType.ConnectionAcquired,
+            MonitorEventType.ConnectionReleased,
+            MonitorEventType.NettyThreadLocalMapCreated,
+            MonitorEventType.SetThreadLocals,
+            MonitorEventType.SetInheritableThreadLocals,
+            MonitorEventType.GetThreadLocals,
+            MonitorEventType.GetInheritableThreadLocals
+    )
 
     fun newEvent(event: MonitorEvent) {
         if (executor != null) {
             val fullEvent = FullMonitorEvent(Instant.now(), Exception().stackTrace.toList(), event)
+            if (event.type in eventsToDrop) {
+                return
+            }
             executor!!.execute {
                 processEvent(fullEvent)
             }
@@ -74,6 +100,12 @@ object FiberMonitor {
             require(executor == null)
             executor = Executors.newSingleThreadScheduledExecutor()
             executor!!.scheduleAtFixedRate(this::inspect, 100, 100, TimeUnit.MILLISECONDS)
+        }
+        thread {
+            while (true) {
+                Thread.sleep(1000)
+                this
+            }
         }
     }
 
@@ -174,58 +206,49 @@ class MonitorEventCorrelator {
     fun getByType() = merged().entries.groupBy { it.key.javaClass }
 
     fun addEvent(fullMonitorEvent: FullMonitorEvent) {
-        events.add(fullMonitorEvent)
+        synchronized(events) {
+            events.add(fullMonitorEvent)
+        }
     }
 
     fun merged(): Map<Any, List<FullMonitorEvent>> {
-        val merged = HashMap<Any, ArrayList<FullMonitorEvent>>()
-        for (event in events) {
-            val eventLists = HashSet<ArrayList<FullMonitorEvent>>()
-            for (key in event.event.keys) {
-                val list = merged[key]
-                if (list != null) {
-                    eventLists.add(list)
+        val keyToEvents = HashMap<Any, HashSet<FullMonitorEvent>>()
+
+        synchronized(events) {
+            for (event in events) {
+                for (key in event.event.keys) {
+                    keyToEvents.getOrPut(key) { HashSet() }.add(event)
                 }
             }
-            val newList = when (eventLists.size) {
-                0 -> ArrayList()
-                1 -> eventLists.first()
-                else -> mergeAll(eventLists)
+        }
+
+        val components = ArrayList<Set<Any>>()
+        val visited = HashSet<Any>()
+        for (root in keyToEvents.keys) {
+            if (root in visited) {
+                continue
             }
-            newList.add(event)
-            for (key in event.event.keys) {
-                merged[key] = newList
+            val component = HashSet<Any>()
+            val toVisit = arrayListOf(root)
+            while (toVisit.isNotEmpty()) {
+                val current = toVisit.removeAt(toVisit.size - 1)
+                if (current in visited) {
+                    continue
+                }
+                toVisit.addAll(keyToEvents[current]!!.flatMapTo(HashSet()) { it.event.keys })
+                component.add(current)
+                visited.add(current)
+            }
+            components.add(component)
+        }
+
+        val merged = HashMap<Any, List<FullMonitorEvent>>()
+        for (component in components) {
+            val eventList = component.flatMapTo(HashSet()) { keyToEvents[it]!! }.sortedBy { it.timestamp }
+            for (key in component) {
+                merged[key] = eventList
             }
         }
         return merged
-    }
-
-    fun mergeAll(lists: Collection<List<FullMonitorEvent>>): ArrayList<FullMonitorEvent> {
-        return lists.fold(ArrayList()) { merged, next -> merge(merged, next) }
-    }
-
-    fun merge(a: List<FullMonitorEvent>, b: List<FullMonitorEvent>): ArrayList<FullMonitorEvent> {
-        val merged = ArrayList<FullMonitorEvent>()
-        var aIndex = 0
-        var bIndex = 0
-        while (true) {
-            if (aIndex >= a.size) {
-                merged.addAll(b.subList(bIndex, b.size))
-                return merged
-            }
-            if (bIndex >= b.size) {
-                merged.addAll(a.subList(aIndex, a.size))
-                return merged
-            }
-            val aElem = a[aIndex]
-            val bElem = b[bIndex]
-            if (aElem.timestamp < bElem.timestamp) {
-                merged.add(aElem)
-                aIndex++
-            } else {
-                merged.add(bElem)
-                bIndex++
-            }
-        }
     }
 }

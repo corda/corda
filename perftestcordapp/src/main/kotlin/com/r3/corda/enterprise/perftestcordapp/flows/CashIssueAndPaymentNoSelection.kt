@@ -41,6 +41,7 @@ class CashIssueAndPaymentNoSelection(val amount: Amount<Currency>,
         fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty)
                 = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
+        progressTracker.currentStep = GENERATING_TX
         val issueResult = subFlow(CashIssueFlow(amount, issueRef, notary))
         val cashStateAndRef = issueResult.stx.tx.outRef<Cash.State>(0)
 

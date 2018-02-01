@@ -135,7 +135,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
         log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
-        keyToParties.addWithDuplicatesAllowed(key, identity)
+        keyToParties.addWithDuplicatesAllowed(key, identity, false)
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         val parentId = mapToKey(identityCertChain[1].publicKey)

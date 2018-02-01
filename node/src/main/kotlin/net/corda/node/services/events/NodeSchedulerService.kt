@@ -58,7 +58,6 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val flowStarter: FlowStarter,
                            private val stateLoader: StateLoader,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val serverThread: Executor,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val log: Logger = staticLog,
                            private val scheduledStates: MutableMap<StateRef, ScheduledStateRef> = createMap())
@@ -244,24 +243,22 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        serverThread.execute {
-            var flowName: String? = "(unknown)"
-            try {
-                database.transaction {
-                    val scheduledFlow = getScheduledFlow(scheduledState)
-                    if (scheduledFlow != null) {
-                        flowName = scheduledFlow.javaClass.name
-                        // TODO refactor the scheduler to store and propagate the original invocation context
-                        val context = InvocationContext.newInstance(Origin.Scheduled(scheduledState))
-                        val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
-                        future.then {
-                            unfinishedSchedules.countDown()
-                        }
+        var flowName: String? = "(unknown)"
+        try {
+            database.transaction {
+                val scheduledFlow = getScheduledFlow(scheduledState)
+                if (scheduledFlow != null) {
+                    flowName = scheduledFlow.javaClass.name
+                    // TODO refactor the scheduler to store and propagate the original invocation context
+                    val context = InvocationContext.newInstance(Origin.Scheduled(scheduledState))
+                    val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
+                    future.then {
+                        unfinishedSchedules.countDown()
                     }
                 }
-            } catch (e: Exception) {
-                log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
             }
+        } catch (e: Exception) {
+            log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
         }
     }
 

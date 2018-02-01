@@ -1,5 +1,6 @@
 package net.corda.node.services.messaging
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
@@ -60,15 +61,13 @@ interface MessagingService {
      * @param sequenceKey an object that may be used to enable a parallel [MessagingService] implementation. Two
      *     subsequent send()s with the same [sequenceKey] (up to equality) are guaranteed to be delivered in the same
      *     sequence the send()s were called. By default this is chosen conservatively to be [target].
-     * @param acknowledgementHandler if non-null this handler will be called once the sent message has been committed by
-     *     the broker. Note that if specified [send] itself may return earlier than the commit.
      */
+    @Suspendable
     fun send(
             message: Message,
             target: MessageRecipients,
             retryId: Long? = null,
-            sequenceKey: Any = target,
-            acknowledgementHandler: (() -> Unit)? = null
+            sequenceKey: Any = target
     )
 
     /** A message with a target and sequenceKey specified. */
@@ -84,10 +83,9 @@ interface MessagingService {
      * implementation.
      *
      * @param addressedMessages The list of messages together with the recipients, retry ids and sequence keys.
-     * @param acknowledgementHandler if non-null this handler will be called once all sent messages have been committed
-     *     by the broker. Note that if specified [send] itself may return earlier than the commit.
      */
-    fun send(addressedMessages: List<AddressedMessage>, acknowledgementHandler: (() -> Unit)? = null)
+    @Suspendable
+    fun send(addressedMessages: List<AddressedMessage>)
 
     /** Cancels the scheduled message redelivery for the specified [retryId] */
     fun cancelRedelivery(retryId: Long)

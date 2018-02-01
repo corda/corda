@@ -442,7 +442,7 @@ class ObservableContext(
                 val artemisMessage = it.session.createMessage(false)
                 serverToClient.writeToClientMessage(serializationContextWithObservableContext, artemisMessage)
                 it.producer.send(clientAddress, artemisMessage)
-                log.debug("<- RPC <- $serverToClient")
+                log.debug { "<- RPC <- $serverToClient" }
             }
         } catch (throwable: Throwable) {
             log.error("Failed to send message, kicking client. Message was $serverToClient", throwable)

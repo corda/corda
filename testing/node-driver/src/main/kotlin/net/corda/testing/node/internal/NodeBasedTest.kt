@@ -8,6 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
+import net.corda.node.internal.EnterpriseNode
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -128,7 +129,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(
-        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : Node(
+        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : EnterpriseNode(
         configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

@@ -2,7 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
-import com.google.common.util.concurrent.MoreExecutors
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.confidential.SwapIdentitiesFlow
@@ -90,7 +90,7 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.Executors
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -110,7 +110,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                             val platformClock: CordaClock,
                             protected val versionInfo: VersionInfo,
                             protected val cordappLoader: CordappLoader,
-                            private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                            protected val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     private class StartedNodeImpl<out N : AbstractNode>(
             override val internals: N,
@@ -131,7 +131,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
-    protected abstract val serverThread: AffinityExecutor
+    protected abstract val serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     protected lateinit var networkParameters: NetworkParameters
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
@@ -140,7 +140,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
     protected var myNotaryIdentity: PartyAndCertificate? = null
-    private lateinit var checkpointStorage: CheckpointStorage
+    protected lateinit var checkpointStorage: CheckpointStorage
     private lateinit var tokenizableServices: List<Any>
     protected lateinit var attachments: NodeAttachmentService
     protected lateinit var network: MessagingService
@@ -229,23 +229,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
-            val flowStarter = FlowStarterImpl(serverThread, smm, flowLogicRefFactory)
+            val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
             val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
                     flowStarter,
                     transactionStorage,
                     unfinishedSchedules = busyNodeLatch,
-                    serverThread = serverThread,
-                    flowLogicRefFactory = flowLogicRefFactory)
-            if (serverThread is ExecutorService) {
-                runOnStop += {
-                    // We wait here, even though any in-flight messages should have been drained away because the
-                    // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
-                    // arbitrary and might be inappropriate.
-                    MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, SECONDS)
-                }
-            }
+                    flowLogicRefFactory = flowLogicRefFactory
+            )
             makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService, flowLogicRefFactory)
             val rpcOps = makeRPCOps(flowStarter, database, smm)
             startMessagingService(rpcOps)
@@ -327,8 +319,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
+
     protected open fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
-        return StateMachineManagerImpl(
+        return SingleThreadedStateMachineManager(
                 services,
                 checkpointStorage,
                 serverThread,
@@ -841,9 +834,9 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
     }
 }
 
-internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
+internal class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
     override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
-        return serverThread.fetchFrom { smm.startFlow(logic, context) }
+        return smm.startFlow(logic, context)
     }
 
     override fun <T> invokeFlowAsync(

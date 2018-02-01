@@ -83,7 +83,8 @@ open class Node(configuration: NodeConfiguration,
         private val sameVmNodeCounter = AtomicInteger()
         val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
         val scanPackagesSeparator = ","
-        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
+        @JvmStatic
+        protected fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
@@ -157,8 +158,12 @@ open class Node(configuration: NodeConfiguration,
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
+
+        val rpcServerConfiguration = RPCServerConfiguration.default.copy(
+                rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
+        )
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize)
+            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize, rpcServerConfiguration)
         }
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
@@ -175,8 +180,10 @@ open class Node(configuration: NodeConfiguration,
                 serverThread,
                 database,
                 services.networkMapCache,
+                services.monitoringService.metrics,
                 advertisedAddress,
-                networkParameters.maxMessageSize)
+                networkParameters.maxMessageSize
+        )
     }
 
     private fun startLocalRpcBroker(): BrokerAddresses? {

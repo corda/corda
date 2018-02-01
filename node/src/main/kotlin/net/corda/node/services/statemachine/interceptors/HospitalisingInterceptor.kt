@@ -38,6 +38,9 @@ class HospitalisingInterceptor(
                 }
             }
         }
+        if (nextState.isRemoved) {
+            hospitalisedFlows.remove(fiber.id)
+        }
         return Pair(continuation, nextState)
     }
 }

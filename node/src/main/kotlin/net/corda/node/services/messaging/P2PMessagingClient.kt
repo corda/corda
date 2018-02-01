@@ -1,5 +1,7 @@
 package net.corda.node.services.messaging
 
+import co.paralleluniverse.fibers.Suspendable
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -18,7 +20,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
-import net.corda.node.services.statemachine.FlowMessagingImpl
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.PersistentMap
@@ -32,7 +33,8 @@ import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
-import org.apache.activemq.artemis.api.core.Message.*
+import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
+import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -78,7 +80,7 @@ import javax.persistence.Lob
  * @param maxMessageSize A bound applied to the message size.
  */
 @ThreadSafe
-class P2PMessagingClient(config: NodeConfiguration,
+class P2PMessagingClient(val config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
                          serverAddress: NetworkHostAndPort,
                          private val myIdentity: PublicKey,
@@ -86,20 +88,20 @@ class P2PMessagingClient(config: NodeConfiguration,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                          private val database: CordaPersistence,
                          private val networkMap: NetworkMapCacheInternal,
+                         private val metricRegistry: MetricRegistry,
                          advertisedAddress: NetworkHostAndPort = serverAddress,
                          maxMessageSize: Int
-) : SingletonSerializeAsToken(), MessagingService {
+) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
     companion object {
         private val log = contextLogger()
         // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
         // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
         // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
         // confusion.
-        private val topicProperty = SimpleString("platform-topic")
-        private val cordaVendorProperty = SimpleString("corda-vendor")
-        private val releaseVersionProperty = SimpleString("release-version")
-        private val platformVersionProperty = SimpleString("platform-version")
-        private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
+        val topicProperty = SimpleString("platform-topic")
+        val cordaVendorProperty = SimpleString("corda-vendor")
+        val releaseVersionProperty = SimpleString("release-version")
+        val platformVersionProperty = SimpleString("platform-version")
         private val messageMaxRetryCount: Int = 3
 
         fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, Instant, ProcessedMessage, String> {
@@ -159,20 +161,23 @@ class P2PMessagingClient(config: NodeConfiguration,
     /** A registration to handle messages of different types */
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
-    private val cordaVendor = SimpleString(versionInfo.vendor)
-    private val releaseVersion = SimpleString(versionInfo.releaseVersion)
-    /** An executor for sending messages */
-    private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging ${myIdentity.toStringShort()}", 1)
-
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
     private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
-    private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
+    private val artemis = ArtemisMessagingClient(
+            config = config,
+            serverAddress = serverAddress,
+            maxMessageSize = maxMessageSize,
+            autoCommitSends = false,
+            autoCommitAcks = false,
+            confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize
+    )
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
     private val processedMessages = createProcessedMessages()
+    private var messagingExecutor: MessagingExecutor? = null
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
@@ -203,7 +208,8 @@ class P2PMessagingClient(config: NodeConfiguration,
 
     fun start() {
         state.locked {
-            val session = artemis.start().session
+            val started = artemis.start()
+            val session = started.session
             val inbox = RemoteInboxAddress(myIdentity).queueName
             val inboxes = mutableListOf(inbox)
             // Create a queue, consumer and producer for handling P2P network messages.
@@ -220,6 +226,18 @@ class P2PMessagingClient(config: NodeConfiguration,
                         deliver(msg, message)
                 }
             }
+
+            val messagingExecutor = MessagingExecutor(
+                    session,
+                    started.producer,
+                    versionInfo,
+                    this@P2PMessagingClient,
+                    metricRegistry,
+                    queueBound = config.enterpriseConfiguration.tuning.maximumMessagingBatchSize
+            )
+            this@P2PMessagingClient.messagingExecutor = messagingExecutor
+            messagingExecutor.start()
+
             registerBridgeControl(session, inboxes)
             enumerateBridges(session, inboxes)
         }
@@ -253,6 +271,7 @@ class P2PMessagingClient(config: NodeConfiguration,
         val artemisMessage = client.session.createMessage(false)
         artemisMessage.writeBodyBufferBytes(controlPacket)
         client.producer.send(BRIDGE_CONTROL, artemisMessage)
+        client.session.commit()
     }
 
     private fun updateBridgesOnNetworkChange(change: NetworkMapCache.MapChange) {
@@ -419,12 +438,7 @@ class P2PMessagingClient(config: NodeConfiguration,
                     // processing a message but if so, it'll be parked waiting for us to count down the latch, so
                     // the session itself is still around and we can still ack messages as a result.
                     override fun acknowledge() {
-                        messagingExecutor.fetchFrom {
-                            state.locked {
-                                artemisMessage.individualAcknowledge()
-                                artemis.started!!.session.commit()
-                            }
-                        }
+                        messagingExecutor!!.acknowledge(artemisMessage)
                     }
                 }
                 deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), acknowledgeHandle)
@@ -476,6 +490,7 @@ class P2PMessagingClient(config: NodeConfiguration,
             shutdownLatch.await()
         }
         // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
+        messagingExecutor?.close()
         if (running) {
             state.locked {
                 artemis.stop()
@@ -483,74 +498,43 @@ class P2PMessagingClient(config: NodeConfiguration,
         }
     }
 
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
-        // We have to perform sending on a different thread pool, since using the same pool for messaging and
-        // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
-        messagingExecutor.fetchFrom {
-            state.locked {
-                val mqAddress = getMQAddress(target)
-                val artemis = artemis.started!!
-                val artemisMessage = artemis.session.createMessage(true).apply {
-                    putStringProperty(cordaVendorProperty, cordaVendor)
-                    putStringProperty(releaseVersionProperty, releaseVersion)
-                    putIntProperty(platformVersionProperty, versionInfo.platformVersion)
-                    putStringProperty(topicProperty, SimpleString(message.topic))
-                    writeBodyBufferBytes(message.data.bytes)
-                    // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
-
-                    // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-                    if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {
-                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
-                    }
-                }
-                log.trace {
-                    "Send to: $mqAddress topic: ${message.topic} " +
-                            "sessionID: ${message.topic} id: ${message.uniqueMessageId}"
-                }
-                artemis.producer.send(mqAddress, artemisMessage)
-                retryId?.let {
-                    database.transaction {
-                        messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
-                    }
-                    scheduledMessageRedeliveries[it] = messagingExecutor.schedule({
-                        sendWithRetry(0, mqAddress, artemisMessage, it)
-                    }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
-
-                }
+    @Suspendable
+    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+        messagingExecutor!!.send(message, target)
+        retryId?.let {
+            database.transaction {
+                messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
             }
+            scheduledMessageRedeliveries[it] = nodeExecutor.schedule({
+                sendWithRetry(0, message, target, retryId)
+            }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
+
         }
-        acknowledgementHandler?.invoke()
     }
 
-    override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
+    @Suspendable
+    override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
         for ((message, target, retryId, sequenceKey) in addressedMessages) {
-            send(message, target, retryId, sequenceKey, null)
+            send(message, target, retryId, sequenceKey)
         }
-        acknowledgementHandler?.invoke()
     }
 
-    private fun sendWithRetry(retryCount: Int, address: String, message: ClientMessage, retryId: Long) {
-        fun ClientMessage.randomiseDuplicateId() {
-            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
-        }
-
+    private fun sendWithRetry(retryCount: Int, message: Message, target: MessageRecipients, retryId: Long) {
         log.trace { "Attempting to retry #$retryCount message delivery for $retryId" }
         if (retryCount >= messageMaxRetryCount) {
-            log.warn("Reached the maximum number of retries ($messageMaxRetryCount) for message $message redelivery to $address")
+            log.warn("Reached the maximum number of retries ($messageMaxRetryCount) for message $message redelivery to $target")
             scheduledMessageRedeliveries.remove(retryId)
             return
         }
 
-        message.randomiseDuplicateId()
-
-        state.locked {
-            log.trace { "Retry #$retryCount sending message $message to $address for $retryId" }
-            artemis.started!!.producer.send(address, message)
+        val messageWithRetryCount = object : Message by message {
+            override val uniqueMessageId = DeduplicationId("${message.uniqueMessageId.toString}-$retryCount")
         }
 
-        scheduledMessageRedeliveries[retryId] = messagingExecutor.schedule({
-            sendWithRetry(retryCount + 1, address, message, retryId)
+        messagingExecutor!!.send(messageWithRetryCount, target)
+
+        scheduledMessageRedeliveries[retryId] = nodeExecutor.schedule({
+            sendWithRetry(retryCount + 1, message, target, retryId)
         }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
     }
 
@@ -565,14 +549,14 @@ class P2PMessagingClient(config: NodeConfiguration,
         }
     }
 
-    private fun getMQAddress(target: MessageRecipients): String {
-        return if (target == myAddress) {
+    override fun resolveTargetToArtemisQueue(address: MessageRecipients): String {
+        return if (address == myAddress) {
             // If we are sending to ourselves then route the message directly to our P2P queue.
             RemoteInboxAddress(myIdentity).queueName
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
-            val internalTargetQueue = (target as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
+            val internalTargetQueue = (address as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
             createQueueIfAbsent(internalTargetQueue)
             internalTargetQueue
         }
@@ -581,20 +565,18 @@ class P2PMessagingClient(config: NodeConfiguration,
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
     private fun createQueueIfAbsent(queueName: String) {
         if (!knownQueues.contains(queueName)) {
-            state.alreadyLocked {
-                val session = artemis.started!!.session
-                val queueQuery = session.queueQuery(SimpleString(queueName))
-                if (!queueQuery.isExists) {
-                    log.info("Create fresh queue $queueName bound on same address")
-                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
-                    if (queueName.startsWith(PEERS_PREFIX)) {
-                        val keyHash = queueName.substring(PEERS_PREFIX.length)
-                        val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
-                        for (node in peers) {
-                            val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
-                            val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
-                            sendBridgeControl(createBridgeMessage)
-                        }
+            val session = artemis.started!!.session
+            val queueQuery = session.queueQuery(SimpleString(queueName))
+            if (!queueQuery.isExists) {
+                log.info("Create fresh queue $queueName bound on same address")
+                session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+                if (queueName.startsWith(PEERS_PREFIX)) {
+                    val keyHash = queueName.substring(PEERS_PREFIX.length)
+                    val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
+                    for (node in peers) {
+                        val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
+                        val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
+                        sendBridgeControl(createBridgeMessage)
                     }
                 }
             }

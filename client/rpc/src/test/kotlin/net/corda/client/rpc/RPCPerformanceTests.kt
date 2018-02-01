@@ -2,6 +2,7 @@ package net.corda.client.rpc
 
 import com.google.common.base.Stopwatch
 import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
@@ -144,10 +145,11 @@ class RPCPerformanceTests : AbstractRPCTest() {
                     parallelism = 8,
                     overallDuration = 5.minutes,
                     injectionRate = 20000L / TimeUnit.SECONDS,
+                    workBound = 50,
                     queueSizeMetricName = "$mode.QueueSize",
                     workDurationMetricName = "$mode.WorkDuration",
                     work = {
-                        proxy.ops.simpleReply(ByteArray(4096), 4096)
+                        doneFuture(proxy.ops.simpleReply(ByteArray(4096), 4096))
                     }
             )
         }

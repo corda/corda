@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.ConcurrentBox
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
@@ -51,16 +52,27 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
         }
     }
 
-    val stateMachineTransactionMap = createMap()
-    val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
-
-    override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
-        stateMachineTransactionMap[transactionId] = stateMachineRunId
-        updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+    private class InnerState {
+        val stateMachineTransactionMap = createMap()
+        val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
     }
 
-    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
-            DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
-                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+    private val concurrentBox = ConcurrentBox(InnerState())
+
+    override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
+        concurrentBox.concurrent {
+            stateMachineTransactionMap[transactionId] = stateMachineRunId
+            updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+        }
+    }
+
+    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
+        return concurrentBox.exclusive {
+            DataFeed(
+                    stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
+                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction()
+            )
+        }
+    }
 
 }

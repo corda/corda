@@ -3,7 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.ConcurrentBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
@@ -79,10 +79,10 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
         }
     }
 
-    private val txStorage = ThreadBox(createTransactionsMap(cacheSizeBytes))
+    private val txStorage = ConcurrentBox(createTransactionsMap(cacheSizeBytes))
 
     override fun addTransaction(transaction: SignedTransaction): Boolean =
-            txStorage.locked {
+            txStorage.concurrent {
                 addWithDuplicatesAllowed(transaction.id, transaction.toTxCacheValue()).apply {
                     updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
                 }
@@ -94,13 +94,13 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        return txStorage.locked {
+        return txStorage.exclusive {
             DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
-        return txStorage.locked {
+        return txStorage.exclusive {
             val existingTransaction = get(id)
             if (existingTransaction == null) {
                 updatesPublisher.filter { it.id == id }.toFuture()

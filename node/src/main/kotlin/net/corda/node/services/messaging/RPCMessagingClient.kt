@@ -11,14 +11,19 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 
-class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort, maxMessageSize: Int) : SingletonSerializeAsToken(), AutoCloseable {
+class RPCMessagingClient(
+        private val config: SSLConfiguration,
+        serverAddress: NetworkHostAndPort,
+        maxMessageSize: Int,
+        private val rpcServerConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
+) : SingletonSerializeAsToken(), AutoCloseable {
     private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     private var rpcServer: RPCServer? = null
 
     fun start(rpcOps: RPCOps, securityManager: RPCSecurityManager) = synchronized(this) {
         val locator = artemis.start().sessionFactory.serverLocator
         val myCert = config.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS)
-        rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, securityManager, CordaX500Name.build(myCert.subjectX500Principal))
+        rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, securityManager, CordaX500Name.build(myCert.subjectX500Principal), rpcServerConfiguration)
     }
 
     fun start2(serverControl: ActiveMQServerControl) = synchronized(this) {

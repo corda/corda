@@ -21,7 +21,6 @@ class AbstractPartyToX500NameAsStringConverter(private val identityService: Iden
         if (party != null) {
             val partyName = identityService.wellKnownPartyFromAnonymous(party)?.toString()
             if (partyName != null) return partyName
-             log.warn("Identity service unable to resolve AbstractParty: $party")
         }
         return null // non resolvable anonymous parties
     }
@@ -30,7 +29,6 @@ class AbstractPartyToX500NameAsStringConverter(private val identityService: Iden
         if (dbData != null) {
             val party = identityService.wellKnownPartyFromX500Name(CordaX500Name.parse(dbData))
             if (party != null) return party
-            log.warn("Identity service unable to resolve X500name: $dbData")
         }
         return null // non resolvable anonymous parties are stored as nulls
     }
