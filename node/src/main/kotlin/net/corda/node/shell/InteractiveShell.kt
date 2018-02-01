@@ -82,7 +82,7 @@ object InteractiveShell {
     private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
-    private lateinit var rpcOps: CordaRPCOps
+    private lateinit var rpcOps: (username: String?, credentials: String?) -> CordaRPCOps
     private lateinit var securityManager: RPCSecurityManager
     private lateinit var identityService: IdentityService
     private var shell: Shell? = null
@@ -92,7 +92,7 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration: NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
+    fun startShell(configuration: NodeConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
         this.rpcOps = cordaRPCOps
         this.securityManager = securityManager
         this.identityService = identityService
@@ -180,7 +180,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, makeRPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"), "InteractiveShell"), StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, makeRPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"), "demo", "demo"), StdoutANSIProgressRenderer))
         }
     }
 

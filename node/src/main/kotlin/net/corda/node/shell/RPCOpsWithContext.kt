@@ -11,13 +11,15 @@ import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject, debugContext: String) : CordaRPCOps {
-    println("SZSZ makeRPCOpsWithContext debugContext=" +debugContext +",invocationContext=" +invocationContext.actor)
+fun makeRPCOpsWithContext(getCordaRPCOps: (username: String?, credential: String?) -> CordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject, username: String?, credential: String?) : CordaRPCOps {
+    val cordaRPCOps: CordaRPCOps by lazy {
+        getCordaRPCOps(username, credential)
+    }
+
     return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { _, method, args ->
         RPCContextRunner(invocationContext, authorizingSubject) {
             try {
-                println("SZSZ RPCContextRunner debugContext=" +debugContext +", method=" + method.name + " ")
-                method.invoke(cordaRPCOps, *(args ?: arrayOf()))
+                 method.invoke(cordaRPCOps, *(args ?: arrayOf()))
             } catch (e: InvocationTargetException) {
                 // Unpack exception.
                 throw e.targetException
@@ -31,7 +33,6 @@ private class RPCContextRunner<T>(val invocationContext: InvocationContext, val 
     private var result: CompletableFuture<T> = CompletableFuture()
 
     override fun run() {
-        println("SZSZ RPCContextRunner run invocationContext=" + invocationContext.actor)
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(invocationContext, authorizingSubject))
         try {
             result.complete(block())

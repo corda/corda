@@ -11,7 +11,7 @@ import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(private val rpcOps: CordaRPCOps, private val securityManager: RPCSecurityManager, private val nodeLegalName: CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+class CordaAuthenticationPlugin(private val rpcOps: (username: String?, credential: String?) -> CordaRPCOps, private val securityManager: RPCSecurityManager, private val nodeLegalName: CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     override fun getImplementation(): AuthenticationPlugin<String> = this
 
@@ -25,7 +25,7 @@ class CordaAuthenticationPlugin(private val rpcOps: CordaRPCOps, private val sec
         val authorizingSubject = securityManager.tryAuthenticate(username, Password(credential))
         if (authorizingSubject != null) {
             val actor = Actor(Actor.Id(username), securityManager.id, nodeLegalName)
-            return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizingSubject, "CordaAuthenticationPlugin"))
+            return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizingSubject, username, credential))
         }
         return AuthInfo.UNSUCCESSFUL
     }

@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.GlobalProperties.networkParameters
 import net.corda.core.internal.concurrent.openFuture
@@ -365,11 +366,13 @@ open class Node(configuration: NodeConfiguration,
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoServerSerializationScheme())
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
+                    registerScheme(KryoClientSerializationScheme())
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
+                rpcClientContext =  KRYO_CLIENT_CONTEXT.withClassLoader(classloader))
     }
 
     private var rpcMessagingClient: RPCMessagingClient? = null

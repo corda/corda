@@ -34,4 +34,11 @@ val AMQP_P2P_CONTEXT = SerializationContextImpl(amqpMagic,
         true,
         SerializationContext.UseCase.P2P)
 
+val KRYO_CLIENT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
+        SerializationDefaults.javaClass.classLoader,
+        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.RPCClient)
+
 
