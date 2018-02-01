@@ -8,6 +8,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.time.Duration
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.servlet.http.HttpServletRequest
@@ -22,7 +23,7 @@ import javax.ws.rs.core.Response.Status.UNAUTHORIZED
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
 @Path("certificate")
-class RegistrationWebService(private val csrHandler: CsrHandler) {
+class RegistrationWebService(private val csrHandler: CsrHandler, private val clientPollInterval: Duration) {
     @Context lateinit var request: HttpServletRequest
     /**
      * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificateRequestStorage] for approval.
@@ -63,7 +64,7 @@ class RegistrationWebService(private val csrHandler: CsrHandler) {
                         .type("application/zip")
                         .header("Content-Disposition", "attachment; filename=\"certificates.zip\"")
             }
-            is CertificateResponse.NotReady -> noContent()
+            is CertificateResponse.NotReady -> noContent().header("Cache-Control", "max-age=${clientPollInterval.seconds}")
             is CertificateResponse.Unauthorised -> status(UNAUTHORIZED).entity(response.message)
         }.build()
     }

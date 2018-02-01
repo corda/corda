@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.io.Closeable
 import java.net.URI
+import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -35,7 +36,7 @@ class NetworkManagementServer : Closeable {
             try {
                 closeAction()
             } catch (e: Exception) {
-                logger.warn("Discregarding exception thrown during close", e)
+                logger.warn("Disregarding exception thrown during close", e)
             }
         }
     }
@@ -111,7 +112,7 @@ class NetworkManagementServer : Closeable {
         scheduledExecutor.scheduleAtFixedRate(approvalThread, config.approveInterval, config.approveInterval, TimeUnit.MILLISECONDS)
         closeActions += scheduledExecutor::shutdown
 
-        return RegistrationWebService(requestProcessor)
+        return RegistrationWebService(requestProcessor, Duration.ofMillis(config.approveInterval))
     }
 
     fun start(hostAndPort: NetworkHostAndPort,

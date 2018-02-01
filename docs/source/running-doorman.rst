@@ -57,7 +57,7 @@ Allowed parameters are:
 
 :rootStorePath: Path for the root keystore
 
-:approveInterval: How often to process Jira approved requests in seconds
+:approveInterval: How often to process Jira approved requests in seconds. This will also be added to the http header, to be use as poll interval in Corda client.
 
 :signInterval: How often to sign the network map in seconds
 

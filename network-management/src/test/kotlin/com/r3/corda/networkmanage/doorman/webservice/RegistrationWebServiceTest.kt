@@ -9,6 +9,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
+import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -43,6 +45,7 @@ class RegistrationWebServiceTest : TestBase() {
     private lateinit var webServer: NetworkManagementWebServer
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
+    private val pollInterval = 10.seconds
 
     @Before
     fun init() {
@@ -52,7 +55,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     private fun startSigningServer(csrHandler: CsrHandler) {
-        webServer = NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), RegistrationWebService(csrHandler))
+        webServer = NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), RegistrationWebService(csrHandler, pollInterval))
         webServer.start()
     }
 
@@ -115,7 +118,9 @@ class RegistrationWebServiceTest : TestBase() {
         }
 
         startSigningServer(requestProcessor)
-        assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
+
+        val response = pollForResponse(id)
+        assertEquals(pollInterval, (response as PollResponse.NotReady).pollInterval.seconds)
 
         requestProcessor.processRequests()
 
@@ -163,7 +168,9 @@ class RegistrationWebServiceTest : TestBase() {
         }
 
         startSigningServer(storage)
-        assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
+        val response = pollForResponse(id)
+        assertEquals(pollInterval, (response as PollResponse.NotReady).pollInterval.seconds)
+
         storage.processRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
@@ -218,14 +225,14 @@ class RegistrationWebServiceTest : TestBase() {
                 }
                 PollResponse.Ready(certificates)
             }
-            HTTP_NO_CONTENT -> PollResponse.NotReady
+            HTTP_NO_CONTENT -> PollResponse.NotReady(conn.cacheControl().maxAgeSeconds())
             HTTP_UNAUTHORIZED -> PollResponse.Unauthorised(IOUtils.toString(conn.errorStream, UTF_8))
             else -> throw IOException("Cannot connect to Certificate Signing Server, HTTP response code : ${conn.responseCode}")
         }
     }
 
     private interface PollResponse {
-        object NotReady : PollResponse
+        data class NotReady(val pollInterval: Int) : PollResponse
         data class Ready(val certChain: List<X509Certificate>) : PollResponse
         data class Unauthorised(val message: String) : PollResponse
     }
