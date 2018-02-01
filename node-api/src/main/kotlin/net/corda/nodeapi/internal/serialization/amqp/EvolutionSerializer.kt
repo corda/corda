@@ -177,12 +177,22 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
     override fun getEvolutionSerializer(factory: SerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
-                                        schemas: SerializationSchemas): AMQPSerializer<Any> =
-            factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
-                when (typeNotation) {
-                    is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
-                    is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                                        schemas: SerializationSchemas): AMQPSerializer<Any> {
+        return factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
+            when (typeNotation) {
+                is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
+                is RestrictedType -> {
+                    // Due to fixes (historic but also potentially future) in out fingerprinter if we can alter
+                    // the fingerprint of a generic collection, however, we don't want to evolve that at all
+                    // so just associated the serializer object with both old and new fingerprint
+                    if (newSerializer is CollectionSerializer || newSerializer is MapSerializer) {
+                        newSerializer
+                    } else {
+                        EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                    }
                 }
             }
+        }
+    }
 }
 
