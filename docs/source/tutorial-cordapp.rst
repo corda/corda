@@ -9,13 +9,12 @@ The example CorDapp
 
 .. contents::
 
-The example CorDapp allows nodes to agree IOUs with each other. Nodes will always agree to the creation of a new IOU
-if:
+The example CorDapp allows nodes to agree IOUs with each other, as long as they obey the following contract rules:
 
-* Its value is strictly positive
-* The node is not trying to issue the IOU to itself
+* The IOU's value is strictly positive
+* A node is not trying to issue an IOU to itself
 
-We will deploy the CorDapp on 4 test nodes:
+We will deploy and run the CorDapp on four test nodes:
 
 * **NetworkMapAndNotary**, which hosts a validating notary service
 * **PartyA**
@@ -27,7 +26,7 @@ facts" between PartyA and PartyB only. PartyC won't be aware of these IOUs.
 
 Downloading the example CorDapp
 -------------------------------
-We need to download the example CorDapp from GitHub.
+Start by downloading the example CorDapp from GitHub:
 
 * Set up your machine by following the :doc:`quickstart guide <getting-set-up>`
 
@@ -36,14 +35,11 @@ We need to download the example CorDapp from GitHub.
 
 * Change directories to the freshly cloned repo: ``cd cordapp-example``
 
-.. note:: If you wish to build off the latest, unstable version of the codebase, follow the instructions in
-   :doc:`building against Master <building-against-master>` instead.
-
 Opening the example CorDapp in IntelliJ
 ---------------------------------------
-Let's open the example CorDapp in IntelliJ IDEA.
+Let's open the example CorDapp in IntelliJ IDEA:
 
-**If opening a fresh IntelliJ instance**
+**If opening a fresh IntelliJ instance**:
 
 * Open IntelliJ
 * A dialogue box will appear:
@@ -60,12 +56,12 @@ Let's open the example CorDapp in IntelliJ IDEA.
 
 * Click the 'import gradle project' link. Press OK on the dialogue that pops up
 
-* Gradle will now download all the project dependencies and perform some indexing. This usually takes a minute or so.
+* Gradle will now download all the project dependencies and perform some indexing. This usually takes a minute or so
 
   * If the 'import gradle project' pop-up does not appear, click the small green speech bubble at the bottom-right of
-    the IDE, or simply close and re-open IntelliJ again to make it reappear.
+    the IDE, or simply close and re-open IntelliJ again to make it reappear
 
-**If you already have IntelliJ open**
+**If you already have IntelliJ open**:
 
 * Open the ``File`` menu
 
@@ -76,8 +72,8 @@ Let's open the example CorDapp in IntelliJ IDEA.
 * Click OK
 
 Project structure
------------------
-The example CorDapp has the following directory structure:
+~~~~~~~~~~~~~~~~~
+The example CorDapp has the following structure:
 
 .. sourcecode:: none
 
@@ -175,11 +171,11 @@ There are two ways to run the example CorDapp:
 * Via the terminal
 * Via IntelliJ
 
-In both cases, we will deploy a set of test nodes with our CorDapp installed, then run the nodes. You can read more
-about how we define the nodes to be deployed :doc:`here <generating-a-node>`.
+Both approaches will create a set of test nodes, install the CorDapp on these nodes, and then run the nodes. You can
+read more about how we generate nodes :doc:`here <generating-a-node>`.
 
-Terminal
-~~~~~~~~
+Running the example CorDapp from the terminal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Building the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -191,29 +187,26 @@ Building the example CorDapp
 
   * Windows: ``gradlew.bat deployNodes``
 
-  This will automatically build four pre-configured nodes with our CorDapp installed. These nodes are meant for local
-  testing only
+  This will automatically build four nodes with our CorDapp already installed
 
 .. note:: CorDapps can be written in any language targeting the JVM. In our case, we've provided the example source in
-   both Kotlin (``/kotlin-source/src``) and Java (``/java-source/src``) Since both sets of source files are
-   functionally identical, we will refer to the Kotlin build throughout the documentation.
+   both Kotlin (``/kotlin-source/src``) and Java (``/java-source/src``). Since both sets of source files are
+   functionally identical, we will refer to the Kotlin version throughout the documentation.
 
-* After the build process has finished, you will see the newly-build nodes in the ``kotlin-source/build/nodes`` folder
+* After the build finishes, you will see the generated nodes in the ``kotlin-source/build/nodes`` folder
 
-  * There will be one folder generated for each node you built, plus a ``runnodes`` shell script (or batch file on
-    Windows) to run all the nodes simultaneously
+  * There will be a folder for each generated node, plus a ``runnodes`` shell script (or batch file on Windows) to run
+    all the nodes simultaneously
 
   * Each node in the ``nodes`` folder has the following structure:
 
     .. sourcecode:: none
 
         . nodeName
-        ├── corda.jar
-        ├── node.conf
-        └── cordapps
-
-    ``corda.jar`` is the Corda runtime, ``cordapps`` contains our node's CorDapps, and the node's configuration is
-    given by ``node.conf``
+        ├── corda.jar              // The Corda node runtime.
+        ├── corda-webserver.jar    // The node development webserver.
+        ├── node.conf              // The node configuration file.
+        └── cordapps               // The node's CorDapps.
 
 Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -239,7 +232,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
     📚  New! Training now available worldwide, see https://corda.net/corda-training/
 
-    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
+    Logs can be found in                    : /Users/username/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
     Database connection url is              : jdbc:h2:tcp://10.163.199.132:54763/node
     Listening on address                    : 127.0.0.1:10005
     RPC service listening on address        : localhost:10006
@@ -256,16 +249,16 @@ For every node except the network map/notary, the script also creates a webserve
 
 .. sourcecode:: none
 
-    Logs can be found in /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs/web
+    Logs can be found in /Users/username/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs/web
     Starting as webserver: localhost:10007
     Webserver started up in 42.02 sec
 
-It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running OK,
-you can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
+It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
+can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
 ``http://localhost:10007/api/status`` for ``PartyA``).
 
-IntelliJ
-~~~~~~~~
+Running the example CorDapp from IntelliJ
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Select the ``Run Example CorDapp - Kotlin`` run configuration from the drop-down menu at the top right-hand side of
   the IDE
 
@@ -274,66 +267,38 @@ IntelliJ
   .. image:: resources/run-config-drop-down.png
     :width: 400
 
-  The node driver defined in ``/src/test/kotlin/com/example/Main.kt`` allows you to specify how many nodes you would like
-  to run and the configuration settings for each node. For the example CorDapp, the driver starts up four nodes
-  and adds an RPC user for all but the network map/notary node:
-
-  .. sourcecode:: kotlin
-
-      fun main(args: Array<String>) {
-          // No permissions required as we are not invoking flows.
-          val user = User("user1", "test", permissions = setOf())
-          driver(isDebug = true, waitForNodesToFinish = true) {
-              startNode(getX500Name(O="NetworkMapAndNotary",L="London",C='GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
-              val (nodeA, nodeB, nodeC) = Futures.allAsList(
-                      startNode(getX500Name(O="PartyA",L="London",C="GB"), rpcUsers = listOf(user)),
-                      startNode(getX500Name(O="PartyB",L="New York",C="US"), rpcUsers = listOf(user)),
-                      startNode(getX500Name(O="PartyC",L="Paris",C="FR"), rpcUsers = listOf(user))).getOrThrow()
-
-              startWebserver(nodeA)
-              startWebserver(nodeB)
-              startWebserver(nodeC)
-          }
-      }
-
 * To stop the nodes, press the red square button at the top right-hand side of the IDE, next to the run configurations
-
-Later, we'll look at how the node driver can be useful for `debugging your CorDapp`_.
 
 Interacting with the example CorDapp
 ------------------------------------
 
 Via HTTP
 ~~~~~~~~
-The CorDapp defines several HTTP API end-points and a web front-end. The end-points allow you to list the IOUs a node
-is involved in, agree new IOUs, and see who is on the network.
+The nodes' webservers run locally on the following ports:
 
-The nodes are running locally on the following ports:
+* PartyA: ``localhost:10007``
+* PartyB: ``localhost:10010``
+* PartyC: ``localhost:10013``
 
-* PartyA:      ``localhost:10007``
-* PartyB:      ``localhost:10010``
-* PartyC:      ``localhost:10013``
+These ports are defined in each node's node.conf file under ``kotlin-source/build/nodes/NodeX/node.conf``.
 
-These ports are defined in build.gradle and in each node's node.conf file under ``kotlin-source/build/nodes/NodeX``.
-
-As the nodes start up, they should tell you which port their embedded web server is running on. The available API
-endpoints are:
+Each node webserver exposes the following endpoints:
 
 * ``/api/example/me``
 * ``/api/example/peers``
 * ``/api/example/ious``
 * ``/api/example/create-iou`` with parameters ``iouValue`` and ``partyName`` which is CN name of a node
 
-The web front-end is served from ``/web/example``.
-
-An IOU can be created by sending a PUT request to the ``api/example/create-iou`` end-point directly, or by using the
-the web form hosted at ``/web/example``.
+There is also a web front-end served from ``/web/example``.
 
 .. warning:: The content in ``web/example`` is only available for demonstration purposes and does not implement
-   anti-XSS, anti-XSRF or any other security techniques. Do not use this code in production.
+   anti-XSS, anti-XSRF or other security techniques. Do not use this code in production.
 
 Creating an IOU via the endpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+An IOU can be created by sending a PUT request to the ``api/example/create-iou`` endpoint directly, or by using the
+the web form served from ``/web/example``.
+
 To create an IOU between PartyA and PartyB, run the following command from the command line:
 
 .. sourcecode:: bash
@@ -356,8 +321,8 @@ of the page, and enter the IOU details into the web-form. The IOU must have a po
 
 And click submit. Upon clicking submit, the modal dialogue will close, and the nodes will agree the IOU.
 
-Once an IOU has been submitted
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Checking the output
+^^^^^^^^^^^^^^^^^^^
 Assuming all went well, you should see some activity in PartyA's web-server terminal window:
 
 .. sourcecode:: none
@@ -387,7 +352,7 @@ You can view the newly-created IOU by accessing the vault of PartyA or PartyB:
 * PartyA: Navigate to http://localhost:10007/web/example and hit the "refresh" button
 * PartyA: Navigate to http://localhost:10010/web/example and hit the "refresh" button
 
-The vault and web front-end of PartyC (on ``localhost:10013``) will not display any IOUs. This is because PartyC was
+The vault and web front-end of PartyC (at ``localhost:10013``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
 
 Via the interactive shell (terminal only)
@@ -414,6 +379,8 @@ following list:
    net.corda.finance.flows.CashIssueFlow
    net.corda.finance.flows.CashPaymentFlow
 
+Creating an IOU via the interactive shell
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We can create a new IOU using the ``ExampleFlow$Initiator`` flow. For example, from the interactive shell of PartyA,
 you can agree an IOU of 50 with PartyB by running
 ``flow start ExampleFlow$Initiator iouValue: 50, otherParty: "O=PartyB,L=New York,C=US"``.
@@ -435,8 +402,14 @@ This will print out the following progress steps:
         ✅   Broadcasting transaction to participants
     ✅   Done
 
+Checking the output
+^^^^^^^^^^^^^^^^^^^
 We can also issue RPC operations to the node via the interactive shell. Type ``run`` to see the full list of available
 operations.
+
+You can see the newly-created IOU by running ``run vaultQuery contractStateType: com.example.state.IOUState``.
+
+As before, the interactive shell of PartyC will not display any IOUs.
 
 Via the h2 web console
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -445,17 +418,17 @@ please follow the instructions in :doc:`node-database`.
 
 Using the example RPC client
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``/src/main/kotlin-source/com/example/client/ExampleClientRPC.kt`` file is a simple utility that uses the client
-RPC library to connect to a node. It will log any existing IOUs and listen for any future IOUs. If you haven't created
+``/src/main/kotlin-source/com/example/client/ExampleClientRPC.kt`` defines a simple RPC client that connects to a node,
+logs any existing IOUs and listens for any future IOUs. If you haven't created
 any IOUs when you first connect to one of the nodes, the client will simply log any future IOUs that are agreed.
 
-*Running the client via IntelliJ:*
+Running the client via IntelliJ
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Run the 'Run Example RPC Client' run configuration. By default, this run configuration is configured to connect to
+PartyA. You can edit the run configuration to connect on a different port.
 
-Select the 'Run Example RPC Client' run configuration which, by default, connects to PartyA. Click the green arrow to
-run the client. You can edit the run configuration to connect on a different port.
-
-*Running the client via the command line:*
-
+Running the client via the command line
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Run the following gradle task:
 
 ``./gradlew runExampleClientRPCKotlin``
@@ -469,7 +442,7 @@ For more information on the client RPC interface and how to build an RPC client 
 * :doc:`Client RPC documentation <clientrpc>`
 * :doc:`Client RPC tutorial <tutorial-clientrpc-api>`
 
-Running Nodes Across Machines
+Running nodes across machines
 -----------------------------
 The nodes can be split across machines and configured to communicate across the network.
 
@@ -490,35 +463,32 @@ and make the following changes:
 
 After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
 
-Debugging your CorDapp
-----------------------
+Testing and debugging
+---------------------
+
+Testing a CorDapp
+~~~~~~~~~~~~~~~~~
+Corda provides several frameworks for writing unit and integration tests for CorDapps.
+
+Contract tests
+^^^^^^^^^^^^^^
+You can run the CorDapp's contract tests by running the ``Run Contract Tests - Kotlin`` run configuration.
+
+Flow tests
+^^^^^^^^^^
+You can run the CorDapp's flow tests by running the ``Run Flow Tests - Kotlin`` run configuration.
+
+Integration tests
+^^^^^^^^^^^^^^^^^
+You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
+
+Debugging Corda nodes
+~~~~~~~~~~~~~~~~~~~~~
 Debugging is done via IntelliJ as follows:
 
-1. Edit the node driver code in ``Main.kt`` based on the number of nodes you wish to start, along with any other
-   configuration options. For example, the code below starts 4 nodes, with one being the network map service and
-   notary. It also sets up RPC credentials for the three non-notary nodes
+1. Start the nodes using the “Run Example CorDapp” run configuration in IntelliJ
 
-.. sourcecode:: kotlin
-
-    fun main(args: Array<String>) {
-        // No permissions required as we are not invoking flows.
-        val user = User("user1", "test", permissions = setOf())
-        driver(isDebug = true, waitForNodesToFinish = true) {
-            startNode(getX500Name(O="NetworkMapAndNotary",L="London",C="GB"), setOf(ServiceInfo(ValidatingNotaryService.type)))
-            val (nodeA, nodeB, nodeC) = Futures.allAsList(
-                    startNode(getX500Name(O="PartyA",L=London,C=GB"), rpcUsers = listOf(user)),
-                    startNode(getX500Name(O="PartyB",L=New York,C=US"), rpcUsers = listOf(user)),
-                    startNode(getX500Name(O="PartyC",L=Paris,C=FR"), rpcUsers = listOf(user))).getOrThrow()
-
-            startWebserver(nodeA)
-            startWebserver(nodeB)
-            startWebserver(nodeC)
-        }
-    }
-
-2. Select and run the “Run Example CorDapp” run configuration in IntelliJ
-
-3. IntelliJ will build and run the CorDapp. The remote debug ports for each node will be automatically generated and
+2. IntelliJ will build and run the CorDapp. The remote debug ports for each node will be automatically generated and
    printed to the terminal. For example:
 
 .. sourcecode:: none
@@ -526,9 +496,11 @@ Debugging is done via IntelliJ as follows:
     [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-example/build/20170707142746/PartyA
     [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Debug port: dt_socket:5007
 
-4. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
+3. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
 
-5. Run the “Debug CorDapp” run configuration
+4. Run the “Debug CorDapp” run configuration
 
-6. Set your breakpoints and start interacting with the node you wish to connect to. When the node hits a breakpoint,
-   execution will pause
+5. Set your breakpoints and interact with the node you've connected to. When the node hits a breakpoint, execution will
+   pause
+
+   * The node webserver runs in a separate process, and is not attached to by the debugger
