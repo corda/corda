@@ -80,10 +80,14 @@ searching the vault via the ``VaultService`` interface on the
 To give a few more specific details consider two simplified real world
 scenarios. First, a basic foreign exchange cash transaction. This
 transaction needs to locate a set of funds to exchange. A flow
-modelling this is implemented in ``FxTransactionBuildTutorial.kt``.
+modelling this is implemented in ``FxTransactionBuildTutorial.kt``
+(see ``docs/source/example-code/src/main/kotlin/net/corda/docs/FxTransactionBuildTutorial.kt`` in the
+`main Corda repo <https://github.com/corda/corda>`_).
 Second, a simple business model in which parties manually accept or
 reject each other's trade proposals, which is implemented in
-``WorkflowTransactionBuildTutorial.kt``. To run and explore these
+``WorkflowTransactionBuildTutorial.kt`` (see
+``docs/source/example-code/src/main/kotlin/net/corda/docs/WorkflowTransactionBuildTutorial.kt`` in the
+`main Corda repo <https://github.com/corda/corda>`_). To run and explore these
 examples using the IntelliJ IDE one can run/step through the respective unit
 tests in ``FxTransactionBuildTutorialTest.kt`` and
 ``WorkflowTransactionBuildTutorialTest.kt``, which drive the flows as

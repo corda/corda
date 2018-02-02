@@ -55,7 +55,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
-        stateMachineTransactionMap[transactionId] = stateMachineRunId
+        stateMachineTransactionMap.addWithDuplicatesAllowed(transactionId, stateMachineRunId)
         updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
     }
 

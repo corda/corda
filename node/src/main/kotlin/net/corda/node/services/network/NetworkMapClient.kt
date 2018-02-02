@@ -14,6 +14,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
+import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
@@ -54,7 +55,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
         val connection = networkMapUrl.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedDataWithCert<NetworkMap>>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
-        val timeout = CacheControl.parse(Headers.of(connection.headerFields.filterKeys { it != null }.mapValues { it.value[0] })).maxAgeSeconds().seconds
+        val timeout = connection.cacheControl().maxAgeSeconds().seconds
         logger.trace { "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} node info hashes. Node Info hashes: ${networkMap.nodeInfoHashes.joinToString("\n")}" }
         return NetworkMapResponse(networkMap, timeout)
     }
