@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -45,7 +45,7 @@ class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsTo
     fun startServiceFlow() {
         val handle = appServiceHub.startFlow(DummyServiceFlow())
         val context = handle.returnValue.get()
-        assertEquals(this.javaClass.name, (context.origin as Origin.Service).serviceClassName)
+        assertEquals(this.javaClass.name, (context.origin as InvocationOrigin.Service).serviceClassName)
     }
 
     fun startServiceFlowAndTrack() {

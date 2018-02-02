@@ -2,7 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -121,7 +121,7 @@ class ScheduledFlowTests {
         aliceNode.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
                 val context = it.logic.stateMachine.context
-                if (context.origin is Origin.Scheduled)
+                if (context.origin is InvocationOrigin.Scheduled)
                     countScheduledFlows++
             }
         }

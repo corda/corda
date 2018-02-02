@@ -4,7 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -27,43 +27,39 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
-private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
-
+/**
+ * Represents information about a flow (the name "state machine" is legacy, Kotlin users can use the [FlowInfo] type
+ * alias). You can access progress tracking, information about why the flow was started and so on.
+ */
 @CordaSerializable
 data class StateMachineInfo @JvmOverloads constructor(
+        /** A univerally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
         val id: StateMachineRunId,
+        /** The JVM class name of the flow code. */
         val flowLogicClassName: String,
-        val initiator: FlowInitiator,
+        /**
+         * An object representing information about the initiator of the flow. Note that this field is
+         * superceded by the [invocationContext] property, which has more detail.
+         */
+        @Deprecated("There is more info available using 'context'") val initiator: FlowInitiator,
+        /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
         val progressTrackerStepAndUpdates: DataFeed<String, String>?,
-        val context: InvocationContext? = null
+        /** An [InvocationContext] describing why and by whom the flow was started. */
+        val invocationContext: InvocationContext = initiator.invocationContext
 ) {
-    fun context(): InvocationContext = context ?: contextFrom(initiator)
-
-    private fun contextFrom(initiator: FlowInitiator): InvocationContext {
-        var actor: Actor? = null
-        val origin: Origin
-        when (initiator) {
-            is FlowInitiator.RPC -> {
-                actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
-                origin = Origin.RPC(actor)
-            }
-            is FlowInitiator.Peer -> origin = Origin.Peer(initiator.party.name)
-            is FlowInitiator.Service -> origin = Origin.Service(initiator.serviceClassName, unknownName)
-            is FlowInitiator.Shell -> origin = Origin.Shell
-            is FlowInitiator.Scheduled -> origin = Origin.Scheduled(initiator.scheduledState)
-        }
-        return InvocationContext.newInstance(origin = origin, actor = actor)
-    }
-
+    @Suppress("DEPRECATION")
     fun copy(id: StateMachineRunId = this.id,
              flowLogicClassName: String = this.flowLogicClassName,
              initiator: FlowInitiator = this.initiator,
              progressTrackerStepAndUpdates: DataFeed<String, String>? = this.progressTrackerStepAndUpdates): StateMachineInfo {
-        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, context = context)
+        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, invocationContext = invocationContext)
     }
 
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
+
+/** An alias for [StateMachineInfo] which uses more modern terminology. */
+typealias FlowInfo = StateMachineInfo
 
 @CordaSerializable
 sealed class StateMachineUpdate {
