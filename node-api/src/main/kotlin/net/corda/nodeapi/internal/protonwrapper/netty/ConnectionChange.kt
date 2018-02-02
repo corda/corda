@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.netty
+package net.corda.nodeapi.internal.protonwrapper.netty
 
 import java.net.InetSocketAddress
 import java.security.cert.X509Certificate

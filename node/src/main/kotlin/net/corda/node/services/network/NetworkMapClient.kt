@@ -11,8 +11,10 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.trace
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
+import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
@@ -29,10 +31,15 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509Certificate) {
+    companion object {
+        private val logger = contextLogger()
+    }
+
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
 
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
+        logger.trace { "Publishing NodeInfo to $publishURL." }
         publishURL.openHttpConnection().apply {
             doOutput = true
             requestMethod = "POST"
@@ -40,27 +47,41 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
             outputStream.use { signedNodeInfo.serialize().open().copyTo(it) }
             checkOkResponse()
         }
+        logger.trace { "Published NodeInfo to $publishURL successfully." }
     }
 
     fun getNetworkMap(): NetworkMapResponse {
+        logger.trace { "Fetching network map update from $networkMapUrl." }
         val connection = networkMapUrl.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedDataWithCert<NetworkMap>>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
-        val timeout = CacheControl.parse(Headers.of(connection.headerFields.filterKeys { it != null }.mapValues { it.value[0] })).maxAgeSeconds().seconds
+        val timeout = connection.cacheControl().maxAgeSeconds().seconds
+        logger.trace { "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} node info hashes. Node Info hashes: ${networkMap.nodeInfoHashes.joinToString("\n")}" }
         return NetworkMapResponse(networkMap, timeout)
     }
 
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo {
-        return URL("$networkMapUrl/node-info/$nodeInfoHash").openHttpConnection().responseAs<SignedNodeInfo>().verified()
+        val url = URL("$networkMapUrl/node-info/$nodeInfoHash")
+        logger.trace { "Fetching node info: '$nodeInfoHash' from $url." }
+        val verifiedNodeInfo = url.openHttpConnection().responseAs<SignedNodeInfo>().verified()
+        logger.trace { "Fetched node info: '$nodeInfoHash' successfully. Node Info: $verifiedNodeInfo" }
+        return verifiedNodeInfo
     }
 
     fun getNetworkParameters(networkParameterHash: SecureHash): SignedDataWithCert<NetworkParameters> {
-        return URL("$networkMapUrl/network-parameters/$networkParameterHash").openHttpConnection().responseAs()
+        val url = URL("$networkMapUrl/network-parameters/$networkParameterHash")
+        logger.trace { "Fetching network parameters: '$networkParameterHash' from $url." }
+        val networkParameter = url.openHttpConnection().responseAs<SignedDataWithCert<NetworkParameters>>()
+        logger.trace { "Fetched network parameters: '$networkParameterHash' successfully. Network Parameters: $networkParameter" }
+        return networkParameter
     }
 
     fun myPublicHostname(): String {
-        val connection = URL("$networkMapUrl/my-hostname").openHttpConnection()
-        return connection.inputStream.bufferedReader().use(BufferedReader::readLine)
+        val url = URL("$networkMapUrl/my-hostname")
+        logger.trace { "Resolving public hostname from '$url'." }
+        val hostName = url.openHttpConnection().inputStream.bufferedReader().use(BufferedReader::readLine)
+        logger.trace { "My public hostname is $hostName." }
+        return hostName
     }
 }
 

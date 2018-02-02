@@ -5,7 +5,6 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -513,6 +512,5 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
-        doReturn(true).whenever(it).useAMQPBridges
     }
 }

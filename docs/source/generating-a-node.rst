@@ -63,7 +63,6 @@ The name must also obey the following constraints:
 * The organisation field of the name also obeys the following constraints:
 
     * No double-spacing
-    * Does not contain the words "node" or "server"
 
         * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
           character confusability attacks
@@ -78,9 +77,9 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "O=Controller,L=London,C=GB"
+        networkMap "O=NetworkMapAndNotary,L=London,C=GB"
         node {
-            name "O=Controller,L=London,C=GB"
+            name "O=NetworkMapAndNotary,L=London,C=GB"
             // The notary will offer a validating notary service.
             notary = [validating : true]
             p2pPort  10002
@@ -114,7 +113,7 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
 
 Running this task will create three nodes in the ``build/nodes`` folder:
 
-* A ``Controller`` node that:
+* A ``NetworkMapAndNotary`` node that:
 
   * Serves as the network map
   * Offers a validating notary service
@@ -123,7 +122,7 @@ Running this task will create three nodes in the ``build/nodes`` folder:
 
 * ``PartyA`` and ``PartyB`` nodes that:
 
-  * Are pointing at the ``Controller`` as the network map service
+  * Are pointing at the ``NetworkMapAndNotary`` as the network map service
   * Are not offering any services
   * Will have a webserver (since ``webPort`` is defined)
   * Are running the ``corda-finance`` CorDapp

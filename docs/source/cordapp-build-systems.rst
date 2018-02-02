@@ -53,6 +53,10 @@ The ``cordformation`` plugin adds two new gradle configurations:
 * ``cordaCompile``, which extends ``compile``
 * ``cordaRuntime``, which extends ``runtime``
 
+``cordaCompile`` and ``cordaRuntime`` indicate dependencies that should not be included in the CorDapp JAR. These
+configurations should be used for any Corda dependency (e.g. ``corda-core``, ``corda-node``) in order to prevent a
+dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs).
+
 To build against Corda, you must add the following to your ``build.gradle`` file:
 
 * ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
@@ -74,6 +78,15 @@ ways to add another CorDapp as a dependency in your CorDapp's ``build.gradle`` f
 
 * ``cordapp project(":another-cordapp")`` (use this if the other CorDapp is defined in a module in the same project)
 * ``cordapp "net.corda:another-cordapp:1.0"`` (use this otherwise)
+
+The ``cordapp`` gradle configuration serves two purposes:
+
+* When using the ``cordformation`` Gradle plugin, the ``cordapp`` configuration indicates that this JAR should be
+  included on your node as a CorDapp
+* When using the ``cordapp`` Gradle plugin, the ``cordapp`` configuration prevents the dependency from being included
+  in the CorDapp JAR
+
+Note that the ``cordformation`` and ``cordapp`` Gradle plugins can be used together.
 
 Other dependencies
 ^^^^^^^^^^^^^^^^^^

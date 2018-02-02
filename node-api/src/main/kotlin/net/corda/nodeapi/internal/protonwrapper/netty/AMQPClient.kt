@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.netty
+package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.*
@@ -12,9 +12,9 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.node.internal.protonwrapper.messages.ReceivedMessage
-import net.corda.node.internal.protonwrapper.messages.SendableMessage
-import net.corda.node.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.KeyStore

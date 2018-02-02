@@ -32,7 +32,7 @@ public class CommercialPaperTest {
     private static final TestIdentity BOB = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};
-    private final MockServices ledgerServices = new MockServices(emptyList(), makeTestIdentityService(MEGA_CORP.getIdentity()));
+    private final MockServices ledgerServices = new MockServices(MEGA_CORP);
 
     // DOCSTART 1
     private ICommercialPaperState getPaper() {

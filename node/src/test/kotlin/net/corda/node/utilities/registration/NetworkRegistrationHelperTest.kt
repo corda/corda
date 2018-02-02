@@ -10,9 +10,12 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.x500Name
+import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -35,10 +38,13 @@ class NetworkRegistrationHelperTest {
     private val nodeLegalName = ALICE_NAME
 
     private lateinit var config: NodeConfiguration
+    private val networkRootTrustStoreFileName = "network-root-truststore.jks"
+    private val networkRootTrustStorePassword = "network-root-truststore-password"
 
     @Before
     fun init() {
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
+
         abstract class AbstractNodeConfiguration : NodeConfiguration
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
@@ -62,7 +68,7 @@ class NetworkRegistrationHelperTest {
 
         val nodeCaCertPath = createNodeCaCertPath()
 
-        saveTrustStoreWithRootCa(nodeCaCertPath.last())
+        saveNetworkTrustStore(nodeCaCertPath.last())
         createRegistrationHelper(nodeCaCertPath).buildKeystore()
 
         val nodeKeystore = config.loadNodeKeyStore()
@@ -105,7 +111,7 @@ class NetworkRegistrationHelperTest {
     @Test
     fun `node CA with incorrect cert role`() {
         val nodeCaCertPath = createNodeCaCertPath(type = CertificateType.TLS)
-        saveTrustStoreWithRootCa(nodeCaCertPath.last())
+        saveNetworkTrustStore(nodeCaCertPath.last())
         val registrationHelper = createRegistrationHelper(nodeCaCertPath)
         assertThatExceptionOfType(CertificateRequestException::class.java)
                 .isThrownBy { registrationHelper.buildKeystore() }
@@ -116,7 +122,7 @@ class NetworkRegistrationHelperTest {
     fun `node CA with incorrect subject`() {
         val invalidName = CordaX500Name("Foo", "MU", "GB")
         val nodeCaCertPath = createNodeCaCertPath(legalName = invalidName)
-        saveTrustStoreWithRootCa(nodeCaCertPath.last())
+        saveNetworkTrustStore(nodeCaCertPath.last())
         val registrationHelper = createRegistrationHelper(nodeCaCertPath)
         assertThatExceptionOfType(CertificateRequestException::class.java)
                 .isThrownBy { registrationHelper.buildKeystore() }
@@ -128,7 +134,7 @@ class NetworkRegistrationHelperTest {
         val wrongRootCert = X509Utilities.createSelfSignedCACertificate(
                 X500Principal("O=Foo,L=MU,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        saveTrustStoreWithRootCa(wrongRootCert)
+        saveNetworkTrustStore(wrongRootCert)
         val registrationHelper = createRegistrationHelper(createNodeCaCertPath())
         assertThatThrownBy {
             registrationHelper.buildKeystore()
@@ -153,14 +159,15 @@ class NetworkRegistrationHelperTest {
     private fun createRegistrationHelper(response: List<X509Certificate>): NetworkRegistrationHelper {
         val certService = rigorousMock<NetworkRegistrationService>().also {
             doReturn(requestId).whenever(it).submitRequest(any())
-            doReturn(response).whenever(it).retrieveCertificates(eq(requestId))
+            doReturn(CertificateResponse(5.seconds, response)).whenever(it).retrieveCertificates(eq(requestId))
         }
-        return NetworkRegistrationHelper(config, certService)
+        return NetworkRegistrationHelper(config, certService, config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword)
     }
 
-    private fun saveTrustStoreWithRootCa(rootCert: X509Certificate) {
+    private fun saveNetworkTrustStore(rootCert: X509Certificate) {
         config.certificatesDirectory.createDirectories()
-        config.loadTrustStore(createNew = true).update {
+        val rootTruststorePath = config.certificatesDirectory / networkRootTrustStoreFileName
+        X509KeyStore.fromFile(rootTruststorePath, networkRootTrustStorePassword, createNew = true).update {
             setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
         }
     }

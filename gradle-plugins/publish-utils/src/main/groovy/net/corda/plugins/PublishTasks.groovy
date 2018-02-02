@@ -30,6 +30,10 @@ class PublishTasks implements Plugin<Project> {
         createConfigurations()
     }
 
+    /**
+     * This call must come at the end of any publish block because it configures the publishing and any
+     * values set after this call in the DSL will not be configured properly (and will use the default value)
+     */
     void setPublishName(String publishName) {
         project.logger.info("Changing publishing name from ${project.name} to ${publishName}")
         this.publishName = publishName
@@ -51,12 +55,16 @@ class PublishTasks implements Plugin<Project> {
     }
 
     void configureMavenPublish(BintrayConfigExtension bintrayConfig) {
+        project.logger.info("Configuring maven publish for $publishName")
         project.apply([plugin: 'maven-publish'])
         project.publishing.publications.create(publishName, MavenPublication) {
             groupId project.group
             artifactId publishName
 
-            artifact project.tasks.sourceJar
+            if (publishConfig.publishSources) {
+                project.logger.info("Publishing sources for $publishName")
+                artifact project.tasks.sourceJar
+            }
             artifact project.tasks.javadocJar
 
             project.configurations.publish.artifacts.each {

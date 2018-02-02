@@ -28,13 +28,6 @@ class LegalNameValidatorTest {
     }
 
     @Test
-    fun `blacklisted words`() {
-        assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateOrganization("Test Server", LegalNameValidator.Validation.FULL)
-        }
-    }
-
-    @Test
     fun `blacklisted characters`() {
         LegalNameValidator.validateOrganization("Test", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {

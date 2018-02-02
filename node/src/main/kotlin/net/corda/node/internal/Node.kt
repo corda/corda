@@ -33,6 +33,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
@@ -137,6 +138,7 @@ open class Node(configuration: NodeConfiguration,
     override lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     private var messageBroker: ArtemisMessagingServer? = null
+    private var bridgeControlListener: BridgeControlListener? = null
     private var rpcBroker: ArtemisBroker? = null
 
     private var shutdownHook: ShutdownHook? = null
@@ -152,9 +154,12 @@ open class Node(configuration: NodeConfiguration,
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
         val advertisedAddress = info.addresses.single()
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-        rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, rpcServerAddresses.admin, networkParameters.maxMessageSize)
+        rpcServerAddresses?.let {
+            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize)
+        }
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
             VerifierType.InMemory -> null
@@ -169,28 +174,31 @@ open class Node(configuration: NodeConfiguration,
                 serviceIdentity,
                 serverThread,
                 database,
+                services.networkMapCache,
                 advertisedAddress,
                 networkParameters.maxMessageSize)
     }
 
-    private fun startLocalRpcBroker(): BrokerAddresses {
+    private fun startLocalRpcBroker(): BrokerAddresses? {
         with(configuration) {
-            require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
-            val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
-            with(rpcOptions) {
-                rpcBroker = if (useSsl) {
-                    ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
-                } else {
-                    ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+            return rpcOptions.address?.let {
+                require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
+                val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
+                with(rpcOptions) {
+                    rpcBroker = if (useSsl) {
+                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                    } else {
+                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                    }
                 }
+                return rpcBroker!!.addresses
             }
-            return rpcBroker!!.addresses
         }
     }
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, services.networkMapCache, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -249,8 +257,13 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::close
             start()
         }
+        // Start P2P bridge service
+        bridgeControlListener?.apply {
+            runOnStop += this::stop
+            start()
+        }
         // Start up the MQ clients.
-        rpcMessagingClient.run {
+        rpcMessagingClient?.run {
             runOnStop += this::close
             start(rpcOps, securityManager)
         }
@@ -353,11 +366,11 @@ open class Node(configuration: NodeConfiguration,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 
-    private lateinit var rpcMessagingClient: RPCMessagingClient
+    private var rpcMessagingClient: RPCMessagingClient? = null
     private var verifierMessagingClient: VerifierMessagingClient? = null
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        rpcMessagingClient.start2(rpcBroker!!.serverControl)
+        rpcMessagingClient?.start2(rpcBroker!!.serverControl)
         verifierMessagingClient?.start2()
         (network as P2PMessagingClient).run()
     }

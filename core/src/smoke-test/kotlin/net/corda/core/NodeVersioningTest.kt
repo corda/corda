@@ -37,6 +37,7 @@ class NodeVersioningTest {
             legalName = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
+            rpcAdminPort = port.andIncrement,
             webPort = port.andIncrement,
             isNotary = false,
             users = listOf(user)

@@ -6,6 +6,7 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
+import java.net.URI
 import kotlin.test.assertEquals
 
 // To regenerate any of the binary test files do the following

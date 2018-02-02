@@ -33,6 +33,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
@@ -237,17 +238,24 @@ class DriverDSLImpl(
         ))
 
         config.corda.certificatesDirectory.createDirectories()
-        config.corda.loadTrustStore(createNew = true).update {
+        // Create network root truststore.
+        val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
+        // The network truststore will be provided by the network operator via out-of-band communication.
+        val rootTruststorePassword = "corda-root-password"
+        X509KeyStore.fromFile(rootTruststorePath, rootTruststorePassword, createNew = true).update {
             setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
         }
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
+                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), rootTruststorePath, rootTruststorePassword).buildKeystore()
                 config
             }
         } else {
-            startOutOfProcessMiniNode(config, "--initial-registration").map { config }
+            startOutOfProcessMiniNode(config,
+                    "--initial-registration",
+                    "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
+                    "--network-root-truststore-password=$rootTruststorePassword").map { config }
         }
     }
 
@@ -479,8 +487,8 @@ class DriverDSLImpl(
             when (it.cluster) {
                 null -> startSingleNotary(it, localNetworkMap)
                 is ClusterSpec.Raft,
-                // DummyCluster is used for testing the notary communication path, and it does not matter
-                // which underlying consensus algorithm is used, so we just stick to Raft
+                    // DummyCluster is used for testing the notary communication path, and it does not matter
+                    // which underlying consensus algorithm is used, so we just stick to Raft
                 is DummyClusterSpec -> startRaftNotaryCluster(it, localNetworkMap)
                 else -> throw IllegalArgumentException("BFT-SMaRt not supported")
             }
@@ -596,7 +604,7 @@ class DriverDSLImpl(
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
-    private fun startOutOfProcessMiniNode(config: NodeConfig, extraCmdLineFlag: String): CordaFuture<Unit> {
+    private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
         val process = startOutOfProcessNode(
@@ -608,7 +616,7 @@ class DriverDSLImpl(
                 systemProperties,
                 cordappPackages,
                 "200m",
-                extraCmdLineFlag
+                *extraCmdLineFlag
         )
 
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
@@ -652,7 +660,7 @@ class DriverDSLImpl(
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize, null)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForNodesToFinish) {
                 state.locked {
                     processes += process
@@ -763,7 +771,7 @@ class DriverDSLImpl(
                 overriddenSystemProperties: Map<String, String>,
                 cordappPackages: List<String>,
                 maximumHeapSize: String,
-                extraCmdLineFlag: String?
+                vararg extraCmdLineFlag: String
         ): Process {
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
                     "debug port is " + (debugPort ?: "not enabled") + ", " +
@@ -801,9 +809,7 @@ class DriverDSLImpl(
                     "--base-directory=${config.corda.baseDirectory}",
                     "--logging-level=$loggingLevel",
                     "--no-local-shell").also {
-                if (extraCmdLineFlag != null) {
-                    it += extraCmdLineFlag
-                }
+                it += extraCmdLineFlag
             }.toList()
 
             return ProcessUtilities.startCordaProcess(

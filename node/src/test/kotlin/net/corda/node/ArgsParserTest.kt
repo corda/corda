@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import org.slf4j.event.Level
 import java.nio.file.Paths
+import kotlin.test.assertEquals
 
 class ArgsParserTest {
     private val parser = ArgsParser()
@@ -25,7 +26,9 @@ class ArgsParserTest {
                 noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false,
-                bootstrapRaftCluster = false))
+                bootstrapRaftCluster = false,
+                networkRootTruststorePassword = null,
+                networkRootTruststorePath = null))
     }
 
     @Test
@@ -110,8 +113,11 @@ class ArgsParserTest {
 
     @Test
     fun `initial-registration`() {
-        val cmdLineOptions = parser.parse("--initial-registration")
+        val truststorePath = Paths.get("truststore") / "file.jks"
+        val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
         assertThat(cmdLineOptions.isRegistration).isTrue()
+        assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.networkRootTruststorePath)
+        assertEquals("password-test", cmdLineOptions.networkRootTruststorePassword)
     }
 
     @Test

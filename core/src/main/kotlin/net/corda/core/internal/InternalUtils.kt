@@ -254,13 +254,12 @@ fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(thi
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
 
-/** @suppress Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
- * @suppress
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
@@ -295,18 +294,12 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
-/**
- * Provide access to internal method for AttachmentClassLoaderTests
- * @suppress
- */
+/** Provide access to internal method for AttachmentClassLoaderTests */
 fun TransactionBuilder.toWireTransaction(cordappProvider: CordappProvider, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(cordappProvider, serializationContext)
 }
 
-/**
- * Provide access to internal method for AttachmentClassLoaderTests
- * @suppress
- */
+/** Provide access to internal method for AttachmentClassLoaderTests */
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */

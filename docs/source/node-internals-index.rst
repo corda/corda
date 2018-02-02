@@ -6,5 +6,4 @@ Node internals
 
    node-services
    vault
-   serialization
    messaging

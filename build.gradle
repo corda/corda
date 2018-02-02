@@ -56,9 +56,9 @@ buildscript {
     ext.h2_version = '1.4.194' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
-    ext.dokka_version = '0.9.14'
+    ext.dokka_version = '0.9.16-eap-2'
     ext.eddsa_version = '0.2.0'
-    ext.dependency_checker_version = '3.0.1'
+    ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
     ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
@@ -73,6 +73,9 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven {
+            url 'https://dl.bintray.com/kotlin/kotlin-eap/'
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -331,8 +334,12 @@ task generateApi(type: net.corda.plugins.GenerateApi){
 }
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)
-if(System.getenv('CORDA_DOCS_ONLY_BUILD') != null) {
-    logger.info("Tests are disabled due to presence of envvar CORDA_DOCS_ONLY_BUILD")
+if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
+    if(file('corda-docs-only-build').exists()) {
+        logger.info("Tests are disabled due to presence of file 'corda-docs-only-build' in the project root")
+    } else {
+        logger.info("Tests are disabled due to the presence of envvar CORDA_DOCS_ONLY_BUILD")
+    }
 
     allprojects {
         test {

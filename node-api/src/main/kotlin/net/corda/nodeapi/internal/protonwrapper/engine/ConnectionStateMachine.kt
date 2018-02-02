@@ -1,4 +1,4 @@
-package net.corda.node.internal.protonwrapper.engine
+package net.corda.nodeapi.internal.protonwrapper.engine
 
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
@@ -7,9 +7,9 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
-import net.corda.node.internal.protonwrapper.messages.MessageStatus
-import net.corda.node.internal.protonwrapper.messages.impl.ReceivedMessageImpl
-import net.corda.node.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import org.apache.qpid.proton.Proton
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.Symbol
@@ -402,6 +402,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
     private fun encodePayloadBytes(msg: SendableMessageImpl): ByteBuf {
         val message = Proton.message() as ProtonJMessage
         message.body = Data(Binary(msg.payload))
+        message.isDurable = true
         message.properties = Properties()
         val appProperties = HashMap(msg.applicationProperties)
         //TODO We shouldn't have to do this, but Artemis Server doesn't set the header on AMQP packets.
