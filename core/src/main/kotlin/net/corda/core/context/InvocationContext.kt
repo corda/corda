@@ -9,52 +9,50 @@ import java.security.Principal
  * Models the information needed to trace an invocation in Corda.
  * Includes initiating actor, origin, trace information, and optional external trace information to correlate clients' IDs.
  *
- * @param origin origin of the invocation.
- * @param trace Corda invocation trace.
- * @param actor acting agent of the invocation, used to derive the security principal.
- * @param externalTrace optional external invocation trace for cross-system logs correlation.
- * @param impersonatedActor optional impersonated actor, used for logging but not for authorisation.
+ * @property origin Origin of the invocation.
+ * @property trace Corda invocation trace.
+ * @property actor Acting agent of the invocation, used to derive the security principal.
+ * @property externalTrace Optional external invocation trace for cross-system logs correlation.
+ * @property impersonatedActor Optional impersonated actor, used for logging but not for authorisation.
  */
 @CordaSerializable
-data class InvocationContext(val origin: Origin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
-
+data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
     companion object {
-
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
         @JvmStatic
-        fun newInstance(origin: Origin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
+        fun newInstance(origin: InvocationOrigin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
 
         /**
-         * Creates an [InvocationContext] with [Origin.RPC] origin.
+         * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
          */
         @JvmStatic
-        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(Origin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
+        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
 
         /**
-         * Creates an [InvocationContext] with [Origin.Peer] origin.
+         * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.
          */
         @JvmStatic
-        fun peer(party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(Origin.Peer(party), trace, null, externalTrace, impersonatedActor)
+        fun peer(party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.Peer(party), trace, null, externalTrace, impersonatedActor)
 
         /**
-         * Creates an [InvocationContext] with [Origin.Service] origin.
+         * Creates an [InvocationContext] with [InvocationOrigin.Service] origin.
          */
         @JvmStatic
-        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(Origin.Service(serviceClassName, owningLegalIdentity), trace, null, externalTrace)
+        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.Service(serviceClassName, owningLegalIdentity), trace, null, externalTrace)
 
         /**
-         * Creates an [InvocationContext] with [Origin.Scheduled] origin.
+         * Creates an [InvocationContext] with [InvocationOrigin.Scheduled] origin.
          */
         @JvmStatic
-        fun scheduled(scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(Origin.Scheduled(scheduledState), trace, null, externalTrace)
+        fun scheduled(scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.Scheduled(scheduledState), trace, null, externalTrace)
 
         /**
-         * Creates an [InvocationContext] with [Origin.Shell] origin.
+         * Creates an [InvocationContext] with [InvocationOrigin.Shell] origin.
          */
         @JvmStatic
-        fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Origin.Shell, trace, null, externalTrace)
+        fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(InvocationOrigin.Shell, trace, null, externalTrace)
     }
 
     /**
@@ -83,11 +81,10 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
 }
 
 /**
- * Invocation origin for tracing purposes.
+ * Represents the source of an action such as a flow start, an RPC, a shell command etc.
  */
 @CordaSerializable
-sealed class Origin {
-
+sealed class InvocationOrigin {
     /**
      * Returns the [Principal] for a given [Actor].
      */
@@ -96,32 +93,28 @@ sealed class Origin {
     /**
      * Origin was an RPC call.
      */
-    data class RPC(private val actor: Actor) : Origin() {
-
+    data class RPC(private val actor: Actor) : InvocationOrigin() {
         override fun principal() = Principal { actor.id.value }
     }
 
     /**
      * Origin was a message sent by a [Peer].
      */
-    data class Peer(val party: CordaX500Name) : Origin() {
-
+    data class Peer(val party: CordaX500Name) : InvocationOrigin() {
         override fun principal() = Principal { party.toString() }
     }
 
     /**
      * Origin was a Corda Service.
      */
-    data class Service(val serviceClassName: String, val owningLegalIdentity: CordaX500Name) : Origin() {
-
+    data class Service(val serviceClassName: String, val owningLegalIdentity: CordaX500Name) : InvocationOrigin() {
         override fun principal() = Principal { serviceClassName }
     }
 
     /**
      * Origin was a scheduled activity.
      */
-    data class Scheduled(val scheduledState: ScheduledStateRef) : Origin() {
-
+    data class Scheduled(val scheduledState: ScheduledStateRef) : InvocationOrigin() {
         override fun principal() = Principal { "Scheduler" }
     }
 
@@ -129,8 +122,13 @@ sealed class Origin {
     /**
      * Origin was the Shell.
      */
-    object Shell : Origin() {
-
+    object Shell : InvocationOrigin() {
         override fun principal() = Principal { "Shell User" }
     }
 }
+
+/**
+ * Authentication / Authorisation Service ID.
+ */
+@CordaSerializable
+data class AuthServiceId(val value: String)

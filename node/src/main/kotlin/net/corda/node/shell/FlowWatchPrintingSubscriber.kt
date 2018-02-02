@@ -72,7 +72,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
                 table.add(RowElement().add(
                         LabelElement(formatFlowId(smmUpdate.id)),
                         LabelElement(formatFlowName(smmUpdate.stateMachineInfo.flowLogicClassName)),
-                        LabelElement(formatInvocationContext(smmUpdate.stateMachineInfo.context())),
+                        LabelElement(formatInvocationContext(smmUpdate.stateMachineInfo.invocationContext)),
                         LabelElement("In progress")
                 ).style(stateColor(smmUpdate).fg()))
                 indexMap[smmUpdate.id] = table.rows.size - 1
