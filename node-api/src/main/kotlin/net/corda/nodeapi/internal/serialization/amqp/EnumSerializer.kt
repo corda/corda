@@ -39,7 +39,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
         return fromOrd
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         if (obj !is Enum<*>) throw NotSerializableException("Serializing $obj as enum when it isn't")
 
         data.withDescribed(typeNotation.descriptor) {

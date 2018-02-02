@@ -130,7 +130,7 @@ class EnumEvolutionSerializer(
         throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 }
