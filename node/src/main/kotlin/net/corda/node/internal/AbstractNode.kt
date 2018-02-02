@@ -8,6 +8,8 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -53,6 +55,7 @@ import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
@@ -194,13 +197,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        val parametersUpdate = getParametersUpdate(identityService.trustRoot)
-        retrieveNetworkParameters(identityService.trustRoot, parametersUpdate)
+        retrieveNetworkParameters(identityService.trustRoot)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
-            val acceptedParametersHash = (parametersUpdate ?: networkParameters).serialize().hash
-            val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair, acceptedParametersHash)
+            val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache)
@@ -277,8 +278,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
                              identity: PartyAndCertificate,
-                             identityKeyPair: KeyPair,
-                             acceptedParametersHash: SecureHash? = null): Pair<Set<KeyPair>, NodeInfo> {
+                             identityKeyPair: KeyPair): Pair<Set<KeyPair>, NodeInfo> {
         val keyPairs = mutableSetOf(identityKeyPair)
 
         myNotaryIdentity = configuration.notary?.let {
@@ -296,8 +296,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 myAddresses(),
                 setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
-                platformClock.instant().toEpochMilli(),
-                acceptedParametersHash
+                platformClock.instant().toEpochMilli()
         )
         // Check if we have already stored a version of 'our own' NodeInfo, this is to avoid regenerating it with
         // a different timestamp.
@@ -642,16 +641,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return verifiedParams
     }
 
-    private fun getParametersUpdate(trustRoot: X509Certificate): NetworkParameters? {
-        val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        return if (parametersUpdateFile.exists()) {
-            parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
-        } else {
-            null
-        }
-    }
-
-    private fun retrieveNetworkParameters(trustRoot: X509Certificate, parametersUpdate: NetworkParameters?) {
+    private fun retrieveNetworkParameters(trustRoot: X509Certificate) {
         val advertisedParametersHash = networkMapClient?.getNetworkMap()?.networkMap?.networkParameterHash
         val networkParamsFile = configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME
         val parametersFromFile = if (networkParamsFile.exists()) {
@@ -669,18 +659,20 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             else if (parametersFromFile.serialize().hash == advertisedParametersHash) { // Restarted with the same parameters.
                 parametersFromFile
             } else { // Update case.
-                if (parametersUpdate == null)
+                val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+                if (!parametersUpdateFile.exists()) {
                     throw IllegalArgumentException("Node uses parameters with hash: ${parametersFromFile.serialize().hash} " +
                             "but network map is advertising: ${advertisedParametersHash}.\n" +
                             "Please update node to use correct network parameters file.")
-                if (parametersUpdate.serialize().hash != advertisedParametersHash) {
+                }
+                val parameterUpdate = parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
+                if (parameterUpdate.serialize().hash != advertisedParametersHash) {
                     throw IllegalArgumentException("Both network parameters and network parameters update files don't match" +
                             "parameters advertised by network map.\n" +
                             "Please update node to use correct network parameters file.")
                 }
-                val parametersUpdateFile = configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
                 parametersUpdateFile.moveTo(networkParamsFile, StandardCopyOption.REPLACE_EXISTING)
-                parametersUpdate
+                parameterUpdate
             }
         } else {
             parametersFromFile ?: throw IllegalArgumentException("Couldn't find network parameters file and compatibility zone wasn't configured")

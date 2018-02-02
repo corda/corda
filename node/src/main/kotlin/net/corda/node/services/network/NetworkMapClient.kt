@@ -2,11 +2,13 @@ package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
@@ -20,8 +22,6 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
-import okhttp3.CacheControl
-import okhttp3.Headers
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.io.BufferedReader
@@ -45,6 +45,13 @@ class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certifica
         logger.trace { "Publishing NodeInfo to $publishURL." }
         publishURL.post(signedNodeInfo.serialize())
         logger.trace { "Published NodeInfo to $publishURL successfully." }
+    }
+
+    fun ackNetworkParametersUpdate(signedParametersHash: SignedData<SecureHash>) {
+        val ackURL = URL("$networkMapUrl/ack-parameters")
+        logger.trace { "Sending network parameters with hash ${signedParametersHash.raw.deserialize()} approval to $ackURL." }
+        ackURL.post(signedParametersHash.serialize())
+        logger.trace { "Sent network parameters approval to $ackURL successfully." }
     }
 
     fun getNetworkMap(): NetworkMapResponse {
@@ -204,24 +211,37 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             logger.info("Downloaded new network parameters: $newParameters from the update: $update")
             newNetworkParameters = Pair(update, newParameters)
             parametersUpdatesTrack.onNext(ParametersUpdateInfo(update.newParametersHash, newParameters.verified(), update.description, update.updateDeadline))
-
         }
     }
 
-    fun acceptNewNetworkParameters(newInfo: NodeInfo, signNodeInfo: (NodeInfo) -> SignedNodeInfo) {
+    fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
         checkNotNull(networkMapClient) { "Network parameters updates are not support without compatibility zone configured" }
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them. Add persisting of newest parameters from update.
-        val (update, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: ${newInfo.acceptedParametersHash}")
+        val (update, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: $parametersHash")
         val newParametersHash = update.newParametersHash
-        if (newInfo.acceptedParametersHash == newParametersHash) {
+        if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
             newParams.serialize()
                     .open()
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
-            val signedNodeInfo = signNodeInfo(newInfo)
-            tryPublishNodeInfoAsync(signedNodeInfo, networkMapClient!!)
+            tryAckNetworkParametersUpdateAsync(sign(parametersHash), networkMapClient!!)
         } else {
-            throw IllegalArgumentException("Refused to accept parameters with hash: ${newInfo.acceptedParametersHash} because network map advertises update with hash: $newParametersHash, please check newest version")
+            throw IllegalArgumentException("Refused to accept parameters with hash: $parametersHash because network map advertises update with hash: $newParametersHash, please check newest version")
         }
+    }
+
+    private fun tryAckNetworkParametersUpdateAsync(signedParametersHash: SignedData<SecureHash>, networkMapClient: NetworkMapClient) {
+        val task = object : Runnable {
+            override fun run() {
+                try {
+                    networkMapClient.ackNetworkParametersUpdate(signedParametersHash)
+                } catch (t: Throwable) {
+                    logger.warn("Error encountered while acknowledging network parameters update, will retry in ${retryInterval.seconds} seconds.", t)
+                    // TODO: Exponential backoff?
+                    executor.schedule(this, retryInterval.toMillis(), TimeUnit.MILLISECONDS)
+                }
+            }
+        }
+        executor.submit(task)
     }
 }

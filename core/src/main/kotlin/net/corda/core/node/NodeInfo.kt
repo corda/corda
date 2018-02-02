@@ -5,7 +5,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.crypto.SecureHash
 
 /**
  * Information about a network node that acts on behalf of some party. NodeInfos can be found via the network map
@@ -18,16 +17,12 @@ import net.corda.core.crypto.SecureHash
  *           for information on how the platform is versioned.
  * @property serial An arbitrary number incremented each time the NodeInfo is changed. This is analogous to the same
  *           concept in DNS.
- * @property acceptedParametersHash Parameters hash accepted by this node, note that it doesn't necessarily point to the
- *          network parameters used by the node (there is parameters change period). It can be null, if NodeInfo was produced
- *          using --just-generate-node-info flag.
  */
 @CordaSerializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentitiesAndCerts: List<PartyAndCertificate>,
                     val platformVersion: Int,
-                    val serial: Long,
-                    val acceptedParametersHash: SecureHash?
+                    val serial: Long
 ) {
     // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
     init {

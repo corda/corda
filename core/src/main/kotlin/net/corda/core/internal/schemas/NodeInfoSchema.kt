@@ -1,6 +1,5 @@
 package net.corda.core.internal.schemas
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
@@ -52,18 +51,14 @@ object NodeInfoSchemaV1 : MappedSchema(
              * Similar to the serial number on DNS records.
              */
             @Column(name = "serial")
-            val serial: Long,
-
-            @Column(name = "accepted_parameters_hash")
-            val acceptedParametersHash: String?
+            val serial: Long
     ) {
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
                     this.addresses.map { it.toHostAndPort() },
                     (this.legalIdentitiesAndCerts.filter { it.isMain } + this.legalIdentitiesAndCerts.filter { !it.isMain }).map { it.toLegalIdentityAndCert() },
                     this.platformVersion,
-                    this.serial,
-                    acceptedParametersHash?.let { SecureHash.parse(it) }
+                    this.serial
             )
         }
     }

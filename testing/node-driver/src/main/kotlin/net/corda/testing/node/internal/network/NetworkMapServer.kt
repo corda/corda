@@ -1,6 +1,7 @@
 package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -22,6 +23,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
 import java.io.InputStream
 import java.net.InetSocketAddress
+import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
@@ -102,6 +104,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
     @Path("network-map")
     inner class InMemoryNetworkMapService {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        private val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy {
             networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         }
@@ -114,6 +117,23 @@ class NetworkMapServer(private val cacheTimeout: Duration,
                 val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
                 signedNodeInfo.verified()
                 nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
+                ok()
+            } catch (e: Exception) {
+                when (e) {
+                    is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
+                    else -> status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.message)
+                }
+            }.build()
+        }
+
+        @POST
+        @Path("ack-parameters")
+        @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+        fun ackNetworkParameters(input: InputStream): Response {
+            return try {
+                val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+                val hash = signedParametersHash.verified()
+                latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
                 ok()
             } catch (e: Exception) {
                 when (e) {

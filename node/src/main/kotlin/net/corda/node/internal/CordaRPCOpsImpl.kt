@@ -6,6 +6,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -19,6 +20,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -27,7 +29,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.signNodeInfo
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -54,13 +55,11 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
-        // TODO When multiple identities design will be better specified this should be signature from node operator not all identities on node.
-        val info = services.myInfo.copy(acceptedParametersHash = parametersHash, serial = services.clock.instant().toEpochMilli())
-        services.networkMapUpdater.acceptNewNetworkParameters(info) {
-            it.signNodeInfo { publicKey, serialised ->
-                services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
-            }
-        }
+        services.networkMapUpdater.acceptNewNetworkParameters(
+                parametersHash,
+                // TODO When multiple identities design will be better specified this should be signature from node operator.
+                { hash -> SignedData(hash.serialize(), services.keyManagementService.sign(hash.serialize().bytes, services.myInfo.legalIdentities[0].owningKey)) }
+        )
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {

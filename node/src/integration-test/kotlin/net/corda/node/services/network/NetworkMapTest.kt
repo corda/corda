@@ -9,7 +9,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -75,7 +74,6 @@ class NetworkMapTest {
             // We use a random modified time above to make the network parameters unqiue so that we're sure they came
             // from the server
             assertEquals(networkMapServer.networkParameters, networkParameters)
-            assertEquals(networkMapServer.networkParameters.serialize().hash, alice.nodeInfo.acceptedParametersHash)
         }
     }
 
@@ -92,11 +90,10 @@ class NetworkMapTest {
             val oldParameters = testNetworkParameters(emptyList(), epoch = 1)
             NetworkParametersCopier(oldParameters).install(aliceDir)
             NetworkParametersCopier(networkMapServer.networkParameters, update = true).install(aliceDir)
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            startNode(providedName = ALICE_NAME).getOrThrow()
             assertThat(aliceDir / NETWORK_PARAMS_UPDATE_FILE_NAME).doesNotExist()
             val parametersFromFile = (aliceDir / NETWORK_PARAMS_FILE_NAME).readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
             assertEquals(networkMapServer.networkParameters, parametersFromFile)
-            assertEquals(networkMapServer.networkParameters.serialize().hash, alice.nodeInfo.acceptedParametersHash)
         }
     }
 
