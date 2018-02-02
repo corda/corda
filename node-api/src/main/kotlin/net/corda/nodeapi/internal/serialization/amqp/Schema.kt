@@ -349,14 +349,16 @@ private fun Hasher.fingerprintWithCustomSerializerOrElse(factory: SerializerFact
 // This method concatenates various elements of the types recursively as unencoded strings into the hasher, effectively
 // creating a unique string for a type which we then hash in the calling function above.
 private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>,
-                               hasher: Hasher, factory: SerializerFactory, offset: Int = 4): Hasher {
-
+                               hasher: Hasher, factory: SerializerFactory, debugIndent: Int = 1): Hasher {
     // We don't include Example<?> and Example<T> where type is ? or T in this otherwise we
     // generate different fingerprints for class Outer<T>(val a: Inner<T>) when serialising
     // and deserializing (assuming deserialization is occurring in a factory that didn't
     // serialise the object in the  first place (and thus the cache lookup fails). This is also
     // true of Any, where we need  Example<A, B> and Example<?, ?> to have the same fingerprint
-    return if (type in alreadySeen && (type !is SerializerFactory.AnyType) && (type !is TypeVariable<*>)) {
+    return if ((type in alreadySeen)
+            && (type !is SerializerFactory.AnyType)
+            && (type !is TypeVariable<*>)
+            && (type !is WildcardType)) {
         hasher.putUnencodedChars(ALREADY_SEEN_HASH)
     } else {
         alreadySeen += type
@@ -370,29 +372,35 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                         hasher.putUnencodedChars(clazz.name)
                     } else {
                         hasher.fingerprintWithCustomSerializerOrElse(factory, clazz, type) {
-                            fingerprintForObject(type, type, alreadySeen, hasher, factory, offset+4)
+                            fingerprintForObject(type, type, alreadySeen, hasher, factory, debugIndent+1)
                         }
                     }
 
                     // ... and concatenate the type data for each parameter type.
                     type.actualTypeArguments.fold(startingHash) { orig, paramType ->
-                        fingerprintForType(paramType, type, alreadySeen, orig, factory, offset+4)
+                        fingerprintForType(paramType, type, alreadySeen, orig, factory, debugIndent+1)
                     }
                 }
-            // Treat generic types as "any type" to prevent fingerprint mismatch. This case we fall into when
-            // looking at A and B from Example<A, B> (remember we call this function recursively). When
-            // serialising a concrete example of the type we have A and B which are TypeVariables<*>'s but
-            // when deserializing we only have the wildcard placeholder ?, or AnyType
+            // Previously, we drew a distinction between TypeVariable, WildcardType, and AnyType, changing
+            // the signature of the fingerprinted object. This, however, doesn't work as it breaks bi-
+            // directional fingerprints. That is, fingerprinting a concrete instance of a generic
+            // type (Example<Int>), creates a different fingerprint from the generic type itself (Example<T>)
             //
-            // Note, TypeVariable<*> used to be encoded as TYPE_VARIABLE_HASH but that again produces a
-            // differing fingerprint on serialisation and deserialization
+            // On serialization Example<Int> is treated as Example<T>, a TypeVariable
+            // On deserialisation it is seen as Example<?>, A WildcardType *and* a TypeVariable
+            //      Note: AnyType is a special case of WildcardType used in other parts of the
+            //            serializer so both cases need to be dealt with here
+            //
+            // If we treat these types as fundamentally different and alter the fingerprint we will
+            // end up breaking into the evolver when we shouldn't or, worse, evoking the carpenter.
                 is SerializerFactory.AnyType,
+                is WildcardType,
                 is TypeVariable<*> -> {
                     hasher.putUnencodedChars("?").putUnencodedChars(ANY_TYPE_HASH)
                 }
                 is Class<*> -> {
                     if (type.isArray) {
-                        fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory, offset+4)
+                        fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory, debugIndent+1)
                                 .putUnencodedChars(ARRAY_HASH)
                     } else if (SerializerFactory.isPrimitive(type)) {
                         hasher.putUnencodedChars(type.name)
@@ -412,17 +420,15 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                                 // to the CorDapp but maybe reference to the JAR in the short term.
                                 hasher.putUnencodedChars(type.name)
                             } else {
-                                fingerprintForObject(type, type, alreadySeen, hasher, factory, offset+4)
+                                fingerprintForObject(type, type, alreadySeen, hasher, factory, debugIndent+1)
                             }
                         }
                     }
                 }
             // Hash the element type + some array hash
-                is GenericArrayType -> fingerprintForType(type.genericComponentType, contextType, alreadySeen,
-                        hasher, factory, offset+4).putUnencodedChars(ARRAY_HASH)
-            // TODO: include bounds
-                is WildcardType -> {
-                    hasher.putUnencodedChars(type.typeName).putUnencodedChars(WILDCARD_TYPE_HASH)
+                is GenericArrayType -> {
+                    fingerprintForType(type.genericComponentType, contextType, alreadySeen,
+                            hasher, factory, debugIndent+1).putUnencodedChars(ARRAY_HASH)
                 }
                 else -> throw NotSerializableException("Don't know how to hash")
             }
@@ -443,16 +449,17 @@ private fun fingerprintForObject(
         alreadySeen: MutableSet<Type>,
         hasher: Hasher,
         factory: SerializerFactory,
-        offset: Int = 0): Hasher {
+        debugIndent: Int = 0): Hasher {
     // Hash the class + properties + interfaces
     val name = type.asClass()?.name ?: throw NotSerializableException("Expected only Class or ParameterizedType but found $type")
+
     propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)
             .serializationOrder
             .fold(hasher.putUnencodedChars(name)) { orig, prop ->
-                fingerprintForType(prop.getter.resolvedType, type, alreadySeen, orig, factory, offset+4)
+                fingerprintForType(prop.getter.resolvedType, type, alreadySeen, orig, factory, debugIndent+1)
                         .putUnencodedChars(prop.getter.name)
                         .putUnencodedChars(if (prop.getter.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
             }
-    interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory, offset+4) }
+    interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory, debugIndent+4) }
     return hasher
 }
