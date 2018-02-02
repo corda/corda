@@ -6,11 +6,9 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
-import java.beans.IndexedPropertyDescriptor
-import java.beans.Introspector
-import java.beans.PropertyDescriptor
 import java.io.NotSerializableException
 import java.lang.reflect.*
+import java.lang.reflect.Field
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -72,62 +70,167 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
 internal fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
-        factory: SerializerFactory) = PropertySerializers.make (
-            if (kotlinConstructor != null) {
-                propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
-            } else {
-                propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
-            }.sortedWith(PropertyAccessor))
+        factory: SerializerFactory) = PropertySerializers.make(
+        if (kotlinConstructor != null) {
+            propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+        } else {
+            propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
+        }.sortedWith(PropertyAccessor))
+
 
 fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
 
+/**
+ * Encapsulates the property of a class and its potential getter and setter methods.
+ *
+ * @property field a property of a class.
+ * @property setter the method of a class that sets the field. Determined by locating
+ * a function called setXyz on the class for the property named in field as xyz.
+ * @property getter the method of a class that returns a fields value. Determined by
+ * locating a function named getXyz for the property named in field as xyz.
+ */
+data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter: Method?) {
+    override fun toString() = StringBuilder("").apply {
+        appendln("Property - ${field?.name ?: "null field"}\n")
+        appendln("  getter - ${getter?.name ?: "no getter"}")
+        append("  setter - ${setter?.name ?: "no setter"}")
+    }.toString()
+}
+
+object PropertyDescriptorsRegex {
+    // match an uppercase letter that also has a corresponding lower case equivalent
+    val re = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
+}
+
+/**
+ * Collate the properties of a class and match them with their getter and setter
+ * methods as per a JavaBean.
+ *
+ * for a property
+ *      exampleProperty
+ *
+ * We look for methods
+ *      setExampleProperty
+ *      getExampleProperty
+ *      isExampleProperty
+ *
+ * Where setExampleProperty must return a type compatible with exampleProperty, getExampleProperty must
+ * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
+ * return a boolean
+ */
+fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
+    val classProperties = mutableMapOf<String, PropertyDescriptor>()
+
+    var clazz: Class<out Any?>? = this
+    do {
+        // get the properties declared on this instance of class
+        clazz!!.declaredFields.forEach { classProperties.put(it.name, PropertyDescriptor(it, null, null)) }
+
+        // then pair them up with the declared getter and setter
+        // Note: It is possible for a class to have multipleinstancess of a function where the types
+        // differ. For example:
+        //      interface I<out T> { val a: T }
+        //      class D(override val a: String) : I<String>
+        // instances of D will have both
+        //      getA - returning a String (java.lang.String) and
+        //      getA - returning an Object (java.lang.Object)
+        // In this instance we take the most derived object
+        clazz.declaredMethods?.map {
+            PropertyDescriptorsRegex.re.find(it.name)?.apply {
+                try {
+                    classProperties.getValue(groups[2]!!.value.decapitalize()).apply {
+                        when (groups[1]!!.value) {
+                            "set" -> {
+                                if (setter == null) setter = it
+                                else if (TypeToken.of(setter!!.genericReturnType).isSupertypeOf(it.genericReturnType)) {
+                                    setter = it
+                                }
+                            }
+                            "get" -> {
+                                if (getter == null) getter = it
+                                else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(it.genericReturnType)) {
+                                    getter = it
+                                }
+                            }
+                            "is" -> {
+                                val rtnType = TypeToken.of(it.genericReturnType)
+                                if ((rtnType == TypeToken.of(Boolean::class.java))
+                                        || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
+                                    if (getter == null) getter = it
+                                }
+                            }
+                        }
+                    }
+                } catch (e: NoSuchElementException) {
+                    // handles the getClass case from java.lang.Object
+                    return@apply
+                }
+            }
+        }
+        clazz = clazz?.superclass
+    } while (clazz != null)
+
+    return classProperties
+}
+
+/**
+ * From a constructor, determine which properties of a class are to be serialized.
+ *
+ * @param kotlinConstructor The constructor to be used to instantiate instances of the class
+ * @param type The class's [Type]
+ * @param factory The factory generating the serializer wrapping this function.
+ */
 internal fun <T : Any> propertiesForSerializationFromConstructor(
         kotlinConstructor: KFunction<T>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> {
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
-    // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
-    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors
-            .filter { it.name != "class" }
-            .groupBy { it.name }
-            .mapValues { it.value[0] }
 
-    if (properties.isNotEmpty() && kotlinConstructor.parameters.isEmpty()) {
-        return propertiesForSerializationFromSetters(properties, type, factory)
+    val classProperties = clazz.propertyDescriptors()
+
+    if (classProperties.isNotEmpty() && kotlinConstructor.parameters.isEmpty()) {
+        return propertiesForSerializationFromSetters(classProperties, type, factory)
     }
 
     return mutableListOf<PropertyAccessor>().apply {
         kotlinConstructor.parameters.withIndex().forEach { param ->
-            val name = param.value.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
+            val name = param.value.name ?: throw NotSerializableException(
+                    "Constructor parameter of $clazz has no name.")
 
-            val propertyReader = if (name in properties) {
-                // it's a publicly accessible property
-                val matchingProperty = properties[name]!!
+            val propertyReader = if (name in classProperties) {
+                if (classProperties[name]!!.getter != null) {
+                    // it's a publicly accessible property
+                    val matchingProperty = classProperties[name]!!
 
-                // Check that the method has a getter in java.
-                val getter = matchingProperty.readMethod ?: throw NotSerializableException(
-                        "Property has no getter method for $name of $clazz. If using Java and the parameter name"
-                                + "looks anonymous, check that you have the -parameters option specified in the Java compiler."
-                                + "Alternately, provide a proxy serializer (SerializationCustomSerializer) if "
-                                + "recompiling isn't an option.")
+                    // Check that the method has a getter in java.
+                    val getter = matchingProperty.getter ?: throw NotSerializableException(
+                            "Property has no getter method for $name of $clazz. If using Java and the parameter name"
+                                    + "looks anonymous, check that you have the -parameters option specified in the "
+                                    + "Java compiler. Alternately, provide a proxy serializer "
+                                    + "(SerializationCustomSerializer) if recompiling isn't an option.")
 
-                val returnType = resolveTypeVariables(getter.genericReturnType, type)
-                if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
-                    throw NotSerializableException(
-                            "Property type '$returnType' for '$name' of '$clazz' differs from constructor parameter "
-                                    + "type '${param.value.type.javaType}'")
+                    val returnType = resolveTypeVariables(getter.genericReturnType, type)
+                    if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
+                        throw NotSerializableException(
+                                "Property '$name' has type '$returnType' on class '$clazz' but differs from constructor " +
+                                "parameter type '${param.value.type.javaType}'")
+                    }
+
+                    Pair(PublicPropertyReader(getter), returnType)
+                } else {
+                    try {
+                        val field = clazz.getDeclaredField(param.value.name)
+                        Pair(PrivatePropertyReader(field, type), field.genericType)
+                    } catch (e: NoSuchFieldException) {
+                        throw NotSerializableException("No property matching constructor parameter named '$name' " +
+                                "of '$clazz'. If using Java, check that you have the -parameters option specified " +
+                                "in the Java compiler. Alternately, provide a proxy serializer " +
+                                "(SerializationCustomSerializer) if recompiling isn't an option")
+                    }
                 }
-
-                Pair(PublicPropertyReader(getter), returnType)
             } else {
-                try {
-                    val field = clazz.getDeclaredField(param.value.name)
-                    Pair(PrivatePropertyReader(field, type), field.genericType)
-                } catch (e: NoSuchFieldException) {
-                    throw NotSerializableException("No property matching constructor parameter named '$name' of '$clazz'. " +
-                            "If using Java, check that you have the -parameters option specified in the Java compiler. " +
-                            "Alternately, provide a proxy serializer (SerializationCustomSerializer) if recompiling isn't an option")
-                }
+                throw NotSerializableException(
+                        "Constructor parameter $name doesn't refer to a property of class '$clazz'")
             }
 
             this += PropertyAccessorConstructor(
@@ -148,18 +251,26 @@ private fun propertiesForSerializationFromSetters(
     return mutableListOf<PropertyAccessorGetterSetter>().apply {
         var idx = 0
         properties.forEach { property ->
-            val getter: Method? = property.value.readMethod
-            val setter: Method? = property.value.writeMethod
+            val getter: Method? = property.value.getter
+            val setter: Method? = property.value.setter
 
             if (getter == null || setter == null) return@forEach
 
-            // NOTE: There is no need to check return and parameter types vs the underlying type for
-            // the getter / setter vs property as if there is a difference then that property isn't reported
-            // by the BEAN inspector and thus we don't consider that case here
+            if (setter.parameterCount != 1) {
+                throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
+                        "takes too many arguments")
+            }
 
-            this += PropertyAccessorGetterSetter (
+            val setterType = setter.parameterTypes.getOrNull(0)!!
+            if (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType))) {
+                throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
+                        "takes parameter of type $setterType yet underlying type is " +
+                        "${property.value.field?.genericType!!}")
+            }
+
+            this += PropertyAccessorGetterSetter(
                     idx++,
-                    PropertySerializer.make(property.key, PublicPropertyReader(getter),
+                    PropertySerializer.make(property.value.field!!.name, PublicPropertyReader(getter),
                             resolveTypeVariables(getter.genericReturnType, type), factory),
                     setter)
         }
@@ -186,23 +297,17 @@ private fun propertiesForSerializationFromAbstract(
         clazz: Class<*>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> {
-    // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
-    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors
-            .filter { it.name != "class" }
-            .sortedBy { it.name }
-            .filterNot { it is IndexedPropertyDescriptor }
+    val properties = clazz.propertyDescriptors()
 
-   return mutableListOf<PropertyAccessorConstructor>().apply {
-       properties.withIndex().forEach { property ->
-           // Check that the method has a getter in java.
-           val getter = property.value.readMethod ?: throw NotSerializableException(
-                   "Property has no getter method for ${property.value.name} of $clazz.")
-           val returnType = resolveTypeVariables(getter.genericReturnType, type)
-           this += PropertyAccessorConstructor(
-                   property.index,
-                   PropertySerializer.make(property.value.name, PublicPropertyReader(getter), returnType, factory))
-       }
-   }
+    return mutableListOf<PropertyAccessorConstructor>().apply {
+        properties.toList().withIndex().forEach {
+            val getter = it.value.second.getter ?: return@forEach
+            val returnType = resolveTypeVariables(getter.genericReturnType, type)
+            this += PropertyAccessorConstructor(
+                    it.index,
+                    PropertySerializer.make(it.value.first, PublicPropertyReader(getter), returnType, factory))
+        }
+    }
 }
 
 internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> {
@@ -270,7 +375,11 @@ private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     // TODO: surely we check it is concrete at this point with no TypeVariables
     return if (resolvedType is TypeVariable<*>) {
         val bounds = resolvedType.bounds
-        return if (bounds.isEmpty()) SerializerFactory.AnyType else if (bounds.size == 1) resolveTypeVariables(bounds[0], contextType) else throw NotSerializableException("Got bounded type $actualType but only support single bound.")
+        return if (bounds.isEmpty()) {
+            SerializerFactory.AnyType
+        } else if (bounds.size == 1) {
+            resolveTypeVariables(bounds[0], contextType)
+        } else throw NotSerializableException("Got bounded type $actualType but only support single bound.")
     } else {
         resolvedType
     }
