@@ -40,7 +40,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     override val revealSubclassesInSchema: Boolean get() = false
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         data.withDescribed(descriptor) {
             writeDescribedObject(uncheckedCast(obj), data, type, output)
         }

@@ -30,7 +30,7 @@ interface AMQPSerializer<out T> {
     /**
      * Write the given object, with declared type, to the output.
      */
-    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput)
+    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int = 0)
 
     /**
      * Read the given object from the input. The envelope is provided in case the schema is required.

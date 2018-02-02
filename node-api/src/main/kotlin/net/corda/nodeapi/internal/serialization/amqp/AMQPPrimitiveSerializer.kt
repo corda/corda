@@ -18,7 +18,7 @@ class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
     override fun writeClassInfo(output: SerializationOutput) {
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         if (obj is ByteArray) {
             data.putObject(Binary(obj))
         } else {
