@@ -1,5 +1,8 @@
 package net.corda.node.services.config
 
+import net.corda.node.services.statemachine.transitions.SessionDeliverPersistenceStrategy
+import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
+
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
         val useMultiThreadedSMM: Boolean = true,
@@ -25,7 +28,8 @@ data class PerformanceTuning(
         val maximumMessagingBatchSize: Int,
         val rpcThreadPoolSize: Int,
         val p2pConfirmationWindowSize: Int,
-        val brokerConnectionTtlCheckIntervalMs: Long
+        val brokerConnectionTtlCheckIntervalMs: Long,
+        val stateMachine: StateMachineConfiguration
 ) {
     companion object {
         val default = PerformanceTuning(
@@ -33,7 +37,8 @@ data class PerformanceTuning(
                 maximumMessagingBatchSize = 256,
                 rpcThreadPoolSize = 4,
                 p2pConfirmationWindowSize = 1048576,
-                brokerConnectionTtlCheckIntervalMs = 20
+                brokerConnectionTtlCheckIntervalMs = 20,
+                stateMachine = StateMachineConfiguration.default
         )
     }
 }

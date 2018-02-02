@@ -101,8 +101,6 @@ class SingleThreadedStateMachineManager(
 
     private val totalStartedFlows = metrics.counter("Flows.Started")
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
-    private val totalSuccessFlows = metrics.counter("Flows.Success")
-    private val totalErrorFlows = metrics.counter("Flows.Error")
 
     /**
      * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
@@ -268,6 +266,8 @@ class SingleThreadedStateMachineManager(
             startedFutures.remove(flowId)?.set(Unit)
         }
     }
+
+    private val stateMachineConfiguration = serviceHub.configuration.enterpriseConfiguration.tuning.stateMachine
 
     private fun checkQuasarJavaAgentPresence() {
         check(SuspendableHelper.isJavaAgentActive(), {
@@ -489,12 +489,12 @@ class SingleThreadedStateMachineManager(
 
     private fun createTransientValues(id: StateMachineRunId, resultFuture: CordaFuture<Any?>): FlowStateMachineImpl.TransientValues {
         return FlowStateMachineImpl.TransientValues(
-                eventQueue = Channels.newChannel(16, Channels.OverflowPolicy.BLOCK),
+                eventQueue = Channels.newChannel(stateMachineConfiguration.eventQueueSize, Channels.OverflowPolicy.BLOCK),
                 resultFuture = resultFuture,
                 database = database,
                 transitionExecutor = transitionExecutor,
                 actionExecutor = actionExecutor!!,
-                stateMachine = StateMachine(id, StateMachineConfiguration.default, secureRandom),
+                stateMachine = StateMachine(id, stateMachineConfiguration, secureRandom),
                 serviceHub = serviceHub,
                 checkpointSerializationContext = checkpointSerializationContext!!
         )
