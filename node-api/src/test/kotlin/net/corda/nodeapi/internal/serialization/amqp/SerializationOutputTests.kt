@@ -20,6 +20,8 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer
+import net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -36,11 +38,13 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.NotSerializableException
+import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.full.superclasses
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -1082,6 +1086,8 @@ class SerializationOutputTests {
     }
 
     //
+    // Example stacktrace that this test is tryint to reproduce
+    //
     // java.lang.IllegalArgumentException:
     //      net.corda.core.contracts.TransactionState ->
     //      data(net.corda.core.contracts.ContractState) ->
@@ -1091,9 +1097,17 @@ class SerializationOutputTests {
     //      displayTokenSize(java.math.BigDecimal) ->
     //      wrong number of arguments
     //
+    // So the actual problem was objects with multiple getters. The code wasn't looking for one with zero
+    // properties, just taking the first one it found with with the most applicable type, and the reflection
+    // ordering of the methods was random, thus occasionally we select the wrong one
+    //
     @Test
-    fun invokeFailure() {
-        data class C (val a: Amount<Currency>)
+    fun reproduceWrongNumberOfArguments() {
+        val field = SerializerFactory::class.java.getDeclaredField("serializersByType").apply {
+            this.isAccessible = true
+        }
+
+        data class C(val a: Amount<Currency>)
 
         val factory = testDefaultFactoryNoEvolution()
         factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
@@ -1101,12 +1115,7 @@ class SerializationOutputTests {
 
         val c = C(Amount<Currency>(100, BigDecimal("1.5"), Currency.getInstance("USD")))
 
+        // were the issue not fixed we'd blow up here
         SerializationOutput(factory).serialize(c)
-        /*
-
-        var deserializedC = DeserializationInput(sf1).deserialize(
-        assertEquals('c', deserializedC.c)
-        */
-
     }
 }
