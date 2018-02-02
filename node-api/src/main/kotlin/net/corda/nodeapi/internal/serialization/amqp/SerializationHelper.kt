@@ -127,7 +127,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         clazz!!.declaredFields.forEach { classProperties.put(it.name, PropertyDescriptor(it, null, null)) }
 
         // then pair them up with the declared getter and setter
-        // Note: It is possible for a class to have multipleinstancess of a function where the types
+        // Note: It is possible for a class to have multiple instancess of a function where the types
         // differ. For example:
         //      interface I<out T> { val a: T }
         //      class D(override val a: String) : I<String>
@@ -135,28 +135,37 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         //      getA - returning a String (java.lang.String) and
         //      getA - returning an Object (java.lang.Object)
         // In this instance we take the most derived object
-        clazz.declaredMethods?.map {
-            PropertyDescriptorsRegex.re.find(it.name)?.apply {
+        //
+        // In addition, only getters that take zero parameters and setters that take a single
+        // parameter will be considered
+        clazz.declaredMethods?.map { func ->
+            PropertyDescriptorsRegex.re.find(func.name)?.apply {
                 try {
                     classProperties.getValue(groups[2]!!.value.decapitalize()).apply {
                         when (groups[1]!!.value) {
                             "set" -> {
-                                if (setter == null) setter = it
-                                else if (TypeToken.of(setter!!.genericReturnType).isSupertypeOf(it.genericReturnType)) {
-                                    setter = it
+                                if (func.parameterCount == 1) {
+                                    if (setter == null) setter = func
+                                    else if (TypeToken.of(setter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
+                                        setter = func
+                                    }
                                 }
                             }
                             "get" -> {
-                                if (getter == null) getter = it
-                                else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(it.genericReturnType)) {
-                                    getter = it
+                                if (func.parameterCount == 0) {
+                                    if (getter == null) getter = func
+                                    else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
+                                        getter = func
+                                    }
                                 }
                             }
                             "is" -> {
-                                val rtnType = TypeToken.of(it.genericReturnType)
-                                if ((rtnType == TypeToken.of(Boolean::class.java))
-                                        || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
-                                    if (getter == null) getter = it
+                                if (func.parameterCount == 0) {
+                                    val rtnType = TypeToken.of(func.genericReturnType)
+                                    if ((rtnType == TypeToken.of(Boolean::class.java))
+                                            || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
+                                        if (getter == null) getter = func
+                                    }
                                 }
                             }
                         }

@@ -1080,4 +1080,33 @@ class SerializationOutputTests {
             serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         }.isInstanceOf(MissingAttachmentsException::class.java)
     }
+
+    //
+    // java.lang.IllegalArgumentException:
+    //      net.corda.core.contracts.TransactionState ->
+    //      data(net.corda.core.contracts.ContractState) ->
+    //      net.corda.finance.contracts.asset.Cash$State ->
+    //      amount(net.corda.core.contracts.Amount<net.corda.core.contracts.Issued<java.util.Currency>>) ->
+    //      net.corda.core.contracts.Amount<net.corda.core.contracts.Issued<java.util.Currency>> ->
+    //      displayTokenSize(java.math.BigDecimal) ->
+    //      wrong number of arguments
+    //
+    @Test
+    fun invokeFailure() {
+        data class C (val a: Amount<Currency>)
+
+        val factory = testDefaultFactoryNoEvolution()
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
+
+        val c = C(Amount<Currency>(100, BigDecimal("1.5"), Currency.getInstance("USD")))
+
+        SerializationOutput(factory).serialize(c)
+        /*
+
+        var deserializedC = DeserializationInput(sf1).deserialize(
+        assertEquals('c', deserializedC.c)
+        */
+
+    }
 }
