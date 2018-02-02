@@ -314,6 +314,16 @@ interface CordaRPCOps : RPCOps {
 
     /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
+
+    /** This will attempt to find a unique representation of an x500 name
+     * uniqueness is checked against the whole set of names within the network
+     * It will attempt to provide the shortest possible unique name by appending more fields till uniqueness is reached
+     * Extra fields are added in the order of CN,O,OU,C,L,S
+     * @param x500Name the name to get a representation of
+     * @return the shortest possible unique [String] representation of this name
+     * @throws [IllegalStateException] if no unique name is possible
+     */
+    fun displayNameFromX500(x500Name: CordaX500Name) : String
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

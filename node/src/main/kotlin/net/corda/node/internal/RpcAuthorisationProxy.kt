@@ -19,7 +19,12 @@ import java.io.InputStream
 import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
+// TODO implement this using reflective proxy or K-Delegation
 class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext) : CordaRPCOps {
+
+    override fun displayNameFromX500(x500Name: CordaX500Name): String {
+        return implementation.displayNameFromX500(x500Name)
+    }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash = guard("uploadAttachmentWithMetadata") {
         implementation.uploadAttachmentWithMetadata(jar, uploader, filename)
@@ -157,11 +162,10 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     private inline fun <RESULT> guard(methodName: String, action: () -> RESULT) = guard(methodName, emptyList(), action)
 
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
-    private inline fun <RESULT> guard(methodName: String, args: List<Class<*>>, action: () -> RESULT) : RESULT {
+    private inline fun <RESULT> guard(methodName: String, args: List<Class<*>>, action: () -> RESULT): RESULT {
         if (!context().isPermitted(methodName, *(args.map { it.name }.toTypedArray()))) {
             throw PermissionException("User not authorized to perform RPC call $methodName with target $args")
-        }
-        else {
+        } else {
             return action()
         }
     }
