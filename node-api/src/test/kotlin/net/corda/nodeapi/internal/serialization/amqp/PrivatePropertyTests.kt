@@ -6,6 +6,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.junit.Test
 import org.apache.qpid.proton.amqp.Symbol
+import org.assertj.core.api.Assertions
+import java.io.NotSerializableException
 import java.util.concurrent.ConcurrentHashMap
 
 class PrivatePropertyTests {
@@ -27,6 +29,15 @@ class PrivatePropertyTests {
         val c1 = C("Pants are comfortable sometimes")
         val c2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(c1))
         assertEquals(c1, c2)
+    }
+
+    @Test
+    fun testWithOnePrivatePropertyBoolean() {
+        data class C(private val b: Boolean)
+
+        C(false).apply {
+            assertEquals(this, DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(this)))
+        }
     }
 
     @Test
@@ -54,6 +65,61 @@ class PrivatePropertyTests {
         val c1 = C(1, 2)
         val c2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(c1))
         assertEquals(c1, c2)
+    }
+
+    @Test
+    fun testWithInheritance() {
+        open class B(val a: String, protected val b: String)
+        class D (a: String, b: String) : B (a, b) {
+            override fun equals(other: Any?): Boolean = when (other) {
+                is D -> other.a == a && other.b == b
+                else -> false
+            }
+        }
+
+        val d1 = D("clump", "lump")
+        val d2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(d1))
+
+        assertEquals(d1, d2)
+    }
+
+    @Test
+    fun testMultiArgSetter() {
+        @Suppress("UNUSED")
+        data class C(private var a: Int, val b: Int) {
+            // This will force the serialization engine to use getter / setter
+            // instantiation for the object rather than construction
+            @ConstructorForDeserialization
+            constructor() : this(0, 0)
+
+            fun setA(a: Int, b: Int) { this.a = a }
+            fun getA() = a
+        }
+
+        val c1 = C(33, 44)
+        Assertions.assertThatThrownBy {
+            SerializationOutput(factory).serialize(c1)
+        }.isInstanceOf(NotSerializableException::class.java).hasMessageContaining(
+                "Defined setter for parameter a takes too many arguments")
+    }
+
+    @Test
+    fun testBadTypeArgSetter() {
+        @Suppress("UNUSED")
+        data class C(private var a: Int, val b: Int) {
+            @ConstructorForDeserialization
+            constructor() : this(0, 0)
+
+            fun setA(a: String) { this.a = a.toInt() }
+            fun getA() = a
+        }
+
+        val c1 = C(33, 44)
+        Assertions.assertThatThrownBy {
+            SerializationOutput(factory).serialize(c1)
+        }.isInstanceOf(NotSerializableException::class.java).hasMessageContaining(
+                "Defined setter for parameter a takes parameter of type class java.lang.String " +
+                        "yet underlying type is int ")
     }
 
     @Test
@@ -127,7 +193,6 @@ class PrivatePropertyTests {
         // Inner and Outer
         assertEquals(2, serializersByDescriptor.size)
 
-        val schemaDescriptor = output.schema.types.first().descriptor.name
         val c2 = DeserializationInput(factory).deserialize(output.obj)
 
         assertEquals(c1, c2)
