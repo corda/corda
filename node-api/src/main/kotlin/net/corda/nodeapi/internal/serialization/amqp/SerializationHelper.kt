@@ -98,7 +98,8 @@ data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter
 }
 
 object PropertyDescriptorsRegex {
-    val re = Regex("(?<type>get|set|is)(?<var>[A-Z].*)")
+    // match an uppercase letter that also has a corresponding lower case equivalent
+    val re = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
 }
 
 /**
