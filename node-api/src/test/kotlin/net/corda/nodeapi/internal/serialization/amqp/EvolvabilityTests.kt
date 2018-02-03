@@ -485,7 +485,7 @@ class EvolvabilityTests {
     // the resulting file and add to the repo, changing the filename as appropriate
     //
     @Test
-    fun readbrokenNetworkparameter(){
+    fun readBrokenNetworkParameters(){
         val sf = testDefaultFactory()
         sf.register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(sf))
         sf.register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
@@ -512,11 +512,11 @@ class EvolvabilityTests {
     }
 
     //
-    // This test created a serialized and signed set of Network Parameters to test weather we
+    // This test created a serialized and signed set of Network Parameters to test whether we
     // can still deserialize them
     //
     @Test
-    @Ignore("This test simply regenerates the test file used for ReadbrokenNetworkparameter")
+    @Ignore("This test simply regenerates the test file used for readBrokenNetworkParameters")
     fun `regenerate broken network parameters`() {
         // note: 6a6b6f256 is the sha that generates the file
         val resource = "networkParams.<corda version>.<commit sha>"

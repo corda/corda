@@ -460,6 +460,6 @@ private fun fingerprintForObject(
                         .putUnencodedChars(prop.getter.name)
                         .putUnencodedChars(if (prop.getter.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
             }
-    interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory, debugIndent+4) }
+    interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, factory, debugIndent+1) }
     return hasher
 }

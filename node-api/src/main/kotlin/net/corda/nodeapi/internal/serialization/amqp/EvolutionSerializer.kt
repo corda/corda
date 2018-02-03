@@ -182,9 +182,11 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {
-                    // Due to fixes (historic but also potentially future) in out fingerprinter if we can alter
-                    // the fingerprint of a generic collection, however, we don't want to evolve that at all
-                    // so just associated the serializer object with both old and new fingerprint
+                    // The fingerprint of a generic collection can be changed through bug fixes to the
+                    // fingerprinting function making it appear as if the class has altered whereas it hasn't.
+                    // Given we don't support the evolution of these generic containers, if it appears
+                    // one has been changed, simply return the original serializer and associate it with
+                    // both the new and old fingerprint
                     if (newSerializer is CollectionSerializer || newSerializer is MapSerializer) {
                         newSerializer
                     } else {
