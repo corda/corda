@@ -102,12 +102,18 @@ abstract class PropertyAccessor(
 class PropertyAccessorGetterSetter(
         initialPosition: Int,
         getter: PropertySerializer,
-        private val setter: Method?) : PropertyAccessor(initialPosition, getter) {
+        private val setter: Method) : PropertyAccessor(initialPosition, getter) {
+    init {
+        /**
+         * Play nicely with Java interop, public methods aren't marked as accessible
+         */
+        setter.isAccessible = true
+    }
     /**
      * Invokes the setter on the underlying object passing in the serialized value.
      */
     override fun set(instance: Any, obj: Any?) {
-        setter?.invoke(instance, *listOf(obj).toTypedArray())
+        setter.invoke(instance, *listOf(obj).toTypedArray())
     }
 }
 

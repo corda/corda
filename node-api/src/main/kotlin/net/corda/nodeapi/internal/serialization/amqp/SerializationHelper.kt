@@ -17,6 +17,7 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
+import kotlin.reflect.jvm.kotlinFunction
 
 /**
  * Annotation indicating a constructor to be used to reconstruct instances of a class during deserialization.
@@ -139,6 +140,8 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         // In addition, only getters that take zero parameters and setters that take a single
         // parameter will be considered
         clazz.declaredMethods?.map { func ->
+            if (!Modifier.isPublic(func.modifiers)) return@map
+
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
                 try {
                     classProperties.getValue(groups[2]!!.value.decapitalize()).apply {
@@ -176,7 +179,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
                 }
             }
         }
-        clazz = clazz?.superclass
+        clazz = clazz.superclass
     } while (clazz != null)
 
     return classProperties
