@@ -99,7 +99,12 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val parsedConfig = config.parseAsNodeConfiguration()
+        val parsedConfig = config.parseAsNodeConfiguration().also { nodeConfiguration ->
+            val errors = nodeConfiguration.validate()
+            if (errors.isNotEmpty()) {
+                throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            }
+        }
         defaultNetworkParameters.install(baseDirectory)
         val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), cordappPackages).start()
         nodes += node

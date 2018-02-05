@@ -50,6 +50,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
 
+    fun validate(): List<String>
+
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
         val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
@@ -161,6 +163,22 @@ data class NodeConfigurationImpl(
             }
             else -> settings
         }.asOptions(fallbackSslOptions)
+    }
+
+    override fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+        errors + validateRpcOptions(rpcOptions)
+        return errors
+    }
+
+    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+        val errors = mutableListOf<String>()
+        if (!options.useSsl) {
+            if (options.adminAddress == null) {
+                errors + "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+            }
+        }
+        return errors
     }
 
     override val exportJMXto: String get() = "http"

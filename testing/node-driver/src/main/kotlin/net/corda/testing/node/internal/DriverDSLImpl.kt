@@ -711,7 +711,12 @@ class DriverDSLImpl(
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
     private class NodeConfig(val typesafe: Config) {
-        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration()
+        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().also { nodeConfiguration ->
+            val errors = nodeConfiguration.validate()
+            if (errors.isNotEmpty()) {
+                throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            }
+        }
     }
 
     companion object {

@@ -90,6 +90,11 @@ open class NodeStartup(val args: Array<String>) {
             logger.error("Exception during node configuration", e)
             return false
         }
+        val errors = conf.validate()
+        if (errors.isNotEmpty()) {
+            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            return false
+        }
 
         try {
             banJavaSerialisation(conf)
