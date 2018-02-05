@@ -18,7 +18,6 @@ import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStor
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import com.r3.corda.networkmanage.hsm.signer.HsmSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
-import net.corda.core.utilities.minutes
 import org.apache.logging.log4j.LogManager
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
@@ -74,10 +73,9 @@ fun run(parameters: Parameters) {
         val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
             val signer = HsmCsrSigner(
                     csrStorage,
-                    csrCertificateName,
+                    loadRootKeyStore(),
                     csrCertCrlDistPoint,
                     csrCertCrlIssuer,
-                    rootCertificateName,
                     validDays,
                     Authenticator(
                             authMode,
@@ -85,8 +83,7 @@ fun run(parameters: Parameters) {
                             authKeyFilePath,
                             authKeyFilePassword,
                             signAuthThreshold,
-                            provider = createProvider(doormanKeyGroup),
-                            rootProvider = createProvider(rootKeyGroup)))
+                            provider = createProvider(doormanKeyGroup)))
             signer.sign(it)
         }
         Menu().withExceptionHandler(::processError).addItem("1", "Sign all approved and unsigned CSRs", {

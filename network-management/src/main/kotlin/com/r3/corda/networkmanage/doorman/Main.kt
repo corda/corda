@@ -5,9 +5,9 @@ import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParameters
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.time.Instant
@@ -24,7 +24,7 @@ private fun processKeyStore(parameters: NetworkManagementServerParameters): Pair
     val keyStorePassword = parameters.keystorePassword ?: readPassword("Key store password: ")
     val privateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("Private key password: ")
     val keyStore = X509KeyStore.fromFile(parameters.keystorePath, keyStorePassword)
-    val csrCertPathAndKey = keyStore.getCertPathAndKey(DEFAULT_CSR_CERTIFICATE_NAME, privateKeyPassword)
+    val csrCertPathAndKey = keyStore.getCertPathAndKey(X509Utilities.CORDA_INTERMEDIATE_CA, privateKeyPassword)
     val networkMapSigner = LocalSigner(keyStore.getCertificateAndKeyPair(CORDA_NETWORK_MAP, privateKeyPassword))
     return Pair(csrCertPathAndKey, networkMapSigner)
 }

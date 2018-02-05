@@ -16,18 +16,23 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name.Companion.parse
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.createCertificateSigningRequest
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class HsmSigningServiceTest : HsmBaseTest() {
+
+    @Before
+    fun setUp() {
+        loadOrCreateKeyStore(rootKeyStoreFile, ROOT_KEYSTORE_PASSWORD)
+    }
 
     @Test
     fun `HSM signing service can sign CSR data`() {
@@ -56,16 +61,15 @@ class HsmSigningServiceTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput()
 
         // given HSM CSR signer
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
         val signer = HsmCsrSigner(
                 mock(),
-                CORDA_INTERMEDIATE_CA,
+                hsmSigningServiceConfig.loadRootKeyStore(),
                 "",
                 null,
-                CORDA_ROOT_CA,
                 3650,
                 Authenticator(
                         provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.doormanKeyGroup),
-                        rootProvider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.rootKeyGroup),
                         inputReader = userInput)
         )
 
@@ -114,6 +118,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput()
 
         // given HSM network map signer
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
         val hsmDataSigner = HsmSigner(Authenticator(
                 provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.networkMapKeyGroup),
                 inputReader = userInput))

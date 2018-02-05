@@ -17,18 +17,16 @@ class Authenticator(private val mode: AuthMode = AuthMode.PASSWORD,
                     private val authKeyFilePass: String? = null,
                     private val authStrengthThreshold: Int = 2,
                     inputReader: InputReader = ConsoleInputReader(),
-                    private val provider: CryptoServerProvider,
-                    private val rootProvider: CryptoServerProvider? = null) : InputReader by inputReader {
+                    private val provider: CryptoServerProvider) : InputReader by inputReader {
 
     /**
      * Interactively (using console) authenticates a user against the HSM. Once authentication is successful the
      * [block] is executed.
      * @param block to be executed once the authentication process succeeds. The block should take 3 parameters:
      * 1) [CryptoServerProvider] instance of the certificate provider
-     * 2) [CryptoServerProvider] instance of the root certificate provider
      * 2) List of strings that corresponds to user names authenticated against the HSM.
      */
-    fun <T : Any> connectAndAuthenticate(block: (CryptoServerProvider, CryptoServerProvider?, List<String>) -> T): T {
+    fun <T : Any> connectAndAuthenticate(block: (CryptoServerProvider, List<String>) -> T): T {
         return try {
             val authenticated = mutableListOf<String>()
             loop@ while (true) {
@@ -49,10 +47,6 @@ class Authenticator(private val mode: AuthMode = AuthMode.PASSWORD,
                         println("Authenticating using card reader")
                         println("Accessing the certificate key group data...")
                         provider.loginSign(user, ":cs2:cyb:USB0", null)
-                        if (rootProvider != null) {
-                            println("Accessing the root certificate key group data...")
-                            rootProvider.loginSign(user, ":cs2:cyb:USB0", null)
-                        }
                     }
                     AuthMode.KEY_FILE -> {
                         println("Authenticating using preconfigured key file $authKeyFilePath")
@@ -69,10 +63,6 @@ class Authenticator(private val mode: AuthMode = AuthMode.PASSWORD,
                         }
                         println("Accessing the certificate key group data...")
                         provider.loginSign(user, authKeyFilePath.toString(), password)
-                        if (rootProvider != null) {
-                            println("Accessing the root certificate key group data...")
-                            rootProvider.loginSign(user, authKeyFilePath.toString(), password)
-                        }
                     }
                     AuthMode.PASSWORD -> {
                         println("Authenticating using password")
@@ -83,10 +73,6 @@ class Authenticator(private val mode: AuthMode = AuthMode.PASSWORD,
                         }
                         println("Accessing the certificate key group data...")
                         provider.loginPassword(user, password)
-                        if (rootProvider != null) {
-                            println("Accessing the root certificate key group data...")
-                            rootProvider.loginPassword(user, password)
-                        }
                     }
                 }
                 authenticated.add(user!!)
@@ -99,7 +85,7 @@ class Authenticator(private val mode: AuthMode = AuthMode.PASSWORD,
                 }
             }
             if (!authenticated.isEmpty()) {
-                block(provider, rootProvider, authenticated)
+                block(provider, authenticated)
             } else {
                 throw AuthenticationException()
             }
@@ -113,8 +99,8 @@ class Authenticator(private val mode: AuthMode = AuthMode.PASSWORD,
         }
     }
 }
-/*
 
+/*
  * Configuration class for [CryptoServerProvider]
  */
 data class CryptoServerProviderConfig(

@@ -8,7 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -21,15 +21,14 @@ data class Parameters(val dataSourceProperties: Properties,
                       val databaseConfig: DatabaseConfig = DatabaseConfig(),
                       val device: String = DEFAULT_DEVICE,
                       // TODO this needs cleaning up after the config-file-only support is implemented
-                      val rootKeyGroup: String,
-                      val doormanKeyGroup:String,
+                      val rootKeyStoreFile: Path,
+                      val rootKeyStorePassword: String,
+                      val doormanKeyGroup: String,
                       val networkMapKeyGroup: String,
                       val keySpecifier: Int = DEFAULT_KEY_SPECIFIER,
-                      val csrCertificateName: String = DEFAULT_CSR_CERTIFICATE_NAME,
                       val csrCertCrlDistPoint: String,
                       val csrCertCrlIssuer: String? = DEFAULT_CSR_CERT_CRL_ISSUER, // X500 name of the issuing authority e.g. "L=New York, C=US, OU=Org Unit, CN=Service Name",
                                                                                    // if null parent CA is is considered as an issuer.
-                      val rootCertificateName: String = DEFAULT_ROOT_CERTIFICATE_NAME,
                       val validDays: Int,
                       val signAuthThreshold: Int = DEFAULT_SIGN_AUTH_THRESHOLD,
                       val keyGenAuthThreshold: Int = DEFAULT_KEY_GEN_AUTH_THRESHOLD,
@@ -44,14 +43,16 @@ data class Parameters(val dataSourceProperties: Properties,
         val DEFAULT_AUTH_MODE = AuthMode.PASSWORD
         val DEFAULT_SIGN_AUTH_THRESHOLD = 2
         val DEFAULT_KEY_GEN_AUTH_THRESHOLD = 2
-        val DEFAULT_CSR_CERTIFICATE_NAME = X509Utilities.CORDA_INTERMEDIATE_CA
-        val DEFAULT_ROOT_CERTIFICATE_NAME = X509Utilities.CORDA_ROOT_CA
         val DEFAULT_KEY_SPECIFIER = 1
         val DEFAULT_KEY_FILE_PATH: Path? = null //Paths.get("/Users/michalkit/WinDev1706Eval/Shared/TEST4.key")
         val DEFAULT_KEY_FILE_PASSWORD: String? = null
         val DEFAULT_AUTO_USERNAME: String? = null
         val DEFAULT_SIGN_INTERVAL = 1.minutes.toMillis()
         val DEFAULT_CSR_CERT_CRL_ISSUER: String? = null
+    }
+
+    fun loadRootKeyStore(createNew: Boolean = false): X509KeyStore {
+        return X509KeyStore.fromFile(rootKeyStoreFile, rootKeyStorePassword, createNew)
     }
 }
 

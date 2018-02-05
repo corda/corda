@@ -7,18 +7,17 @@ import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createClientCertifi
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveCertAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.getX509Certificate
 import org.bouncycastle.asn1.x500.X500Name
 
 /**
  * Encapsulates certificate signing logic
  */
 class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
-                   private val intermediateCertAlias: String,
+                   private val rootKeyStore: X509KeyStore,
                    private val csrCertCrlDistPoint: String,
                    private val csrCertCrlIssuer: String?,
-                   private val rootCertAlias: String,
                    private val validDays: Int,
                    private val authenticator: Authenticator) : CertificateSigningRequestSigner {
 
@@ -33,11 +32,12 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
      * @param toSign list of approved certificates to be signed
      */
     override fun sign(toSign: List<ApprovedCertificateRequestData>) {
-        authenticator.connectAndAuthenticate { provider, rootProvider, signers ->
-            val rootKeyStore = getAndInitializeKeyStore(rootProvider!!)
-            val rootCert = rootKeyStore.getX509Certificate(rootCertAlias)
+        authenticator.connectAndAuthenticate { provider, signers ->
+            // This should be changed once we allow for more certificates in the chain. Preferably we should use
+            // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
+            val rootCert = rootKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
             val keyStore = getAndInitializeKeyStore(provider)
-            val doormanCertAndKey = retrieveCertAndKeyPair(intermediateCertAlias, keyStore)
+            val doormanCertAndKey = retrieveCertAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, keyStore)
             toSign.forEach {
                 val nodeCaCert = createClientCertificate(
                         CertificateType.NODE_CA,

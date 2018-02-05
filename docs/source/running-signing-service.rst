@@ -28,7 +28,9 @@ Allowed parameters are:
 :device: HSM connection string. It is of the following format 3001@127.0.0.1, where 3001 is the port number.
     Default value: "3001@127.0.0.1"
 
-:rootKeyGroup: HSM key group for the root certificate key. This parameter is vendor specific (see Utimaco docs).
+:rootKeyStoreFile: Location of the key store (trust store) containing the root certificate.
+
+:rootKeyStorePassword: Password for the key store (trust store) containing the root certificate.
 
 :networkMapKeyGroup: HSM key group for the network map certificate key. This parameter is vendor specific (see Utimaco docs).
 
@@ -38,11 +40,7 @@ Allowed parameters are:
 
 :rootPrivateKeyPassword: Private key password for the root certificate.
 
-:rootCertificateName: Root certificate name. Default value: "cordarootca".
-
 :csrPrivateKeyPassword: Private key password for the intermediate certificate used to sign certficate signing requests.
-
-:csrCertificateName: Certificate signing requests intermediate certificate name. Default value: "cordaintermediateca".
 
 :csrCertCrlDistPoint: Certificate revocation list location for the node CA certificate.
 
@@ -52,8 +50,6 @@ Allowed parameters are:
 :databaseProperties: Database properties.
 
 :dataSourceProperties: Data source properties. It should describe (or point to) the Doorman database.
-
-:networkMapCertificateName: Network map intermediate certificate name. Default value: "cordaintermediateca_nm"
 
 :networkMapPrivateKeyPassword: Private key password for the intermediate certificate used to sign the network map.
 

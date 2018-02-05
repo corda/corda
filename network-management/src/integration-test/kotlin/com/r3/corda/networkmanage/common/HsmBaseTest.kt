@@ -11,26 +11,31 @@ import com.r3.corda.networkmanage.hsm.generator.CertificateConfiguration
 import com.r3.corda.networkmanage.hsm.generator.GeneratorParameters
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.CertificateType
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Path
 import java.util.*
 
 abstract class HsmBaseTest {
     companion object {
-        val ROOT_CERT_KEY_GROUP = "DEV.CORDACONNECT.ROOT"
-        val NETWORK_MAP_CERT_KEY_GROUP = "DEV.CORDACONNECT.OPS.NETMAP"
-        val DOORMAN_CERT_KEY_GROUP = "DEV.CORDACONNECT.OPS.CERT"
-        val ROOT_CERT_SUBJECT = "CN=Corda Root CA, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
-        val NETWORK_MAP_CERT_SUBJECT = "CN=Corda Network Map, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
-        val DOORMAN_CERT_SUBJECT = "CN=Corda Doorman CA, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
+        const val ROOT_CERT_KEY_GROUP = "DEV.CORDACONNECT.ROOT"
+        const val NETWORK_MAP_CERT_KEY_GROUP = "DEV.CORDACONNECT.OPS.NETMAP"
+        const val DOORMAN_CERT_KEY_GROUP = "DEV.CORDACONNECT.OPS.CERT"
+        const val ROOT_CERT_SUBJECT = "CN=Corda Root CA, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
+        const val NETWORK_MAP_CERT_SUBJECT = "CN=Corda Network Map, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
+        const val DOORMAN_CERT_SUBJECT = "CN=Corda Doorman CA, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
         val HSM_USER_CONFIGS = listOf(UserAuthenticationParameters(
                 username = "INTEGRATION_TEST",
                 authMode = AuthMode.PASSWORD,
                 authToken = "INTEGRATION_TEST",
                 keyFilePassword = null))
+        const val ROOT_KEYSTORE_PASSWORD: String = "trustpass"
     }
+
+    protected lateinit var rootKeyStoreFile: Path
 
     @Rule
     @JvmField
@@ -43,7 +48,8 @@ abstract class HsmBaseTest {
     private lateinit var dbName: String
 
     @Before
-    fun generateRandomDbName() {
+    fun generateDbName() {
+        rootKeyStoreFile =  tempFolder.root.toPath() / "truststore.jks"
         dbName = random63BitValue().toString()
     }
 
@@ -51,8 +57,8 @@ abstract class HsmBaseTest {
         return GeneratorParameters(
                 hsmHost = hsmSimulator.host,
                 hsmPort = hsmSimulator.port,
-                trustStoreDirectory = tempFolder.root.toPath(),
-                trustStorePassword = "",
+                trustStoreDirectory = rootKeyStoreFile.parent,
+                trustStorePassword = ROOT_KEYSTORE_PASSWORD,
                 userConfigs = HSM_USER_CONFIGS,
                 certConfig = certConfig
         )
@@ -79,16 +85,19 @@ abstract class HsmBaseTest {
         ))
     }
 
-    protected val hsmSigningServiceConfig = Parameters(
-            dataSourceProperties = mock(),
-            device = "${hsmSimulator.port}@${hsmSimulator.host}",
-            keySpecifier = 1,
-            rootKeyGroup = ROOT_CERT_KEY_GROUP,
-            doormanKeyGroup = DOORMAN_CERT_KEY_GROUP,
-            networkMapKeyGroup = NETWORK_MAP_CERT_KEY_GROUP,
-            validDays = 3650,
-            csrCertCrlDistPoint = "http://test.com/revoked.crl"
-    )
+    protected fun createHsmSigningServiceConfig(): Parameters {
+        return Parameters(
+                dataSourceProperties = mock(),
+                device = "${hsmSimulator.port}@${hsmSimulator.host}",
+                keySpecifier = 1,
+                rootKeyStoreFile = rootKeyStoreFile,
+                rootKeyStorePassword = ROOT_KEYSTORE_PASSWORD,
+                doormanKeyGroup = DOORMAN_CERT_KEY_GROUP,
+                networkMapKeyGroup = NETWORK_MAP_CERT_KEY_GROUP,
+                validDays = 3650,
+                csrCertCrlDistPoint = "http://test.com/revoked.crl"
+        )
+    }
 
     protected fun givenHsmUserAuthenticationInput(): InputReader {
         val inputReader = mock<InputReader>()
@@ -97,7 +106,7 @@ abstract class HsmBaseTest {
         return inputReader
     }
 
-    protected fun makeTestDataSourceProperties(): Properties {
+    fun makeTestDataSourceProperties(): Properties {
         return makeTestDataSourceProperties(dbName)
     }
 }

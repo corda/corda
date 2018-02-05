@@ -10,6 +10,7 @@ import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -49,8 +50,11 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
 
+    private lateinit var dbName: String
+
     @Before
     fun setUp() {
+        dbName = random63BitValue().toString()
         timer = Timer()
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate

@@ -13,11 +13,12 @@ class HsmAuthenticatorTest : HsmBaseTest() {
     fun `Authenticator executes the block once user is successfully authenticated`() {
         // given
         val userInput = givenHsmUserAuthenticationInput()
-        val authenticator = Authenticator(provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.rootKeyGroup), inputReader = userInput)
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val authenticator = Authenticator(provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.doormanKeyGroup), inputReader = userInput)
         val executed = AtomicBoolean(false)
 
         // when
-        authenticator.connectAndAuthenticate { _, _, _ -> executed.set(true) }
+        authenticator.connectAndAuthenticate { _, _ -> executed.set(true) }
 
         // then
         assertTrue(executed.get())

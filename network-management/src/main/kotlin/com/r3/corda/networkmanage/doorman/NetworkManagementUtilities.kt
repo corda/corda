@@ -1,12 +1,13 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
-import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 import kotlin.system.exitProcess
@@ -103,7 +104,7 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
     }
 
     storeCertIfAbsent(
-            DEFAULT_CSR_CERTIFICATE_NAME,
+            X509Utilities.CORDA_INTERMEDIATE_CA,
             CertificateType.INTERMEDIATE_CA,
             X500Principal("CN=Corda Doorman CA,$CORDA_X500_BASE"),
             X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
