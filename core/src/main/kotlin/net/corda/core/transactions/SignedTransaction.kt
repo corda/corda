@@ -37,7 +37,7 @@ import java.util.function.Predicate
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<TransactionSignature>
 ) : TransactionWithSignatures {
-    // DOCEND 1
+    // DOCEND 1.
     constructor(ctx: CoreTransaction, sigs: List<TransactionSignature>) : this(ctx.serialize(), sigs) {
         cachedTransaction = ctx
     }
@@ -68,15 +68,15 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      */
     fun buildFilteredTransaction(filtering: Predicate<Any>) = tx.buildFilteredTransaction(filtering)
 
-    /** Helper to access the inputs of the contained transaction */
+    /** Helper to access the inputs of the contained transaction. */
     val inputs: List<StateRef> get() = transaction.inputs
-    /** Helper to access the notary of the contained transaction */
+    /** Helper to access the notary of the contained transaction. */
     val notary: Party? get() = transaction.notary
 
     override val requiredSigningKeys: Set<PublicKey> get() = tx.requiredSigningKeys
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
-        // TODO: We need a much better way of structuring this data
+        // TODO: We need a much better way of structuring this data.
         val descriptions = ArrayList<String>()
         this.tx.commands.forEach { command ->
             if (command.signers.any { it in keys })
@@ -162,18 +162,11 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         }
     }
 
-    /**
-     * TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
-     * from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
-     * objects from the TransactionState.
-     */
+    // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
+    // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
+    // objects from the TransactionState.
     private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
-        if (checkSufficientSignatures) {
-            verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
-        } else {
-            checkSignaturesAreValid()
-        }
-        val ltx = tx.toLedgerTransaction(services)
+        val ltx = toLedgerTransaction(services, checkSufficientSignatures)
         // TODO: allow non-blocking verification
         services.transactionVerifierService.verify(ltx).getOrThrow()
     }

@@ -102,7 +102,6 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
      * requirements are met, while it tests for aggregated-weight integer overflow.
      * In practice, this method should be always invoked on the root [CompositeKey], as it inherently
      * validates the child nodes (all the way till the leaves).
-     * TODO: Always call this method when deserialising [CompositeKey]s.
      */
     fun checkValidity() {
         if (validated) return
@@ -145,7 +144,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             return if (weight == other.weight)
                 node.encoded.sequence().compareTo(other.node.encoded.sequence())
             else
-                weight.compareTo(other.weight)
+                -weight.compareTo(other.weight) // Descending ordering.
         }
 
         override fun toASN1Primitive(): ASN1Primitive {
@@ -182,8 +181,6 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
     // Return true when and if the threshold requirement is met.
     private fun checkFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
-        if (keysToCheck.any { it is CompositeKey }) return false
-
         var totalWeight = 0
         children.forEach { (node, weight) ->
             if (node is CompositeKey) {
@@ -205,6 +202,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         // We validate keys only when checking if they're matched, as this checks subkeys as a result.
         // Doing these checks at deserialization/construction time would result in duplicate checks.
         checkValidity()
+        if (keysToCheck.any { it is CompositeKey }) return false
         return checkFulfilledBy(keysToCheck)
     }
 
