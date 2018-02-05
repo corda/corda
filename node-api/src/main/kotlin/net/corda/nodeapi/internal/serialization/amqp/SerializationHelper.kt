@@ -263,6 +263,7 @@ fun propertiesForSerializationFromSetters(
         factory: SerializerFactory): List<PropertyAccessor> {
     return mutableListOf<PropertyAccessorGetterSetter>().apply {
         var idx = 0
+
         properties.forEach { property ->
             val getter: Method? = property.value.preferredGetter()
             val setter: Method? = property.value.setter
@@ -276,7 +277,8 @@ fun propertiesForSerializationFromSetters(
 
             val setterType = setter.parameterTypes[0]!!
 
-            if (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType))) {
+            if ((property.value.field != null) &&
+                    (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType)))) {
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet underlying type is " +
                         "${property.value.field?.genericType!!}")
@@ -290,7 +292,7 @@ fun propertiesForSerializationFromSetters(
             }
             this += PropertyAccessorGetterSetter(
                     idx++,
-                    PropertySerializer.make(property.value.field!!.name, PublicPropertyReader(getter),
+                    PropertySerializer.make(property.key, PublicPropertyReader(getter),
                             resolveTypeVariables(getter.genericReturnType, type), factory),
                     setter)
         }
