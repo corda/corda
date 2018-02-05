@@ -86,7 +86,7 @@ class PrivatePropertyTests {
     @Test
     fun testMultiArgSetter() {
         @Suppress("UNUSED")
-        data class C(private var a: Int, val b: Int) {
+        data class C(private var a: Int, var b: Int) {
             // This will force the serialization engine to use getter / setter
             // instantiation for the object rather than construction
             @ConstructorForDeserialization
@@ -97,10 +97,9 @@ class PrivatePropertyTests {
         }
 
         val c1 = C(33, 44)
-        Assertions.assertThatThrownBy {
-            SerializationOutput(factory).serialize(c1)
-        }.isInstanceOf(NotSerializableException::class.java).hasMessageContaining(
-                "Defined setter for parameter a takes too many arguments")
+        val c2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(c1))
+        assertEquals(0, c2.getA())
+        assertEquals(44, c2.b)
     }
 
     @Test
