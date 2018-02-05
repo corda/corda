@@ -11,6 +11,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -140,7 +141,7 @@ open class NodeStartup(val args: Array<String>) {
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
-            if (!cmdlineOptions.noLocalShell && System.console() != null && conf.devMode) {
+            if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(startedNode)

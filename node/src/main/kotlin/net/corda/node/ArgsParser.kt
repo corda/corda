@@ -1,5 +1,6 @@
 package net.corda.node
 
+import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
@@ -93,7 +94,9 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean) {
     fun loadConfig(): NodeConfiguration {
-        val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
+        val config = ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(
+                mapOf("noLocalShell" to this.noLocalShell)
+        )).parseAsNodeConfiguration()
         if (isRegistration) {
             requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
             requireNotNull(networkRootTruststorePath) { "Network root trust store path must be provided in registration mode." }

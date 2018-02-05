@@ -45,6 +45,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
+    val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
@@ -68,6 +69,10 @@ data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
+
+fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
+fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
+fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
@@ -128,6 +133,7 @@ data class NodeConfigurationImpl(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
+        override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
