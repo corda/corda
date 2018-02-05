@@ -27,7 +27,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.startFlowAndReturnFuture
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -125,7 +125,7 @@ class ScheduledFlowTests {
                     countScheduledFlows++
             }
         }
-        aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary))
+        aliceNode.services.startFlowAndReturnFuture(InsertInitialStateFlow(bob, notary))
         mockNet.waitQuiescent()
         val stateFromA = aliceNode.database.transaction {
             aliceNode.services.vaultService.queryBy<ScheduledState>().states.single()
@@ -143,8 +143,8 @@ class ScheduledFlowTests {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
-            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)
-            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)).resultFuture)
+            futures.add(aliceNode.services.startFlowAndReturnFuture(InsertInitialStateFlow(bob, notary)))
+            futures.add(bobNode.services.startFlowAndReturnFuture(InsertInitialStateFlow(alice, notary)))
         }
         mockNet.waitQuiescent()
 

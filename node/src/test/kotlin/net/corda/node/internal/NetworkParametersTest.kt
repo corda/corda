@@ -67,7 +67,7 @@ class NetworkParametersTest {
         val alice = mockNet.createPartyNode(ALICE_NAME)
         assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)
         assertFails {
-            alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
+            alice.services.startFlowAndReturnFuture(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).getOrThrow()
         }
     }
 

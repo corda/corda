@@ -10,7 +10,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.startFlowAndReturnFuture
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -39,19 +39,19 @@ class FxTransactionBuildTutorialTest {
     @Test
     fun `Run ForeignExchangeFlow to completion`() {
         // Use NodeA as issuer and create some dollars
-        val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(DOLLARS(1000),
+        val flowHandle1 = nodeA.services.startFlowAndReturnFuture(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for the flow to stop and print
-        flowHandle1.resultFuture.getOrThrow()
+        flowHandle1.getOrThrow()
         printBalances()
 
         // Using NodeB as Issuer create some pounds.
-        val flowHandle2 = nodeB.services.startFlow(CashIssueFlow(POUNDS(1000),
+        val flowHandle2 = nodeB.services.startFlowAndReturnFuture(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for flow to come to an end and print
-        flowHandle2.resultFuture.getOrThrow()
+        flowHandle2.getOrThrow()
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
@@ -59,13 +59,13 @@ class FxTransactionBuildTutorialTest {
         val nodeBVaultUpdate = nodeB.services.vaultService.updates.toFuture()
 
         // Now run the actual Fx exchange
-        val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
+        val doIt = nodeA.services.startFlowAndReturnFuture(ForeignExchangeFlow("trade1",
                 POUNDS(100).issuedBy(nodeB.info.chooseIdentity().ref(0x01)),
                 DOLLARS(200).issuedBy(nodeA.info.chooseIdentity().ref(0x01)),
                 nodeB.info.chooseIdentity(),
                 weAreBaseCurrencySeller = false))
         // wait for the flow to finish and the vault updates to be done
-        doIt.resultFuture.getOrThrow()
+        doIt.getOrThrow()
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
         val balancesA = nodeA.database.transaction {

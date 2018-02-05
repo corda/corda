@@ -30,7 +30,7 @@ import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.startFlowAndReturnFuture
 import org.junit.After
 import org.junit.Test
 import java.util.*
@@ -67,7 +67,7 @@ class NodePair(private val mockNet: MockNetwork) {
 
     fun <T> communicate(clientLogic: AbstractClientLogic<T>, rebootClient: Boolean): FlowStateMachine<T> {
         server.internalRegisterFlowFactory(AbstractClientLogic::class.java, InitiatedFlowFactory.Core { ServerLogic(it, serverRunning) }, ServerLogic::class.java, false)
-        client.services.startFlow(clientLogic)
+        client.services.startFlowAndReturnFuture(clientLogic)
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
             client.dispose()

@@ -22,7 +22,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.startFlowAndReturnFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -94,7 +94,7 @@ class ValidatingNotaryServiceTests {
 
     private fun runClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
-        val future = aliceServices.startFlow(flow).resultFuture
+        val future = aliceServices.startFlowAndReturnFuture(flow)
         mockNet.runNetwork()
         return future
     }

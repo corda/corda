@@ -24,7 +24,7 @@ import net.corda.irs.flows.FixingFlow
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.startFlowAndReturnFuture
 import rx.Observable
 import java.time.LocalDate
 import java.util.*
@@ -160,7 +160,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val instigator = StartDealFlow(
                 node2.info.chooseIdentity(),
                 AutoOffer(mockNet.defaultNotaryIdentity, irs)) // TODO Pass notary as parameter to Simulation.
-        val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
+        val instigatorTxFuture = node1.services.startFlowAndReturnFuture(instigator)
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }
     }

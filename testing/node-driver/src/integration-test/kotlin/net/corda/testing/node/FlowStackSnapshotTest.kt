@@ -10,6 +10,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.startFlow
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path

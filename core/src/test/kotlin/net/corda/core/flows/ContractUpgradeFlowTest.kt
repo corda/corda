@@ -30,7 +30,7 @@ import net.corda.testing.node.internal.rpcTestUser
 import net.corda.testing.node.internal.startRpcClient
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
