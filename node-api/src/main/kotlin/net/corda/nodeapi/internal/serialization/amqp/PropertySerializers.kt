@@ -86,9 +86,7 @@ class EvolutionPropertyReader : PropertyReader() {
                 + "be reading from an object")
     }
 
-    override fun isNullable(): Boolean {
-        return true
-    }
+    override fun isNullable() = true
 }
 
 /**

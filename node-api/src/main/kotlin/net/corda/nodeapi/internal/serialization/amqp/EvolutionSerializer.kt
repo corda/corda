@@ -95,7 +95,6 @@ abstract class EvolutionSerializer(
                             "New parameter ${it.value.name} is mandatory, should be nullable for evolution to worK")
                 }
             }
-
             return EvolutionSerializerViaConstructor (new.type, factory, readersAsSerialized, constructor, constructorArgs)
         }
 
@@ -130,8 +129,7 @@ abstract class EvolutionSerializer(
             old.fields.forEach {
                 readersAsSerialized[it.name] = try {
                     OldParam(-1, PropertySerializer.make(it.name, EvolutionPropertyReader(),
-                            it.getTypeAsClass(factory.classloader)
-                            , factory))
+                            it.getTypeAsClass(factory.classloader), factory))
                 } catch (e: ClassNotFoundException) {
                     throw NotSerializableException(e.message)
                 }
@@ -208,7 +206,6 @@ class EvolutionSerializerViaSetters(
                 setters[it.first.property.name]?.set(instance, this)
             }
         }
-
         return instance
     }
 }
