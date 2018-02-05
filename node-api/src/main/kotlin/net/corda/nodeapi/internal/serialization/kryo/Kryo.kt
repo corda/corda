@@ -186,7 +186,7 @@ object InputStreamSerializer : Serializer<InputStream>() {
                 output.writeInt(numberOfBytesRead, true)
                 output.writeBytes(buffer, 0, numberOfBytesRead)
             } else {
-                output.writeInt(0)
+                output.writeInt(0, true)
                 break
             }
         }

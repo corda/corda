@@ -19,6 +19,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +29,7 @@ import java.io.InputStream
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -148,6 +150,14 @@ class KryoTests {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())
+    }
+
+    @Test
+    fun `InputStream serialisation does not write trailing garbage`() {
+        val byteArrays = listOf("123", "456").map { it.toByteArray() }
+        val streams = byteArrays.map { it.inputStream() }.serialize(factory, context).deserialize(factory, context).iterator()
+        byteArrays.forEach { assertArrayEquals(it, streams.next().readBytes()) }
+        assertFalse(streams.hasNext())
     }
 
     @Test
