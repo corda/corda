@@ -177,12 +177,24 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
     override fun getEvolutionSerializer(factory: SerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
-                                        schemas: SerializationSchemas): AMQPSerializer<Any> =
-            factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
-                when (typeNotation) {
-                    is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
-                    is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                                        schemas: SerializationSchemas): AMQPSerializer<Any> {
+        return factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
+            when (typeNotation) {
+                is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
+                is RestrictedType -> {
+                    // The fingerprint of a generic collection can be changed through bug fixes to the
+                    // fingerprinting function making it appear as if the class has altered whereas it hasn't.
+                    // Given we don't support the evolution of these generic containers, if it appears
+                    // one has been changed, simply return the original serializer and associate it with
+                    // both the new and old fingerprint
+                    if (newSerializer is CollectionSerializer || newSerializer is MapSerializer) {
+                        newSerializer
+                    } else {
+                        EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                    }
                 }
             }
+        }
+    }
 }
 
