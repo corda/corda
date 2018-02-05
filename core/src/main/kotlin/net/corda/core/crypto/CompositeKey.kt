@@ -144,7 +144,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             return if (weight == other.weight)
                 node.encoded.sequence().compareTo(other.node.encoded.sequence())
             else
-                -weight.compareTo(other.weight) // Descending ordering.
+                -weight.compareTo(other.weight) // Descending order.
         }
 
         override fun toASN1Primitive(): ASN1Primitive {

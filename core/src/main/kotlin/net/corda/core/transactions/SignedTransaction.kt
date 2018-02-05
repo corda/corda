@@ -167,7 +167,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     // objects from the TransactionState.
     private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
         val ltx = toLedgerTransaction(services, checkSufficientSignatures)
-        // TODO: allow non-blocking verification
+        // TODO: allow non-blocking verification.
         services.transactionVerifierService.verify(ltx).getOrThrow()
     }
 
