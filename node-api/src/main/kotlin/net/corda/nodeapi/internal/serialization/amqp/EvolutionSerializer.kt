@@ -125,7 +125,7 @@ abstract class EvolutionSerializer(
         fun make(old: CompositeType, new: ObjectSerializer,
                  factory: SerializerFactory): AMQPSerializer<Any> {
 
-            // The order in which the properties where serialised is important and must be preserved
+            // The order in which the properties were serialised is important and must be preserved
             val readersAsSerialized = LinkedHashMap<String, OldParam>()
             old.fields.forEach {
                 readersAsSerialized[it.name] = try {
