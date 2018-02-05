@@ -20,13 +20,28 @@ public class CordformNode implements NodeDefinition {
     protected static final String DEFAULT_HOST = "localhost";
 
     /**
-     * Name of the node.
+     * Name of the node. Node will be placed in directory based on this name - all lowercase with whitespaces removed.
+     * Actual node name inside node.conf will be as set here.
      */
     private String name;
 
     public String getName() {
         return name;
     }
+
+    /**
+     * p2p Port.
+     */
+    private int p2pPort = 10002;
+
+    public int getP2pPort() { return p2pPort; }
+
+    /**
+     * RPC Port.
+     */
+    private int rpcPort = 10003;
+
+    public int getRpcPort() { return rpcPort; }
 
     /**
      * Set the RPC users for this node. This configuration block allows arbitrary configuration.
@@ -79,6 +94,7 @@ public class CordformNode implements NodeDefinition {
      */
     public void p2pPort(int p2pPort) {
         p2pAddress(DEFAULT_HOST + ':' + p2pPort);
+        this.p2pPort = p2pPort;
     }
 
     /**
@@ -110,6 +126,7 @@ public class CordformNode implements NodeDefinition {
     @Deprecated
     public void rpcPort(int rpcPort) {
         rpcAddress(DEFAULT_HOST + ':' + rpcPort);
+        this.rpcPort = rpcPort;
     }
 
     /**
