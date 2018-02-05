@@ -8,6 +8,17 @@ public final class RpcSettings {
 
     private Config config = ConfigFactory.empty();
 
+    private int port = 10003;
+    private int adminPort = 10005;
+
+    public int getPort() {
+        return port;
+    }
+
+    public int getAdminPort() {
+        return adminPort;
+    }
+
     /**
      * RPC address for the node.
      */
@@ -16,10 +27,23 @@ public final class RpcSettings {
     }
 
     /**
+     * RPC Port for the node
+     */
+    public final void port(final int value) {
+        this.port = value;
+        setValue("address", "localhost:"+port);
+    }
+
+    /**
      * RPC admin address for the node (necessary if [useSsl] is false or unset).
      */
     public final void adminAddress(final String value) {
         setValue("adminAddress", value);
+    }
+
+    public final void adminPort(final int value) {
+        this.adminPort = value;
+        setValue("adminAddress", "localhost:"+adminPort);
     }
 
     /**
@@ -43,7 +67,7 @@ public final class RpcSettings {
         config = options.addTo("ssl", config);
     }
 
-    final Config addTo(final String key, final Config config) {
+    public final Config addTo(final String key, final Config config) {
         if (this.config.isEmpty()) {
             return config;
         }

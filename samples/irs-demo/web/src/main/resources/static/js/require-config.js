@@ -11,18 +11,14 @@ require.config({
 		maskedInput: 'bower_components/jquery.maskedinput/jquery.maskedinput'
 	},
 	shim: {
-		'angular' : {'exports' : 'angular'},
+		'angular': { 'exports': 'angular' },
 		'angularRoute': ['angular'],
 		'fcsaNumber': ['angular'],
 		'semantic': ['jquery'],
 		'maskedInput': ['jquery']
 	},
-	priority: [
-		"angular"
-	],
-	baseUrl: 'js',
+	priority: ["angular"],
+	baseUrl: 'js'
 });
 
-require(['angular', 'app'], (angular, app) => {
-
-});
+require(['angular', 'app'], function (angular, app) {});

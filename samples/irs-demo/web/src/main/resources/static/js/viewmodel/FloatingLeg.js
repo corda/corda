@@ -1,6 +1,6 @@
 'use strict';
 
-define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
+define(['utils/dayCountBasisLookup'], function (dayCountBasisLookup) {
     return {
         floatingRatePayer: "O=Bank B,L=New York,C=US",
         notional: 2500000000,
@@ -20,7 +20,7 @@ define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
         fixingsPerPayment: "Quarterly",
         indexSource: "Rates Service Provider",
         indexTenor: {
-           name: "3M"
+            name: "3M"
         }
     };
 });

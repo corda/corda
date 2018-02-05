@@ -65,6 +65,10 @@ buildscript {
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+    ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
+    ext.docker_compose_rule_version = '0.33.0'
+    ext.selenium_version = '3.8.1'
+    ext.ghostdriver_version = '2.1.0'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'

@@ -40,6 +40,8 @@ dependencies {
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     compile project(':cordform-common')
+    // Docker-compose file generation
+    compile "org.yaml:snakeyaml:$snake_yaml_version"
 }
 
 task createNodeRunner(type: Jar, dependsOn: [classes]) {

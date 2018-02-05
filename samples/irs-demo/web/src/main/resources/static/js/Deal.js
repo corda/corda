@@ -1,36 +1,32 @@
 "use strict";
 
-define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
-    let calculationModel = {
+define(['viewmodel/FixedRate'], function (fixedRateViewModel) {
+    var calculationModel = {
         expression: "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) - (floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
-        floatingLegPaymentSchedule: {
-
-        },
-        fixedLegPaymentSchedule: {
-
-        }
+        floatingLegPaymentSchedule: {},
+        fixedLegPaymentSchedule: {}
     };
 
-    let indexLookup = {
+    var indexLookup = {
         "GBP": "ICE LIBOR",
         "USD": "ICE LIBOR",
         "EUR": "EURIBOR"
     };
 
-    let calendarLookup = {
+    var calendarLookup = {
         "GBP": "London",
         "USD": "NewYork",
         "EUR": "London"
     };
 
-    let Deal = function(dealViewModel) {
-        let now = new Date();
-        let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`;
+    var Deal = function Deal(dealViewModel) {
+        var now = new Date();
+        var tradeId = "T" + now.getUTCFullYear() + "-" + now.getUTCMonth() + "-" + now.getUTCDate() + "." + now.getUTCHours() + ":" + now.getUTCMinutes() + ":" + now.getUTCSeconds() + ":" + now.getUTCMilliseconds();
 
-        this.toJson = () => {
-            let fixedLeg = {};
-            let floatingLeg = {};
-            let common = {};
+        this.toJson = function () {
+            var fixedLeg = {};
+            var floatingLeg = {};
+            var common = {};
             _.assign(fixedLeg, dealViewModel.fixedLeg);
             _.assign(floatingLeg, dealViewModel.floatingLeg);
             _.assign(common, dealViewModel.common);
@@ -65,7 +61,7 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
             delete common.effectiveDate;
             delete common.terminationDate;
 
-            let json = {
+            var json = {
                 fixedLeg: fixedLeg,
                 floatingLeg: floatingLeg,
                 calculation: calculationModel,
