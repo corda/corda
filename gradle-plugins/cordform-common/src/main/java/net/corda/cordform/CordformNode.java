@@ -20,7 +20,8 @@ public class CordformNode implements NodeDefinition {
     protected static final String DEFAULT_HOST = "localhost";
 
     /**
-     * Name of the node.
+     * Name of the node. Node will be placed in directory based on this name - all lowercase with whitespaces removed.
+     * Actual node name inside node.conf will be as set here.
      */
     private String name;
 
