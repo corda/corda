@@ -61,6 +61,7 @@ fun <A> verifierDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         jmxPolicy: JmxPolicy = JmxPolicy(),
+        maxTransactionSize: Int = Int.MAX_VALUE,
         dsl: VerifierDriverDSL.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -184,6 +185,7 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
         val securityManager = object : ActiveMQSecurityManager {
             // We don't need auth, SSL is good enough
             override fun validateUser(user: String?, password: String?) = true
+
             override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = true
         }
 

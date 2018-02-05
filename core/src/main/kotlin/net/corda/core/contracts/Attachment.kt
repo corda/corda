@@ -50,4 +50,9 @@ interface Attachment : NamedByHash {
      * Can be empty, for example non-contract attachments won't be necessarily be signed.
      */
     val signers: List<Party>
+
+    /**
+     * Attachment size in bytes.
+     */
+    val size: Int
 }

@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Introduced max transaction size limit on transactions. The max transaction size parameter is set by the compatibility zone
+  operator. The parameter is distributed to Corda nodes by network map service as part of the ``NetworkParameters``.
+
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.

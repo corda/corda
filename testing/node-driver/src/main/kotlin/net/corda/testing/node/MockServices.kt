@@ -6,6 +6,7 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.NodeProperties
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -124,6 +125,10 @@ open class MockServices private constructor(
             // compiler and then the c'tor itself.
             return Throwable().stackTrace[3].className.split('.').dropLast(1).joinToString(".")
         }
+    }
+
+    init {
+        NodeProperties.maxTransactionSize = Int.MAX_VALUE
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal,
