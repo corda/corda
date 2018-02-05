@@ -66,7 +66,6 @@ interface TransactionWithSignatures : NamedByHash {
     @Throws(SignatureException::class)
     fun verifySignaturesExcept(allowedToBeMissing: Collection<PublicKey>) {
         checkSignaturesAreValid()
-
         val needed = getMissingSigners() - allowedToBeMissing
         if (needed.isNotEmpty())
             throw SignaturesMissingException(needed.toNonEmptySet(), getKeyDescriptions(needed), id)

@@ -134,8 +134,11 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
-        checkSignaturesAreValid()
-        if (checkSufficientSignatures) verifyRequiredSignatures()
+        if (checkSufficientSignatures) {
+            verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
+        } else {
+            checkSignaturesAreValid()
+        }
         return tx.toLedgerTransaction(services)
     }
 
@@ -165,8 +168,11 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * objects from the TransactionState.
      */
     private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
-        checkSignaturesAreValid()
-        if (checkSufficientSignatures) verifyRequiredSignatures()
+        if (checkSufficientSignatures) {
+            verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
+        } else {
+            checkSignaturesAreValid()
+        }
         val ltx = tx.toLedgerTransaction(services)
         // TODO: allow non-blocking verification
         services.transactionVerifierService.verify(ltx).getOrThrow()

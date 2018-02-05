@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import net.corda.core.utilities.sequence
@@ -106,6 +105,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
      * TODO: Always call this method when deserialising [CompositeKey]s.
      */
     fun checkValidity() {
+        if (validated) return
         val visitedMap = IdentityHashMap<CompositeKey, Boolean>()
         visitedMap.put(this, true)
         cycleDetection(visitedMap) // Graph cycle testing on the root node.
@@ -180,17 +180,20 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
     override fun getFormat() = ASN1Encoding.DER
 
-    // Extracted method from isFulfilledBy.
+    // Return true when and if the threshold requirement is met.
     private fun checkFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
         if (keysToCheck.any { it is CompositeKey }) return false
-        val totalWeight = children.map { (node, weight) ->
+
+        var totalWeight = 0
+        children.forEach { (node, weight) ->
             if (node is CompositeKey) {
-                if (node.checkFulfilledBy(keysToCheck)) weight else 0
+                if (node.checkFulfilledBy(keysToCheck)) totalWeight += weight
             } else {
-                if (keysToCheck.contains(node)) weight else 0
+                if (node in keysToCheck) totalWeight += weight
             }
-        }.sum()
-        return totalWeight >= threshold
+            if (totalWeight >= threshold) return true
+        }
+        return false
     }
 
     /**
@@ -201,8 +204,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
     fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
         // We validate keys only when checking if they're matched, as this checks subkeys as a result.
         // Doing these checks at deserialization/construction time would result in duplicate checks.
-        if (!validated)
-            checkValidity() // TODO: remove when checkValidity() will be eventually invoked during/after deserialization.
+        checkValidity()
         return checkFulfilledBy(keysToCheck)
     }
 
