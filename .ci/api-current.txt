@@ -4153,7 +4153,7 @@ public final class net.corda.testing.node.NodeTestUtils extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final net.corda.testing.dsl.LedgerDSL ledger(net.corda.core.node.ServiceHub, kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public static final net.corda.testing.dsl.LedgerDSL ledger(net.corda.core.node.ServiceHub, net.corda.core.identity.Party, kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext newContext(net.corda.node.services.api.StartedNodeServices)
-  @org.jetbrains.annotations.NotNull public static final net.corda.core.internal.FlowStateMachine startFlow(net.corda.node.services.api.StartedNodeServices, net.corda.core.flows.FlowLogic)
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.concurrent.CordaFuture startFlowAndReturnFuture(net.corda.node.services.api.StartedNodeServices, net.corda.core.flows.FlowLogic)
   @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Actor testActor(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext testContext(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public static final net.corda.testing.dsl.LedgerDSL transaction(net.corda.core.node.ServiceHub, kotlin.jvm.functions.Function1)
