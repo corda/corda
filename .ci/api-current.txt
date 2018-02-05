@@ -3148,8 +3148,8 @@ public final class net.corda.core.utilities.ByteArrays extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.ByteSequence copy()
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public abstract byte[] getBytes()
-  public abstract int getOffset()
-  public abstract int getSize()
+  public final int getOffset()
+  public final int getSize()
   public int hashCode()
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.utilities.ByteSequence of(byte[])
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.utilities.ByteSequence of(byte[], int)
@@ -3272,8 +3272,6 @@ public static final class net.corda.core.utilities.NonEmptySet$iterator$1 extend
 @net.corda.core.serialization.CordaSerializable public class net.corda.core.utilities.OpaqueBytes extends net.corda.core.utilities.ByteSequence
   public <init>(byte[])
   @org.jetbrains.annotations.NotNull public final byte[] getBytes()
-  public int getOffset()
-  public int getSize()
   public static final net.corda.core.utilities.OpaqueBytes$Companion Companion
 ##
 public static final class net.corda.core.utilities.OpaqueBytes$Companion extends java.lang.Object
@@ -3281,8 +3279,6 @@ public static final class net.corda.core.utilities.OpaqueBytes$Companion extends
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.utilities.OpaqueBytesSubSequence extends net.corda.core.utilities.ByteSequence
   public <init>(byte[], int, int)
   @org.jetbrains.annotations.NotNull public byte[] getBytes()
-  public int getOffset()
-  public int getSize()
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.utilities.ProgressTracker extends java.lang.Object
   public final void endWithError(Throwable)

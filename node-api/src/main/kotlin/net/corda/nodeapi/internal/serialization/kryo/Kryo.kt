@@ -84,8 +84,8 @@ import kotlin.reflect.jvm.javaType
  */
 object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
     override fun write(kryo: Kryo, output: Output, obj: SerializedBytes<Any>) {
-        output.writeVarInt(obj.bytes.size, true)
-        output.writeBytes(obj.bytes)
+        output.writeVarInt(obj.size, true)
+        obj.writeTo(output)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<SerializedBytes<Any>>): SerializedBytes<Any> {

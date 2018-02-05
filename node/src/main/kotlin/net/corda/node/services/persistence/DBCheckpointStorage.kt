@@ -31,7 +31,7 @@ class DBCheckpointStorage : CheckpointStorage {
     override fun addCheckpoint(checkpoint: Checkpoint) {
         currentDBSession().save(DBCheckpoint().apply {
             checkpointId = checkpoint.id.toString()
-            this.checkpoint = checkpoint.serializedFiber.bytes
+            this.checkpoint = checkpoint.serializedFiber.bytes // XXX: Is copying the byte array necessary?
         })
     }
 

@@ -68,7 +68,7 @@ class ListsSerializationTest {
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
-            write(KryoHeaderV0_1.bytes)
+            KryoHeaderV0_1.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
             write(javaEmptyListClass.name.toAscii())

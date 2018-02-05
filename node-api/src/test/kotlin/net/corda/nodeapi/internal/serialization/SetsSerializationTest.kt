@@ -55,7 +55,7 @@ class SetsSerializationTest {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
-            write(KryoHeaderV0_1.bytes)
+            KryoHeaderV0_1.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
             write(javaEmptySetClass.name.toAscii())

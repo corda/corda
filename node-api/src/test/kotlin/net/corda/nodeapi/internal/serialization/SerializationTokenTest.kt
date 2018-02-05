@@ -98,7 +98,7 @@ class SerializationTokenTest {
         val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(this.context)))
         val stream = ByteArrayOutputStream()
         Output(stream).use {
-            it.write(KryoHeaderV0_1.bytes)
+            KryoHeaderV0_1.writeTo(it)
             kryo.writeClass(it, SingletonSerializeAsToken::class.java)
             kryo.writeObject(it, emptyList<Any>())
         }

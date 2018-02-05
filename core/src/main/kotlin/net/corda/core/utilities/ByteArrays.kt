@@ -4,44 +4,25 @@ package net.corda.core.utilities
 
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
+import java.io.OutputStream
+import java.nio.ByteBuffer
 import javax.xml.bind.DatatypeConverter
 
 /**
  * An abstraction of a byte array, with offset and size that does no copying of bytes unless asked to.
  *
  * The data of interest typically starts at position [offset] within the [bytes] and is [size] bytes long.
+ *
+ * @property offset The start position of the sequence within the byte array.
+ * @property size The number of bytes this sequence represents.
  */
 @CordaSerializable
-sealed class ByteSequence : Comparable<ByteSequence> {
-    constructor() {
-        this._bytes = COPY_BYTES
-    }
-
-    /**
-     * This constructor allows to bypass calls to [bytes] for functions in this class if the implementation
-     * of [bytes] makes a copy of the underlying [ByteArray] (as [OpaqueBytes] does for safety).  This improves
-     * performance.  It is recommended to use this constructor rather than the default constructor.
-     */
-    constructor(uncopiedBytes: ByteArray) {
-        this._bytes = uncopiedBytes
-    }
-
+sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val size: Int) : Comparable<ByteSequence> {
     /**
      * The underlying bytes.  Some implementations may choose to make a copy of the underlying [ByteArray] for
      * security reasons.  For example, [OpaqueBytes].
      */
     abstract val bytes: ByteArray
-    /**
-     * The number of bytes this sequence represents.
-     */
-    abstract val size: Int
-    /**
-     * The start position of the sequence within the byte array.
-     */
-    abstract val offset: Int
-
-    private val _bytes: ByteArray
-        get() = if (field === COPY_BYTES) bytes else field
 
     /** Returns a [ByteArrayInputStream] of the bytes */
     fun open() = ByteArrayInputStream(_bytes, offset, size)
@@ -52,6 +33,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
      * @param offset The offset within this sequence to start the new sequence.  Note: not the offset within the backing array.
      * @param size The size of the intended sub sequence.
      */
+    @Suppress("MemberVisibilityCanPrivate")
     fun subSequence(offset: Int, size: Int): ByteSequence {
         require(offset >= 0)
         require(offset + size <= this.size)
@@ -69,17 +51,24 @@ sealed class ByteSequence : Comparable<ByteSequence> {
         fun of(bytes: ByteArray, offset: Int = 0, size: Int = bytes.size): ByteSequence {
             return OpaqueBytesSubSequence(bytes, offset, size)
         }
-
-        private val COPY_BYTES: ByteArray = ByteArray(0)
     }
 
     /**
      * Take the first n bytes of this sequence as a sub-sequence.  See [subSequence] for further semantics.
      */
-    fun take(n: Int): ByteSequence {
-        require(size >= n)
-        return subSequence(0, n)
-    }
+    fun take(n: Int) = subSequence(0, n)
+
+    /** Return a [subSequence] of all but the first n bytes of this sequence. */
+    fun skip(n: Int) = subSequence(n, size - n)
+
+    /** A read-only [ByteBuffer] view of this sequence. */
+    fun asReadOnlyBuffer() = ByteBuffer.wrap(_bytes, offset, size).asReadOnlyBuffer()!!
+
+    /** Write this sequence to an [OutputStream]. */
+    fun writeTo(output: OutputStream) = output.write(_bytes, offset, size)
+
+    /** Write this sequence to a [ByteBuffer]. */
+    fun putTo(buffer: ByteBuffer) = buffer.put(_bytes, offset, size)!!
 
     /**
      * Copy this sequence, complete with new backing array.  This can be helpful to break references to potentially
@@ -141,7 +130,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
  * In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
  * functionality to Java, but it won't arrive for a few years yet!
  */
-open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes) {
+open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes, 0, bytes.size) {
     companion object {
         /**
          * Create [OpaqueBytes] from a sequence of [Byte] values.
@@ -156,8 +145,8 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes) {
 
     /**
      * The bytes are always cloned so that this object becomes immutable. This has been done
-     * to prevent tampering with entities such as [SecureHash] and [PrivacySalt], as well as
-     * preserve the integrity of our hash constants [zeroHash] and [allOnesHash].
+     * to prevent tampering with entities such as [net.corda.core.crypto.SecureHash] and [net.corda.core.contracts.PrivacySalt], as well as
+     * preserve the integrity of our hash constants [net.corda.core.crypto.SecureHash.zeroHash] and [net.corda.core.crypto.SecureHash.allOnesHash].
      *
      * Cloning like this may become a performance issue, depending on whether or not the JIT
      * compiler is ever able to optimise away the clone. In which case we may need to revisit
@@ -165,8 +154,6 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes) {
      */
     override final val bytes: ByteArray = bytes
         get() = field.clone()
-    override val size: Int = bytes.size
-    override val offset: Int = 0
 }
 
 /**
@@ -188,7 +175,7 @@ fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 /**
  * Class is public for serialization purposes
  */
-class OpaqueBytesSubSequence(override val bytes: ByteArray, override val offset: Int, override val size: Int) : ByteSequence(bytes) {
+class OpaqueBytesSubSequence(override val bytes: ByteArray, offset: Int, size: Int) : ByteSequence(bytes, offset, size) {
     init {
         require(offset >= 0 && offset < bytes.size)
         require(size >= 0 && size <= bytes.size)
