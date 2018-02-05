@@ -9,7 +9,7 @@ import net.corda.finance.issuedBy
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.core.*
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.startFlowAndReturnFuture
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -51,9 +51,9 @@ class FinalityFlowTests {
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, bob, notary)
         val stx = aliceServices.signInitialTransaction(builder)
-        val flow = aliceServices.startFlow(FinalityFlow(stx))
+        val flow = aliceServices.startFlowAndReturnFuture(FinalityFlow(stx))
         mockNet.runNetwork()
-        val notarisedTx = flow.resultFuture.getOrThrow()
+        val notarisedTx = flow.getOrThrow()
         notarisedTx.verifyRequiredSignatures()
         val transactionSeenByB = bobServices.database.transaction {
             bobServices.validatedTransactions.getTransaction(notarisedTx.id)
@@ -68,10 +68,10 @@ class FinalityFlowTests {
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, fakeIdentity, notary)
         val stx = aliceServices.signInitialTransaction(builder)
-        val flow = aliceServices.startFlow(FinalityFlow(stx))
+        val flow = aliceServices.startFlowAndReturnFuture(FinalityFlow(stx))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
-            flow.resultFuture.getOrThrow()
+            flow.getOrThrow()
         }
     }
 }

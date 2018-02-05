@@ -10,7 +10,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.driver.driver
-import net.corda.testing.node.internal.startFlow
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
@@ -291,7 +290,7 @@ class FlowStackSnapshotTest {
         val mockNet = MockNetwork(emptyList(), threadPerNode = true)
         val node = mockNet.createPartyNode()
         node.registerInitiatedFlow(DummyFlow::class.java)
-        node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).resultFuture.get()
+        node.services.startFlowAndReturnFuture(FlowStackSnapshotSerializationTestingFlow()).get()
         val thrown = try {
             // Due to the [MockNetwork] implementation, the easiest way to trigger object serialization process is at
             // the network stopping stage.
