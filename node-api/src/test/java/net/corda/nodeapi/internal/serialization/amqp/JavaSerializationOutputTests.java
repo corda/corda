@@ -4,6 +4,7 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist;
 import net.corda.core.serialization.SerializedBytes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
@@ -211,12 +212,14 @@ public class JavaSerializationOutputTests {
     }
 
     @Test
+    @Ignore
     public void testJavaConstructorAnnotations() throws NotSerializableException {
         Foo obj = new Foo("Hello World!", 123);
         serdes(obj);
     }
 
     @Test
+    @Ignore
     public void testJavaConstructorWithoutAnnotations() throws NotSerializableException {
         UnAnnotatedFoo obj = new UnAnnotatedFoo("Hello World!", 123);
         serdes(obj);

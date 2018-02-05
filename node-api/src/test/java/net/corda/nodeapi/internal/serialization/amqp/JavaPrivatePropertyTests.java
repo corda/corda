@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -118,6 +119,7 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
+    @Ignore
     public void singlePrivateIntWithBoolean() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
         EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
