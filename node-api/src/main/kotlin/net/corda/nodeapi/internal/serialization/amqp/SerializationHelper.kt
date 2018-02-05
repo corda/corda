@@ -89,12 +89,18 @@ fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbs
  * @property getter the method of a class that returns a fields value. Determined by
  * locating a function named getXyz for the property named in field as xyz.
  */
-data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter: Method?) {
+data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter: Method?, var iser: Method?) {
     override fun toString() = StringBuilder("").apply {
         appendln("Property - ${field?.name ?: "null field"}\n")
         appendln("  getter - ${getter?.name ?: "no getter"}")
-        append("  setter - ${setter?.name ?: "no setter"}")
+        appendln("  setter - ${setter?.name ?: "no setter"}")
+        appendln("  iser   - ${iser?.name ?: "no isXYZ defined"}")
     }.toString()
+
+    constructor() : this(null, null, null, null)
+    constructor(field: Field?) : this(field, null, null, null)
+
+    fun preferredGetter() : Method? = getter ?: iser
 }
 
 object PropertyDescriptorsRegex {
@@ -122,12 +128,10 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
     val classProperties = mutableMapOf<String, PropertyDescriptor>()
 
     var clazz: Class<out Any?>? = this
-    do {
-        // get the properties declared on this instance of class
-        clazz!!.declaredFields.forEach { classProperties.put(it.name, PropertyDescriptor(it, null, null)) }
+     clazz!!.declaredFields.forEach { classProperties.put(it.name, PropertyDescriptor(it)) }
 
-        // then pair them up with the declared getter and setter
-        // Note: It is possible for a class to have multiple instancess of a function where the types
+    do {
+        // Note: It is possible for a class to have multiple instances of a function where the types
         // differ. For example:
         //      interface I<out T> { val a: T }
         //      class D(override val a: String) : I<String>
@@ -138,45 +142,45 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         //
         // In addition, only getters that take zero parameters and setters that take a single
         // parameter will be considered
-        clazz.declaredMethods?.map { func ->
+        clazz!!.declaredMethods?.map { func ->
+            if (!Modifier.isPublic(func.modifiers)) return@map
+            if (func.name == "getClass") return@map
+
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
-                try {
-                    classProperties.getValue(groups[2]!!.value.decapitalize()).apply {
-                        when (groups[1]!!.value) {
-                            "set" -> {
-                                if (func.parameterCount == 1) {
-                                    if (setter == null) setter = func
-                                    else if (TypeToken.of(setter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
-                                        setter = func
-                                    }
+                // take into account those constructor properties that don't directly map to a named
+                // property which are, by default, already added to the map
+                classProperties.computeIfAbsent(groups[2]!!.value.decapitalize()) { PropertyDescriptor() }.apply {
+                    when (groups[1]!!.value) {
+                        "set" -> {
+                            if (func.parameterCount == 1) {
+                                if (setter == null) setter = func
+                                else if (TypeToken.of(setter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
+                                    setter = func
                                 }
                             }
-                            "get" -> {
-                                if (func.parameterCount == 0) {
-                                    if (getter == null) getter = func
-                                    else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
-                                        getter = func
-                                    }
+                        }
+                        "get" -> {
+                            if (func.parameterCount == 0) {
+                                if (getter == null) getter = func
+                                else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
+                                    getter = func
                                 }
                             }
-                            "is" -> {
-                                if (func.parameterCount == 0) {
-                                    val rtnType = TypeToken.of(func.genericReturnType)
-                                    if ((rtnType == TypeToken.of(Boolean::class.java))
-                                            || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
-                                        if (getter == null) getter = func
-                                    }
+                        }
+                        "is" -> {
+                            if (func.parameterCount == 0) {
+                                val rtnType = TypeToken.of(func.genericReturnType)
+                                if ((rtnType == TypeToken.of(Boolean::class.java))
+                                        || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
+                                    if (iser == null) iser = func
                                 }
                             }
                         }
                     }
-                } catch (e: NoSuchElementException) {
-                    // handles the getClass case from java.lang.Object
-                    return@apply
                 }
             }
         }
-        clazz = clazz?.superclass
+        clazz = clazz.superclass
     } while (clazz != null)
 
     return classProperties
@@ -260,7 +264,7 @@ private fun propertiesForSerializationFromSetters(
     return mutableListOf<PropertyAccessorGetterSetter>().apply {
         var idx = 0
         properties.forEach { property ->
-            val getter: Method? = property.value.getter
+            val getter: Method? = property.value.preferredGetter()
             val setter: Method? = property.value.setter
 
             if (getter == null || setter == null) return@forEach
@@ -270,13 +274,20 @@ private fun propertiesForSerializationFromSetters(
                         "takes too many arguments")
             }
 
-            val setterType = setter.parameterTypes.getOrNull(0)!!
+            val setterType = setter.parameterTypes[0]!!
+
             if (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType))) {
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet underlying type is " +
                         "${property.value.field?.genericType!!}")
             }
 
+            // make sure the setter returns the same type (within inheritance bounds) the getter accepts
+            if (!(TypeToken.of (setterType).isSupertypeOf(getter.returnType))) {
+                throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
+                        "takes parameter of type $setterType yet the defined getter returns a value of type " +
+                        "${getter.returnType}")
+            }
             this += PropertyAccessorGetterSetter(
                     idx++,
                     PropertySerializer.make(property.value.field!!.name, PublicPropertyReader(getter),
