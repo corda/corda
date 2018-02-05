@@ -253,7 +253,7 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
  * If we determine a class has a constructor that takes no parameters then check for pairs of getters / setters
  * and use those
  */
-private fun propertiesForSerializationFromSetters(
+fun propertiesForSerializationFromSetters(
         properties: Map<String, PropertyDescriptor>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> {

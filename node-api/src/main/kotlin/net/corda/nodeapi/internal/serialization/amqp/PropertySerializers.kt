@@ -14,6 +14,9 @@ abstract class PropertyReader {
     abstract fun isNullable(): Boolean
 }
 
+/**
+ * Accessor for those properties of a class that have defined getter functions.
+ */
 class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
     init {
         readMethod?.isAccessible = true
@@ -43,6 +46,10 @@ class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
     override fun isNullable(): Boolean = readMethod?.returnsNullable() ?: false
 }
 
+/**
+ * Accessor for those properties of a class that do not have defined getter functions. In which case
+ * we used reflection to remove the unreadable status from that property whilst it's accessed.
+ */
 class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader() {
     init {
         loggerFor<PropertySerializer>().warn("Create property Serializer for private property '${field.name}' not "
@@ -66,6 +73,20 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
         loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
         true
     }
+}
+
+/**
+ * Special instance of a [PropertyReader] for use only by [EvolutionSerializer]s to make
+ * it explicit that no properties are ever actually read from an object as the evolution
+ * serializer should only be accessing the already serialized form.
+ */
+class EvolutionPropertyReader : PropertyReader() {
+    override fun read(obj: Any?): Any? {
+        throw UnsupportedOperationException("It should be impossible for an evolution serializer to "
+                + "be reading from an object")
+    }
+
+    override fun isNullable() = true
 }
 
 /**
