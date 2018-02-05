@@ -7,6 +7,7 @@ import java.nio.ByteBuffer
 class Ord(private val ordinal: Int) {
     interface Bytecode {
         val ord: Ord
+        val encodedSize get() = 1
         fun writeTo(stream: OutputStream) = stream.write(ord.ordinal)
         fun putTo(buffer: ByteBuffer) = buffer.put(ord.ordinal.toByte())!!
     }

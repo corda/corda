@@ -1,11 +1,14 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
+import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
 import net.corda.nodeapi.internal.serialization.Instruction
+import net.corda.nodeapi.internal.serialization.kryo.byteArrayOutput
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
+import java.io.OutputStream
 import java.lang.reflect.Type
-import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -20,8 +23,7 @@ data class BytesAndSchemas<T : Any>(
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-open class SerializationOutput(internal val serializerFactory: SerializerFactory) {
-
+open class SerializationOutput @JvmOverloads constructor(internal val serializerFactory: SerializerFactory, private val encoding: SerializationEncoding? = null) {
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
     internal val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
@@ -68,12 +70,21 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
                 writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
             }
         }
-        val bytes = ByteArray(data.encodedSize().toInt() + 8)
-        val buf = ByteBuffer.wrap(bytes)
-        amqpMagic.putTo(buf)
-        Instruction.DATA_AND_STOP.putTo(buf)
-        data.encode(buf)
-        return SerializedBytes(bytes)
+        return SerializedBytes(byteArrayOutput {
+            var stream: OutputStream = it
+            try {
+                amqpMagic.writeTo(stream)
+                if (encoding != null) {
+                    Instruction.ENCODING.writeTo(stream)
+                    (encoding as CordaSerializationEncoding).writeTo(stream)
+                    stream = encoding.wrap(stream)
+                }
+                Instruction.DATA_AND_STOP.writeTo(stream)
+                stream.asByteBuffer(data.encodedSize().toInt(), data::encode)
+            } finally {
+                stream.close()
+            }
+        })
     }
 
     internal fun writeObject(obj: Any, data: Data) {

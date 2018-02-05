@@ -1,18 +1,23 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import com.esotericsoftware.kryo.io.ByteBufferInputStream
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
+import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
+import net.corda.nodeapi.internal.serialization.Instruction
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
+import java.io.InputStream
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.lang.reflect.WildcardType
+import java.nio.ByteBuffer
 
 data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 
@@ -47,6 +52,23 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             }
             return size + BYTES_NEEDED_TO_PEEK
         }
+
+        @Throws(NotSerializableException::class)
+        fun <T> getDataBytes(byteSequence: ByteSequence, task: (ByteBuffer) -> T): T {
+            // Check that the lead bytes match expected header
+            val amqpSequence = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
+            var stream: InputStream = ByteBufferInputStream(amqpSequence)
+            try {
+                while (true) {
+                    when (Instruction.vals.readFrom(stream)) {
+                        Instruction.ENCODING -> stream = CordaSerializationEncoding.vals.readFrom(stream).wrap(stream)
+                        Instruction.DATA_AND_STOP, Instruction.ALT_DATA_AND_STOP -> return task(stream.asByteBuffer())
+                    }
+                }
+            } finally {
+                stream.close()
+            }
+        }
     }
 
     @Throws(NotSerializableException::class)
@@ -58,12 +80,12 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
 
     @Throws(NotSerializableException::class)
     internal fun getEnvelope(byteSequence: ByteSequence): Envelope {
-        // Check that the lead bytes match expected header
-        val dataBytes = (amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")).apply { get() }
-        val data = Data.Factory.create()
-        val expectedSize = dataBytes.remaining()
-        if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")
-        return Envelope.get(data)
+        return getDataBytes(byteSequence) { dataBytes ->
+            val data = Data.Factory.create()
+            val expectedSize = dataBytes.remaining()
+            if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")
+            Envelope.get(data)
+        }
     }
 
     @Throws(NotSerializableException::class)
