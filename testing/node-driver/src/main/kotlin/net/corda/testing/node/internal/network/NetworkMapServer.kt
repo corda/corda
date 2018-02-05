@@ -91,8 +91,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
     }
 
     fun advertiseNewParameters() {
-        checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
-        networkParameters = nextNetworkParameters!!
+        networkParameters  = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
         nextNetworkParameters = null
         parametersUpdate = null
     }

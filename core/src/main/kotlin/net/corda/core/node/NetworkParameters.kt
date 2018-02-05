@@ -5,6 +5,8 @@ import net.corda.core.serialization.CordaSerializable
 import java.time.Instant
 
 /**
+ * Network parameters are a set of values that every node participating in the zone needs to agree on and use to
+ * correctly interoperate with each other.
  * @property minimumPlatformVersion Minimum version of Corda platform that is required for nodes in the network.
  * @property notaries List of well known and trusted notary identities with information on validation type.
  * @property maxMessageSize Maximum P2P message sent over the wire in bytes.

@@ -210,10 +210,10 @@ class NetworkMapUpdaterTest {
         updates.expectEvents(isStrict = false) {
             sequence(
                     expect { update: ParametersUpdateInfo ->
-                        require(update.updateDeadline == updateDeadline)
-                        require(update.description == "Test update")
-                        require(update.hash == newParameters.serialize().hash)
-                        require(update.parameters == newParameters)
+                        assert(update.updateDeadline == updateDeadline)
+                        assert(update.description == "Test update")
+                        assert(update.hash == newParameters.serialize().hash)
+                        assert(update.parameters == newParameters)
                     }
             )
         }
@@ -239,8 +239,9 @@ class NetworkMapUpdaterTest {
     }
 
     private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant = Instant.now()) {
-        networkParamsMap[nextParameters.serialize().hash] = nextParameters
-        parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, updateDeadline)
+        val nextParamsHash = nextParameters.serialize().hash
+        networkParamsMap[nextParamsHash] = nextParameters
+        parametersUpdate = ParametersUpdate(nextParamsHash, description, updateDeadline)
     }
 
     private fun createMockNetworkMapClient(): NetworkMapClient {
@@ -260,7 +261,6 @@ class NetworkMapUpdaterTest {
                 networkParamsMap[paramsHash]?.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
             }
             on { ackNetworkParametersUpdate(any()) }.then {
-                val signedHash: SignedData<SecureHash> = uncheckedCast(it.arguments[0])
                 Unit
             }
         }

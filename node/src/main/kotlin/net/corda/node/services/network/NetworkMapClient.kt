@@ -226,7 +226,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
             tryAckNetworkParametersUpdateAsync(sign(parametersHash), networkMapClient!!)
         } else {
-            throw IllegalArgumentException("Refused to accept parameters with hash: $parametersHash because network map advertises update with hash: $newParametersHash, please check newest version")
+            throw IllegalArgumentException("Refused to accept parameters with hash $parametersHash because network map advertises update with hash $newParametersHash. Please check newest version")
         }
     }
 

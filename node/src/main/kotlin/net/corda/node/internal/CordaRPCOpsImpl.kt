@@ -58,7 +58,10 @@ internal class CordaRPCOpsImpl(
         services.networkMapUpdater.acceptNewNetworkParameters(
                 parametersHash,
                 // TODO When multiple identities design will be better specified this should be signature from node operator.
-                { hash -> SignedData(hash.serialize(), services.keyManagementService.sign(hash.serialize().bytes, services.myInfo.legalIdentities[0].owningKey)) }
+                { hash ->
+                    val bytesToSign = hash.serialize()
+                    SignedData(bytesToSign, services.keyManagementService.sign(bytesToSign.bytes, services.myInfo.legalIdentities[0].owningKey))
+                }
         )
     }
 
