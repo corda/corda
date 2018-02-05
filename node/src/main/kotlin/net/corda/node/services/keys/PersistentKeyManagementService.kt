@@ -8,6 +8,7 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -37,11 +38,10 @@ class PersistentKeyManagementService(val identityService: IdentityServiceInterna
 
             @Lob
             @Column(name = "public_key")
-            var publicKey: ByteArray = ByteArray(0),
-
+            var publicKey: ByteArray = EMPTY_BYTE_ARRAY,
             @Lob
             @Column(name = "private_key")
-            var privateKey: ByteArray = ByteArray(0)
+            var privateKey: ByteArray = EMPTY_BYTE_ARRAY
     ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
             : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)

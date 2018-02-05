@@ -13,6 +13,7 @@ import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.*
@@ -34,7 +35,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
 
             @Lob
             @Column(name = "transaction_value")
-            var transaction: ByteArray = ByteArray(0)
+            var transaction: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     private companion object {
