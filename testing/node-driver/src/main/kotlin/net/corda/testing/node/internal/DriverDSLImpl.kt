@@ -91,7 +91,8 @@ class DriverDSLImpl(
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
         val networkParameters: NetworkParameters,
-        val notaryCustomOverrides: Map<String, Any?>
+        val notaryCustomOverrides: Map<String, Any?>,
+        val inMemoryDB: Boolean
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -109,6 +110,9 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
+    // While starting with inProcess mode, we need to have different names to avoid clashes
+    private var inMemoryCounter = 0
+
     interface Waitable {
         @Throws(InterruptedException::class)
         fun waitFor()
@@ -124,6 +128,18 @@ class DriverDSLImpl(
     private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$") }
 
     private val jolokiaJarPath: String by lazy { resolveJar(".*jolokia-jvm-.*-agent\\.jar$") }
+
+    private fun NodeConfig.enhanceForInMemoryDB(): NodeConfig = this.run {
+        if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
+            val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter++};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
+            corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
+            println("IM ENHANCING THE DATASOURCE URL OMG!")
+            NodeConfig(typesafe = typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)), corda = corda)
+        } else {
+            println("NO ENHANCING FOR YOU!")
+            this
+        }
+    }
 
     private fun resolveJar(jarNamePattern: String): String {
         return try {
@@ -232,7 +248,7 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
-        ))
+        )).enhanceForInMemoryDB()
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap)
     }
 
@@ -250,7 +266,7 @@ class DriverDSLImpl(
                                 "adminAddress" to portAllocation.nextHostAndPort().toString()
                         ),
                         "devMode" to false)
-        ))
+        )).enhanceForInMemoryDB()
 
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
@@ -372,7 +388,7 @@ class DriverDSLImpl(
                 configOverrides = rawConfig.toNodeOnly()
         )
         val cordaConfig = typesafe.parseAsNodeConfiguration()
-        val config = NodeConfig(rawConfig, cordaConfig)
+        val config = NodeConfig(rawConfig, cordaConfig).enhanceForInMemoryDB()
         return startNodeInternal(config, webAddress, null, "512m", localNetworkMap)
     }
 
@@ -1048,7 +1064,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     notarySpecs = defaultParameters.notarySpecs,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
-                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides
+                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
+                    inMemoryDB = defaultParameters.inMemoryDB
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1127,6 +1144,7 @@ fun <A> internalDriver(
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
+        inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1144,7 +1162,8 @@ fun <A> internalDriver(
                     jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
-                    notaryCustomOverrides = notaryCustomOverrides
+                    notaryCustomOverrides = notaryCustomOverrides,
+                    inMemoryDB = inMemoryDB
             ),
             coerce = { it },
             dsl = dsl,
