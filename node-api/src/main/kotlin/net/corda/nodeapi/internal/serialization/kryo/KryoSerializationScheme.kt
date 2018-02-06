@@ -13,13 +13,12 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.serialization.*
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.SerializationScheme
 import java.security.PublicKey
 
-// "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
-val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray(Charsets.UTF_8))
+val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0, 1))
 
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
@@ -84,10 +83,9 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        val headerSize = KryoHeaderV0_1.size
-        byteSequence.take(headerSize) == KryoHeaderV0_1 || throw KryoException("Serialized bytes header does not match expected format.")
+        val dataBytes = kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")
         return context.kryo {
-            kryoInput(byteSequence.skip(headerSize).open()) {
+            kryoInput(dataBytes.open()) {
                 if (context.objectReferencesEnabled) {
                     uncheckedCast(readClassAndObject(this))
                 } else {
@@ -100,7 +98,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         return context.kryo {
             SerializedBytes(kryoOutput {
-                KryoHeaderV0_1.writeTo(this)
+                kryoMagic.writeTo(this)
                 if (context.objectReferencesEnabled) {
                     writeClassAndObject(this, obj)
                 } else {

@@ -13,15 +13,13 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
@@ -38,16 +36,13 @@ class KryoTests {
         private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
     }
 
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
         factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        context = SerializationContextImpl(KryoHeaderV0_1,
+        context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
@@ -259,7 +254,7 @@ class KryoTests {
         }
         Tmp()
         val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(KryoHeaderV0_1,
+        val context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),

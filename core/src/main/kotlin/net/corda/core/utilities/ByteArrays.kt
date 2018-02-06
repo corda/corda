@@ -74,7 +74,10 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
      * Copy this sequence, complete with new backing array.  This can be helpful to break references to potentially
      * large backing arrays from small sub-sequences.
      */
-    fun copy(): ByteSequence = of(_bytes.copyOfRange(offset, offset + size))
+    fun copy(): ByteSequence = of(copyBytes())
+
+    /** Same as [copy] but returns just the new byte array. */
+    fun copyBytes() = _bytes.copyOfRange(offset, offset + size)
 
     /**
      * Compare byte arrays byte by byte.  Arrays that are shorter are deemed less than longer arrays if all the bytes
@@ -122,7 +125,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
         return result
     }
 
-    override fun toString(): String = "[${_bytes.copyOfRange(offset, offset + size).toHexString()}]"
+    override fun toString(): String = "[${copyBytes().toHexString()}]"
 }
 
 /**
