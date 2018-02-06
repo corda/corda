@@ -16,10 +16,11 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
+import net.corda.nodeapi.internal.serialization.Instruction
 import net.corda.nodeapi.internal.serialization.SerializationScheme
 import java.security.PublicKey
 
-val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0, 1))
+val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
 
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
@@ -84,7 +85,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        val dataBytes = kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")
+        val dataBytes = (kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")).apply { get() }
         return context.kryo {
             kryoInput(ByteBufferInputStream(dataBytes)) {
                 if (context.objectReferencesEnabled) {
@@ -100,6 +101,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         return context.kryo {
             SerializedBytes(kryoOutput {
                 kryoMagic.writeTo(this)
+                Instruction.DATA_AND_STOP.writeTo(this)
                 if (context.objectReferencesEnabled) {
                     writeClassAndObject(this, obj)
                 } else {

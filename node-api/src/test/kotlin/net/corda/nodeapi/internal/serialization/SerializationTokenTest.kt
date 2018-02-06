@@ -99,6 +99,7 @@ class SerializationTokenTest {
         val stream = ByteArrayOutputStream()
         Output(stream).use {
             kryoMagic.writeTo(it)
+            Instruction.ALT_DATA_AND_STOP.writeTo(it)
             kryo.writeClass(it, SingletonSerializeAsToken::class.java)
             kryo.writeObject(it, emptyList<Any>())
         }

@@ -59,7 +59,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     @Throws(NotSerializableException::class)
     internal fun getEnvelope(byteSequence: ByteSequence): Envelope {
         // Check that the lead bytes match expected header
-        val dataBytes = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
+        val dataBytes = (amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")).apply { get() }
         val data = Data.Factory.create()
         val expectedSize = dataBytes.remaining()
         if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")

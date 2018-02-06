@@ -56,6 +56,7 @@ class SetsSerializationTest {
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
             kryoMagic.writeTo(this)
+            Instruction.ALT_DATA_AND_STOP.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
             write(javaEmptySetClass.name.toAscii())

@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.SerializedBytes
+import net.corda.nodeapi.internal.serialization.Instruction
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -70,6 +71,7 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
         val bytes = ByteArray(data.encodedSize().toInt() + 8)
         val buf = ByteBuffer.wrap(bytes)
         amqpMagic.putTo(buf)
+        Instruction.DATA_AND_STOP.putTo(buf)
         data.encode(buf)
         return SerializedBytes(bytes)
     }

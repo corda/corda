@@ -18,7 +18,7 @@ import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterFiel
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
 const val DESCRIPTOR_DOMAIN: String = "net.corda"
-val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0, 0))
+val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0))
 
 /**
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their
