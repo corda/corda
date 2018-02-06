@@ -2,6 +2,7 @@ package net.corda.testing.services
 
 import com.google.common.hash.Hashing
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -29,6 +30,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun importAttachment(jar: InputStream): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
+/*
         require(jar !is JarInputStream)
 
         val bytes = getBytes(jar)
@@ -38,19 +40,19 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             files[sha256] = bytes
         }
         return sha256
+*/
+        TODO("not implemented")
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
         return importAttachment(jar)
     }
 
-    val files = HashMap<SecureHash, ByteArray>()
+    val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null
-        return object : AbstractAttachment({ f }) {
-            override val id = id
-        }
+        return f.first
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
@@ -81,7 +83,9 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val bytes = getBytes(jar)
 
         if (!files.containsKey(id)) {
-            files[id] = bytes
+            files[id] = Pair(ContractAttachment(object : AbstractAttachment({ bytes }) {
+                override val id = id
+            }, contractClassName), bytes)
         }
         return id
 

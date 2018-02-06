@@ -8,6 +8,7 @@ import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
@@ -87,7 +88,14 @@ class NodeAttachmentService(
             var uploader: String? = null,
 
             @Column(name = "filename", updatable = false)
-            var filename: String? = null
+            var filename: String? = null,
+
+//            @ElementCollection
+//            @CollectionTable(name="contract_class_name", joinColumns = arrayOf(
+//                    JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+//            var contractClassNames: List<ContractClassName>? = null
+            @Column(name = "contract_class_name")
+            var contractClassName: ContractClassName? = null
     ) : Serializable
 
     @VisibleForTesting
@@ -198,20 +206,27 @@ class NodeAttachmentService(
     // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
     // a problem somewhere else or this needs to be revisited.
 
-    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<ByteArray>>(
+    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<Pair<Attachment, ByteArray>>>(
             maxWeight = attachmentContentCacheSize,
             concurrencyLevel = defaultCordaCacheConcurrencyLevel,
-            weigher = object : Weigher<SecureHash, Optional<ByteArray>> {
-                override fun weigh(key: SecureHash, value: Optional<ByteArray>): Int {
-                    return key.size + if (value.isPresent) value.get().size else 0
+            weigher = object : Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> {
+                override fun weigh(key: SecureHash, value: Optional<Pair<Attachment, ByteArray>>): Int {
+                    return key.size + if (value.isPresent) value.get().second.size else 0
                 }
             },
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
     )
 
-    private fun loadAttachmentContent(id: SecureHash): ByteArray? {
-        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-        return attachment?.content
+    private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
+        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString()) ?: return null
+        val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
+            if (attachment.contractClassName != null) {
+                ContractAttachment(it, attachment.contractClassName!!)
+            } else {
+                it
+            }
+        }
+        return Pair(attachmentImpl, attachment.content)
     }
 
 
@@ -224,16 +239,7 @@ class NodeAttachmentService(
     private fun createAttachment(key: SecureHash): Attachment? {
         val content = attachmentContentCache.get(key)
         if (content.isPresent) {
-            return AttachmentImpl(
-                    key,
-                    {
-                        attachmentContentCache
-                                .get(key)
-                                .orElseThrow {
-                                    IllegalArgumentException("No attachement impl should have been created for non existent content")
-                                }
-                    },
-                    checkAttachmentsOnLoad)
+            return content.get().first
         }
         // if no attachement has been found, we don't want to cache that - it might arrive later
         attachmentContentCache.invalidate(key)
@@ -302,8 +308,7 @@ class NodeAttachmentService(
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         try {
             return importAttachment(jar)
-        }
-        catch (faee: java.nio.file.FileAlreadyExistsException) {
+        } catch (faee: java.nio.file.FileAlreadyExistsException) {
             return AttachmentId.parse(faee.message!!)
         }
     }
@@ -325,7 +330,7 @@ class NodeAttachmentService(
         if (!hasAttachment(id)) {
             checkIsAValidJAR(ByteArrayInputStream(bytes))
             val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, contractClassName = contractClassName)
             session.save(attachment)
             attachmentCount.inc()
             log.info("Stored new attachment $id")
