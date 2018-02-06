@@ -216,8 +216,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
         networkMapClient ?: throw IllegalStateException("Network parameters updates are not support without compatibility zone configured")
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them. Add persisting of newest parameters from update.
-        val (update, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: $parametersHash")
-        val newParametersHash = update.newParametersHash
+        val (_, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: $parametersHash")
+        val newParametersHash = newParams.serialize().hash // We should check that we sign the right data structure hash.
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
             newParams.serialize()
