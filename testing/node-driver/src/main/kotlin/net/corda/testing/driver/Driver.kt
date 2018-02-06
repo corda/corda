@@ -5,6 +5,7 @@ package net.corda.testing.driver
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -79,7 +80,7 @@ sealed class NodeHandle : AutoCloseable {
             override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
             override val useHTTPS: Boolean,
-            val node: StartedNode<Node>,
+            internal val node: StartedNode<Node>,
             val nodeThread: Thread,
             private val onStopCallback: () -> Unit
     ) : NodeHandle() {
@@ -91,6 +92,10 @@ sealed class NodeHandle : AutoCloseable {
             }
             onStopCallback()
         }
+
+        val database get() = node.database
+        val services get() = node.services
+        fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(initiatedFlowClass)
     }
 
     /**

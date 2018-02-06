@@ -80,7 +80,7 @@ class NodePerformanceTests {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
             a as NodeHandle.InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.node.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->
                 startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 2000L / TimeUnit.SECONDS) {
                     connection.proxy.startFlow(::EmptyFlow).returnValue.get()
@@ -98,7 +98,7 @@ class NodePerformanceTests {
                 extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
             val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.node.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.services.monitoringService.metrics)
             notary.rpcClientToNode().use("A", "A") { connection ->
                 println("ISSUING")
                 val doneFutures = (1..100).toList().parallelStream().map {

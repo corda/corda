@@ -37,14 +37,14 @@ class TraderDemoTest {
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
-            ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
+            ).map { (it.getOrThrow() as NodeHandle.InProcess) }
             nodeA.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-                val client = CordaRPCClient(it.internals.configuration.rpcOptions.address!!)
+                val client = CordaRPCClient(it.configuration.rpcOptions.address!!)
                 client.start(demoUser.username, demoUser.password).proxy
             }
             val nodeBankRpc = let {
-                val client = CordaRPCClient(bankNode.internals.configuration.rpcOptions.address!!)
+                val client = CordaRPCClient(bankNode.configuration.rpcOptions.address!!)
                 client.start(bankUser.username, bankUser.password).proxy
             }
 
@@ -56,8 +56,8 @@ class TraderDemoTest {
             val expectedBCash = clientB.cashCount + 1
             val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-            clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.chooseIdentity().name, sellerName = nodeB.info.chooseIdentity().name)
-            clientB.runSeller(buyerName = nodeA.info.chooseIdentity().name, amount = 5.DOLLARS)
+            clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.services.myInfo.chooseIdentity().name, sellerName = nodeB.services.myInfo.chooseIdentity().name)
+            clientB.runSeller(buyerName = nodeA.services.myInfo.chooseIdentity().name, amount = 5.DOLLARS)
 
             assertThat(clientA.cashCount).isGreaterThan(originalACash)
             assertThat(clientB.cashCount).isEqualTo(expectedBCash)

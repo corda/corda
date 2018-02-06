@@ -79,7 +79,7 @@ class NodeSchemaServiceTest {
     fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
         val tables = driver(startNodesInProcess = true) {
-            (defaultNotaryNode.getOrThrow() as NodeHandle.InProcess).node.database.transaction {
+            (defaultNotaryNode.getOrThrow() as NodeHandle.InProcess).database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }
         }
