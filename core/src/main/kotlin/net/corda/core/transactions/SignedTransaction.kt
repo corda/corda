@@ -37,7 +37,7 @@ import java.util.function.Predicate
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<TransactionSignature>
 ) : TransactionWithSignatures {
-    // DOCEND 1.
+    // DOCEND 1
     constructor(ctx: CoreTransaction, sigs: List<TransactionSignature>) : this(ctx.serialize(), sigs) {
         cachedTransaction = ctx
     }
