@@ -209,7 +209,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         if (newParameters != null) {
             logger.info("Downloaded new network parameters: $newParameters from the update: $update")
             newNetworkParameters = Pair(update, newParameters)
-            parametersUpdatesTrack.onNext(ParametersUpdateInfo(update.newParametersHash, newParameters.verified(), update.description, update.updateDeadline))
+            parametersUpdatesTrack.onNext(ParametersUpdateInfo(update.newParametersHash, newParameters.verifiedNetworkMapCert(networkMapClient!!.trustedRoot), update.description, update.updateDeadline))
         }
     }
 
@@ -217,7 +217,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         networkMapClient ?: throw IllegalStateException("Network parameters updates are not support without compatibility zone configured")
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them. Add persisting of newest parameters from update.
         val (_, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: $parametersHash")
-        val newParametersHash = newParams.serialize().hash // We should check that we sign the right data structure hash.
+        val newParametersHash = newParams.verifiedNetworkMapCert(networkMapClient.trustedRoot).serialize().hash // We should check that we sign the right data structure hash.
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
             newParams.serialize()

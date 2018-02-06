@@ -9,7 +9,6 @@ import com.nhaarman.mockito_kotlin.verify
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -242,6 +241,9 @@ class NetworkMapUpdaterTest {
 
     private fun createMockNetworkMapClient(): NetworkMapClient {
         return mock {
+            on { trustedRoot }.then {
+                DEV_ROOT_CA.certificate
+            }
             on { publish(any()) }.then {
                 val signedNodeInfo: SignedNodeInfo = uncheckedCast(it.arguments[0])
                 nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
