@@ -92,7 +92,7 @@ class TutorialMockNetwork {
         })
         // DOCEND 1
 
-        val initiatingReceiveFlow = nodeA.services.startFlowAndReturnFuture(FlowA(nodeB.info.legalIdentities.first()))
+        val initiatingReceiveFlow = nodeA.services.startFlow(FlowA(nodeB.info.legalIdentities.first()))
 
         mockNet.runNetwork()
 

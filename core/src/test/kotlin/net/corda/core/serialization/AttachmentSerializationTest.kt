@@ -21,7 +21,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -153,7 +153,7 @@ class AttachmentSerializationTest {
                 InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
                 ServerLogic::class.java,
                 track = false)
-        client.services.startFlowAndReturnFuture(clientLogic)
+        client.services.startFlow(clientLogic)
         mockNet.runNetwork(rounds)
     }
 

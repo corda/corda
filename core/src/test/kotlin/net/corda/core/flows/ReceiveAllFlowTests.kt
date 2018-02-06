@@ -7,7 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -50,7 +50,7 @@ class ReceiveMultipleFlowTests {
             } as FlowLogic<Unit>
         }
 
-        val flow = nodes[0].services.startFlowAndReturnFuture(initiatingFlow)
+        val flow = nodes[0].services.startFlow(initiatingFlow)
         mockNet.runNetwork()
         val receivedAnswer = flow.getOrThrow()
         assertThat(receivedAnswer).isEqualTo(answer)
@@ -62,7 +62,7 @@ class ReceiveMultipleFlowTests {
         nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
         val stringValue = "Thriller"
         nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
-        val flow = nodes[0].services.startFlowAndReturnFuture(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
+        val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
         mockNet.runNetwork()
         val result = flow.getOrThrow()
         assertThat(result).isEqualTo(doubleValue * stringValue.length)
@@ -74,7 +74,7 @@ class ReceiveMultipleFlowTests {
         nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
         val value2 = 6.0
         nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
-        val flow = nodes[0].services.startFlowAndReturnFuture(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
+        val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
         mockNet.runNetwork()
         val data = flow.getOrThrow()
         assertThat(data[0]).isEqualTo(value1)

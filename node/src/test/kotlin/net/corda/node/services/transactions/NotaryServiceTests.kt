@@ -20,7 +20,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -112,8 +112,8 @@ class NotaryServiceTests {
 
         val firstAttempt = NotaryFlow.Client(stx)
         val secondAttempt = NotaryFlow.Client(stx)
-        val f1 = aliceServices.startFlowAndReturnFuture(firstAttempt)
-        val f2 = aliceServices.startFlowAndReturnFuture(secondAttempt)
+        val f1 = aliceServices.startFlow(firstAttempt)
+        val f2 = aliceServices.startFlow(secondAttempt)
 
         mockNet.runNetwork()
 
@@ -148,8 +148,8 @@ class NotaryServiceTests {
 
         val firstSpend = NotaryFlow.Client(stx)
         val secondSpend = NotaryFlow.Client(stx2) // Double spend the inputState in a second transaction.
-        aliceServices.startFlowAndReturnFuture(firstSpend)
-        val future = aliceServices.startFlowAndReturnFuture(secondSpend)
+        aliceServices.startFlow(firstSpend)
+        val future = aliceServices.startFlow(secondSpend)
 
         mockNet.runNetwork()
 
@@ -161,7 +161,7 @@ class NotaryServiceTests {
 
     private fun runNotaryClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
-        val future = aliceServices.startFlowAndReturnFuture(flow)
+        val future = aliceServices.startFlow(flow)
         mockNet.runNetwork()
         return future
     }

@@ -66,4 +66,4 @@ fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company
  */
 fun StartedNodeServices.newContext() = testContext(myInfo.chooseIdentity().name)
 
-fun <T> StartedNodeServices.startFlowAndReturnFuture(logic: FlowLogic<T>): CordaFuture<T> = startFlow(logic, newContext()).getOrThrow().resultFuture
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): CordaFuture<T> = startFlow(logic, newContext()).getOrThrow().resultFuture

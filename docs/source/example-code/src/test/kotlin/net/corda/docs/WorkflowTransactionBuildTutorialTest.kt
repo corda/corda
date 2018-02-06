@@ -13,7 +13,7 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -54,7 +54,7 @@ class WorkflowTransactionBuildTutorialTest {
         // Setup a vault subscriber to wait for successful upload of the proposal to NodeB
         val nodeBVaultUpdate = bobServices.vaultService.updates.toFuture()
         // Kick of the proposal flow
-        val flow1 = aliceServices.startFlowAndReturnFuture(SubmitTradeApprovalFlow("1234", bob))
+        val flow1 = aliceServices.startFlow(SubmitTradeApprovalFlow("1234", bob))
         // Wait for the flow to finish
         val proposalRef = flow1.getOrThrow()
         val proposalLinearId = proposalRef.state.data.linearId
@@ -78,7 +78,7 @@ class WorkflowTransactionBuildTutorialTest {
         val nodeAVaultUpdate = aliceServices.vaultService.updates.toFuture()
         val secondNodeBVaultUpdate = bobServices.vaultService.updates.toFuture()
         // Run the manual completion flow from NodeB
-        val flow2 = bobServices.startFlowAndReturnFuture(SubmitCompletionFlow(latestFromB.ref, WorkflowState.APPROVED))
+        val flow2 = bobServices.startFlow(SubmitCompletionFlow(latestFromB.ref, WorkflowState.APPROVED))
         // wait for the flow to end
         val completedRef = flow2.getOrThrow()
         // wait for the vault updates to stabilise

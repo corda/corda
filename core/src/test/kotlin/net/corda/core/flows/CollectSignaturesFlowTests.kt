@@ -17,7 +17,7 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -113,7 +113,7 @@ class CollectSignaturesFlowTests {
         val magicNumber = 1337
         val parties = listOf(alice, bConfidentialIdentity.party, charlie)
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
-        val flow = aliceNode.services.startFlowAndReturnFuture(TestFlow.Initiator(state, notary))
+        val flow = aliceNode.services.startFlow(TestFlow.Initiator(state, notary))
         mockNet.runNetwork()
         val result = flow.getOrThrow()
         result.verifyRequiredSignatures()
@@ -125,7 +125,7 @@ class CollectSignaturesFlowTests {
     fun `no need to collect any signatures`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.ref(1))
         val ptx = aliceNode.services.signInitialTransaction(onePartyDummyContract)
-        val flow = aliceNode.services.startFlowAndReturnFuture(CollectSignaturesFlow(ptx, emptySet()))
+        val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
         val result = flow.getOrThrow()
         result.verifyRequiredSignatures()
@@ -138,7 +138,7 @@ class CollectSignaturesFlowTests {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.ref(1))
         val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), miniCorp)
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
-        val flow = aliceNode.services.startFlowAndReturnFuture(CollectSignaturesFlow(ptx, emptySet()))
+        val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {
             flow.getOrThrow()
@@ -153,7 +153,7 @@ class CollectSignaturesFlowTests {
                 bob.ref(3))
         val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
         val signedByBoth = bobNode.services.addSignature(signedByA)
-        val flow = aliceNode.services.startFlowAndReturnFuture(CollectSignaturesFlow(signedByBoth, emptySet()))
+        val flow = aliceNode.services.startFlow(CollectSignaturesFlow(signedByBoth, emptySet()))
         mockNet.runNetwork()
         val result = flow.getOrThrow()
         println(result.tx)

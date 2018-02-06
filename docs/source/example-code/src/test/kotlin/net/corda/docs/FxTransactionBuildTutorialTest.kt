@@ -10,7 +10,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -39,7 +39,7 @@ class FxTransactionBuildTutorialTest {
     @Test
     fun `Run ForeignExchangeFlow to completion`() {
         // Use NodeA as issuer and create some dollars
-        val flowHandle1 = nodeA.services.startFlowAndReturnFuture(CashIssueFlow(DOLLARS(1000),
+        val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for the flow to stop and print
@@ -47,7 +47,7 @@ class FxTransactionBuildTutorialTest {
         printBalances()
 
         // Using NodeB as Issuer create some pounds.
-        val flowHandle2 = nodeB.services.startFlowAndReturnFuture(CashIssueFlow(POUNDS(1000),
+        val flowHandle2 = nodeB.services.startFlow(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for flow to come to an end and print
@@ -59,7 +59,7 @@ class FxTransactionBuildTutorialTest {
         val nodeBVaultUpdate = nodeB.services.vaultService.updates.toFuture()
 
         // Now run the actual Fx exchange
-        val doIt = nodeA.services.startFlowAndReturnFuture(ForeignExchangeFlow("trade1",
+        val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
                 POUNDS(100).issuedBy(nodeB.info.chooseIdentity().ref(0x01)),
                 DOLLARS(200).issuedBy(nodeA.info.chooseIdentity().ref(0x01)),
                 nodeB.info.chooseIdentity(),

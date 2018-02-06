@@ -19,7 +19,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -43,7 +43,7 @@ class RaftNotaryServiceTests {
                     .addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
             val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
-            val firstSpend = bankA.services.startFlowAndReturnFuture(NotaryFlow.Client(firstSpendTx))
+            val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
             firstSpend.getOrThrow()
 
             val secondSpendBuilder = TransactionBuilder(defaultNotaryIdentity).withItems(inputState).run {
@@ -53,7 +53,7 @@ class RaftNotaryServiceTests {
                 this
             }
             val secondSpendTx = bankA.services.signInitialTransaction(secondSpendBuilder)
-            val secondSpend = bankA.services.startFlowAndReturnFuture(NotaryFlow.Client(secondSpendTx))
+            val secondSpend = bankA.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
             val ex = assertFailsWith(NotaryException::class) { secondSpend.getOrThrow() }
             val error = ex.error as NotaryError.Conflict

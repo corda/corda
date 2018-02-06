@@ -10,7 +10,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlowAndReturnFuture
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -56,7 +56,7 @@ class CustomVaultQueryTest {
 
     private fun issueCashForCurrency(amountToIssue: Amount<Currency>) {
         // Use NodeA as issuer and create some dollars
-        val flowHandle1 = nodeA.services.startFlowAndReturnFuture(CashIssueFlow(amountToIssue,
+        val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(amountToIssue,
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for the flow to stop and print
@@ -64,7 +64,7 @@ class CustomVaultQueryTest {
     }
 
     private fun topUpCurrencies() {
-        val flowHandle1 = nodeA.services.startFlowAndReturnFuture(TopupIssuerFlow.TopupIssuanceRequester(
+        val flowHandle1 = nodeA.services.startFlow(TopupIssuerFlow.TopupIssuanceRequester(
                 nodeA.info.chooseIdentity(),
                 OpaqueBytes.of(0x01),
                 nodeA.info.chooseIdentity(),
