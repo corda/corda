@@ -2763,7 +2763,7 @@ public final class net.corda.core.serialization.ObjectWithCompatibleContext exte
 public final class net.corda.core.serialization.SerializationAPIKt extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final net.corda.core.serialization.SerializedBytes serialize(Object, net.corda.core.serialization.SerializationFactory, net.corda.core.serialization.SerializationContext)
 ##
-public interface net.corda.core.serialization.SerializationContext
+@net.corda.core.DoNotImplement public interface net.corda.core.serialization.SerializationContext
   @org.jetbrains.annotations.NotNull public abstract ClassLoader getDeserializationClassLoader()
   public abstract boolean getObjectReferencesEnabled()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.ByteSequence getPreferredSerializationVersion()

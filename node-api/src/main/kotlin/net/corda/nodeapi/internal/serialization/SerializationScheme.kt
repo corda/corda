@@ -23,8 +23,8 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
                                     override val objectReferencesEnabled: Boolean,
-                                    override val useCase: SerializationContext.UseCase) : SerializationContext {
-
+                                    override val useCase: SerializationContext.UseCase,
+                                    override val encoding: SerializationEncoding?) : SerializationContext {
     private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = CacheBuilder.newBuilder().weakValues().maximumSize(1024).build()
 
     /**

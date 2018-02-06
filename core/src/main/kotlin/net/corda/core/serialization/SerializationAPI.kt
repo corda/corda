@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.serialization.internal.effectiveSerializationEnv
@@ -99,14 +100,22 @@ abstract class SerializationFactory {
     }
 }
 typealias SerializationMagic = ByteSequence
+@DoNotImplement
+interface SerializationEncoding
+
 /**
  * Parameters to serialization and deserialization.
  */
+@DoNotImplement
 interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
     val preferredSerializationVersion: SerializationMagic
+    /**
+     * If non-null, apply this encoding (typically compression) when serializing.
+     */
+    val encoding: SerializationEncoding?
     /**
      * The class loader to use for deserialization.
      */

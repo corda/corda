@@ -47,7 +47,8 @@ class KryoTests {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.Storage)
+                SerializationContext.UseCase.Storage,
+                null)
     }
 
     @Test
@@ -259,7 +260,8 @@ class KryoTests {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.P2P,
+                null)
         pt.serialize(factory, context)
     }
 
