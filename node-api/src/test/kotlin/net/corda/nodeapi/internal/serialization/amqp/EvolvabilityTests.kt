@@ -538,4 +538,45 @@ class EvolvabilityTests {
         File(URI("$localPath/$resource")).writeBytes( signedAndSerialized.bytes)
     }
 
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun getterSetterEvolver1() {
+        val resource = "EvolvabilityTests.getterSetterEvolver1"
+        val sf = testDefaultFactory()
+
+        //
+        // Class as it was serialised
+        //
+        // data class C(var c: Int, var d: Int, var b: Int, var e: Int, var a: Int) {
+        //     // This will force the serialization engine to use getter / setter
+        //     // instantiation for the object rather than construction
+        //     @ConstructorForDeserialization
+        //     @Suppress("UNUSED")
+        //     constructor() : this(0, 0, 0, 0, 0)
+        // }
+        //
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(3,4,2,5,1)).bytes)
+
+        //
+        // Class as it exists now, c has been removed
+        //
+        data class C(var d: Int, var b: Int, var e: Int, var a: Int) {
+            // This will force the serialization engine to use getter / setter
+            // instantiation for the object rather than construction
+            @ConstructorForDeserialization
+            @Suppress("UNUSED")
+            constructor() : this(0, 0, 0, 0)
+        }
+
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
+
+        val sc2 = f.readBytes()
+        val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
+
+        assertEquals(1, deserializedC.a)
+        assertEquals(2, deserializedC.b)
+        assertEquals(4, deserializedC.d)
+        assertEquals(5, deserializedC.e)
+    }
 }
