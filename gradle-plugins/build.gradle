@@ -14,6 +14,7 @@ buildscript {
         jsr305_version = constants.getProperty("jsr305Version")
         kotlin_version = constants.getProperty("kotlinVersion")
         artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+        snake_yaml_version = constants.getProperty('snakeYamlVersion')
     }
 
     repositories {

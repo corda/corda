@@ -45,9 +45,12 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
+    val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
+
+    fun validate(): List<String>
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -68,6 +71,10 @@ data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
+
+fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
+fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
+fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
@@ -128,6 +135,7 @@ data class NodeConfigurationImpl(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
+        override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
@@ -155,6 +163,22 @@ data class NodeConfigurationImpl(
             }
             else -> settings
         }.asOptions(fallbackSslOptions)
+    }
+
+    override fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+        errors + validateRpcOptions(rpcOptions)
+        return errors
+    }
+
+    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+        val errors = mutableListOf<String>()
+        if (!options.useSsl) {
+            if (options.adminAddress == null) {
+                errors + "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+            }
+        }
+        return errors
     }
 
     override val exportJMXto: String get() = "http"

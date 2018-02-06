@@ -286,12 +286,8 @@ public class SetterConstructorTests {
         tm.setA(10);
         assertEquals("10", tm.getA());
 
-        TypeMismatch post = new DeserializationInput(factory1).deserialize(new SerializationOutput(factory1).serialize(tm),
-                TypeMismatch.class);
-
-        // because there is a type mismatch in the class, it won't return that info as a BEAN property and thus
-        // we won't serialise it and thus on deserialization it won't be initialized
-        Assertions.assertThatThrownBy(() -> post.getA()).isInstanceOf(NullPointerException.class);
+        Assertions.assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm)).isInstanceOf (
+                NotSerializableException.class);
     }
 
     @Test
@@ -306,11 +302,7 @@ public class SetterConstructorTests {
         tm.setA("10");
         assertEquals((Integer)10, tm.getA());
 
-        TypeMismatch2 post = new DeserializationInput(factory1).deserialize(new SerializationOutput(factory1).serialize(tm),
-                TypeMismatch2.class);
-
-        // because there is a type mismatch in the class, it won't return that info as a BEAN property and thus
-        // we won't serialise it and thus on deserialization it won't be initialized
-        assertEquals(null, post.getA());
+        Assertions.assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm)).isInstanceOf(
+                NotSerializableException.class);
     }
 }

@@ -120,16 +120,17 @@ val typeStrToType: Map<Pair<String, Boolean>, Class<out Any?>> = mapOf(
         Pair("byte", false) to Byte::class.javaObjectType
 )
 
+fun String.stripGenerics() : String = if(this.endsWith('>')) {
+    this.substring(0, this.indexOf('<'))
+} else this
+
 fun AMQPField.getTypeAsClass(classloader: ClassLoader) = typeStrToType[Pair(type, mandatory)] ?: when (type) {
     "string" -> String::class.java
     "binary" -> ByteArray::class.java
-    "*" -> if (requires.isEmpty()) Any::class.java else classloader.loadClass(requires[0])
-    else -> {
-        classloader.loadClass(
-        if (type.endsWith("?>")) {
-            type.substring(0, type.indexOf('<'))
-        } else type)
+    "*" -> if (requires.isEmpty()) Any::class.java else {
+        classloader.loadClass(requires[0].stripGenerics())
     }
+    else -> classloader.loadClass(type.stripGenerics())
 }
 
 fun AMQPField.validateType(classloader: ClassLoader) = when (type) {

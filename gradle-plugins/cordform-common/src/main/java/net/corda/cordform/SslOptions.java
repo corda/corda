@@ -43,7 +43,7 @@ public final class SslOptions {
         setValue("trustStoreFile", value);
     }
 
-    final Config addTo(final String key, final Config config) {
+    public final Config addTo(final String key, final Config config) {
         if (this.config.isEmpty()) {
             return config;
         }
