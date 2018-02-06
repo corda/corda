@@ -80,7 +80,6 @@ sealed class NodeHandle : AutoCloseable {
             override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
             override val useHTTPS: Boolean,
-            internal val node: StartedNode<Node>,
             val nodeThread: Thread,
             private val onStopCallback: () -> Unit
     ) : NodeHandle() {
@@ -92,10 +91,14 @@ sealed class NodeHandle : AutoCloseable {
             }
             onStopCallback()
         }
-
+        private lateinit var node: StartedNode<Node>
         val database get() = node.database
         val services get() = node.services
         fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(initiatedFlowClass)
+        internal fun initialise(node: StartedNode<Node>) : InProcess {
+            this.node = node
+            return this
+        }
     }
 
     /**
