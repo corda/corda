@@ -8,7 +8,7 @@ import java.lang.annotation.Inherited
  * These methods are not part of Corda's API compatibility guarantee and applications should not use them.
  */
 @Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
 @MustBeDocumented
 @Inherited
 annotation class CordaInternal

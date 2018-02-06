@@ -419,9 +419,10 @@ abstract class FlowLogic<out T> {
      * the entire flow. When inside a flow this is equivalent to [co.paralleluniverse.strands.Strand.currentStrand]. This
      * is public only because it must be accessed across module boundaries.
      */
-    @CordaInternal
     var stateMachine: FlowStateMachine<*>
+        @CordaInternal
         get() = _stateMachine ?: throw IllegalStateException("This can only be done after the flow has been started.")
+        @CordaInternal
         set(value) {
             _stateMachine = value
         }
