@@ -52,17 +52,17 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             }
             return builder.build(threshold)
         }
-        // Required for sorting [children] list.
+        // Required for sorting [children] list. To ensure a deterministic way of adding children required for equality
+        // checking, [children] list is sorted during construction. A DESC ordering in the [NodeAndWeight.weight] field
+        // will improve efficiency, because keys with bigger "weights" are the first to be checked and thus the
+        // threshold requirement might be met earlier without requiring a full [children] scan.
         // TODO: node.encoded.sequence() might be expensive, consider a faster deterministic compareTo implementation
         //      for public keys in general.
         private val descWeightComparator = compareBy<NodeAndWeight>({ -it.weight }, { it.node.encoded.sequence() })
     }
 
     /**
-     * To ensure a deterministic way of adding children required for equality checking, [children] list is sorted
-     * during construction. A DESC ordering in the [NodeAndWeight.weight] field will improve efficiency, because keys
-     * with bigger "weights" are the first to be checked and thus the threshold requirement might be met earlier without
-     * requiring a full [children] scan.
+     * Τhe order of the children may not be the same to what was provided in the constructor.
      */
     val children: List<NodeAndWeight> = children.sortedWith(descWeightComparator)
 
