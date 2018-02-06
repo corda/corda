@@ -15,7 +15,6 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -27,7 +26,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 // DOCSTART 3
-@Ignore
 class ResolveTransactionsFlowTest {
     private lateinit var mockNet: MockNetwork
     private lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
