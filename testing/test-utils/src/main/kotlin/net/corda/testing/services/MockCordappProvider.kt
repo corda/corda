@@ -7,10 +7,13 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.testing.common.internal.getContractHash
+import net.corda.testing.common.internal.testNetworkParameters
 import java.nio.file.Paths
 import java.util.*
 
-class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : CordappProviderImpl(cordappLoader, attachmentStorage) {
+class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage, networkParameters: NetworkParameters = testNetworkParameters(emptyList())) : CordappProviderImpl(cordappLoader, attachmentStorage, networkParameters) {
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
@@ -30,7 +33,8 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
         }
     }
 
-    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
+    override fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId? =
+            getContractHash(contractClassName)
 
     private fun findOrImportAttachment(data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {

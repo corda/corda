@@ -88,7 +88,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
+                resolveContractAttachment = { services.cordappProvider.getCurrentContractAttachmentID(it.contract) }
         )
     }
 
@@ -114,10 +114,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
-        val contractAttachments = findAttachmentContracts(resolvedInputs, resolveContractAttachment, resolveAttachment)
-        // Order of attachments is important since contracts may refer to indexes so only append automatic attachments
-        val attachments = (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) } + contractAttachments).distinct()
+
+        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
         return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
     }
 

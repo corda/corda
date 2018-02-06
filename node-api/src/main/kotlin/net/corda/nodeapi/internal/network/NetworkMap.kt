@@ -5,6 +5,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate
@@ -25,6 +26,7 @@ data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameter
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
  * @property modifiedTime
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
+ * @property whitelistedContractImplementations List of valid jars containing contract code
  * of parameters.
  */
 // TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
@@ -37,7 +39,8 @@ data class NetworkParameters(
         val maxMessageSize: Int,
         val maxTransactionSize: Int,
         val modifiedTime: Instant,
-        val epoch: Int
+        val epoch: Int,
+        val whitelistedContractImplementations: Map<String, List<AttachmentId>>
 ) {
     init {
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }

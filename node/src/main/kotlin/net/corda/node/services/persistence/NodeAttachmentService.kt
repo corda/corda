@@ -8,6 +8,7 @@ import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.VisibleForTesting
@@ -25,6 +26,7 @@ import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.io.*
+import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
@@ -304,6 +306,34 @@ class NodeAttachmentService(
         catch (faee: java.nio.file.FileAlreadyExistsException) {
             return AttachmentId.parse(faee.message!!)
         }
+    }
+
+    override fun importOrGetContractAttachment(contractClassName: ContractClassName, jar: InputStream): AttachmentId {
+        //TODO - TUDOR - refactor
+        require(jar !is JarInputStream)
+
+        fun _getAttachmentIdAndBytes(): Pair<AttachmentId, ByteArray> {
+            val bytes = jar.readBytes()
+            checkIsAValidJAR(ByteArrayInputStream(bytes))
+            //todo -this should come from somewhere
+            val id = SecureHash.SHA256(Hashing.sha256().hashString(contractClassName, StandardCharsets.UTF_8).asBytes())
+            return Pair(id, bytes)
+        }
+
+
+        val (id, bytes) = _getAttachmentIdAndBytes()
+        if (!hasAttachment(id)) {
+            checkIsAValidJAR(ByteArrayInputStream(bytes))
+            val session = currentDBSession()
+            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+            session.save(attachment)
+            attachmentCount.inc()
+            log.info("Stored new attachment $id")
+//        } else {
+//            throw java.nio.file.FileAlreadyExistsException(id.toString())
+        }
+        return id
+
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {

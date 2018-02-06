@@ -202,7 +202,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        retrieveNetworkParameters(identityService.trustRoot)
+        this.networkParameters = retrieveNetworkParameters(identityService.trustRoot)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
@@ -533,7 +533,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
-        val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
+        val cordappProvider = makeCordappProviderImpl(cordappLoader, attachments, networkParameters)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
                 identityService,
@@ -553,6 +553,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 services, cordappProvider, this)
         return tokenizableServices
     }
+
+    protected open fun makeCordappProviderImpl(cordappLoader: CordappLoader, attachments: NodeAttachmentService, networkParameters: NetworkParameters) = CordappProviderImpl(cordappLoader, attachments, networkParameters)
 
     protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
     private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
@@ -633,10 +635,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
-    private fun retrieveNetworkParameters(trustRoot: X509Certificate) {
+    protected open fun retrieveNetworkParameters(trustRoot: X509Certificate): NetworkParameters {
         val networkParamsFile = configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME
 
-        networkParameters = if (networkParamsFile.exists()) {
+        val networkParameters = if (networkParamsFile.exists()) {
             networkParamsFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
         } else {
             log.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
@@ -654,6 +656,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
+        return networkParameters
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {

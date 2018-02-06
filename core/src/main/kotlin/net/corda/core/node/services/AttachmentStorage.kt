@@ -2,6 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -51,6 +52,13 @@ interface AttachmentStorage {
      * @return [AttachmentId] of uploaded attachment
      */
     fun importOrGetAttachment(jar: InputStream): AttachmentId
+
+    /**
+     * Inserts or returns Attachment Id of attachment. Does not throw an exception if already uploaded.
+     * @param jar [InputStream] of Jar file
+     * @return [AttachmentId] of uploaded attachment
+     */
+    fun importOrGetContractAttachment(contractClassName: ContractClassName, jar: InputStream): AttachmentId
 
     /**
      * Searches attachment using given criteria and optional sort rules

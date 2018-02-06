@@ -20,6 +20,11 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
     override fun isSatisfiedBy(attachment: Attachment) = attachment.id == attachmentId
 }
 
+/** An [AttachmentConstraint] that verifies that the hash is in the network parameters*/
+data class WhitelistedByZoneAttachmentConstraint(val validContractImplementations: Set<SecureHash>) : AttachmentConstraint {
+    override fun isSatisfiedBy(attachment: Attachment) = validContractImplementations.contains(attachment.id)
+}
+
 /**
  * This [AttachmentConstraint] is a convenience class that will be automatically resolved to a [HashAttachmentConstraint].
  * The resolution occurs in [TransactionBuilder.toWireTransaction] and uses the [TransactionState.contract] value

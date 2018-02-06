@@ -26,5 +26,12 @@ interface CordappProvider {
      * @param contractClassName The contract to find the attachment for
      * @return An attachment ID if it exists
      */
-    fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId?
+    fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId?
+
+    /**
+     *
+     * @param contractClassName The contract to find the valid attachments for
+     * @return the set of AttachmentId defined in the network map
+     */
+    fun getValidAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>
 }

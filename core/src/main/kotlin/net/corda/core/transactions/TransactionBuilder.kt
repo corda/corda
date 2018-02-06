@@ -17,6 +17,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import kotlin.collections.HashSet
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -33,14 +34,15 @@ import java.util.*
 open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
-        protected val inputs: MutableList<StateRef> = arrayListOf(),
+        protected val inputs: MutableList<StateAndRef<*>> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt()
 ) {
-    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
+    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid
+            ?: UUID.randomUUID())
 
     /**
      * Creates a copy of the builder.
@@ -85,22 +87,36 @@ open class TransactionBuilder(
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services.cordappProvider)
 
+    private fun getContractAttachmentId(cordappProvider: CordappProvider, state: TransactionState<ContractState>) = cordappProvider.getCurrentContractAttachmentID(state.contract)
+            ?: throw MissingContractAttachments(listOf(state))
+
     internal fun toWireTransactionWithContext(cordappProvider: CordappProvider, serializationContext: SerializationContext? = null): WireTransaction {
+
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
         // allows for less boiler plate when constructing transactions since for the typical case the named contract
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
         // with an explicit [AttachmentConstraint]
         val resolvedOutputs = outputs.map { state ->
             if (state.constraint is AutomaticHashConstraint) {
-                cordappProvider.getContractAttachmentID(state.contract)?.let {
-                    state.copy(constraint = HashAttachmentConstraint(it))
-                } ?: throw MissingContractAttachments(listOf(state))
+                val values = cordappProvider.getValidAttachmentIdsFromNetworkParameters(state.contract)
+                if(values == setOf(SecureHash.zeroHash, SecureHash.allOnesHash)){
+                    state.copy(constraint = AlwaysAcceptAttachmentConstraint)
+                }else{
+                    state.copy(constraint = WhitelistedByZoneAttachmentConstraint(values))
+                }
             } else {
                 state
             }
         }
+
+        val inputAttachments = inputs.map { stateAndRef -> getContractAttachmentId(cordappProvider, stateAndRef.state) }
+        val outputAttachments = outputs.map { state -> getContractAttachmentId(cordappProvider, state) }
+
+        // create a set of unique contract attachmentIds for all input and output states
+        val contractAttachments = HashSet(inputAttachments + outputAttachments)
+
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputs, resolvedOutputs, commands, attachments, notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments, notary, window), privacySalt)
         }
     }
 
@@ -116,7 +132,7 @@ open class TransactionBuilder(
     open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
-        inputs.add(stateAndRef.ref)
+        inputs.add(stateAndRef)
         return this
     }
 
@@ -177,7 +193,7 @@ open class TransactionBuilder(
     }
 
     // Accessors that yield immutable snapshots.
-    fun inputStates(): List<StateRef> = ArrayList(inputs)
+    fun inputStates(): List<StateRef> = inputs.map { it.ref }
 
     fun attachments(): List<SecureHash> = ArrayList(attachments)
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)

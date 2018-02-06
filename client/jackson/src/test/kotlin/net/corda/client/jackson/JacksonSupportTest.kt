@@ -100,7 +100,7 @@ class JacksonSupportTest {
     @Test
     fun writeTransaction() {
         val attachmentRef = SecureHash.randomSHA256()
-        doReturn(attachmentRef).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
+        doReturn(attachmentRef).whenever(cordappProvider).getCurrentContractAttachmentID(DummyContract.PROGRAM_ID)
         fun makeDummyTx(): SignedTransaction {
             val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
                     .toWireTransaction(services)

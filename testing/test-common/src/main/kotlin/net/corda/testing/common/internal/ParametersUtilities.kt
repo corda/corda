@@ -1,7 +1,13 @@
 package net.corda.testing.common.internal
 
+import com.google.common.hash.Hashing
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.crypto.SecureHash
+import net.corda.core.node.services.AttachmentId
+import net.corda.core.utilities.hexToByteArray
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NotaryInfo
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 
 fun testNetworkParameters(
@@ -18,6 +24,10 @@ fun testNetworkParameters(
             modifiedTime = modifiedTime,
             maxMessageSize = maxMessageSize,
             maxTransactionSize = maxTransactionSize,
-            epoch = epoch
+            epoch = epoch,
+            whitelistedContractImplementations = getMockWhitelistedContractImplementations()
     )
 }
+
+fun getContractHash(contractClassName: ContractClassName) = SecureHash.SHA256(Hashing.sha256().hashString(contractClassName, StandardCharsets.UTF_8).asBytes())
+fun getMockWhitelistedContractImplementations() = emptyMap<ContractClassName, List<AttachmentId>>().withDefault { listOf(getContractHash(it)) }

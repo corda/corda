@@ -1,12 +1,14 @@
 package net.corda.demobench.model
 
 import javafx.beans.binding.IntegerExpression
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
@@ -144,7 +146,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
-                epoch = 1
+                epoch = 1,
+                whitelistedContractImplementations = emptyMap<ContractClassName, List<AttachmentId>>() // TODO -Tudor
         ))
         notaryIdentity = identity
         networkParametersCopier = parametersCopier

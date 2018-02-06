@@ -9,12 +9,13 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.network.NetworkParameters
 import java.net.URL
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage, private val networkParameters: NetworkParameters) : SingletonSerializeAsToken(), CordappProviderInternal {
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
@@ -32,7 +33,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
         throw IllegalStateException("Not in an app context")
     }
 
-    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
+    override fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
         return getCordappForClass(contractClassName)?.let(this::getCordappAttachmentId)
     }
 
@@ -50,9 +51,13 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(cordapp.jarPath)
 
     private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
-        val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it.jarPath }
-        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importOrGetAttachment(it) }}
-        return attachmentIds.zip(cordappsWithAttachments).toMap()
+        val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it to it.jarPath }.toMap()
+        val attachmentIds = cordappsWithAttachments.flatMap { (cordapp, url) ->
+            cordapp.contractClassNames.map { contract ->
+                url.openStream().use { stream -> attachmentStorage.importOrGetContractAttachment(contract, stream) }
+            }
+        }
+        return attachmentIds.zip(cordappsWithAttachments.values).toMap()
     }
 
     /**
@@ -72,4 +77,19 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
      * @return cordapp A cordapp or null if no cordapp has the given class loaded
      */
     fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
+
+    val acceptAll = mapOf("all" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
+
+    override fun getValidAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>  {
+        if (networkParameters.whitelistedContractImplementations == acceptAll) {
+            return acceptAll.get("all")!!.toSet()
+        } else {
+            return try {
+                networkParameters.whitelistedContractImplementations.getValue(contractClassName).toSet()
+            } catch (e: NoSuchElementException) {
+                throw IllegalStateException("Could not find valid attachment ids for $contractClassName")
+            }
+        }
+    }
+
 }

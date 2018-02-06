@@ -164,7 +164,8 @@ class NetworkBootstrapper {
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
-                epoch = 1
+                epoch = 1,
+                whitelistedContractImplementations = emptyMap() // TODO -Tudor
         ), overwriteFile = true)
 
         nodeDirs.forEach(copier::install)
