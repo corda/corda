@@ -12,6 +12,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.MockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -28,9 +29,9 @@ import kotlin.test.assertNull
 // DOCSTART 3
 class ResolveTransactionsFlowTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var megaCorpNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var miniCorpNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var notaryNode: MockNode
+    private lateinit var megaCorpNode: MockNode
+    private lateinit var miniCorpNode: MockNode
     private lateinit var megaCorp: Party
     private lateinit var miniCorp: Party
     private lateinit var notary: Party

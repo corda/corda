@@ -18,7 +18,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
@@ -26,12 +25,12 @@ import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.testing.core.chooseIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.MockNode
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.startFlow
 import org.junit.After
@@ -44,7 +43,7 @@ import kotlin.test.assertTrue
 class BFTNotaryServiceTests {
     private lateinit var mockNet: MockNetwork
     private lateinit var notary: Party
-    private lateinit var node: StartedNode<MockNode>
+    private lateinit var node: MockNode
 
     @Before
     fun before() {
@@ -154,7 +153,7 @@ class BFTNotaryServiceTests {
         }
     }
 
-    private fun StartedNode<*>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun MockNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.chooseIdentity().owningKey))

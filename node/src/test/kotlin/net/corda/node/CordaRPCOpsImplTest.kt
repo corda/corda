@@ -26,7 +26,6 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.SecureCordaRPCOps
-import net.corda.node.internal.StartedNode
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
@@ -38,7 +37,7 @@ import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.MockNode
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
@@ -69,7 +68,7 @@ class CordaRPCOpsImplTest {
     }
 
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var aliceNode: MockNode
     private lateinit var alice: Party
     private lateinit var notary: Party
     private lateinit var rpc: CordaRPCOps

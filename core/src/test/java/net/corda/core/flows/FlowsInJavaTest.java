@@ -6,6 +6,7 @@ import net.corda.core.identity.Party;
 import net.corda.node.internal.StartedNode;
 import net.corda.testing.core.TestConstants;
 import net.corda.testing.node.MockNetwork;
+import net.corda.testing.node.MockNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,8 +22,8 @@ import static net.corda.testing.node.NodeTestUtils.startFlow;
 
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork(emptyList());
-    private StartedNode<MockNetwork.MockNode> aliceNode;
-    private StartedNode<MockNetwork.MockNode> bobNode;
+    private MockNode aliceNode;
+    private MockNode bobNode;
     private Party bob;
 
     @Before

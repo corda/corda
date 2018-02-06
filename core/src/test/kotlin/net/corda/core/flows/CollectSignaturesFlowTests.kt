@@ -16,6 +16,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNode
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.startFlow
 import org.junit.After
@@ -30,9 +31,9 @@ class CollectSignaturesFlowTests {
     }
 
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var charlieNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var aliceNode: MockNode
+    private lateinit var bobNode: MockNode
+    private lateinit var charlieNode: MockNode
     private lateinit var alice: Party
     private lateinit var bob: Party
     private lateinit var charlie: Party

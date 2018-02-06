@@ -21,6 +21,7 @@ import net.corda.node.services.statemachine.SessionInit
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.time.format.DateTimeFormatter
@@ -107,8 +108,8 @@ class NetworkMapVisualiser : Application() {
         }
         // Fire the message bullets between nodes.
         simulation.mockNet.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
-            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
+            val senderNode: InternalMockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
+            val destNode: InternalMockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
 
             if (transferIsInteresting(msg)) {
                 viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()
@@ -116,7 +117,7 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Pulse all parties in a trade when the trade completes
-        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<MockNetwork.MockNode> ->
+        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<InternalMockNetwork.MockNode> ->
             nodes.forEach { viewModel.nodesToWidgets[it]!!.longPulseAnim.play() }
         }
 

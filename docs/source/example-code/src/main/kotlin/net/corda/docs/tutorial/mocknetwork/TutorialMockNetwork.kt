@@ -12,7 +12,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.node.*
@@ -52,8 +51,8 @@ class TutorialMockNetwork {
     }
 
     lateinit private var mockNet: MockNetwork
-    lateinit private var nodeA: StartedNode<MockNetwork.MockNode>
-    lateinit private var nodeB: StartedNode<MockNetwork.MockNode>
+    lateinit private var nodeA: MockNode
+    lateinit private var nodeB: MockNode
 
     @Rule
     @JvmField
