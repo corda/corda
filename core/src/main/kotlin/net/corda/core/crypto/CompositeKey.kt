@@ -11,7 +11,7 @@ import java.util.*
 
 /**
  * A tree data structure that enables the representation of composite public keys, which are used to represent
- * the signing requirements for multisignature scenarios such as RAFT notary services. A composite key is a list
+ * the signing requirements for multi-signature scenarios such as RAFT notary services. A composite key is a list
  * of leaf keys and their contributing weight, and each leaf can be a conventional single key or a composite key.
  * Keys contribute their weight to the total if they are matched by the signature.
  *
@@ -52,9 +52,19 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             }
             return builder.build(threshold)
         }
+        // Required for sorting [children] list.
+        // TODO: node.encoded.sequence() might be expensive, consider a faster deterministic compareTo implementation
+        //      for public keys in general.
+        private val descWeightComparator = compareBy<NodeAndWeight>({ -it.weight }, { it.node.encoded.sequence() })
     }
 
-    val children: List<NodeAndWeight> = children.sorted()
+    /**
+     * To ensure a deterministic way of adding children required for equality checking, [children] list is sorted
+     * during construction. A DESC ordering in the [NodeAndWeight.weight] field will improve efficiency, because keys
+     * with bigger "weights" are the first to be checked and thus the threshold requirement might be met earlier without
+     * requiring a full [children] scan.
+     */
+    val children: List<NodeAndWeight> = children.sortedWith(descWeightComparator)
 
     init {
         // TODO: replace with the more extensive, but slower, checkValidity() test.
@@ -142,9 +152,10 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         override fun compareTo(other: NodeAndWeight): Int {
             return if (weight == other.weight)
+                // TODO: this might be expensive, consider a faster deterministic compareTo implementation when weights are equal.
                 node.encoded.sequence().compareTo(other.node.encoded.sequence())
             else
-                -weight.compareTo(other.weight) // Descending order.
+                weight.compareTo(other.weight)
         }
 
         override fun toASN1Primitive(): ASN1Primitive {
