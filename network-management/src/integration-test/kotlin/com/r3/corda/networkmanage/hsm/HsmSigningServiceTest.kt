@@ -31,7 +31,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
 
     @Before
     fun setUp() {
-        loadOrCreateKeyStore(rootKeyStoreFile, ROOT_KEYSTORE_PASSWORD)
+        loadOrCreateKeyStore(rootKeyStoreFile, TRUSTSTORE_PASSWORD)
     }
 
     @Test

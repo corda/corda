@@ -39,7 +39,24 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
 
     private companion object {
         val DEFAULT_SERVER_ADDRESS = "corda.azurecr.io"
-        val DEFAULT_IMAGE_REPO_TAG = "corda.azurecr.io/network-management/hsm-simulator"
+        /*
+         * Currently we have following images:
+         * 1) corda.azurecr.io/network-management/hsm-simulator - having only one user configured:
+         *    - INTEGRATION_TEST (password: INTEGRATION_TEST) with the CXI_GROUP="*"
+         * 2)corda.azurecr.io/network-management/hsm-simulator-with-groups - having following users configured:
+         *    - INTEGRATION_TEST (password: INTEGRATION_TEST) with the CXI_GROUP=*
+         *    - INTEGRATION_TEST_SUPER (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT
+         *    - INTEGRATION_TEST_ROOT (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.ROOT
+         *    - INTEGRATION_TEST_OPS (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS
+         *    - INTEGRATION_TEST_SUPER_ (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.*
+         *    - INTEGRATION_TEST_ROOT_ (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.ROOT.*
+         *    - INTEGRATION_TEST_OPS_ (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.*
+         *    - INTEGRATION_TEST_OPS_CERT (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.CERT
+         *    - INTEGRATION_TEST_OPS_NETMAP (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.NETMAP
+         *    - INTEGRATION_TEST_OPS_CERT (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.CERT.*
+         *    - INTEGRATION_TEST_OPS_NETMAP (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.NETMAP.*
+         */
+        val DEFAULT_IMAGE_REPO_TAG = "corda.azurecr.io/network-management/hsm-simulator-with-groups"
         val DEFAULT_IMAGE_VERSION = "latest"
         val DEFAULT_PULL_IMAGE = true
 

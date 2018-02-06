@@ -21,18 +21,44 @@ import java.util.*
 
 abstract class HsmBaseTest {
     companion object {
-        const val ROOT_CERT_KEY_GROUP = "DEV.CORDACONNECT.ROOT"
-        const val NETWORK_MAP_CERT_KEY_GROUP = "DEV.CORDACONNECT.OPS.NETMAP"
-        const val DOORMAN_CERT_KEY_GROUP = "DEV.CORDACONNECT.OPS.CERT"
-        const val ROOT_CERT_SUBJECT = "CN=Corda Root CA, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
-        const val NETWORK_MAP_CERT_SUBJECT = "CN=Corda Network Map, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
-        const val DOORMAN_CERT_SUBJECT = "CN=Corda Doorman CA, O=R3 HoldCo LLC, OU=Corda, L=New York, C=US"
-        val HSM_USER_CONFIGS = listOf(UserAuthenticationParameters(
-                username = "INTEGRATION_TEST",
-                authMode = AuthMode.PASSWORD,
-                authToken = "INTEGRATION_TEST",
-                keyFilePassword = null))
-        const val ROOT_KEYSTORE_PASSWORD: String = "trustpass"
+        const val ROOT_CERT_KEY_GROUP = "TEST.CORDACONNECT.ROOT"
+        const val NETWORK_MAP_CERT_KEY_GROUP = "TEST.CORDACONNECT.OPS.NETMAP"
+        const val DOORMAN_CERT_KEY_GROUP = "TEST.CORDACONNECT.OPS.CERT"
+        const val ROOT_CERT_SUBJECT = "CN=Corda Root CA, O=R3 Ltd, OU=Corda, L=London, C=GB"
+        const val NETWORK_MAP_CERT_SUBJECT = "CN=Corda Network Map, O=R3 Ltd, OU=Corda, L=London, C=GB"
+        const val DOORMAN_CERT_SUBJECT = "CN=Corda Doorman CA, O=R3 Ltd, OU=Corda, L=London, C=GB"
+        const val TRUSTSTORE_PASSWORD: String = "trustpass"
+        const val HSM_USERNAME = "INTEGRATION_TEST"
+        const val HSM_PASSWORD = "INTEGRATION_TEST"
+        const val HSM_USERNAME_SUPER = "INTEGRATION_TEST_SUPER"
+        const val HSM_USERNAME_OPS = "INTEGRATION_TEST_OPS"
+        const val HSM_USERNAME_ROOT = "INTEGRATION_TEST_ROOT"
+        const val HSM_USERNAME_SUPER_ = "INTEGRATION_TEST_SUPER_"
+        const val HSM_USERNAME_OPS_ = "INTEGRATION_TEST_OPS_"
+        const val HSM_USERNAME_ROOT_ = "INTEGRATION_TEST_ROOT_"
+        const val HSM_USERNAME_OPS_CERT = "INTEGRATION_TEST_OPS_CERT"
+        const val HSM_USERNAME_OPS_NETMAP = "INTEGRATION_TEST_OPS_NETMAP"
+        const val HSM_USERNAME_OPS_CERT_ = "INTEGRATION_TEST_OPS_CERT_"
+        const val HSM_USERNAME_OPS_NETMAP_ = "INTEGRATION_TEST_OPS_NETMAP_"
+        val HSM_USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME)
+        val HSM_SUPER_USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_SUPER)
+        val HSM_ROOT_USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_ROOT)
+        val HSM_OPS_USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_OPS)
+        val HSM_SUPER__USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_SUPER_)
+        val HSM_ROOT__USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_ROOT_)
+        val HSM_OPS__USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_OPS_)
+        val HSM_OPS_CERT_USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_OPS_CERT)
+        val HSM_OPS_NETMAP_USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_OPS_NETMAP)
+        val HSM_OPS_CERT__USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_OPS_CERT_)
+        val HSM_OPS_NETMAP__USER_CONFIGS = createHsmUserConfigs(HSM_USERNAME_OPS_NETMAP_)
+
+        private fun createHsmUserConfigs(username: String): List<UserAuthenticationParameters> {
+            return listOf(UserAuthenticationParameters(
+                    username = username,
+                    authMode = AuthMode.PASSWORD,
+                    authToken = "INTEGRATION_TEST",
+                    keyFilePassword = null))
+        }
     }
 
     protected lateinit var rootKeyStoreFile: Path
@@ -53,13 +79,14 @@ abstract class HsmBaseTest {
         dbName = random63BitValue().toString()
     }
 
-    private fun createGeneratorParameters(certConfig: CertificateConfiguration): GeneratorParameters {
+    private fun createGeneratorParameters(certConfig: CertificateConfiguration,
+                                          userConfigs: List<UserAuthenticationParameters>): GeneratorParameters {
         return GeneratorParameters(
                 hsmHost = hsmSimulator.host,
                 hsmPort = hsmSimulator.port,
                 trustStoreDirectory = rootKeyStoreFile.parent,
-                trustStorePassword = ROOT_KEYSTORE_PASSWORD,
-                userConfigs = HSM_USER_CONFIGS,
+                trustStorePassword = TRUSTSTORE_PASSWORD,
+                userConfigs = userConfigs,
                 certConfig = certConfig
         )
     }
@@ -67,7 +94,8 @@ abstract class HsmBaseTest {
     protected fun createGeneratorParameters(keyGroup: String,
                                             rootKeyGroup: String?,
                                             certificateType: CertificateType,
-                                            subject: String): GeneratorParameters {
+                                            subject: String,
+                                            hsmUserConfigs: List<UserAuthenticationParameters> = HSM_USER_CONFIGS): GeneratorParameters {
         return createGeneratorParameters(CertificateConfiguration(
                 keySpecifier = 1,
                 keyGroup = keyGroup,
@@ -82,7 +110,7 @@ abstract class HsmBaseTest {
                 keyOverride = 0,
                 crlIssuer = null,
                 crlDistributionUrl = null
-        ))
+        ), hsmUserConfigs)
     }
 
     protected fun createHsmSigningServiceConfig(): Parameters {
@@ -91,7 +119,7 @@ abstract class HsmBaseTest {
                 device = "${hsmSimulator.port}@${hsmSimulator.host}",
                 keySpecifier = 1,
                 rootKeyStoreFile = rootKeyStoreFile,
-                rootKeyStorePassword = ROOT_KEYSTORE_PASSWORD,
+                rootKeyStorePassword = TRUSTSTORE_PASSWORD,
                 doormanKeyGroup = DOORMAN_CERT_KEY_GROUP,
                 networkMapKeyGroup = NETWORK_MAP_CERT_KEY_GROUP,
                 validDays = 3650,
@@ -99,10 +127,11 @@ abstract class HsmBaseTest {
         )
     }
 
-    protected fun givenHsmUserAuthenticationInput(): InputReader {
+    protected fun givenHsmUserAuthenticationInput(username: String = HSM_USERNAME,
+                                                  password: String = HSM_PASSWORD): InputReader {
         val inputReader = mock<InputReader>()
-        whenever(inputReader.readLine()).thenReturn(hsmSimulator.cryptoUserCredentials().username)
-        whenever(inputReader.readPassword(any())).thenReturn(hsmSimulator.cryptoUserCredentials().password)
+        whenever(inputReader.readLine()).thenReturn(username)
+        whenever(inputReader.readPassword(any())).thenReturn(password)
         return inputReader
     }
 
