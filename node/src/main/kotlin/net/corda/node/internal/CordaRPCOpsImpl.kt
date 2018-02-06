@@ -50,7 +50,7 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
-    override fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
+    override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         return services.networkMapUpdater.track()
     }
 

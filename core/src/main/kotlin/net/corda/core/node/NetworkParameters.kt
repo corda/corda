@@ -11,7 +11,7 @@ import java.time.Instant
  * @property notaries List of well known and trusted notary identities with information on validation type.
  * @property maxMessageSize Maximum P2P message sent over the wire in bytes.
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
- * @property modifiedTime
+ * @property modifiedTime Last modification time of network parameters set.
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
  */

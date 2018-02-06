@@ -21,8 +21,8 @@ import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
 class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext) : CordaRPCOps {
-    override fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> = guard("newNetworkMapParameters") {
-        implementation.newNetworkMapParameters()
+    override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> = guard("networkParametersFeed") {
+        implementation.networkParametersFeed()
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) = guard("acceptNewNetworkParameters") {

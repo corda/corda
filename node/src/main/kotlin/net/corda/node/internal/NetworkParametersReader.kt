@@ -33,9 +33,9 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             null
         }
         val parameters = if (advertisedParametersHash != null) {
-            // I feel it doesn't make sense, on one hand we have node starting without parameters and just accepting them by default,
+            // TODO On one hand we have node starting without parameters and just accepting them by default,
             //  on the other we have parameters update process - it needs to be unified. Say you start the node, you don't have matching parameters,
-            //  you get them from network map, but you have to run the acceptance step. TODO To be implemented in later stage?
+            //  you get them from network map, but you have to run the approval step.
             if (signedParametersFromFile == null) { // Node joins for the first time.
                 downloadParameters(trustRoot, advertisedParametersHash)
             }

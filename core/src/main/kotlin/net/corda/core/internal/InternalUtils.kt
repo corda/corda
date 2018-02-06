@@ -30,6 +30,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -364,6 +365,10 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
 }
 
-fun <T:Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
+inline fun <T:Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
     return SignedData(this, signer(this))
+}
+
+inline fun <T:Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
+    return SignedData(this, keyPair.private.sign(this.bytes, keyPair.public))
 }

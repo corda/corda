@@ -47,7 +47,7 @@ class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<Di
     }
 }
 
-inline fun NodeInfo.signNodeInfo(signer: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
+inline fun NodeInfo.sign(signer: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
     // For now we exclude any composite identities, see [SignedNodeInfo]
     val owningKeys = legalIdentities.map { it.owningKey }.filter { it !is CompositeKey }
     val serialised = serialize()

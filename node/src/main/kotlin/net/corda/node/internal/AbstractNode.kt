@@ -56,7 +56,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.signNodeInfo
+import net.corda.nodeapi.internal.sign
 import net.corda.nodeapi.internal.storeLegalIdentity
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
@@ -172,7 +172,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
             persistentNetworkMapCache.start()
             val (keyPairs, info) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-            val signedNodeInfo = info.signNodeInfo { publicKey, serialised ->
+            val signedNodeInfo = info.sign { publicKey, serialised ->
                 val privateKey = keyPairs.single { it.public == publicKey }.private
                 privateKey.sign(serialised.bytes)
             }
@@ -239,7 +239,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.updateNodeInfo(services.myInfo) {
-            it.signNodeInfo { publicKey, serialised ->
+            it.sign { publicKey, serialised ->
                 services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
             }
         }

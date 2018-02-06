@@ -76,7 +76,7 @@ sealed class StateMachineUpdate {
 
 /**
  * Data class containing information about the scheduled network parameters update. The info is emitted every time node
- * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.newNetworkMapParameters] and [CordaRPCOps.acceptNewNetworkParameters].
+ * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
  * @property hash new [NetworkParameters] hash
  * @property parameters new [NetworkParameters] data structure
  * @property description description of the update
@@ -231,14 +231,15 @@ interface CordaRPCOps : RPCOps {
      */
     // TODO This operation should be restricted to just node admins.
     @RPCReturnsObservables
-    fun newNetworkMapParameters(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
+    fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
 
     /**
-     * Accept network parameters with given hash, hash is obtained through [newNetworkMapParameters] method.
+     * Accept network parameters with given hash, hash is obtained through [networkParametersFeed] method.
      * Information is sent back to the zone operator that the node accepted the parameters update - this process cannot be
      * undone.
      * Only parameters that are scheduled for update can be accepted, if different hash is provided this method will fail.
      * Note: This operation may be restricted only to node administrators.
+     * @param parametersHash hash of network parameters to accept
      * @throws IllegalArgumentException if network map advertises update with different parameters hash then the one accepted by node's operator.
      * @throws IOException if failed to send the approval to network map
      */
