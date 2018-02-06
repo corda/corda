@@ -9,7 +9,6 @@ import com.nhaarman.mockito_kotlin.verify
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -42,7 +41,6 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -222,23 +220,21 @@ class NetworkMapUpdaterTest {
     @Test
     fun `ack network parameters update`() {
         val newParameters = testNetworkParameters(emptyList(), epoch = 314)
-        scheduleParametersUpdate(newParameters, "Test update")
+        scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         updater.subscribeToNetworkMap()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val keyPair = Crypto.generateKeyPair()
-        updater.acceptNewNetworkParameters(newHash,
-                { hash -> SignedData(hash.serialize(), keyPair.private.sign(hash.serialize().bytes, keyPair.public)) })
+        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign { keyPair.private.sign(it.bytes, keyPair.public) } })
         verify(networkMapClient).ackNetworkParametersUpdate(any())
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assertTrue(updateFile.exists())
         val signedNetworkParams = updateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
     }
 
-    private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant = Instant.now()) {
+    private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant) {
         val nextParamsHash = nextParameters.serialize().hash
         networkParamsMap[nextParamsHash] = nextParameters
         parametersUpdate = ParametersUpdate(nextParamsHash, description, updateDeadline)

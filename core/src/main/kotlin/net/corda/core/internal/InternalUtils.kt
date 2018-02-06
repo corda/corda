@@ -3,9 +3,7 @@
 package net.corda.core.internal
 
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
@@ -364,4 +362,8 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     val serialised = serialize()
     val signature = Crypto.doSign(privateKey, serialised.bytes)
     return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
+}
+
+fun <T:Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
+    return SignedData(this, signer(this))
 }

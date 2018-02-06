@@ -129,17 +129,10 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         @Path("ack-parameters")
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
         fun ackNetworkParameters(input: InputStream): Response {
-            return try {
-                val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
-                val hash = signedParametersHash.verified()
-                latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
-                ok()
-            } catch (e: Exception) {
-                when (e) {
-                    is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
-                    else -> status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.message)
-                }
-            }.build()
+            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val hash = signedParametersHash.verified()
+            latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
+            return ok().build()
         }
 
         @GET

@@ -202,8 +202,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun handleUpdateNetworkParameters(update: ParametersUpdate) {
-        if (update.newParametersHash == newNetworkParameters?.first?.newParametersHash) {
-            logger.warn("Couldn't retrive network parameters from update: $update")
+        if (update.newParametersHash == newNetworkParameters?.first?.newParametersHash) { // This update was handled already.
             return
         }
         val newParameters = networkMapClient?.getNetworkParameters(update.newParametersHash)
@@ -224,24 +223,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             newParams.serialize()
                     .open()
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
-            tryAckNetworkParametersUpdateAsync(sign(parametersHash), networkMapClient!!)
+            networkMapClient!!.ackNetworkParametersUpdate(sign(parametersHash))
         } else {
             throw IllegalArgumentException("Refused to accept parameters with hash $parametersHash because network map advertises update with hash $newParametersHash. Please check newest version")
         }
-    }
-
-    private fun tryAckNetworkParametersUpdateAsync(signedParametersHash: SignedData<SecureHash>, networkMapClient: NetworkMapClient) {
-        val task = object : Runnable {
-            override fun run() {
-                try {
-                    networkMapClient.ackNetworkParametersUpdate(signedParametersHash)
-                } catch (t: Throwable) {
-                    logger.warn("Error encountered while acknowledging network parameters update, will retry in ${retryInterval.seconds} seconds.", t)
-                    // TODO: Exponential backoff?
-                    executor.schedule(this, retryInterval.toMillis(), TimeUnit.MILLISECONDS)
-                }
-            }
-        }
-        executor.submit(task)
     }
 }

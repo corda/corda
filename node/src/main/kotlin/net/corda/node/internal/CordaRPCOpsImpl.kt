@@ -6,7 +6,6 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -14,6 +13,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
@@ -58,10 +58,7 @@ internal class CordaRPCOpsImpl(
         services.networkMapUpdater.acceptNewNetworkParameters(
                 parametersHash,
                 // TODO When multiple identities design will be better specified this should be signature from node operator.
-                { hash ->
-                    val bytesToSign = hash.serialize()
-                    SignedData(bytesToSign, services.keyManagementService.sign(bytesToSign.bytes, services.myInfo.legalIdentities[0].owningKey))
-                }
+                { hash -> hash.serialize().sign { services.keyManagementService.sign(it.bytes, services.myInfo.legalIdentities[0].owningKey) } }
         )
     }
 
