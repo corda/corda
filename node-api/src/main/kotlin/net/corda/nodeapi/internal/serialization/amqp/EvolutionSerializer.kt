@@ -60,6 +60,7 @@ abstract class EvolutionSerializer(
          */
         private fun getEvolverConstructor(type: Type, oldArgs: Map<String, OldParam>): KFunction<Any>? {
             val clazz: Class<*> = type.asClass()!!
+
             if (!isConcrete(clazz)) return null
 
             val oldArgumentSet = oldArgs.map { Pair(it.key as String?, it.value.property.resolvedType) }
@@ -123,7 +124,6 @@ abstract class EvolutionSerializer(
          */
         fun make(old: CompositeType, new: ObjectSerializer,
                  factory: SerializerFactory): AMQPSerializer<Any> {
-
             // The order in which the properties were serialised is important and must be preserved
             val readersAsSerialized = LinkedHashMap<String, OldParam>()
             old.fields.forEach {
@@ -135,9 +135,9 @@ abstract class EvolutionSerializer(
                 }
             }
 
-            val constructor = getEvolverConstructor(new.type, readersAsSerialized) ?:
-                    throw NotSerializableException(
-                            "Attempt to deserialize an interface: ${new.type}. Serialized form is invalid.")
+            // cope with the situation where a generic interface was serialised as a type, in such cases
+            // return the synthesised object which is, given the absence of a constructor, a no op
+            val constructor = getEvolverConstructor(new.type, readersAsSerialized) ?: return new
 
             val classProperties = new.type.asClass()?.propertyDescriptors() ?: emptyMap()
 
