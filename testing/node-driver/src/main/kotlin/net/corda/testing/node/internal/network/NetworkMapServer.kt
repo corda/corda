@@ -91,9 +91,13 @@ class NetworkMapServer(private val cacheTimeout: Duration,
     }
 
     fun advertiseNewParameters() {
-        networkParameters  = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
+        networkParameters = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
         nextNetworkParameters = null
         parametersUpdate = null
+    }
+
+    fun latestParametersAccepted(publicKey: PublicKey): SecureHash? {
+        return service.latestAcceptedParametersMap[publicKey]
     }
 
     override fun close() {
@@ -103,7 +107,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
     @Path("network-map")
     inner class InMemoryNetworkMapService {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
-        private val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
+        val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy {
             networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         }

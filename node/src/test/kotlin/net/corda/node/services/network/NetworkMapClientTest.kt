@@ -1,21 +1,10 @@
 package net.corda.node.services.network
 
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
-import net.corda.core.crypto.sign
 import net.corda.core.internal.*
-import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.NetworkParametersReader
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DEV_ROOT_CA
@@ -37,7 +26,6 @@ import java.net.URL
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 
 class NetworkMapClientTest {
     @Rule
@@ -111,35 +99,19 @@ class NetworkMapClientTest {
     @Test
     fun `handle parameters update`() {
         val nextParameters = testNetworkParameters(emptyList(), epoch = 2)
-        val hash1 = server.networkParameters.serialize().hash
-        val hash2 = nextParameters.serialize().hash
+        val originalNetworkParameterHash = server.networkParameters.serialize().hash
+        val nextNetworkParameterHash = nextParameters.serialize().hash
         val description = "Test parameters"
         server.scheduleParametersUpdate(nextParameters, description, Instant.now().plus(1, ChronoUnit.DAYS))
         val (networkMap) = networkMapClient.getNetworkMap()
-        assertEquals(networkMap.networkParameterHash, hash1)
+        assertEquals(networkMap.networkParameterHash, originalNetworkParameterHash)
         assertEquals(networkMap.parametersUpdate?.description, description)
-        assertEquals(networkMap.parametersUpdate?.newParametersHash, hash2)
-        val params1 = networkMapClient.getNetworkParameters(hash1).verified()
-        val params2 = networkMapClient.getNetworkParameters(hash2).verified()
-        assertEquals(params1, server.networkParameters)
-        assertEquals(params2, nextParameters)
+        assertEquals(networkMap.parametersUpdate?.newParametersHash, nextNetworkParameterHash)
+        assertEquals(networkMapClient.getNetworkParameters(originalNetworkParameterHash).verified(), server.networkParameters)
+        assertEquals(networkMapClient.getNetworkParameters(nextNetworkParameterHash).verified(), nextParameters)
         val keyPair = Crypto.generateKeyPair()
-        val signedHash = SignedData(hash2.serialize(), keyPair.private.sign(hash2.serialize().bytes, keyPair.public))
+        val signedHash = nextNetworkParameterHash.serialize().sign(keyPair)
         networkMapClient.ackNetworkParametersUpdate(signedHash)
-    }
-
-    @Test
-    fun `read correct set of parameters from file`() {
-        val fs = Jimfs.newFileSystem(Configuration.unix())
-        val baseDirectory = fs.getPath("/node").createDirectories()
-        val oldParameters = testNetworkParameters(emptyList(), epoch = 1)
-        NetworkParametersCopier(oldParameters).install(baseDirectory)
-        NetworkParametersCopier(server.networkParameters, update = true).install(baseDirectory) // Parameters update file.
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).networkParameters
-        assertFalse((baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
-        assertEquals(server.networkParameters, parameters)
-        // Parameters from update should be moved to `network-parameters` file.
-        val parametersFromFile = (baseDirectory / NETWORK_PARAMS_FILE_NAME).readAll().deserialize<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
-        assertEquals(server.networkParameters, parametersFromFile)
+        assertEquals(nextNetworkParameterHash, server.latestParametersAccepted(keyPair.public))
     }
 }

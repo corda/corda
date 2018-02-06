@@ -3,10 +3,10 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
-import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity

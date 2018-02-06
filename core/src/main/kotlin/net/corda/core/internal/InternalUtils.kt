@@ -365,10 +365,10 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
 }
 
-inline fun <T:Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
+inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
     return SignedData(this, signer(this))
 }
 
-inline fun <T:Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
-    return SignedData(this, keyPair.private.sign(this.bytes, keyPair.public))
+inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
+    return SignedData(this, keyPair.sign(this.bytes))
 }

@@ -36,5 +36,10 @@ data class NetworkParameters(
     }
 }
 
+/**
+ * Data class storing information about notaries available in the network.
+ * @property identity Identity of the notary (note that it can be an identity of the distributed node).
+ * @property validating Indicates if the notary is validating.
+ */
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)

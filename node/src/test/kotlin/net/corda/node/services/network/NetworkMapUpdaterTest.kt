@@ -207,10 +207,10 @@ class NetworkMapUpdaterTest {
         updates.expectEvents(isStrict = false) {
             sequence(
                     expect { update: ParametersUpdateInfo ->
-                        assert(update.updateDeadline == updateDeadline)
-                        assert(update.description == "Test update")
-                        assert(update.hash == newParameters.serialize().hash)
-                        assert(update.parameters == newParameters)
+                        assertThat(update.updateDeadline == updateDeadline)
+                        assertThat(update.description == "Test update")
+                        assertThat(update.hash == newParameters.serialize().hash)
+                        assertThat(update.parameters == newParameters)
                     }
             )
         }
