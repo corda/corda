@@ -186,9 +186,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
                 return rpcBroker!!.addresses

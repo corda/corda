@@ -504,7 +504,7 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(null).whenever(it).notary
         doReturn(DatabaseConfig()).whenever(it).database
         doReturn("").whenever(it).emailAddress
-        doReturn("").whenever(it).exportJMXto
+        doReturn(null).whenever(it).jmxMonitoringHttpPort
         doReturn(true).whenever(it).devMode
         doReturn(null).whenever(it).compatibilityZoneURL
         doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies

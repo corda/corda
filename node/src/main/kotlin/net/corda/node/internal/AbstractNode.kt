@@ -53,6 +53,8 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.NodeBuildProperties
+import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -70,6 +72,7 @@ import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
@@ -198,6 +201,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
         initCertificate()
+        initialiseJVMAgents()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
@@ -759,6 +763,22 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
     protected open fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
         return NodeVaultService(platformClock, keyManagementService, stateLoader, hibernateConfig)
+    }
+
+    /** Load configured JVM agents */
+    private fun initialiseJVMAgents() {
+        configuration.jmxMonitoringHttpPort?.let { port ->
+            requireNotNull(NodeBuildProperties.JOLOKIA_AGENT_VERSION) {
+                "'jolokiaAgentVersion' missing from build properties"
+            }
+            log.info("Starting Jolokia agent on HTTP port: $port")
+            val libDir = Paths.get(configuration.baseDirectory.toString(), "drivers")
+            val jarFilePath = JVMAgentRegistry.resolveAgentJar(
+                    "jolokia-jvm-${NodeBuildProperties.JOLOKIA_AGENT_VERSION}-agent.jar", libDir) ?:
+                    throw Error("Unable to locate agent jar file")
+            log.info("Agent jar file: $jarFilePath")
+            JVMAgentRegistry.attach("jolokia", "port=$port", jarFilePath)
+        }
     }
 
     private inner class ServiceHubInternalImpl(
