@@ -88,7 +88,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                resolveContractAttachment = { services.cordappProvider.getCurrentContractAttachmentID(it.contract) }
+                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
         )
     }
 

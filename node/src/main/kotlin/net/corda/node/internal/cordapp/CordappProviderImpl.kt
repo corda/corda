@@ -34,7 +34,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
         throw IllegalStateException("Not in an app context")
     }
 
-    override fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
+    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
         return getCordappForClass(contractClassName)?.let(this::getCordappAttachmentId)
     }
 
@@ -52,13 +52,12 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
      */
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(cordapp.jarPath)
 
-    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
-        val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it to it.jarPath }.toMap()
-        val attachmentIds = cordappsWithAttachments.map { (cordapp, url) ->
-            url.openStream().use { stream -> attachmentStorage.importContractAttachment(cordapp.contractClassNames, stream) }
-        }
-        return attachmentIds.zip(cordappsWithAttachments.values).toMap()
-    }
+    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> =
+            cordapps.filter { !it.contractClassNames.isEmpty() }.map {
+                it.jarPath.openStream().use { stream ->
+                    attachmentStorage.importContractAttachment(it.contractClassNames, stream)
+                } to it.jarPath
+            }.toMap()
 
     /**
      * Get the current cordapp context for the given CorDapp

@@ -26,7 +26,7 @@ interface CordappProvider {
      * @param contractClassName The contract to find the attachment for
      * @return An attachment ID if it exists
      */
-    fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId?
+    fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId?
 
     /**
      *

@@ -13,6 +13,7 @@ import java.nio.file.Paths
 import java.util.*
 
 class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage, networkParameters: NetworkParameters = testNetworkParameters(emptyList())) : CordappProviderImpl(cordappLoader, attachmentStorage, networkParameters) {
+    constructor(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage): this(cordappLoader, attachmentStorage, testNetworkParameters(emptyList()))
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
@@ -31,6 +32,8 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
             cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName) , contractClassName.toByteArray(), attachments)))
         }
     }
+
+    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
 
     private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {

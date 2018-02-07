@@ -4693,9 +4693,6 @@ public final class net.corda.testing.services.MockAttachmentStorage extends net.
 public static final class net.corda.testing.services.MockAttachmentStorage$Companion extends java.lang.Object
   public final byte[] getBytes(java.io.InputStream)
 ##
-public static final class net.corda.testing.services.MockAttachmentStorage$openAttachment$1 extends net.corda.core.internal.AbstractAttachment
-  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
-##
 public final class net.corda.testing.services.MockCordappProvider extends net.corda.node.internal.cordapp.CordappProviderImpl
   public <init>(net.corda.node.internal.cordapp.CordappLoader, net.corda.core.node.services.AttachmentStorage)
   public final void addMockCordapp(String, net.corda.testing.services.MockAttachmentStorage)

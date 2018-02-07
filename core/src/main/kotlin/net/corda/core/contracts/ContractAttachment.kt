@@ -12,6 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 class ContractAttachment(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName> = emptySet()) : Attachment by attachment {
 
     constructor(attachment: Attachment, contracts: Set<ContractClassName>) : this(attachment, contracts.first(), contracts)
+    constructor(attachment: Attachment, contract: ContractClassName) : this(attachment, contract, emptySet())
 
     val allContracts: Set<ContractClassName> = contracts + contract
 

@@ -56,7 +56,7 @@ class CordappProviderImplTests {
         val provider = CordappProviderImpl(loader, attachmentStore, testNetworkParameters(emptyList()))
         val className = "net.corda.finance.contracts.isolated.AnotherDummyContract"
         val expected = provider.getAppContext(provider.cordapps.first()).attachmentId
-        val actual = provider.getCurrentContractAttachmentID(className)
+        val actual = provider.getContractAttachmentID(className)
 
         Assert.assertNotNull(actual)
         Assert.assertEquals(actual!!, expected)

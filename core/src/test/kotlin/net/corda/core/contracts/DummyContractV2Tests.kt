@@ -37,7 +37,7 @@ class DummyContractV2Tests {
     fun `upgrade from v1`() {
         val services = rigorousMock<ServicesForResolution>().also {
             doReturn(rigorousMock<CordappProvider>().also {
-                doReturn(allOnesHash).whenever(it).getCurrentContractAttachmentID(any())
+                doReturn(allOnesHash).whenever(it).getContractAttachmentID(any())
                 doReturn(setOf(allOnesHash)).whenever(it).getZoneWhitelistedContractAttachmentIds(any())
             }).whenever(it).cordappProvider
         }

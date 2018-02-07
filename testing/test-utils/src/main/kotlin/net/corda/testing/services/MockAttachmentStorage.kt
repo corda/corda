@@ -13,10 +13,8 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.services.persistence.NodeAttachmentService
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.jar.JarInputStream
 
@@ -29,6 +27,8 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             s.toByteArray()
         }
     }
+
+    val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
     override fun importAttachment(jar: InputStream): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
@@ -48,8 +48,6 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
         return importAttachment(jar)
     }
-
-    val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null

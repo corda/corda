@@ -87,7 +87,7 @@ open class TransactionBuilder(
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services.cordappProvider)
 
-    private fun getContractAttachmentId(cordappProvider: CordappProvider, state: TransactionState<ContractState>) = cordappProvider.getCurrentContractAttachmentID(state.contract)
+    private fun getContractAttachmentId(cordappProvider: CordappProvider, state: TransactionState<ContractState>) = cordappProvider.getContractAttachmentID(state.contract)
             ?: throw MissingContractAttachments(listOf(state))
 
     //todo - TUDOR - is this the right approach? move this somewhere
