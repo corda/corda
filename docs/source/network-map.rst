@@ -79,3 +79,46 @@ More parameters will be added in future releases to regulate things like allowed
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
 cryptographic algorithms and rollout schedules (e.g. for moving to post quantum cryptography), parameters related to
 SGX and so on.
+
+Network parameters update process
+---------------------------------
+
+In case of the need to change network parameters Corda zone operator will start the update process. There are many reasons
+that may lead to this decision: we discovered that some new fields have to be added to enable smooth network interoperability or change
+of the existing compatibility constants is required due to upgrade or security reasons.
+
+To synchronize all nodes in the compatibility zone to use the new set of the network parameters two RPC methods exist. The process
+requires human interaction and approval of the change. The rest of the process is automatic.
+
+When the update is about to happen Network Map Service starts to advertise the additional information with the usual network map
+data. It includes new network parameters hash, description of the change and the update deadline. Node queries network map server
+for the new set of parameters and emits ``ParametersUpdateInfo`` via ``CordaRPCOps::networkParametersFeed`` method to inform
+node operator about the event.
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        /**
+         * Data class containing information about the scheduled network parameters update. The info is emitted every time node
+         * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
+         * @property hash new [NetworkParameters] hash
+         * @property parameters new [NetworkParameters] data structure
+         * @property description description of the update
+         * @property updateDeadline deadline for accepting this update using [CordaRPCOps.acceptNewNetworkParameters]
+         */
+        @CordaSerializable
+        data class ParametersUpdateInfo(
+                val hash: SecureHash,
+                val parameters: NetworkParameters,
+                val description: String,
+                val updateDeadline: Instant
+        )
+
+Node administrator can review the change and decide if is going to accept it. The approval should be done before ``updateDeadline``.
+Any new update that occurs before the deadline automatically cancels the current one. Only the latest update can be accepted.
+To send back parameters approval to the zone operator and install them on the node it is sufficient to call RPC method
+``fun acceptNewNetworkParameters(parametersHash: SecureHash)`` with ``parametersHash`` from update, notice that the process cannot be undone.
+
+After certain percentage of nodes in the compatibility zone will accept the new parameters network map will start to advertise
+them as the current parameters. Node restart is needed in this case.
