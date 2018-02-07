@@ -220,7 +220,7 @@ class NodeAttachmentService(
         val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                 ?: return null
         val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
-            if (attachment.contractClassNames != null) {
+            if (attachment.contractClassNames != null && attachment.contractClassNames!!.isNotEmpty()) {
                 ContractAttachment(it, attachment.contractClassNames!!.toSet())
             } else {
                 it
