@@ -665,7 +665,7 @@ class FlowFrameworkTests {
     }
 
     private inline fun <reified P : FlowLogic<*>> StartedMockNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
-        return findStateMachines(P::class.java).single { it.javaClass == P::class.java }
+        return findStateMachines(P::class.java).single()
     }
 
     private inline fun <reified P : FlowLogic<*>> StartedMockNode.registerFlowFactory(
