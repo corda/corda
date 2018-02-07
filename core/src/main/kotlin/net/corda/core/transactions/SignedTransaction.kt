@@ -163,22 +163,22 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         if (isNotaryChangeTransaction()) {
-            verifyNotaryChangeTransaction(checkSufficientSignatures, services)
+            verifyNotaryChangeTransaction(services, checkSufficientSignatures)
         } else {
-            verifyRegularTransaction(checkSufficientSignatures, services)
+            verifyRegularTransaction(services, checkSufficientSignatures)
         }
     }
 
     // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
     // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
     // objects from the TransactionState.
-    private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
+    private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ltx = toLedgerTransaction(services, checkSufficientSignatures)
         // TODO: allow non-blocking verification.
         services.transactionVerifierService.verify(ltx).getOrThrow()
     }
 
-    private fun verifyNotaryChangeTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
+    private fun verifyNotaryChangeTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ntx = resolveNotaryChangeTransaction(services)
         if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
     }
