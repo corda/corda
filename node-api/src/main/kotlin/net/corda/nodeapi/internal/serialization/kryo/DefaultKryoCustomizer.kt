@@ -198,6 +198,7 @@ object DefaultKryoCustomizer {
     }
 
     const val END_OF_CTR = "!!"
+
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
             if (kryo.serializationContext() != null) {
@@ -207,6 +208,7 @@ object DefaultKryoCustomizer {
                 obj.attachment.open().use { it.copyTo(buffer) }
                 output.writeBytesWithLength(buffer.toByteArray())
             }
+            output.writeString(obj.contract)
             for (contract in obj.contracts) {
                 output.writeString(contract)
             }
@@ -226,6 +228,7 @@ object DefaultKryoCustomizer {
 
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
+                val contract = input.readString()
                 val contracts = readContracts()
 
                 val context = kryo.serializationContext()!!
@@ -239,11 +242,12 @@ object DefaultKryoCustomizer {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contracts)
+                return ContractAttachment(lazyAttachment, contract, contracts)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
+                val contract = input.readString()
                 val contracts = readContracts()
-                return ContractAttachment(attachment, contracts)
+                return ContractAttachment(attachment, contract, contracts)
             }
         }
     }

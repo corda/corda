@@ -42,6 +42,7 @@ class ContractAttachmentSerializerTest {
 
         assertEquals(contractAttachment.id, deserialized.attachment.id)
         assertEquals(contractAttachment.contract, deserialized.contract)
+        assertEquals(contractAttachment.contracts, deserialized.contracts)
         assertArrayEquals(contractAttachment.open().readBytes(), deserialized.open().readBytes())
     }
 
@@ -57,6 +58,7 @@ class ContractAttachmentSerializerTest {
 
         assertEquals(contractAttachment.id, deserialized.attachment.id)
         assertEquals(contractAttachment.contract, deserialized.contract)
+        assertEquals(contractAttachment.contracts, deserialized.contracts)
         assertArrayEquals(contractAttachment.open().readBytes(), deserialized.open().readBytes())
     }
 

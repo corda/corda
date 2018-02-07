@@ -86,7 +86,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         if (!files.containsKey(id)) {
             files[id] = Pair(ContractAttachment(object : AbstractAttachment({ bytes }) {
                 override val id = id
-            }, contractClassNames.toSet()), bytes)
+            }, contractClassNames.first(), contractClassNames.toSet()), bytes)
         }
         return id
 
