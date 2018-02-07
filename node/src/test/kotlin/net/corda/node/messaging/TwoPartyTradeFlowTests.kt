@@ -536,7 +536,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyer, notary, assetToSell, 1000.DOLLARS, anonymous)
-        val sellerResult = sellerNode.services.startFlow(seller).resultFuture
+        val sellerResult = sellerNode.services.startFlow(seller)
         return RunResult(firstBuyerFiber, sellerResult, seller.stateMachine.id)
     }
 

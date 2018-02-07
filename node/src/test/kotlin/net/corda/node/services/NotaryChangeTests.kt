@@ -74,7 +74,7 @@ class NotaryChangeTests {
 
         mockNet.runNetwork()
 
-        val newState = future.resultFuture.getOrThrow()
+        val newState = future.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
         val loadedStateA = clientNodeA.services.loadState(newState.ref)
         val loadedStateB = clientNodeB.services.loadState(newState.ref)
@@ -91,7 +91,7 @@ class NotaryChangeTests {
         mockNet.runNetwork()
 
         assertThatExceptionOfType(StateReplacementException::class.java).isThrownBy {
-            future.resultFuture.getOrThrow()
+            future.getOrThrow()
         }
     }
 
@@ -104,7 +104,7 @@ class NotaryChangeTests {
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
         mockNet.runNetwork()
-        val newState = future.resultFuture.getOrThrow()
+        val newState = future.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
         val recordedTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!
@@ -150,7 +150,7 @@ class NotaryChangeTests {
         val future = node.services.startFlow(flow)
         mockNet.runNetwork()
 
-        return future.resultFuture.getOrThrow()
+        return future.getOrThrow()
     }
 
     private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: StartedNode<*>, toNode: StartedNode<*>): StateAndRef<DummyContract.SingleOwnerState> {
@@ -161,7 +161,7 @@ class NotaryChangeTests {
         val future = fromNode.services.startFlow(notaryFlow)
         mockNet.runNetwork()
 
-        val notarySignature = future.resultFuture.getOrThrow()
+        val notarySignature = future.getOrThrow()
         val finalTransaction = stx + notarySignature
 
         fromNode.services.recordTransactions(finalTransaction)
