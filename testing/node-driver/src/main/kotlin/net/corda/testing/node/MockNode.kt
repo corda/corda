@@ -50,7 +50,6 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.getContractHash
 import net.corda.testing.common.internal.getMockWhitelistedContractImplementations
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -295,12 +294,6 @@ open class MockNetwork(private val cordappPackages: List<String>,
             advertiseNodeToNetwork(started)
             return started
         }
-
-        override fun makeCordappProviderImpl(cordappLoader: CordappLoader, attachments: NodeAttachmentService, networkParameters: NetworkParameters) =
-                object : CordappProviderImpl(cordappLoader, attachments, networkParameters) {
-                    override fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId? =
-                            getContractHash(contractClassName)
-                }
 
         override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
         private fun advertiseNodeToNetwork(newNode: StartedNode<MockNode>) {

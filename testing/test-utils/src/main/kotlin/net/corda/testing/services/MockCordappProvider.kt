@@ -8,7 +8,6 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.testing.common.internal.getContractHash
 import net.corda.testing.common.internal.testNetworkParameters
 import java.nio.file.Paths
 import java.util.*
@@ -29,21 +28,18 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
                 customSchemas = emptySet(),
                 jarPath = Paths.get(".").toUri().toURL())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
-            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(contractClassName, contractClassName.toByteArray(), attachments)))
+            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName) , contractClassName.toByteArray(), attachments)))
         }
     }
 
-    override fun getCurrentContractAttachmentID(contractClassName: ContractClassName): AttachmentId? =
-            getContractHash(contractClassName)
-
-    private fun findOrImportAttachment(contractClassName: ContractClassName, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
+    private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {
             Arrays.equals(it.value.second, data)
         }
         return if (!existingAttachment.isEmpty()) {
             existingAttachment.keys.first()
         } else {
-            attachments.importOrGetContractAttachment(contractClassName, data.inputStream())
+            attachments.importOrGetContractAttachment(contractClassNames, data.inputStream())
         }
     }
 }

@@ -29,7 +29,7 @@ class LedgerTransactionQueryTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val keyPair = generateKeyPair()
-    private val services = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+    private val services = MockServices(listOf("net.corda.testing.contracts"), rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(keyPair.public)
     }, CordaX500Name("MegaCorp", "London", "GB"), keyPair)
     private val identity: Party = services.myInfo.singleIdentity()

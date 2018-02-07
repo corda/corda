@@ -90,12 +90,10 @@ class NodeAttachmentService(
             @Column(name = "filename", updatable = false)
             var filename: String? = null,
 
-//            @ElementCollection
+            @ElementCollection
 //            @CollectionTable(name="contract_class_name", joinColumns = arrayOf(
 //                    JoinColumn(name = "output_index", referencedColumnName = "output_index"))
-//            var contractClassNames: List<ContractClassName>? = null
-            @Column(name = "contract_class_name")
-            var contractClassName: ContractClassName? = null
+            var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
 
     @VisibleForTesting
@@ -218,10 +216,11 @@ class NodeAttachmentService(
     )
 
     private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
-        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString()) ?: return null
+        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+                ?: return null
         val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
-            if (attachment.contractClassName != null) {
-                ContractAttachment(it, attachment.contractClassName!!)
+            if (attachment.contractClassNames != null) {
+                ContractAttachment(it, attachment.contractClassNames!!.toSet())
             } else {
                 it
             }
@@ -271,15 +270,20 @@ class NodeAttachmentService(
         return Pair(id, bytes)
     }
 
-    override fun hasAttachment(attachmentId: AttachmentId): Boolean {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
-        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), attachmentId.toString()))
-        return (session.createQuery(criteriaQuery).singleResult > 0)
-    }
+    override fun hasAttachment(attachmentId: AttachmentId): Boolean =
+            currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
+//        val criteriaBuilder = session.criteriaBuilder
+//        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+//        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
+//        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+//        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), attachmentId.toString()))
+//        return (session.createQuery(criteriaQuery).singleResult > 0)
+//    }
+
+
+//    fun getAttachmentHash1(contractClassName: ContractClassName?, jar: InputStream): AttachmentId {
+//        return SecureHash.SHA256(Hashing.sha256().hashString(contractClassName!!, StandardCharsets.UTF_8).asBytes())
+//    }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
@@ -313,24 +317,20 @@ class NodeAttachmentService(
         }
     }
 
-    override fun importOrGetContractAttachment(contractClassName: ContractClassName, jar: InputStream): AttachmentId {
+    override fun importOrGetContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
         //TODO - TUDOR - refactor
         require(jar !is JarInputStream)
 
-        fun _getAttachmentIdAndBytes(): Pair<AttachmentId, ByteArray> {
-            val bytes = jar.readBytes()
-            checkIsAValidJAR(ByteArrayInputStream(bytes))
-            //todo -this should come from somewhere
-            val id = SecureHash.SHA256(Hashing.sha256().hashString(contractClassName, StandardCharsets.UTF_8).asBytes())
-            return Pair(id, bytes)
-        }
+        val hs = HashingInputStream(Hashing.sha256(), jar)
+        val bytes = hs.readBytes()
+        checkIsAValidJAR(ByteArrayInputStream(bytes))
+        val id = SecureHash.SHA256(hs.hash().asBytes())
 
-
-        val (id, bytes) = _getAttachmentIdAndBytes()
+        log.warn("${this} save dbattach: ${contractClassNames}  ${id} ${bytes.size}")
         if (!hasAttachment(id)) {
             checkIsAValidJAR(ByteArrayInputStream(bytes))
             val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, contractClassName = contractClassName)
+            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, contractClassNames = contractClassNames)
             session.save(attachment)
             attachmentCount.inc()
             log.info("Stored new attachment $id")

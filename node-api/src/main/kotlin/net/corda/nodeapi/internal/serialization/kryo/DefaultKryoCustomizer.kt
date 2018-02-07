@@ -197,6 +197,7 @@ object DefaultKryoCustomizer {
         }
     }
 
+    const val END_OF_CTR = "!!"
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
             if (kryo.serializationContext() != null) {
@@ -206,30 +207,43 @@ object DefaultKryoCustomizer {
                 obj.attachment.open().use { it.copyTo(buffer) }
                 output.writeBytesWithLength(buffer.toByteArray())
             }
-            output.writeString(obj.contract)
+            for (contract in obj.contracts) {
+                output.writeString(contract)
+            }
+            output.writeString(END_OF_CTR)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
+
+            fun readContracts(): Set<String> {
+                val result = mutableSetOf<String>()
+                do {
+                    val contract = input.readString()
+                    if (contract != END_OF_CTR) result.add(contract)
+                } while (contract != END_OF_CTR)
+                return result
+            }
+
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
-                val contract = input.readString()
+                val contracts = readContracts()
 
                 val context = kryo.serializationContext()!!
                 val attachmentStorage = context.serviceHub.attachments
 
                 val lazyAttachment = object : AbstractAttachment({
-                    val attachment = attachmentStorage.openAttachment(attachmentHash) ?: throw MissingAttachmentsException(listOf(attachmentHash))
+                    val attachment = attachmentStorage.openAttachment(attachmentHash)
+                            ?: throw MissingAttachmentsException(listOf(attachmentHash))
                     attachment.open().readBytes()
                 }) {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contract)
+                return ContractAttachment(lazyAttachment, contracts)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
-                val contract = input.readString()
-
-                return ContractAttachment(attachment, contract)
+                val contracts = readContracts()
+                return ContractAttachment(attachment, contracts)
             }
         }
     }

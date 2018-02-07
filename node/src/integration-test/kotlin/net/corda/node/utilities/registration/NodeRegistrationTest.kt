@@ -24,6 +24,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
+import net.corda.testing.node.internal.network.acceptAll
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -79,7 +80,7 @@ class NodeRegistrationTest {
     fun `node registration correct root cert`() {
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
-                publishNotaries = { server.networkParameters = testNetworkParameters(it) },
+                publishNotaries = { server.networkParameters = testNetworkParameters(it).copy(whitelistedContractImplementations = acceptAll) },
                 rootCert = DEV_ROOT_CA.certificate)
         internalDriver(
                 portAllocation = portAllocation,

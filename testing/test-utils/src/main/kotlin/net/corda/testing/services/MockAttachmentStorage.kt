@@ -1,6 +1,7 @@
 package net.corda.testing.services
 
 import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
@@ -12,6 +13,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.node.services.persistence.NodeAttachmentService
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
@@ -69,23 +71,23 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         try {
             return importAttachment(jar)
-        }
-        catch (faee: java.nio.file.FileAlreadyExistsException) {
+        } catch (faee: java.nio.file.FileAlreadyExistsException) {
             return AttachmentId.parse(faee.message!!)
         }
     }
 
-    override fun importOrGetContractAttachment(contractClassName: ContractClassName, jar: InputStream): AttachmentId {
-        val id = SecureHash.SHA256(Hashing.sha256().hashString(contractClassName, StandardCharsets.UTF_8).asBytes())
+
+    override fun importOrGetContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
-
-        val bytes = getBytes(jar)
+        val hs = HashingInputStream(Hashing.sha256(), jar)
+        val bytes = hs.readBytes()
+        val id = SecureHash.SHA256(hs.hash().asBytes())
 
         if (!files.containsKey(id)) {
             files[id] = Pair(ContractAttachment(object : AbstractAttachment({ bytes }) {
                 override val id = id
-            }, contractClassName), bytes)
+            }, contractClassNames.toSet()), bytes)
         }
         return id
 

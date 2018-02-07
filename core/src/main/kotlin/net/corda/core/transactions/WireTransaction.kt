@@ -234,19 +234,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return buf.toString()
     }
 
-    private fun findAttachmentContracts(resolvedInputs: List<StateAndRef<ContractState>>,
-                                        resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
-                                        resolveAttachment: (SecureHash) -> Attachment?
-    ): List<Attachment> {
-        val contractAttachments = (outputs + resolvedInputs.map { it.state }).map { Pair(it, resolveContractAttachment(it)) }
-        val missingAttachments = contractAttachments.filter { it.second == null }
-        return if (missingAttachments.isEmpty()) {
-            contractAttachments.map { ContractAttachment(resolveAttachment(it.second!!) ?: throw AttachmentResolutionException(it.second!!), it.first.contract) }
-        } else {
-            throw MissingContractAttachments(missingAttachments.map { it.first })
-        }
-    }
-
     override fun equals(other: Any?): Boolean {
         if (other is WireTransaction) {
             return (this.id == other.id)

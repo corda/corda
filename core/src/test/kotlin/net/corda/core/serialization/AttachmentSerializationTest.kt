@@ -43,7 +43,7 @@ private fun createAttachmentData(content: String) = ByteArrayOutputStream().appl
 private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
 private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
-    attachments.importAttachment(createAttachmentData(content).inputStream())
+    attachments.importOrGetContractAttachment(listOf("test"),createAttachmentData(content).inputStream())
 }
 
 private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
@@ -70,7 +70,7 @@ class AttachmentSerializationTest {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = MockNetwork(listOf("net.corda.finance.contracts.asset"))
         server = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         client = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
