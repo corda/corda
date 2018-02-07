@@ -21,7 +21,7 @@ import net.corda.node.events.FlowsDrainingModeSetEvent
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.statemachine.SessionInit
+import net.corda.node.services.statemachine.ExistingSessionMessage
 import net.corda.node.services.statemachine.SessionMessage
 import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.utilities.AffinityExecutor
@@ -385,7 +385,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     .doOnError { error -> throw error }
                     .map { artemisMessage -> artemisMessage to artemisToCordaMessage(artemisMessage) }
                     .filter { messages -> messages.second != null }
-                    .filter { messages -> !isDrainingModeOn() || messages.second!!.data.deserialize<SessionMessage>() !is SessionInit }
+                    .filter { messages -> !isDrainingModeOn() || messages.second!!.data.deserialize<SessionMessage>() is ExistingSessionMessage }
                     .doOnNext { messages -> deliver(messages.first, messages.second!!) }
                     // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
                     .doOnCompleted(latch::countDown)
