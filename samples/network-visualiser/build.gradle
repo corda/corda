@@ -6,7 +6,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
+        classpath "io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE"
     }
 }
 
@@ -16,6 +17,7 @@ buildscript {
 // This has to be repeated here as otherwise the order of files does matter
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
+ext['jackson.version'] = "$jackson_version"
 
 
 apply plugin: 'java'
