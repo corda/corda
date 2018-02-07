@@ -1,0 +1,503 @@
+93054a959 Add cmdline option for network root truststore and password (#2407)
+
+e357a8818 Deprecate TimeWindowChecker, make TimeWindowInvalid report exact current time and transaction time window (#2280)
+0ff9c9e2e Move to message based bridge control protocol (#2410)
+
+
+5df50c0e8 Fixes a bug in the deserialisation of UniqueIdentifiers in the CRaSH shell.
+4a3379ac8 CORDA-937 adding node key pair to utility/testing methods (#2405)
+f59560bb0 Database schema changes. (#2389)
+cfc5c6709 Fixes formatting.
+87b00fde7 Better instructions for building against master.
+35f89e03e Abstract InMemoryMessaging behind an interface so as not expose net.corda.nodeapi.internal.persistence.CordaPersistence in public API (#2390)
+de4c06252 Node restarted with shutdown executor (#2391)
+7427d63bb Prevents checkSignatures from failing if tx also contains unrecognised sigs.
+af081a717 Remove primary key constraint on DBHostAndPort (#2318)
+4d4f12d59 Reworks upgrade notes to improve structure and style.
+038c4eb61 Removes cli vs ide from quickstart. Adds link to new utilities page.
+bbcafca95 Retire DatabaseTransactionManager. (#2385)
+e699dad07 CORDA-917 Bootstrap nodes without Notary schemas (by default)  (#2376)
+0e047d926 CORDA-914 - Deterministic property ordering for AMQP serialization
+d19eb4a9d Removed useHTTPS from NodeConfiguration as it's not needed by the node. (#2375)
+6edf95506 Rename the inbox (#2360)
+6e817f014 Adds default endpoints for the Corda development webserver.
+55b7035a4 Don't propagate internal notary service errors to the client (#2368)
+1367cd4ad CORDA-912 Stop exposing internal node user, create user in testing infrastructu… (#2361)
+094e96d30 Move the CommercialPaperTest examples to a location where it'll be run by gradle/ci. Make sure the tests pass, even the example tests that are intended to fail, so these files are kept up to date as the code changes.
+5e7d2f00a ENT-1389 Modify the HibernateObserver to persist states by schema (and only create a session per schema, not one per state per schema) (#2366)
+df195b20b ENT-1383 Memory weight based transaction cache (#2355)
+91779276f Use single thread per netty eventgroup during testing
+fb1d3087d Raft notaries can share a single key pair for the service identity (in contrast to a shared composite public key, and individual signing key pairs). This allows adjusting the cluster size on the fly.
+7311111c9 Re-enable notary idempotence test (#2356)
+c2bd7403a hibernate mapping changes (#2337)
+979d7f2c6 ENT-1226 Improve Network client Error Handling (#2344)
+5df48e0f5 Allow testing of platform version when building test node info (#2333)
+c5149bab9 Backport of ENT-1303 applied to 3.0-RC3 (#2332)
+592442765 Make additionalcorddapps property on cordform node internal (#2329)
+694721e8b TEMP removal of SSH tests till they're made determinsitic (#2325)
+48be562a2 ECDSA entropyToKeyPair + no idempotent signatures (#2210)
+01e488094 SPELLING: updae error message in tests
+63734aa3e Harmonises the names of the parameters across CashExitFlow constructors.
+412fead02  CORDA-785: Add functions for constructing FlowLogicRef without the class (#2134)
+8a3299fa2 CORDA-716 Configure api scanner for test modules (#2259)
+d84105b60 Using X509Certificate consistently throughout, rather than BC's X509CertificateHolder. (#2305)
+c1874cbd6 Fixes a broken link to the shell page.
+20683c323 Added checks on the received node CA cert from the doorman service. (#2301)
+730fec2eb Internal driver now also does the registration for the notaries. (#2304)
+fe3c2b398 CORDA-891 Refactoring for #2273 (#2306)
+a9f9bf2c0 Adding tests to check EdDSA compatibility with RFC8032 (#2302)
+b8421e502 Increase memory allowance for SIMM demo to pass with external DB on MacOS (#2303)
+07258c0a1 Moved configureTestSSL out of testing API and made it internal. (#2297)
+4a2f15711 Validating the entire cert path in node registration, rather just checking the root cert. (#2298)
+39d25958e Fixed identity generation of single node notaries as used by the driver and MockNetwork. (#2296)
+cb0b31107 CordaRPCJavaClientTest refactoring to align with enterprise repo. (#2299)
+5ce873a6e Removed unparseable % sign (#2294)
+f8f5639b3 More descriptive error message (#2295)
+1d66fe929 [CORDA-879] Generate node directories as part of bootstrapping (#2285)
+ce4a64083 CORDA-886: Removed the 60s timeout when generating node-info files in the network bootstrapper. Instead a warning is given. (#2290)
+693cac2a1 Fix debug option in Cordformation (#2276)
+7f1b61d34 Adds a caveat regarding the inability to record a transaction twice.
+6db049075 Fix node integration tests. (#2233)
+a2d14bd20 Exclude jolokia packages from Quasar instrumentation. (#2279)
+ad23bb875 BFTNotaryServiceTests - instantiate MockServices before each test, not at the class level. (#2281)
+cb703476a CORDA-880 Make contractsdsl java interop functions behave same as inline functions (#2275)
+313d21f06 Move unspecifiedCountry to internal. (#2274)
+e1e715ee8 Removed all remaining special treatment of the X500 common name.
+f7445a5e6 CORDA-876 MockNetwork no longer leaks serialization env if init fails (#2272)
+22af527b7 CORDA-869: Clean up error reporting in node config/registration (#2268)
+21f0892de CORDA-831: Add roles to X509 certificates (#2180)
+166918c62 CORDA-869: Stop silently dropping node configuration errors (#2267)
+00a5e3db6 CORDA-830 Introducing the network bootstrapper
+e9cead905 CORDA-833: SignedNodeInfo object for holding a list of signatures, one for each identity in the NodeInfo. This forms part of the network map.
+8114a20ab CORDA-716 Move non-API things to internal (#2256)
+2652ae111 CORDA-716 Devrel feedback (#2266)
+595d41af0 AMQP Bridging between nodes (#2181)
+02ad2b8b6 Fix LargeTransactionTest (#2265)
+479a65648 CORDA-716 Consistent MockServices API (#2247)
+550469ea3 Wire part of network parameters (#2187)
+8dfe377ae Corda-862 - Fix notary demo for AMQP
+21e1118ea Make test constants Java-visible fields. (#2258)
+5e60aa1c5 ENT-1249 - Downgrade to version 2.1 instead
+409cefd46 CORDA-827: more doc changes (#2254)
+dbf6862f3 Adds debugging info for contract constraints, and links to it from error message.
+05bc05a93 CORDA-716 Retire withTestSerialization (#2240)
+5b33db93f Add doc comments on supported TLS schemes and scheme hash functions (#2161)
+2319bf396 Renamed TestIdentity.key to keyPair and pubkey to publicKey (#2249)
+f3253b464 Adding comment to test
+4ad7b2325 ENT-1249 - Downgrade to Artemis 2.2 to protect against rouge connections causing OOM
+d5f8258bd Updated the changelog to incorporate the new network map design as one story.
+e781d816a Removed remaining uses of KRYO_P2P_CONTEXT
+7cfe7f2a7 Windows space in path escape (#2246)
+1b49c50c8 Clarifies that only the first two tutorials are related and form a sequence.
+f9f476b4f Moves upgrade notes to be more visible.
+929341e7e Updates tutorials (general fixes, link to solutions repos)
+d1ea881ae Inline testNodeConfiguration. (#2238)
+2f610c236 add noise (#2237)
+168334743 Clone of equivalent design directory from Enterprise repo. (#2120)
+d6df251e3 Bypass needless lookup. (#2236)
+b58e2b89c TLS supports K1 and mixed K1-R1-RSA (#2216)
+c3b995534 CORDA-716 Fix split packages in testing (#2232)
+905c8252a CORDA-654 Remaining key constants (#2226)
+42782f889 ENT-1151: Rework unicode block validation rules (#2125)
+08bbf9061 Introduce TestIdentity. (#2217)
+537e30453 IRS demo permissions fix (#2231)
+64c0d41a5 ENT-1237 Fix run script for IRS Demo web apps
+2dc73ecf3 Changed logic to check for initial certificate, now using the truststore instead of the .cer file (#2213)
+5b12c5177 Correct version strings
+1fb1d6fb7 CORDA-852 - Fix AMQP serialisation of nested generic
+6dcac410c CORDA-822 - Partially revert changes to ExplorerSimulator done by JMX Jolokia instrumentation (#2197)
+d8c7f0ae2 Inline DUMMY_CASH/OBLIGATION_ISSUER. (#2214)
+544e19e27 CORDA-654 Remove key constants from NodeTestUtils (#2205)
+249d8d1ac Further merge fixes
+da38e6f67 Configurable authorization/authentication data sources [CORDA-827] (#2145)
+991c59e75 Stop granting NODE_USER full RPC permissions (#2098)
+89d452819 Rename Tansform -> Transform in filename
+232925439 Additional comment corrections
+c66026e54 Code Cleanup
+92efd82fa Fix broken test (#2218)
+0129bbe07 Minor corrections to the V2 cheatsheet.
+6c02c91ec Removes old network diagram. Consolidates two sections on node naming. Moves contract constraints to API section.
+476256920 CORDA-822 - JMX Jolokia instrumentation (#2197)
+c396842b0 CORDA-553 - Review comments
+9b097aa98 CORDA-819 Add checks to ensure TLS and Client CA cert chains to the same trusted root (#2149)
+afdf5fb71 Code tidy up, auto reformat, IntelliJ suggestions
+7c5a328cc Create a single NodeInfo (#2174)
+db9eb8a63 Preliminary work to make merge with master manageable
+e6adbe713 CORDA-831: Add confidential identity certificate type (#2198)
+32ea59d08 Inline some DUMMY constants. (#2200)
+8878fa99a CORDA-553 - Remove CordaCustomSerializer annotation
+c4d5d3817 CORDA-553 - Update api checker
+1f7083cd6 CORDA-553 - Review comments
+fcec60e23 CORDA-786 - Use reflection to infer proxy and proxied types in CorDapp custom serializers
+d25b7f560 CORDA-786 - Genericise the CorDapp Proxy
+688135049 CORDA-786 - Add whitelist testing for external custom serializers
+f931b74ae  CORDA-780 / CORDA-786 - Doc updates
+81eb0c189 CORDA-780 / CORDA-786 - Enable AMQP for P2P and Storage Contexts
+ce859178e Correct identities passed to generateSpend (#2199)
+137508493 CORDA-840: Gradle plugins are now able to be published to artifactory. (#2203)
+e0abcda13 Makes it clearer how to build a JAR. Removes ambiguous deployNodes content.
+c36bea3af CORDA-654 MockServices no longer has hard-coded identities (#2192)
+4a677815e Removing NetworkParametersGenerator as an interface
+cb11379d9 Addressing some of the technical debt
+eb3b816d9 Rename NetworkisRegistrationHelperTest to NetworkRegistrationHelperTest (#2185)
+89256a7f1 Moved the CZ URL and node registration logic of the driver to be more internal, not available through the standard driver call, as these are not testing features for an app dev.
+8461837f1 Cleaned up Driver.kt so that only the relevant bits are exposed as public API
+b0ebf3d7e CORDA-654 Various MockServices refactorings (#2167)
+e4d76204c Pass some key constants into MockServices. (#2173)
+426b5eb44 Adds an example use of pagination.
+4374c32a7 HttpUtils methods now throw an IOException when a request isn't successful, rather than returning a Boolean. This has been the cause of previous bugs as people forget to check for the false case.
+f7b87c08d Crash dependency upgrade (#2146)
+1ff0d881b CORDA-553 - Better tests for rule breaking changes to enum constants
+b6427a312 remove calls to exitnodes from NodeStartup (#2080)
+ca06132c4 add upstart instructions (#2171)
+acd2281b2 ENT-1125 bootstrap root certificate (#2151)
+d2f66acff Use non-static Rx pool when testing. (#2165)
+e25787244 CORDA-553 - Review Comments
+526407275 Renamed n.c.nodeapi.config to n.c.nodeapi.internal.config as that config code is not public API. For the same reason, also moved User into the same internal package.
+d5e3f2830 Removed remaining references to networkMapService
+7e044e112 CORDA-553 - Review comments
+32ebd2cc8 CORDA-553 - Review comments
+6958cbbc4 Fix demobench as part of network parameters work (#2148)
+1f0571306 Showcase of closures registered as flows. (#2162)
+15f677a2f Make rigorousMock callRealMethod by default for concrete methods. (#2159)
+c2731c679 More merge fixes and moved NodesInfoFilesCopier into internal package
+10e686bc8 Inline DriverConstants. (#2156)
+a314a6a12 CORDA-654 Simplify TransactionDSL API (#2152)
+5a6f2a19b [CORDA-824]: fix resource leak in Cash selection (#2155)
+b84fdd3ff Some additional contributors recognised
+6a3435f07 Added R3 contributors to the overall attribution list as well
+b18bf94d4 Initial commit of list of contributors to Corda
+d1f3ec11d Initial commit of list of contributors to Corda
+0db7dce98 Dynamic registration of RPC users security roles in ArtemisMessagingS… (#2140)
+1e58aedb8 Fixes order of xmx commands.
+c9f3e9879 Another approach to fixing deployNodes task and network parameters generation (#2066)
+a88e7c903 enable service instructions
+3c31fdf31 CORDA-806 Remove initialiseSerialization from rpcDriver (#2084)
+b638b30d2 Moved CordaPersistence and dependent classes into internal package in node-api. This is so that the doorman can make use of them without needing a compile dependency to node.
+5c53a9178 Overhaul of the Bank of Corda demo to fix two problems it had:
+b45d9e957 CORDA-654 Pass key constants into VaultFiller (#2118)
+dbe2dca7b CORDA-654 Make VaultFiller a class so I can change its hardcoded bits (#2141)
+1b5eeaaad Create a dedicated Log4J2 file for NodeExplorer and output logging configuration used. (#2142)
+cb1fa2e01 Corda now works with H2 without the need to allow Hibernate to create the database automatically. (#2124)
+c88c6202b CORDA-553 - Review comments
+74bf00c15 Show origin test in ThreadLeakException. (#2143)
+cc1fba641 Integration test for http network map service (#2078)
+ff9e7474b CORDA-654 Make MOCK_IDENTITIES less special (#2114)
+614779d4e ENT-1128 fix node restarts when using AzureSQLServer (#2139)
+4c2f0d791 Fix broken unit test
+f135d5782 CORDA-553 - Plumb the transform schema into the AMQP serialisation framework
+4bd6fef0f StateMachineManager is no longer lateinit. (#2123)
+4ca54b73f Added tests to make sure the platform version is correctly available
+2ceb6283a Moved X509Utilities, and some other crypto utilities in node, into node-api so that they can be used by services outside of the node.
+0e3713237 rename table "link_nodeinfo_party" to "node_link_nodeinfo_party" (#2135)
+1705df4d1 Made the database config option typesafe, rather than relying on String properties
+449155cea IdentityService is no longer obtained lazily. (#2130)
+20337aaa2 Network permissioning new doc
+ce9b6c1f1 CORDA-311-post PR merged fixes (#2106)
+502d0df63 Mutual TLS auth - mixed RSA and ECDSA keys (#2095)
+eede51cf7 Update method added to MockNetwork since branching
+9097107d2 Revert "Revert "Introducing network parameters.""
+f7e51a9ae Various cleanups to AMQP and Kryo serialisation:
+288eb5fcc CORDA-716 Call stop on InMemoryMessagingNetwork (#2077)
+15dbbb2de remove NodeState and nodeStateObservable remnants (#2102)
+37b4d0e93 Fixed some permission issues with demos. (#2099)
+a13dbcaa5 ENT-1069 Allow for nodes to be started in registration mode (#2065)
+ad9f335dd Consistent database columns naming convention. (#2097)
+c467a056a Revert CORDA-296: added rpc that returns an observable for node state (#2091)
+e63b6d138 CORDA-311 Shell via SSH server  (#2087)
+6a2c170b8 Additional index to vault_states table to stop a table scan. (#2093)
+d84e9aab7 Added exception if same attachment uploaded. Added test
+6413c6679 Change default driver permissions such that NodeExplorer works. (#2086)
+f26aa3355 Introduce contextLogger (#2085)
+273965f17 remove cordacon code (#2082)
+49cdad58c Minor: Add a brief comment to the RPC role setup code that explains the security justification for it.
+adacbfc7d Upgrade to Kotlin 1.1.60
+b685537c5 Reverse types for Issuer attributes. (#2083)
+55e4688cc CORDA-787 Split NodeMessagingClient into 3 (#2063)
+2dc4251cb change version to 3.0-NETWORKMAP-SNAPSHOT for the feature branch (#2076)
+332915f08 Bug fix for cash selection on H2 where the accumulated pennies amount is larger than max int
+8e7165db4 CORDA-759: Enforce key checks on identity de-anonymisation (#1993)
+1f9829337 Stabilise NodeStatePersistenceTests (#2079)
+817748c87 Performance improvement: cache app classloaders (#2060)
+857e39543 Change how mock notary identity is extracted (#2075)
+128d5cad0 Fixed typo in KotlinUtils.kt seperate -> separate
+f5c9fd8f4 Cross provider Issuer Reference database storage (#2032)
+19aba62fc Move tests to using named identities (#1879)
+aabc3c5b0 NodeInfo is no longer lateinit. (#2068)
+787de9d95 CORDA-716 Fix last of the test thread leaks (#2069)
+039cacae7 CORDA-787 Remove unused class (#2049)
+3d87a1a73 RaftCluster metrics for available members
+953a4a379 Revert "Introducing network parameters."
+e4f5e16bf Clean up identities in tests, stage 1 (#2059)
+37b34c6fc Remove unused code. (#2071)
+55bcf295e Move class to the only place that uses it. (#2067)
+5bdbd2457 Removal of transaction contract state as BLOB in VaultStates table. (#2034)
+b423fea53 Consistent database tables naming convention. (#2064)
+8e18e1ba2 Updates flow cookbook to use freshKeyAndCert not freshKey.
+d78308f51 Detangle issuers in NodeVaultServiceTest (#2057)
+7337996e0 Add config library and default config to webserver JAR (#2047)
+92c886180 [CORDA-760]: Propagate invocation context across the codebase. (#2016)
+f0a5ea96e Consistent database columns naming convention. (#2043)
+4e263a198 Removed incorrect @Lob annotation from key_hash schema fields. (#2033)
+b5fffa76f Retire a lateinit var. (#2038)
+c4a9320e7 CORDA-716 Don't allow the netty global executor to inherit serialization env holder (#2048)
+ecd09b7e6 Store raft commit index in DistributedImmutableMap
+75d42a25f Removed ValidateClasspathTest smoke test, as NodeProcess.Factory does the same thing and has wider coverage
+2fe41715c On exit, the driver will automaticallly shutdown any nodes which weren't waited for.
+fc8ed3420 Switch from compaction mode sequential to full
+b0af1c715 From code review
+4e67a979a Added some more details regarding setting log levels for individual modules
+0d2382619 Raft Notary: bootstrap command line flag
+64a9946f0 Replace artemis network map with http network map (#1970)
+3627cc9fc Vault query - return single column which groups multiple aggregation functions.
+2d997b1fa Retire verifierDriver serialization init. (#2026)
+b23e72768 Raft Notary: change compaction mode to sequential
+cf33be66f Raft Notary: remove snapshotting
+887dc68a4 RELEASE - Increment Platform Version Number (#2040)
+1a02c9a74 AttachmentCriteriaQuery class and infrastructure (#2022)
+2a961b8e2 Separate server contexts from shared contexts. (#2044)
+687a99226 CORDA-716 Make asContextEnv available to smoketesting (#2039)
+c583af8f4 Add AbstractPartyDescriptor to stop Hibernate warning (#1878)
+81869535b BUGFIX: Remove bad import
+b8b3911ce Fix the BFT startup consensus workaround. (#2042)
+d7ce405ec Fix RPCStabilityTests.`client doesnt leak threads when it fails to start` (#2037)
+076a8ab93 Step through cert path when registering (#2027)
+6a569fb3f Retire findTokenizableService. (#2036)
+052124bbe CORDA-716 Make serialization init less static (#1996)
+cc4c732a4 CORDA-715 Upgrade Artemis from 2.1.0 to 2.4.0 (#2029)
+001cb4f90 Don't blow up if a param is anonymous e.g. underscore. (#2020)
+39e2f6ad9 ENT-1031 AMQP serializer for ContractAttachment, evaluate lazy attachment and write out in full
+5354c777c CORDA-781 code layout cleaned up
+b0517954a CORDA-781 clean up imports
+13001ee67 CORDA-781 code review: clean up AMQP scheme
+4c1d1733a Serialization of large contract attachments causes OOM exception (#1991)
+6b71c6cf7 Retire some initialiseSerialization booleans. (#2019)
+26819bfd0 No public key serializer overriding for checkpointing
+89b01ab34 Hooks for PublicKeySerializer customization
+219433c3c Hooks for PublicKeySerializer
+7d1f7ab53 CORDA-296: added rpc that returns an observable for node state (#2004)
+c7ec9ad8a Fix Gradle warning for example-code project. (#2013)
+a036a6300 Enforce serialization API for Java. (#2014)
+117261caa Retired getDefaultNotary test extension method.
+e26e41a38 Various structural cleanups of node-driver: * Extracted out ShutdownManager into its own file * Moved RPCDriver and ProcessUtilities into internal package * Made n.c.testing.performance package internal
+e6feca2f0 Added verifySignaturesExcept which takes in a colleciton of PublicKeys
+deaba2887 Some cleanup after network map removal (#2006)
+7944fcde5 Supported TLS cipher suites (#2005)
+a4be26a29 Removed unnecessary calls to MockNetwork.runNetwork (b/c there is no more P2P node registration) and removed redundant entries in cordappPackages
+4e1578c19 Remove retired IntegrationTestCategory reference (#2007)
+20a8ab5e7 RELEASE - post 2.0 nump build no on master
+1b332e2cb Add extra version pinning for spring.boot gradle plug-in
+41e0be195 Exit code is between 0-255. So protect against VERY unlikey chance of overflow. (#2000)
+00a901485 CORDA-716 Rename one TestClock to DemoClock, and unduplicate code (#1988)
+9baa9037a Retire marker interface. (#1997)
+3bb018a5c Removed the ability to manually start notary nodes from the driver and MockNetwork. Instead by default a single notary is automatically started. This can be customised at creation time of the driver and MockNetwork. This more accurately models the concept of network parameters in a CZ.
+68481765e Clean up build gradle files
+9be37c2b8 Remove useless call to waitUntilNetworkReady within driver started nodes (#1998)
+22453204e move node info schema to internal package (#1976)
+d04e48740 Introducing network parameters.
+549046575 [CORDA-446] Remove entities from netmap cache & friends (#1980)
+837e8800e Checking that the smoke tests don't have the node on their classpath.
+2e0e78e88 Retire DriverBasedTest. (#1986)
+7521675ef It's not commonName it's organisation. (#1987)
+d882f8871 [CORDA-758]: Permissions are now checked for each RPC method. (#1985)
+a21d361df Clean up mentions of nodeReady future and friends from MockNetwork/Driver (#1979)
+20a6fda35 Correct unchecked cast call (#1973)
+b925e6540 [CORDA-446] Remove mentions of networkmap node in DemoBench (#1969)
+00e682a54 [CORDA-446] Clean up other mentions of network map node and logic (#1974)
+e564edaa5 Line endings fix.
+09c836f5e Bumped gradle plugins to 2.0.8 for publishing.
+dcaac9169 Cordformation now allows addresses to be used for non-database addresses. (#1917)
+f614557ae Remove SimpleNode it's unused (#1971)
+6b2b663ab CORDA-716 Retire MockNetwork.Factory (#1937)
+6a5f8a236 Upgraded to gradle 4.3 (#1960)
+d6adb83cd CORDA-756 - Refactor Kryo into sub module as per AMQP
+7f96205b9 Allow Gradle to set dependency between Jar and ScanApi tasks. (#1962)
+6ebba9dea Removed the startNotary methods from NodeBasedTest, and moved it into an internal package
+3aeacef3b CORDA-751: Eliminate duplicating entry for classpath when OutOfProcess node is started (#1961)
+d79d8dad4 Removing exposed reference
+4b0b13dad CORDA-716 Retire TestDependencyInjectionBase (#1939)
+02a5ddb7d Remove Bower dependencies from repo and download them on demand (#1959)
+bad31658f Fix whitespace
+3f43d8ad2 Add helper for checking whether to check checkpoints and unit test it.
+9176fcb8e Remove for good network map service node (#1942)
+05d6fb91c Reinstate Simulation config overrides for notary. (#1947)
+851918dd7 CORDA-553 - API standard doc update
+ecbb4330d CORDA-553 - Review comments
+0d4c2d352 Replaces links to Discourse with Stack Overflow links.
+cde1587ac Cleaned up devModeOptions
+5b5a4bd2e Code rewiew: turn dev mode options into a data class
+a0b9768be Retire FullNodeConfiguration (#1954)
+335060553 CORDA-553 - Cope with future transforms
+bc12f87a2 CORDA-553 - Review Comments
+3633624dc CORDA-553 - First steps towards evolvability
+4a4500811 Code rewiew: reformat
+79f080368 Code rewiew: constant naming
+01f80fb18 remove outdated test (#1949)
+4e07add16 CORDA-742 Change capsule cache directory for testing purposes
+428eb43ab Minor: add a discussion to recordTransactions.
+d7e4aa178 Add more formal support for observer/regulator nodes. This is a simplistic approach which assumes a dedicated node for observers: states that are reported to the node will appear in the database and update feeds as normal. Apps that expect all updates to be relevant to themselves may need adjusting if they run on an observer node too, but this is likely to be rare.
+1b4a5f3d4 Add a toString to FlowSessionImpl
+170fde9d7 Code rewiew: - add comments - clearer variable names - use constants instead of literal
+91bba5e26 CORDA-741 changed formatted to true
+75ba47123 CORDA-728 Turning on capsule debug
+59fe7a196 CORDA-728 fixed the issue with node runner on mac. Also did a tiny bit of readability refactoring.
+a4636b0d5 Fix mock for new NodeConfigutation property
+d275ab41a Rename debugOptions to devModeOptions, extension method
+0cbee046f Add extension method to check for flags devModeOptions, formatting
+74595c65c Add optional debug options to config and allow to switch checkpointChecking off in dev mode
+71fe0daa0 Give the checkpoint checker thread a meaningful name
+04d8260e0 CORDA-351: force update dependencies and suppress vulnerabilities not… (#1944)
+a3be4d0da Add extraPackages to NodePerformanceTest so it runs successfully
+dcca3179d Perform sensible currency conversion (#1941)
+44a7d872d IRS Demo - split IRS Demo into two separate applications to showcase … (#1638)
+ba7514644 CORDA-716 Unpollute MockNode with Simulation-specific code (#1945)
+1100cb1cb Exclude IntelliJ custom dictionaries from git
+5bb460181 Reflects V1.0 changes on Master re: internal samples and identity sync flow API.
+5349d4f85 Standardisation of Public Keys in Schema entities. (#68) (#1936)
+2fe3fbbfe CORDA-699 Add injection or modification of memory network messages (#1920)
+4b8590ef4 CORDA-736 Add some new features to corda.jar via node.conf for testing (#1926)
+927924498 Introduce MockNodeParameters/Args (#1923)
+7f6608deb Retrofit changes from Enterprise PR #61 (#1934)
+c5a6047b0 Minor fix for api checker script to support macOS
+b04368e36 [CORDA-442] make MockNetwork not start a networkmap node (#1908)
+2463cbd41 CORDA-435 - AMQP enablement fixes
+303acf715 CORDA-435 - AMQP serialisation cannot work with private vals
+cbb513509 Fixing Bank-Of-Corda Demo in `master` (#1922)
+01728e5a4 Network map service REST API wrapper (#1907)
+97f7c9b79 CORDA-435 - Ensure Kryo only tests use Kryo serializatin context
+1b7ebd484 CORDA-351: added dependency check plugin to gradle build script (#1911)
+c66a84bfc Interface changes for multi-threading
+54f901c4f move SMM
+11db199b7 Fix-up: Bank Of Corda sample (#1912)
+005ce349a * Retire MockServiceHubInternal (#1909)
+342090db6 Experimental support for PostgreSQL (#1525)
+2c84d07e8 CORDA-704: Implement `@DoNotImplement` annotation (#1903)
+e6de0aa40 Review Comments
+651bbdcf8 Kotlin migration
+3dd09fd69 Cordformation in Kotlin (#1873)
+0b7a39f66 CORDA-725 - update changelog
+1e05f27ba CORDA-725 - Change AMQP identifier to officially assigned value
+32e727264 Review fixes
+8c9045bd7 deployNodes Gradle task appends properties from an optional file to node.conf (#1444)
+bd53a22ef Removed extraAdvertisedServiceIds config
+34dbbe626 Add confidential identity support to cash exit logic (#1849)
+242b019dc CORDA-641: Remove special case handling of notary transactions (#1675)
+0e47e53b6 Make AttachmentLoadingTests more stable (#1810)
+7af1f02a2 Add a configuration option to set how often should a node check for new nodeinfos on disk (#1851)
+6166fa835 Don't generate Kt classes (#1798)
+22b1dead3 Remove functions with spaces in their name (#1850)
+d1db35c34 Removes unnecessary @JVMOverloads annotation.
+484cf7542 CORDA-686 - Split Cordapp gradle plugin from cordformation (#1817)
+747830ff9 Scan API for addition of new abstract methods. (#1854)
+7ad754fe7 Add signature exchange to transaction key flow (#1417)
+7340a2e32 CORDA-654: Handle non-standard file systems in NodeInfoWatcher (#1818)
+e1458a40c Revert code transformation; use of deprecated method
+14f959b4a Code clean-up run
+f6e5d2385 Non-material public API change due to interfaces being re-arranged (#1852)
+69ad52cf5 Deflake node infoWatcherTest (#1836)
+29a101c37 [CORDA-683] Enable `receiveAll()` from Flows.
+20a30b30d Initial stub for IntelliJ Code Style settings (#1832)
+689758a71 CORDA-644: Only serialise Kotlin lambdas when checkpointing. (#1801)
+f83f1b701 CORDA-599 Fix circular dependency between vault and SH (#1630)
+a9508b393 CORDA-540: AMQP Private key serializer (#1838)
+a425f82c7 CORDA-540: Change how standard mutable whitelists structured (#1814)
+8d46b6bcb Update gradle plugin version for previous commit
+727cd0e55 Cleaned up notary configuration by introducing a notary config option.
+0b35a99c5 [CORDA-682]: Claim Jigsaw module names (#1824)
+d761d52c1 Fix filterAnnotationsFor() to return MethodInfo.
+3afe85504 Update to match MockNetwork API change (#1831)
+3f6ce3c86 Removes broken link.
+d9f086cf9 Modify the API Scanner plugin to filter method annotations.
+b5a77a7a9 Remove unnecessary `this` in sample code + minor changes to contract paragraph
+82d1979b9 Better error for driver instantiated outside package.
+fe4635a81 Start Flows from services
+66d78fcf6 Cleanup of mock network pre-NetworkParameters (#1802)
+d499ee32b Correct bad exception reference and various rendering issues
+33ba14514 CORDA-540: Add verification to ensure that private keys can only be serialized with specific contexts (#1800)
+e8d21f231 Deflake NodeInfoWatcherTest (#1811)
+9239050fc Make cordapp-example java tree buildable (#1809)
+248c89881 Instantiate Contract classes outside of LedgerTransaction.verify() (#1770)
+cf83328d5 Add filesystem polling to nodes (#1623)
+257756d86 Change IdentitySyncFlow to only offer own identities (#1740)
+46532ccbc Don't repackage well known key types (#1545)
+2ca140d7f CORDA-540: Allow AMQP switch for storage context (#1799)
+f5784f718 Remove database transaction from notaryPartyFromX500Name (#1786)
+5b79def79 Add CordaRPCOps.notaryPartyFromX500Name (#1786)
+ab7507db6 CORDA-599 Remove unnecessary laziness (#1517)
+eb0e2535e [CORDA-442] Make cordformation serialize NodeInfos to disk during deployment. (#1546)
+97731bcaa Add README for our automated API check. (#1793)
+e2bb14da8 CORDA-540: AMQP specific fixes in "node-api" project (#1765)
+e6e3c29d7 Fixed a few instances of waitUntilNetworkReady() to fix flaky tests. (#1785)
+4fa63d07d Update build label to 1.1-SNAPSHOT (#1598)
+ba9e2f01b Improve API page wording (#1788)
+55af4d211 Derive working directory for API check from location of script. (#1789)
+c570f8c6e Fail the API check for lines starting with a single '-'. (#1787)
+c87e1045e CORDA-540: Perform schema verification (#1672)
+457f95f18 Removed the network map service type as it's no longer needed.
+24b773eec Added new API check script and API version
+1e7474d08 Use latest crash shell which fixes error when using multiple commands or hitting keys accidentally (#1729)
+9e5d8044b Fixed test broken by merge.
+2d5385974 Fixes bugs with contract constraints (#1696)
+655f2be8b Fixed flaky test
+ed06443ce Update Readme (#1756)
+fee156cc4 Added a contract constraints section to the key concepts doc. (#1704)
+659b44736 V1 tests and fixes for the ContractConstraints work (#1739)
+efc85f855 Added current API to CI directory (#1772)
+831df4bc3 Minor: print a deprecation warning when the web server starts.
+12982b303 Move dbCloser to MockNode, the only thing that uses it. (#1512)
+383eb2bef CORDA-540: Fix to make IRS demo code pass in AMQP mode (#1769)
+ef9b54327 Checking out the latest milestone will no longer be required.
+
+1e12aebe0 Gradle API Scanner plugin (#1669)
+786113540 Hide companion object completely from external visibility (#1742)
+7787896cb Hide SerializationContext from public API on TransactionBuilder (#1715)
+5fa738188 Custom exceptions in corda, should either derive from an appropriate closely related java exception, or CordaException, or CordaRuntimeException. They should not inherit just from Exception, or RuntimeException.
+89ef4034c Clean up of Dokka comments (#1632)
+2aaeb4c0b CORDA-652: Remove uses of `createSomeNodes` for consistency (#1492)
+5e5f9d779 add message warning windows users they might need to manually kill explorer demo nodes started by gradle (#1717)
+eb0e5ad41 Improve NodeTabView in DemoBench (#1639)
+f8a43a833 A temporary fix for contract upgrade transactions: during LedgerTransaction verification run the right logic based on whether it contains the UpgradeCommand.
+c0dd8d338 CORDA-649: Improving logging (#1699)
+57e131d8a Prevent the root project from building an unwanted dummy cordapp. (#1706)
+334164aa8 Fixed several bugs in the contract constraints work (#1695)
+5ed755d3f CORDA-653 - Serialised enums should respect whitelist (#1692)
+512de2690 Added changelog entry. (#1691)
+39160de0a BIGINT fix for H2 coin selection. (#1659)
+7a55855af Fix validating notary flow to handle notary change transactions properly. Add a notary change test for checking longer chains involving both regular and notary change transactions.
+241f84355 Unification of VaultQuery And VaultService APIs (into single VaultService interface) to simplify node bootstrapping and usability. (#1677)
+d1891faa4 FlowSnapshot serialization error (#1671)
+9874e1ff3 uncheckedCast crusade (#1667)
+c8739e83a IRS Fixes to bring UI closer to declared financial types
+762b2a512 More memory to attachment demo test nodes
+c6c4c13be Declare this internal message string as "const". (#1674)
+b75c9f925 Ironic: upgrade the version of the Gradle plugin that checks for upgraded versions of things.
+7a082a659 Add an IntelliJ scope that covers the currently supported Corda API.
+8a842d1d5 CORDA-540: Ensure that covariance of type is handled correctly when serializing with AMQP (#1631)
+aff4d35cc Enforce JSON serialized key format (#1606)
+24ff7efd5 Cordapps now have a name field (#1645)
+474a72d1d [CORDA-624] Node Explorer on Issuing cash throws MissingContractAttachements exception (#1654)
+63168c029 [CORDA-481]:  GH 965: Java 8 lambdas don't work properly in checkpointing (#1619)
+246ab26d3 Properly escape backslashes in windows paths (#1556)
+b4e674c2f CORDA-540: Implementation of path in the serialization graph (#1484)
+bef640d88 Add integration test to verify that ProcessUtilities work as expected (#1561)
+23f16b4b2 CORDA-604: Update cash spending to handle multiple identities (#1534)
+6ddb6c7cc Command toString signers-keys format (#1609)
+
+RPC
+9d115a211 Delay RPC arguments deserialisation to allow routing of errors
+4df8b427d Removed SSLConfiguration parameter from CordaRPCClient, thus removing SSL support.
+142f52fa8 [CORDA:936]: Enable RPC layer to work with SSL
+2082168cf Close Hikari CP around external auth database on shutdown (RPCSecurityManagerImpl.kt) (#2359)
+0a56c7554 Minor: AuthDBTests - close RPC connections to prevent thread leaks
+8b5ad9d5c Remove unused class DefaultCordaRpcPermissions (#2328)
+3c0e00645 Reverted incorrect additional advertised RPC address in NodeInfo (#2417)
+2d557d04b Minor rewrites. Better documentation of granting RPC permissions to RPC users.
+9783f11ba Exposed RPC SSL settings through Cordformation (#2419)
+0ce0baa23 Removed initialiseSerialization param from CordaRPCClient, mirroring change in 1.0 branch
+00b570df2 Improve RPC security test coverage [CORDA-827] (#2320)
+
+Bridge
+ceff50d65 Refactor location of bridge code to allow out of process bridging (#2431)
+
+Testing Framework
+1661cea81 CORDA-892: Make cordform test use new network bootstrapper logic (#2307)

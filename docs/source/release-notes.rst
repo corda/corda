@@ -3,47 +3,128 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
-Unreleased
-----------
-* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
-  hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
-  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
-  found at :doc:`permissioning`.
+Release 3.0
+-----------
 
-* **Enum Class Evolution**
-  With the addition of AMQP serialization Corda now supports enum constant evolution.
+With thanks to open source contributor Ben Wyeth got providing a mechanism for registering a callback on app shutdown
 
-  That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
-  annotations applied, have older and newer instances of that enumeration be understood.
+Since the release of Version 2 of Corda there have been a large number of changes added
 
-* **AMQP Enabled**:
-  AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This change
-  brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
-  users.
+Significant Changes
+===================
 
-  Details on the AMQP serialization framework can be found in the :doc:`serialization` document :ref:`here <amqp_ref>`.
-  This provides an introduction and overview of the framework whilst more specific details on object evolution as it relates to
-  serialization is similarly found in pages :doc:`serialization-default-evolution` and :doc:`serialization-enum-evolution`
-  respectively. Recommendations on how best to code CorDapps using your own :ref:`custom types <amqp_custom_types_ref>`.
+* **AMQP**:
+
+AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This
+change brings a serialisation format that will allow us to deliver enhanced security and wire stability. It is a key
+prerequisite to enabling different Corda node versions to coexist on the same network and to enable easier upgrades.
+
+Details on the AMQP serialization framework can be found :ref:`here <amqp_ref>`. This provides an introduction and
+overview of the framework whilst more specific details on object evolution as it relates to serialization is similarly
+found in :doc:`serialization-default-evolution` and :doc:`serialization-enum-evolution` respectively.
 
   .. note:: This release delivers the bulk of our transition from Kryo serialisation to AMQP serialisation. This means that many of the restrictions
-    that were documented in previous versions of Corda are now enforced. (https://docs.corda.net/releases/release-V1.0/serialization.html).
+    that were documented in previous versions of Corda are now enforced.
+ 
+    In particular, you are advised to review the section titled :ref:`Custom Types <amqp_custom_types_ref>`.
+    To aid with the transition, we have included support in this release for default construction and instantiation of
+    objects with inaccessible private fields, but it is not guaranteed that this support will continue into future versions;
+    the restrictions documented at the link above are the canonical source.
 
-    In particular, you are advised to review the section titled "Custom Types". To aid with the transition, we have included support
-    in this release for default construction of objects and their instantiation through getters as well as objects with inaccessible
-    private fields but it is not guaranteed that this support will continue into future versions; the restrictions documented at the
-    link above are the canonical source.
-
-* **Custom Serializers**
+  * **Custom Serializers**
 
   To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
   to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
   serializers to operate on those types.
-
+ 
   A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
 
+
+* **The Network Map Service**
+
+ The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
+
+   * The previous design was never intended to be final but was rather a quick implementation in the earliest days of the
+     Corda project to unblock higher priority items. It suffers from numerous disadvantages including lack of scalability,
+     as one node is expected to hold open and manage connections to every node on the network; not reliable; hard to defend
+     against DoS attacks; etc.
+
+   * There is no longer a special network map node for distributing the network map to the other nodes. Instead the network
+     map is now a collection of signed ``NodeInfo`` files distributed via HTTP.
+
+   * The ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL`` which is the base URL for the
+     doorman registration and for downloading the network map. There is also an end-point for the node to publish its node-info
+     object, which the node does each time it changes. ``networkMapService`` config has been removed.
+
+   * To support local and test deployments, the node polls the ``additional-node-infos`` directory for these signed ``NodeInfo``
+     objects which are stored in its local cache. On startup the node generates its own signed file with the filename format
+     "nodeInfo-*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
+
+   * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
+     parameter is no longer needed.
+
+   * For test deployments we've introduced a bootstrapping tool (see :doc:`setting-up-a-corda-network`).
+
+   * ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
+     removed. The configuration of notaries has been simplified into a single ``notary`` config object. See
+     :doc:`corda-configuration-file` for more details.
+
+   * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
+     to correctly interop.
+
+   * The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
+     their X500 name.
+
+   * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
+     Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+
+   * The common name in the node's X500 legal name is no longer reserved and can be used as part of the node's name.
+
+   * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
+     was needed to allow changes to the schema.
+
+* **SSh Server**
+
+* **Testing Infratsructure**
+
+  << ARC >>
+
+* **Artemis and Bridges**
+
+  << MATHEW >>
+
+The Artemis topics used for peer-to-peer communication have been changed to be more consistent with future cryptographic
+agility and to open up the future possibility of sharing brokers between nodes. This is a breaking wire level change
+as it means that nodes after this change will not be able to communicate correctly with nodes running the previous version.
+Also, any pending enqueued messages in the Artemis message store will not be delivered correctly to their original target.
+However, assuming a clean reset of the artemis data and that the nodes are consistent versions,
+data persisted via the AMQP serializer will be forward compatible.
+
+Broker splut up
+
+* **RPC Security**
+
+Other Functional Improvments
+============================
+
+* **X.509 certificates**
+
+  These now have an extension that specifies the Corda role the certificate is used for, and the role
+  hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
+  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
+  found at see :doc:`permissioning-certificate-specification`.
+
+Minor Changes
+=============
+
+* Upgraded version of gradle used to 4.4.1
+* RPC Error reporting improvements,
+* Fingerprinting of generics in the AMQP library has has a number of issues resolved
+
+
+
 Release 2.0
-----------
+-----------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
 a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
 This was absent from version 1 but based on user feedback its re-introduction removes the need for complicated "isRelevant()" checks.
