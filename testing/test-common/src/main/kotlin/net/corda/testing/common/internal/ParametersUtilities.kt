@@ -30,6 +30,4 @@ fun testNetworkParameters(
 }
 val acceptAll = mapOf("all" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
-//fun getContractHash(contractClassName: ContractClassName) = SecureHash.SHA256(Hashing.sha256().hashString(contractClassName, StandardCharsets.UTF_8).asBytes())
-//fun getMockWhitelistedContractImplementations() = emptyMap<ContractClassName, List<AttachmentId>>().withDefault { listOf(getContractHash(it)) }
 fun getMockWhitelistedContractImplementations() = acceptAll

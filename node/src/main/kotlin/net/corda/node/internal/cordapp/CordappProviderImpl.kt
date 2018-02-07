@@ -53,7 +53,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
         val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it to it.jarPath }.toMap()
         val attachmentIds = cordappsWithAttachments.map { (cordapp, url) ->
-            url.openStream().use { stream -> attachmentStorage.importOrGetContractAttachment(cordapp.contractClassNames, stream) }
+            url.openStream().use { stream -> attachmentStorage.importContractAttachment(cordapp.contractClassNames, stream) }
         }
         return attachmentIds.zip(cordappsWithAttachments.values).toMap()
     }
@@ -76,9 +76,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
      */
     fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
 
+    //TODO -TUDOR - is this the right approach?
     val acceptAll = mapOf("all" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
-    override fun getValidAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>  {
+    override fun getWhitelistedContractAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>  {
         if (networkParameters.whitelistedContractImplementations == acceptAll) {
             return acceptAll.get("all")!!.toSet()
         } else {

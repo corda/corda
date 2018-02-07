@@ -90,6 +90,7 @@ class NodeAttachmentService(
             @Column(name = "filename", updatable = false)
             var filename: String? = null,
 
+            //TODO - Tudor - set table name
             @ElementCollection
 //            @CollectionTable(name="contract_class_name", joinColumns = arrayOf(
 //                    JoinColumn(name = "output_index", referencedColumnName = "output_index"))
@@ -272,18 +273,6 @@ class NodeAttachmentService(
 
     override fun hasAttachment(attachmentId: AttachmentId): Boolean =
             currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
-//        val criteriaBuilder = session.criteriaBuilder
-//        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-//        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
-//        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-//        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), attachmentId.toString()))
-//        return (session.createQuery(criteriaQuery).singleResult > 0)
-//    }
-
-
-//    fun getAttachmentHash1(contractClassName: ContractClassName?, jar: InputStream): AttachmentId {
-//        return SecureHash.SHA256(Hashing.sha256().hashString(contractClassName!!, StandardCharsets.UTF_8).asBytes())
-//    }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
@@ -317,7 +306,7 @@ class NodeAttachmentService(
         }
     }
 
-    override fun importOrGetContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
+    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
         //TODO - TUDOR - refactor
         require(jar !is JarInputStream)
 

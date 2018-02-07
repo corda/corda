@@ -58,7 +58,7 @@ interface AttachmentStorage {
      * @param jar [InputStream] of Jar file
      * @return [AttachmentId] of uploaded attachment
      */
-    fun importOrGetContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId
+    fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId
 
     /**
      * Searches attachment using given criteria and optional sort rules

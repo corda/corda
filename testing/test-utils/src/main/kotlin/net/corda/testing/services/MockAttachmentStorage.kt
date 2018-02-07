@@ -32,18 +32,17 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun importAttachment(jar: InputStream): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
-/*
         require(jar !is JarInputStream)
 
         val bytes = getBytes(jar)
 
         val sha256 = bytes.sha256()
         if (!files.containsKey(sha256)) {
-            files[sha256] = bytes
+            files[sha256] = Pair(object : AbstractAttachment({ bytes }) {
+                override val id = sha256
+            }, bytes)
         }
         return sha256
-*/
-        TODO("not implemented")
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
@@ -77,7 +76,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     }
 
 
-    override fun importOrGetContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
+    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
         val hs = HashingInputStream(Hashing.sha256(), jar)

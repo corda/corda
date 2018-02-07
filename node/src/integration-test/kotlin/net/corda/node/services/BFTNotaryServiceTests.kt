@@ -48,7 +48,7 @@ class BFTNotaryServiceTests {
 
     @Before
     fun before() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = MockNetwork(listOf("net.corda.testing.contracts"))
     }
 
     @After

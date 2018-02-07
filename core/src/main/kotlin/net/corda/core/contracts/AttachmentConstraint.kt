@@ -21,8 +21,8 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
 }
 
 /** An [AttachmentConstraint] that verifies that the hash is in the network parameters*/
-data class WhitelistedByZoneAttachmentConstraint(val validContractImplementations: Set<SecureHash>) : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment) = validContractImplementations.contains(attachment.id)
+data class WhitelistedByZoneAttachmentConstraint(val whitelistedContractImplementations: Set<SecureHash>) : AttachmentConstraint {
+    override fun isSatisfiedBy(attachment: Attachment) = whitelistedContractImplementations.contains(attachment.id)
 }
 
 /**

@@ -33,5 +33,5 @@ interface CordappProvider {
      * @param contractClassName The contract to find the valid attachments for
      * @return the set of AttachmentId defined in the network map
      */
-    fun getValidAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>
+    fun getWhitelistedContractAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>
 }

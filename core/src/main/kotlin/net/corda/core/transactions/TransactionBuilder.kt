@@ -90,6 +90,8 @@ open class TransactionBuilder(
     private fun getContractAttachmentId(cordappProvider: CordappProvider, state: TransactionState<ContractState>) = cordappProvider.getCurrentContractAttachmentID(state.contract)
             ?: throw MissingContractAttachments(listOf(state))
 
+    //todo - TUDOR - is this the right approach? move this somewhere
+    val whitelistAll = setOf(SecureHash.zeroHash, SecureHash.allOnesHash)
     internal fun toWireTransactionWithContext(cordappProvider: CordappProvider, serializationContext: SerializationContext? = null): WireTransaction {
 
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
@@ -97,15 +99,11 @@ open class TransactionBuilder(
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
         // with an explicit [AttachmentConstraint]
         val resolvedOutputs = outputs.map { state ->
-            if (state.constraint is AutomaticHashConstraint) {
-                val values = cordappProvider.getValidAttachmentIdsFromNetworkParameters(state.contract)
-                if(values == setOf(SecureHash.zeroHash, SecureHash.allOnesHash)){
-                    state.copy(constraint = AlwaysAcceptAttachmentConstraint)
-                }else{
-                    state.copy(constraint = WhitelistedByZoneAttachmentConstraint(values))
-                }
-            } else {
-                state
+            val whitelistedContractImplementations = cordappProvider.getWhitelistedContractAttachmentIdsFromNetworkParameters(state.contract)
+            when {
+                state.constraint !is AutomaticHashConstraint -> state
+                whitelistedContractImplementations == whitelistAll -> state.copy(constraint = AlwaysAcceptAttachmentConstraint)
+                else -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint(whitelistedContractImplementations))
             }
         }
 

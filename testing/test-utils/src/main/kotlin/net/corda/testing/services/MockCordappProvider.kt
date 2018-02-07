@@ -39,7 +39,7 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
         return if (!existingAttachment.isEmpty()) {
             existingAttachment.keys.first()
         } else {
-            attachments.importOrGetContractAttachment(contractClassNames, data.inputStream())
+            attachments.importContractAttachment(contractClassNames, data.inputStream())
         }
     }
 }

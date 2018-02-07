@@ -43,7 +43,7 @@ private fun createAttachmentData(content: String) = ByteArrayOutputStream().appl
 private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
 private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
-    attachments.importOrGetContractAttachment(listOf("test"),createAttachmentData(content).inputStream())
+    attachments.importContractAttachment(listOf("test"),createAttachmentData(content).inputStream())
 }
 
 private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
