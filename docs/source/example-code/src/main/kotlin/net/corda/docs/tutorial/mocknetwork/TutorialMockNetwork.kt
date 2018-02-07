@@ -15,11 +15,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.SessionData
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MessagingServiceSpy
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.setMessagingServiceSpy
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -102,6 +98,6 @@ class TutorialMockNetwork {
 
         expectedEx.expect(IllegalArgumentException::class.java)
         expectedEx.expectMessage("Expected to receive 1")
-        initiatingReceiveFlow.resultFuture.getOrThrow()
+        initiatingReceiveFlow.getOrThrow()
     }
 }

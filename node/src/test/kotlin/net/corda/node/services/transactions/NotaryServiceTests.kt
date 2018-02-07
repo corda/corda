@@ -19,8 +19,8 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.startFlow
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -120,11 +120,11 @@ class NotaryServiceTests {
         // Note that the notary will only return identical signatures when using deterministic signature
         // schemes (e.g. EdDSA) and when deterministic metadata is attached (no timestamps or nonces).
         // We only really care that both signatures are over the same transaction and by the same notary.
-        val sig1 = f1.resultFuture.getOrThrow().single()
+        val sig1 = f1.getOrThrow().single()
         assertEquals(sig1.by, notary.owningKey)
         assertTrue(sig1.isValid(stx.id))
 
-        val sig2 = f2.resultFuture.getOrThrow().single()
+        val sig2 = f2.getOrThrow().single()
         assertEquals(sig2.by, notary.owningKey)
         assertTrue(sig2.isValid(stx.id))
     }
@@ -153,7 +153,7 @@ class NotaryServiceTests {
 
         mockNet.runNetwork()
 
-        val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
+        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.Conflict
         assertEquals(notaryError.txId, stx2.id)
         notaryError.conflict.verified()
@@ -161,7 +161,7 @@ class NotaryServiceTests {
 
     private fun runNotaryClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
-        val future = aliceServices.startFlow(flow).resultFuture
+        val future = aliceServices.startFlow(flow)
         mockNet.runNetwork()
         return future
     }

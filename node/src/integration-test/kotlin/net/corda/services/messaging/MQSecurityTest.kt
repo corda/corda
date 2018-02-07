@@ -3,9 +3,7 @@ package net.corda.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -193,7 +191,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created
-        alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
+        alice.services.startFlow(SendFlow(bobParty, 0)).getOrThrow()
         return bobParty
     }
 

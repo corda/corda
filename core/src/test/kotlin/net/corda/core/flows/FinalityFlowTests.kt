@@ -53,7 +53,7 @@ class FinalityFlowTests {
         val stx = aliceServices.signInitialTransaction(builder)
         val flow = aliceServices.startFlow(FinalityFlow(stx))
         mockNet.runNetwork()
-        val notarisedTx = flow.resultFuture.getOrThrow()
+        val notarisedTx = flow.getOrThrow()
         notarisedTx.verifyRequiredSignatures()
         val transactionSeenByB = bobServices.database.transaction {
             bobServices.validatedTransactions.getTransaction(notarisedTx.id)
@@ -71,7 +71,7 @@ class FinalityFlowTests {
         val flow = aliceServices.startFlow(FinalityFlow(stx))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
-            flow.resultFuture.getOrThrow()
+            flow.getOrThrow()
         }
     }
 }

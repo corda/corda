@@ -30,7 +30,7 @@ class SwapIdentitiesFlowTests {
         val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob))
 
         // Get the results
-        val actual: Map<Party, AnonymousParty> = requesterFlow.resultFuture.getOrThrow().toMap()
+        val actual: Map<Party, AnonymousParty> = requesterFlow.getOrThrow().toMap()
         assertEquals(2, actual.size)
         // Verify that the generated anonymous identities do not match the well known identities
         val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()

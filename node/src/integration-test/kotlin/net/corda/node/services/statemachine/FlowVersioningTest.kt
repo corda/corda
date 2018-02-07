@@ -22,7 +22,7 @@ class FlowVersioningTest : NodeBasedTest() {
         val bob = startNode(BOB_NAME, platformVersion = 3)
         bob.internals.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
-                PretendInitiatingCoreFlow(bob.info.chooseIdentity())).resultFuture.getOrThrow()
+                PretendInitiatingCoreFlow(bob.info.chooseIdentity())).getOrThrow()
         assertThat(alicePlatformVersionAccordingToBob).isEqualTo(2)
         assertThat(bobPlatformVersionAccordingToAlice).isEqualTo(3)
     }
