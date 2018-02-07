@@ -5,6 +5,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Observable
 import java.time.Duration
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -45,6 +46,14 @@ inline fun Logger.trace(msg: () -> String) {
 /** Log a DEBUG level message produced by evaluating the given lamdba, but only if DEBUG logging is enabled. */
 inline fun Logger.debug(msg: () -> String) {
     if (isDebugEnabled) debug(msg())
+}
+
+/**
+ * Filters out all elements that are not of the given [ELEMENT] type.
+ */
+inline fun <reified ELEMENT : Any> Observable<*>.filterIsInstance(): Observable<ELEMENT> {
+
+    return filter(ELEMENT::class::isInstance).map { it as ELEMENT }
 }
 
 /**

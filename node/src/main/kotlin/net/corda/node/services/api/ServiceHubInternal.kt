@@ -64,6 +64,7 @@ interface ServiceHubInternal : ServiceHub {
     val networkService: MessagingService
     val database: CordaPersistence
     val configuration: NodeConfiguration
+    val nodeProperties: NodePropertiesStore
     override val cordappProvider: CordappProviderInternal
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }

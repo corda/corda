@@ -16,6 +16,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
+import net.corda.node.events.bus.EventBus
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
@@ -143,7 +144,7 @@ open class Node(configuration: NodeConfiguration,
 
     private var shutdownHook: ShutdownHook? = null
 
-    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, isDrainingModeOn: () -> Boolean, eventBus: EventBus): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService ?:
@@ -176,7 +177,9 @@ open class Node(configuration: NodeConfiguration,
                 database,
                 services.networkMapCache,
                 advertisedAddress,
-                networkParameters.maxMessageSize)
+                networkParameters.maxMessageSize,
+                isDrainingModeOn = isDrainingModeOn,
+                events = eventBus::events)
     }
 
     private fun startLocalRpcBroker(): BrokerAddresses? {

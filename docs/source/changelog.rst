@@ -6,6 +6,10 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
+  In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
+  This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
+
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.

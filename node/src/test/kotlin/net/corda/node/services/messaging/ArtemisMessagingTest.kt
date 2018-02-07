@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.events.bus.InMemoryEventBus
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
@@ -171,7 +172,9 @@ class ArtemisMessagingTest {
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     networkMapCache,
-                    maxMessageSize = maxMessageSize).apply {
+                    maxMessageSize = maxMessageSize,
+                    isDrainingModeOn = { false },
+                    events = { InMemoryEventBus().events }).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }
