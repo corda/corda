@@ -9,4 +9,3 @@ package net.corda.core
 @Target(AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
 @MustBeDocumented
 annotation class CordaInternal
-
