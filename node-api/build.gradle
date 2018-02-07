@@ -34,6 +34,9 @@ dependencies {
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:0.21.0"
 
+    // Pure-Java Snappy compression
+    compile 'org.iq80.snappy:snappy:0.4'
+
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"

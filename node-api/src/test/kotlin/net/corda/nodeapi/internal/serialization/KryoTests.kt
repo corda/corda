@@ -19,8 +19,12 @@ import net.corda.testing.core.TestIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -31,9 +35,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class KryoTests {
+@RunWith(Parameterized::class)
+class KryoTests(private val compression: CordaSerializationEncoding?) {
     companion object {
         private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
+        @Parameters(name = "{0}")
+        @JvmStatic
+        fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
     }
 
     private lateinit var factory: SerializationFactory
@@ -48,7 +56,7 @@ class KryoTests {
                 emptyMap(),
                 true,
                 SerializationContext.UseCase.Storage,
-                null)
+                compression)
     }
 
     @Test
@@ -301,5 +309,14 @@ class KryoTests {
         val exception = FetchDataFlow.HashNotFound(randomHash)
         val exception2 = exception.serialize(factory, context).deserialize(factory, context)
         assertEquals(randomHash, exception2.requested)
+    }
+
+    @Test
+    fun `compression has the desired effect`() {
+        compression ?: return
+        val data = ByteArray(12345).also { Random(0).nextBytes(it) }.let { it + it }
+        val compressed = data.serialize(factory, context)
+        assertEquals(.5, compressed.size.toDouble() / data.size, .03)
+        assertArrayEquals(data, compressed.deserialize(factory, context))
     }
 }

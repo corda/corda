@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.Instruction
 import net.corda.nodeapi.internal.serialization.SerializationScheme
+import net.corda.nodeapi.internal.serialization.*
 import java.security.PublicKey
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
@@ -85,14 +86,24 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        val dataBytes = (kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")).apply { get() }
+        val dataBytes = kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")
         return context.kryo {
             kryoInput(ByteBufferInputStream(dataBytes)) {
-                if (context.objectReferencesEnabled) {
-                    uncheckedCast(readClassAndObject(this))
-                } else {
-                    withoutReferences { uncheckedCast<Any?, T>(readClassAndObject(this)) }
+                val result: T
+                loop@ while (true) {
+                    when (Instruction.vals.readFrom(this)) {
+                        Instruction.ENCODING -> substitute(CordaSerializationEncoding.vals.readFrom(this)::wrap)
+                        Instruction.DATA_AND_STOP, Instruction.ALT_DATA_AND_STOP -> {
+                            result = if (context.objectReferencesEnabled) {
+                                uncheckedCast(readClassAndObject(this))
+                            } else {
+                                withoutReferences { uncheckedCast<Any?, T>(readClassAndObject(this)) }
+                            }
+                            break@loop
+                        }
+                    }
                 }
+                result
             }
         }
     }
@@ -101,7 +112,12 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         return context.kryo {
             SerializedBytes(kryoOutput {
                 kryoMagic.writeTo(this)
-                Instruction.DATA_AND_STOP.writeTo(this)
+                context.encoding?.let { encoding ->
+                    Instruction.ENCODING.writeTo(this)
+                    (encoding as CordaSerializationEncoding).writeTo(this)
+                    substitute(encoding::wrap)
+                }
+                Instruction.ALT_DATA_AND_STOP.writeTo(this) // XXX: Change to DATA_AND_STOP?
                 if (context.objectReferencesEnabled) {
                     writeClassAndObject(this, obj)
                 } else {
