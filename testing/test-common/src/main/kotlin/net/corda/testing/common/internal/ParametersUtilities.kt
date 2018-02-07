@@ -1,14 +1,8 @@
 package net.corda.testing.common.internal
 
-import com.google.common.hash.Hashing
-import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.SecureHash
-import net.corda.core.node.services.AttachmentId
-import net.corda.core.utilities.hexToByteArray
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
-import java.nio.charset.StandardCharsets
+import net.corda.core.utilities.whitelistAllContractsForTest
 import java.time.Instant
 
 fun testNetworkParameters(

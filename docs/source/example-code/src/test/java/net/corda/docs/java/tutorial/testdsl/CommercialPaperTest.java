@@ -15,12 +15,10 @@ import java.security.PublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 
-import static java.util.Collections.emptyList;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
-import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static net.corda.testing.node.NodeTestUtils.ledger;
 import static net.corda.testing.node.NodeTestUtils.transaction;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;

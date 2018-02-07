@@ -92,8 +92,6 @@ data class LedgerTransaction(
     private fun verifyConstraints() {
         val contractAttachments = attachments.filterIsInstance<ContractAttachment>()
         (inputs.map { it.state } + outputs).forEach { state ->
-            // Ordering of attachments matters - if two attachments contain the same named contract then the second
-            // will be shadowed by the first.
             val contractAttachment = contractAttachments.find { it.allContracts.contains(state.contract) }
                     ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 

@@ -13,11 +13,13 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.utilities.whiteListHashes
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.collections.HashSet
+
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -90,8 +92,6 @@ open class TransactionBuilder(
     private fun getContractAttachmentId(cordappProvider: CordappProvider, state: TransactionState<ContractState>) = cordappProvider.getContractAttachmentID(state.contract)
             ?: throw MissingContractAttachments(listOf(state))
 
-    //todo - TUDOR - is this the right approach? move this somewhere
-    val whitelistAll = setOf(SecureHash.zeroHash, SecureHash.allOnesHash)
     internal fun toWireTransactionWithContext(cordappProvider: CordappProvider, serializationContext: SerializationContext? = null): WireTransaction {
 
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
@@ -102,11 +102,12 @@ open class TransactionBuilder(
             val whitelistedContractImplementations = cordappProvider.getZoneWhitelistedContractAttachmentIds(state.contract)
             when {
                 state.constraint !is AutomaticHashConstraint -> state
-                whitelistedContractImplementations == whitelistAll -> state.copy(constraint = AlwaysAcceptAttachmentConstraint)
+                whitelistedContractImplementations == whiteListHashes -> state.copy(constraint = AlwaysAcceptAttachmentConstraint)
                 else -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint(whitelistedContractImplementations))
             }
         }
 
+        //todo - TUDOR - should this be the old or the new contract?
         val inputAttachments = inputs.map { stateAndRef -> getContractAttachmentId(cordappProvider, stateAndRef.state) }
         val outputAttachments = outputs.map { state -> getContractAttachmentId(cordappProvider, state) }
 

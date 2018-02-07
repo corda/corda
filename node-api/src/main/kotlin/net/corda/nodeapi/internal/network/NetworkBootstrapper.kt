@@ -165,7 +165,7 @@ class NetworkBootstrapper {
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
                 epoch = 1,
-                whitelistedContractImplementations = emptyMap() // TODO -Tudor
+                whitelistedContractImplementations = emptyMap()
         ), overwriteFile = true)
 
         nodeDirs.forEach(copier::install)

@@ -147,7 +147,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
                 epoch = 1,
-                whitelistedContractImplementations = emptyMap<ContractClassName, List<AttachmentId>>() // TODO -Tudor
+                whitelistedContractImplementations = emptyMap()
         ))
         notaryIdentity = identity
         networkParametersCopier = parametersCopier

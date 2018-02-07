@@ -26,7 +26,7 @@ data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameter
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
  * @property modifiedTime
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set of parameters.
- * @property whitelistedContractImplementations List of valid jars containing contract code
+ * @property whitelistedContractImplementations List of whitelisted jars containing contract code for each contract class
  */
 // TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
 //  It needs separate design.
@@ -49,12 +49,6 @@ data class NetworkParameters(
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
     }
 }
-
-/**
- * This sequence can be used for test/demos
- * TODO - add warning on startup!
- */
-val whitelistAllContractsForTest = mapOf("*" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)

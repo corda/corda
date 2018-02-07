@@ -27,8 +27,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 // DOCSTART 3
-@Ignore
-//TODO - TUDOR-investigate
 class ResolveTransactionsFlowTest {
     private lateinit var mockNet: MockNetwork
     private lateinit var notaryNode: StartedNode<MockNetwork.MockNode>

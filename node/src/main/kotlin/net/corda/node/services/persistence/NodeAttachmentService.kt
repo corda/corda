@@ -90,10 +90,11 @@ class NodeAttachmentService(
             @Column(name = "filename", updatable = false)
             var filename: String? = null,
 
-            //TODO - Tudor - set table name
             @ElementCollection
-//            @CollectionTable(name="contract_class_name", joinColumns = arrayOf(
-//                    JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+            @Column(name = "contract_class_name")
+            @CollectionTable(name="node_attachments_contract_class_name", joinColumns = arrayOf(
+                    JoinColumn(name = "att_id", referencedColumnName = "att_id")),
+                    foreignKey = ForeignKey(name="FK__ctr_class__attachments") )
             var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
 

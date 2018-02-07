@@ -9,8 +9,9 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.whiteListHashes
 import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
+import net.corda.core.utilities.whitelistAllContractsForTest
 import java.net.URL
 
 /**
@@ -79,9 +80,9 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
 
     override fun getZoneWhitelistedContractAttachmentIds(contractClassName: ContractClassName): Set<AttachmentId> =
             if (networkParameters.whitelistedContractImplementations == whitelistAllContractsForTest) {
-                whitelistAllContractsForTest.values.first().toSet()
+                whiteListHashes
             } else {
                 networkParameters.whitelistedContractImplementations!!.get(contractClassName)?.toSet()
-                        ?: throw IllegalStateException("Could not find valid attachment ids for $contractClassName")
+                        ?: throw IllegalStateException("The contract: $contractClassName is not whitelisted.")
             }
 }

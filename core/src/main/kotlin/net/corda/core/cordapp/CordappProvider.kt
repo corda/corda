@@ -30,7 +30,7 @@ interface CordappProvider {
 
     /**
      *
-     * @param contractClassName The contract to find the valid attachments for
+     * @param contractClassName The contract to find the whiteliested attachments for
      * @return the set of AttachmentId defined in the network map
      */
     fun getZoneWhitelistedContractAttachmentIds(contractClassName: ContractClassName): Set<AttachmentId>
