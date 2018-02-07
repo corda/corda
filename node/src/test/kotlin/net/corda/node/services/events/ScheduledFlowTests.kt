@@ -143,8 +143,8 @@ class ScheduledFlowTests {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
-            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)
-            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)).resultFuture)
+            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)))
+            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)))
         }
         mockNet.waitQuiescent()
 

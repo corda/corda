@@ -52,7 +52,7 @@ class ReceiveMultipleFlowTests {
 
         val flow = nodes[0].services.startFlow(initiatingFlow)
         mockNet.runNetwork()
-        val receivedAnswer = flow.resultFuture.getOrThrow()
+        val receivedAnswer = flow.getOrThrow()
         assertThat(receivedAnswer).isEqualTo(answer)
     }
 
@@ -64,7 +64,7 @@ class ReceiveMultipleFlowTests {
         nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
         val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
         mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
+        val result = flow.getOrThrow()
         assertThat(result).isEqualTo(doubleValue * stringValue.length)
     }
 
@@ -76,7 +76,7 @@ class ReceiveMultipleFlowTests {
         nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
         val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
         mockNet.runNetwork()
-        val data = flow.resultFuture.getOrThrow()
+        val data = flow.getOrThrow()
         assertThat(data[0]).isEqualTo(value1)
         assertThat(data[1]).isEqualTo(value2)
         assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)

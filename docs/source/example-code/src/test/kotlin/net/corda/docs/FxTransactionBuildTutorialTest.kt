@@ -43,7 +43,7 @@ class FxTransactionBuildTutorialTest {
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for the flow to stop and print
-        flowHandle1.resultFuture.getOrThrow()
+        flowHandle1.getOrThrow()
         printBalances()
 
         // Using NodeB as Issuer create some pounds.
@@ -51,7 +51,7 @@ class FxTransactionBuildTutorialTest {
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for flow to come to an end and print
-        flowHandle2.resultFuture.getOrThrow()
+        flowHandle2.getOrThrow()
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
@@ -65,7 +65,7 @@ class FxTransactionBuildTutorialTest {
                 nodeB.info.chooseIdentity(),
                 weAreBaseCurrencySeller = false))
         // wait for the flow to finish and the vault updates to be done
-        doIt.resultFuture.getOrThrow()
+        doIt.getOrThrow()
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
         val balancesA = nodeA.database.transaction {
