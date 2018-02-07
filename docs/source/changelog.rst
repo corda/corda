@@ -417,6 +417,12 @@ Release 1.0
 * Current implementation of SSL in ``CordaRPCClient`` has been removed until we have a better solution which doesn't rely
   on the node's keystore.
 
+* A ``CordaInternal`` attribute has been added to identify properties on classes that are not intended to form part of the
+  public api and as such not be used
+
+* Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
+  only for internal use
+
 .. _changelog_m14:
 
 Milestone 14

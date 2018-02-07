@@ -66,4 +66,8 @@ fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company
  */
 fun StartedNodeServices.newContext() = testContext(myInfo.chooseIdentity().name)
 
+/**
+ * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]
+ * has origin [Origin.RPC] and actor with id "Only For Testing".
+ */
 fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): CordaFuture<T> = startFlow(logic, newContext()).getOrThrow().resultFuture
