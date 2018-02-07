@@ -10,7 +10,6 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
@@ -39,6 +38,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -51,7 +51,6 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
-import net.corda.testing.node.internal.network.acceptAll
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Observable
@@ -701,7 +700,7 @@ class DriverDSLImpl(
      * The local version of the network map, which is a bunch of classes that copy the relevant files to the node directories.
      */
     private inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
-        val networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaryInfos).copy(whitelistedContractImplementations = acceptAll))
+        val networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaryInfos).copy(whitelistedContractImplementations = whitelistAllContractsForTest))
         // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
         // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
         // Investigate whether we can avoid that.

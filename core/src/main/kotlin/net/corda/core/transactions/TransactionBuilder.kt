@@ -99,7 +99,7 @@ open class TransactionBuilder(
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
         // with an explicit [AttachmentConstraint]
         val resolvedOutputs = outputs.map { state ->
-            val whitelistedContractImplementations = cordappProvider.getWhitelistedContractAttachmentIdsFromNetworkParameters(state.contract)
+            val whitelistedContractImplementations = cordappProvider.getZoneWhitelistedContractAttachmentIds(state.contract)
             when {
                 state.constraint !is AutomaticHashConstraint -> state
                 whitelistedContractImplementations == whitelistAll -> state.copy(constraint = AlwaysAcceptAttachmentConstraint)

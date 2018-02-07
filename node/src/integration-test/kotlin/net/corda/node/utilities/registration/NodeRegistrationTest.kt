@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -24,7 +25,6 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
-import net.corda.testing.node.internal.network.acceptAll
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -80,7 +80,7 @@ class NodeRegistrationTest {
     fun `node registration correct root cert`() {
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
-                publishNotaries = { server.networkParameters = testNetworkParameters(it).copy(whitelistedContractImplementations = acceptAll) },
+                publishNotaries = { server.networkParameters = testNetworkParameters(it).copy(whitelistedContractImplementations = whitelistAllContractsForTest) },
                 rootCert = DEV_ROOT_CA.certificate)
         internalDriver(
                 portAllocation = portAllocation,

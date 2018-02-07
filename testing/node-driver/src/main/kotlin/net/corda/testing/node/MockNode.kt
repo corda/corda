@@ -5,7 +5,6 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
-import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -20,7 +19,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
@@ -31,13 +29,11 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -45,12 +41,11 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.getMockWhitelistedContractImplementations
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.setGlobalSerialization
@@ -326,7 +321,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
-        override fun retrieveNetworkParameters(trustRoot: X509Certificate) = super.retrieveNetworkParameters(trustRoot).copy(whitelistedContractImplementations = getMockWhitelistedContractImplementations())
+        override fun retrieveNetworkParameters(trustRoot: X509Certificate) = super.retrieveNetworkParameters(trustRoot).copy(whitelistedContractImplementations = whitelistAllContractsForTest)
 
         override fun startShell(rpcOps: CordaRPCOps) {
             //No mock shell

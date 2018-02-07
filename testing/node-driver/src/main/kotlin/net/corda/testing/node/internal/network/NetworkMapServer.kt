@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -30,15 +31,13 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
-val acceptAll = mapOf("all" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
-
 class NetworkMapServer(private val cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
                        private val networkMapCa: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
-        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, 40000, Instant.now(), 10, acceptAll) // TODO -Tudor
+        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, 40000, Instant.now(), 10, whitelistAllContractsForTest)
     }
 
     private val server: Server

@@ -7,6 +7,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.hexToByteArray
 import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.nodeapi.internal.network.whitelistAllContractsForTest
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 
@@ -25,9 +26,6 @@ fun testNetworkParameters(
             maxMessageSize = maxMessageSize,
             maxTransactionSize = maxTransactionSize,
             epoch = epoch,
-            whitelistedContractImplementations = getMockWhitelistedContractImplementations()
+            whitelistedContractImplementations = whitelistAllContractsForTest
     )
 }
-val acceptAll = mapOf("all" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
-
-fun getMockWhitelistedContractImplementations() = acceptAll
