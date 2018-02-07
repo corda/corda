@@ -52,14 +52,14 @@ class ResolveTransactionsFlowTest {
     fun tearDown() {
         mockNet.stopNodes()
     }
-// DOCEND 3
+    // DOCEND 3
 
     // DOCSTART 1
     @Test
     fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
         val p = TestFlow(setOf(stx2.id), megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
         val results = future.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
@@ -74,7 +74,7 @@ class ResolveTransactionsFlowTest {
     fun `dependency with an error`() {
         val stx = makeTransactions(signFirstTX = false).second
         val p = TestFlow(setOf(stx.id), megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
         assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
     }
@@ -83,7 +83,7 @@ class ResolveTransactionsFlowTest {
     fun `resolve from a signed transaction`() {
         val (stx1, stx2) = makeTransactions()
         val p = TestFlow(stx2, megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
         future.getOrThrow()
         miniCorpNode.database.transaction {
@@ -108,7 +108,7 @@ class ResolveTransactionsFlowTest {
             cursor = stx
         }
         val p = TestFlow(setOf(cursor.id), megaCorp, 40)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
         assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.getOrThrow() }
     }
@@ -132,7 +132,7 @@ class ResolveTransactionsFlowTest {
         }
 
         val p = TestFlow(setOf(stx3.id), megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
         future.getOrThrow()
     }
@@ -154,7 +154,7 @@ class ResolveTransactionsFlowTest {
         }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = TestFlow(stx2, megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
         future.getOrThrow()
 

@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -419,7 +420,9 @@ abstract class FlowLogic<out T> {
      * is public only because it must be accessed across module boundaries.
      */
     var stateMachine: FlowStateMachine<*>
+        @CordaInternal
         get() = _stateMachine ?: throw IllegalStateException("This can only be done after the flow has been started.")
+        @CordaInternal
         set(value) {
             _stateMachine = value
         }

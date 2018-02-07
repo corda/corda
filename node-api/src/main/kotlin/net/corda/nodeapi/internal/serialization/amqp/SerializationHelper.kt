@@ -98,7 +98,6 @@ data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter
     }.toString()
 
     constructor() : this(null, null, null, null)
-    constructor(field: Field?) : this(field, null, null, null)
 
     fun preferredGetter() : Method? = getter ?: iser
 }
@@ -128,9 +127,16 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
     val classProperties = mutableMapOf<String, PropertyDescriptor>()
 
     var clazz: Class<out Any?>? = this
-     clazz!!.declaredFields.forEach { classProperties.put(it.name, PropertyDescriptor(it)) }
 
     do {
+        clazz!!.declaredFields.forEach { property ->
+            classProperties.computeIfAbsent(property.name) {
+                PropertyDescriptor()
+            }.apply {
+                this.field = property
+            }
+        }
+
         // Note: It is possible for a class to have multiple instances of a function where the types
         // differ. For example:
         //      interface I<out T> { val a: T }
@@ -142,7 +148,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         //
         // In addition, only getters that take zero parameters and setters that take a single
         // parameter will be considered
-        clazz!!.declaredMethods?.map { func ->
+        clazz.declaredMethods?.map { func ->
             if (!Modifier.isPublic(func.modifiers)) return@map
             if (func.name == "getClass") return@map
 
@@ -231,15 +237,13 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
 
                     Pair(PublicPropertyReader(getter), returnType)
                 } else {
-                    try {
-                        val field = clazz.getDeclaredField(param.value.name)
-                        Pair(PrivatePropertyReader(field, type), field.genericType)
-                    } catch (e: NoSuchFieldException) {
+                    val field = classProperties[name]!!.field ?:
                         throw NotSerializableException("No property matching constructor parameter named '$name' " +
                                 "of '$clazz'. If using Java, check that you have the -parameters option specified " +
                                 "in the Java compiler. Alternately, provide a proxy serializer " +
                                 "(SerializationCustomSerializer) if recompiling isn't an option")
-                    }
+
+                    Pair(PrivatePropertyReader(field, type), field.genericType)
                 }
             } else {
                 throw NotSerializableException(
@@ -257,12 +261,13 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
  * If we determine a class has a constructor that takes no parameters then check for pairs of getters / setters
  * and use those
  */
-private fun propertiesForSerializationFromSetters(
+fun propertiesForSerializationFromSetters(
         properties: Map<String, PropertyDescriptor>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> {
     return mutableListOf<PropertyAccessorGetterSetter>().apply {
         var idx = 0
+
         properties.forEach { property ->
             val getter: Method? = property.value.preferredGetter()
             val setter: Method? = property.value.setter
@@ -276,7 +281,8 @@ private fun propertiesForSerializationFromSetters(
 
             val setterType = setter.parameterTypes[0]!!
 
-            if (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType))) {
+            if ((property.value.field != null) &&
+                    (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType)))) {
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet underlying type is " +
                         "${property.value.field?.genericType!!}")
@@ -290,7 +296,7 @@ private fun propertiesForSerializationFromSetters(
             }
             this += PropertyAccessorGetterSetter(
                     idx++,
-                    PropertySerializer.make(property.value.field!!.name, PublicPropertyReader(getter),
+                    PropertySerializer.make(property.key, PublicPropertyReader(getter),
                             resolveTypeVariables(getter.genericReturnType, type), factory),
                     setter)
         }
@@ -322,6 +328,8 @@ private fun propertiesForSerializationFromAbstract(
     return mutableListOf<PropertyAccessorConstructor>().apply {
         properties.toList().withIndex().forEach {
             val getter = it.value.second.getter ?: return@forEach
+            if (it.value.second.field == null) return@forEach
+
             val returnType = resolveTypeVariables(getter.genericReturnType, type)
             this += PropertyAccessorConstructor(
                     it.index,
