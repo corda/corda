@@ -51,8 +51,8 @@ class TutorialMockNetwork {
     }
 
     lateinit private var mockNet: MockNetwork
-    lateinit private var nodeA: MockNode
-    lateinit private var nodeB: MockNode
+    lateinit private var nodeA: StartedMockNode
+    lateinit private var nodeB: StartedMockNode
 
     @Rule
     @JvmField

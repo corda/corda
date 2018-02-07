@@ -26,9 +26,9 @@ import kotlin.test.assertTrue
 
 class NotaryChangeTests {
     private lateinit var mockNet: MockNetwork
-    private lateinit var oldNotaryNode: MockNode
-    private lateinit var clientNodeA: MockNode
-    private lateinit var clientNodeB: MockNode
+    private lateinit var oldNotaryNode: StartedMockNode
+    private lateinit var clientNodeA: StartedMockNode
+    private lateinit var clientNodeB: StartedMockNode
     private lateinit var newNotaryParty: Party
     private lateinit var oldNotaryParty: Party
     private lateinit var clientA: Party
@@ -141,7 +141,7 @@ class NotaryChangeTests {
         assertEquals(issued.state, changedNotaryBack.state)
     }
 
-    private fun changeNotary(movedState: StateAndRef<DummyContract.SingleOwnerState>, node: MockNode, newNotary: Party): StateAndRef<DummyContract.SingleOwnerState> {
+    private fun changeNotary(movedState: StateAndRef<DummyContract.SingleOwnerState>, node: StartedMockNode, newNotary: Party): StateAndRef<DummyContract.SingleOwnerState> {
         val flow = NotaryChangeFlow(movedState, newNotary)
         val future = node.services.startFlow(flow)
         mockNet.runNetwork()
@@ -149,7 +149,7 @@ class NotaryChangeTests {
         return future.getOrThrow()
     }
 
-    private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: MockNode, toNode: MockNode): StateAndRef<DummyContract.SingleOwnerState> {
+    private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: StartedMockNode, toNode: StartedMockNode): StateAndRef<DummyContract.SingleOwnerState> {
         val tx = DummyContract.move(state, toNode.info.chooseIdentity())
         val stx = fromNode.services.signInitialTransaction(tx)
 
@@ -199,7 +199,7 @@ fun issueState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party)
     return stx.tx.outRef(0)
 }
 
-fun issueMultiPartyState(nodeA: MockNode, nodeB: MockNode, notaryNode: MockNode, notaryIdentity: Party): StateAndRef<DummyContract.MultiOwnerState> {
+fun issueMultiPartyState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryNode: StartedMockNode, notaryIdentity: Party): StateAndRef<DummyContract.MultiOwnerState> {
     val participants = listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())
     val state = TransactionState(
             DummyContract.MultiOwnerState(0, participants),

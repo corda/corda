@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 class NodeSchemaServiceTest {
     /**
-     * Note: this test requires explicitly registering custom contract schemas with a MockNode
+     * Note: this test requires explicitly registering custom contract schemas with a StartedMockNode
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {

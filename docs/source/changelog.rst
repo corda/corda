@@ -170,6 +170,10 @@ UNRELEASED
 * Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
   This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
 
+* Created a new ``MockNetwork`` for creating mock networks for testing, and ``StartedMockNode`` and ``UnstartedMockNode``
+  which are wrappers around our MockNode implementation that expose relevant methods for testing without exposing
+  internals
+
 .. _changelog_v1:
 
 Release 1.0

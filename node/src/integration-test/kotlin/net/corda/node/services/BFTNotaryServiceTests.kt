@@ -30,7 +30,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.startFlow
 import org.junit.After
@@ -43,7 +43,7 @@ import kotlin.test.assertTrue
 class BFTNotaryServiceTests {
     private lateinit var mockNet: MockNetwork
     private lateinit var notary: Party
-    private lateinit var node: MockNode
+    private lateinit var node: StartedMockNode
 
     @Before
     fun before() {
@@ -153,7 +153,7 @@ class BFTNotaryServiceTests {
         }
     }
 
-    private fun MockNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun StartedMockNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.chooseIdentity().owningKey))

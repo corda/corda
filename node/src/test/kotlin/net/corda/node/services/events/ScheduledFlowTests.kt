@@ -18,7 +18,6 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -26,7 +25,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.startFlow
 import org.junit.After
@@ -44,8 +43,8 @@ class ScheduledFlowTests {
     }
 
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: MockNode
-    private lateinit var bobNode: MockNode
+    private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party

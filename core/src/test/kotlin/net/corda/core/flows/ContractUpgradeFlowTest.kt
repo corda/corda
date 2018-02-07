@@ -24,7 +24,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver
@@ -41,8 +41,8 @@ import kotlin.test.assertTrue
 
 class ContractUpgradeFlowTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: MockNode
-    private lateinit var bobNode: MockNode
+    private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
@@ -103,7 +103,7 @@ class ContractUpgradeFlowTest {
 
         val result = resultFuture.getOrThrow()
 
-        fun check(node: MockNode) {
+        fun check(node: StartedMockNode) {
             val nodeStx = node.database.transaction {
                 node.services.validatedTransactions.getTransaction(result.ref.txhash)
             }
@@ -123,7 +123,7 @@ class ContractUpgradeFlowTest {
         check(bobNode)
     }
 
-    private fun RPCDriverDSL.startProxy(node: MockNode, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: StartedMockNode, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,

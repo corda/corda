@@ -290,7 +290,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
         override fun generateKeyPair(): KeyPair {
             counter = counter.add(BigInteger.ONE)
-            // The MockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
+            // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
             return Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
         }
 

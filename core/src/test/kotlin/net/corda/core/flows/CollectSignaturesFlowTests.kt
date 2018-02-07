@@ -11,12 +11,11 @@ import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.startFlow
 import org.junit.After
@@ -31,9 +30,9 @@ class CollectSignaturesFlowTests {
     }
 
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: MockNode
-    private lateinit var bobNode: MockNode
-    private lateinit var charlieNode: MockNode
+    private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
+    private lateinit var charlieNode: StartedMockNode
     private lateinit var alice: Party
     private lateinit var bob: Party
     private lateinit var charlie: Party

@@ -34,7 +34,7 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -62,13 +62,13 @@ class FlowFrameworkTests {
 
     private lateinit var mockNet: MockNetwork
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
-    private lateinit var aliceNode: MockNode
-    private lateinit var bobNode: MockNode
+    private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
     private lateinit var notaryIdentity: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
 
-    private fun MockNode.flushSmm() {
+    private fun StartedMockNode.flushSmm() {
         (this.smm as StateMachineManagerImpl).executor.flush()
     }
 
@@ -654,7 +654,7 @@ class FlowFrameworkTests {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.restartAndGetRestoredFlow() = run {
+    private inline fun <reified P : FlowLogic<*>> StartedMockNode.restartAndGetRestoredFlow() = run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
         val newNode = mockNet.createNode(MockNodeParameters(id, configuration.myLegalName))
@@ -664,11 +664,11 @@ class FlowFrameworkTests {
         newNode.getSingleFlow<P>().first
     }
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
+    private inline fun <reified P : FlowLogic<*>> StartedMockNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
         return findStateMachines(P::class.java).single { it.javaClass == P::class.java }
     }
 
-    private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
+    private inline fun <reified P : FlowLogic<*>> StartedMockNode.registerFlowFactory(
             initiatingFlowClass: KClass<out FlowLogic<*>>,
             initiatedFlowVersion: Int = 1,
             noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
@@ -689,7 +689,7 @@ class FlowFrameworkTests {
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
 
-    private fun MockNode.sendSessionMessage(message: SessionMessage, destination: Party) {
+    private fun StartedMockNode.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
             send(createMessage(StateMachineManagerImpl.sessionTopic, message.serialize().bytes), address)
@@ -700,7 +700,7 @@ class FlowFrameworkTests {
         assertThat(receivedSessionMessages).containsExactly(*expected)
     }
 
-    private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
+    private fun assertSessionTransfers(node: StartedMockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
         val actualForNode = receivedSessionMessages.filter { it.from == node.id || it.to == node.services.networkService.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
@@ -732,8 +732,8 @@ class FlowFrameworkTests {
         else -> message
     }
 
-    private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
-    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
+    private infix fun StartedMockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
+    private infix fun Pair<Int, SessionMessage>.to(node: StartedMockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
     private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTracker.Step>>>
         get() {
