@@ -138,7 +138,7 @@ class FlowFrameworkTests {
         bobNode.pumpReceive()
         bobNode.disableDBCloseOnStop()
         bobNode.setAcceptableLiveFiberCountOnStop(1)
-        bobNode.dispose()
+        bobNode.stop()
         mockNet.runNetwork()
         val restoredFlow = bobNode.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
@@ -151,7 +151,7 @@ class FlowFrameworkTests {
         // Make sure the add() has finished initial processing.
         bobNode.flushSmm()
         bobNode.disableDBCloseOnStop()
-        bobNode.dispose() // kill receiver
+        bobNode.stop() // kill receiver
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
@@ -178,7 +178,7 @@ class FlowFrameworkTests {
         bobNode.flushSmm()
         bobNode.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
-        bobNode.dispose()
+        bobNode.stop()
         bobNode.database.transaction {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size) // confirm checkpoint
             bobNode.services.networkMapCache.clearNetworkMapCache()
