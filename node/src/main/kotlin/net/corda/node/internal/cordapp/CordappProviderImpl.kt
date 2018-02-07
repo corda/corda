@@ -81,7 +81,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
             if (networkParameters.whitelistedContractImplementations == whitelistAllContractsForTest) {
                 whitelistAllContractsForTest.values.first().toSet()
             } else {
-                networkParameters.whitelistedContractImplementations.get(contractClassName)?.toSet()
+                networkParameters.whitelistedContractImplementations!!.get(contractClassName)?.toSet()
                         ?: throw IllegalStateException("Could not find valid attachment ids for $contractClassName")
             }
 }

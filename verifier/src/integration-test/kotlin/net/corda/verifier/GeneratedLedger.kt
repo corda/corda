@@ -32,7 +32,7 @@ data class GeneratedLedger(
     val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
     val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
     val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
-        attachments.mapNotNull { it as? ContractAttachment }.flatMap { attch-> attch.contracts.map { it to attch } }.toMap()
+        attachments.mapNotNull { it as? ContractAttachment }.flatMap { attch-> attch.allContracts.map { it to attch } }.toMap()
     }
 
     companion object {
