@@ -43,9 +43,6 @@ sourceSets {
             runtimeClasspath += main.output
             srcDir file('src/smoke-test/java')
         }
-        resources {
-            srcDir file('src/smoke-test/resources')
-        }
     }
 }
 
