@@ -74,6 +74,7 @@ sealed class StateMachineUpdate {
     data class Removed(override val id: StateMachineRunId, val result: Try<*>) : StateMachineUpdate()
 }
 
+// DOCSTART 1
 /**
  * Data class containing information about the scheduled network parameters update. The info is emitted every time node
  * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
@@ -89,6 +90,7 @@ data class ParametersUpdateInfo(
         val description: String,
         val updateDeadline: Instant
 )
+// DOCEND 1
 
 @CordaSerializable
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
