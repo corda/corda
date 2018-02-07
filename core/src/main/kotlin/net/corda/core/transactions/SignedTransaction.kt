@@ -134,6 +134,13 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
+        // TODO: We could probably optimise the below by
+        // a) not throwing if threshold is eventually satisfied, but some of the rest of the signatures are failing.
+        // b) omit verifying signatures when threshold requirement is met.
+        // c) omit verifying signatures from keys not included in [requiredSigningKeys].
+        // For the above to work, [checkSignaturesAreValid] should take the [requiredSigningKeys] as input
+        // and probably combine logic from signature validation and key-fulfilment
+        // in [TransactionWithSignatures.verifySignaturesExcept].
         if (checkSufficientSignatures) {
             verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
         } else {
