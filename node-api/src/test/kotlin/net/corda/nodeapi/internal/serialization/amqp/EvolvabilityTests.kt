@@ -485,6 +485,7 @@ class EvolvabilityTests {
     // the resulting file and add to the repo, changing the filename as appropriate
     //
     @Test
+    @Ignore
     fun readBrokenNetworkParameters(){
         val sf = testDefaultFactory()
         sf.register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(sf))
