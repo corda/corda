@@ -181,6 +181,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     private fun verifyNotaryChangeTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ntx = resolveNotaryChangeTransaction(services)
         if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
+        else checkSignaturesAreValid()
     }
 
     fun isNotaryChangeTransaction() = transaction is NotaryChangeWireTransaction
