@@ -79,9 +79,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     val acceptAll = mapOf("all" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
     override fun getValidAttachmentIdsFromNetworkParameters(contractClassName: ContractClassName): Set<AttachmentId>  {
-        log.warn("cfg:  ${networkParameters.whitelistedContractImplementations}")
-        log.warn("acceptAll:  ${acceptAll}")
-        log.warn("=:  ${networkParameters.whitelistedContractImplementations== acceptAll}")
         if (networkParameters.whitelistedContractImplementations == acceptAll) {
             return acceptAll.get("all")!!.toSet()
         } else {

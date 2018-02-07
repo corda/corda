@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import java.security.PublicKey;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 
 import static java.util.Collections.emptyList;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
@@ -32,7 +33,7 @@ public class CommercialPaperTest {
     private static final TestIdentity BOB = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};
-    private final MockServices ledgerServices = new MockServices(MEGA_CORP);
+    private final MockServices ledgerServices = new MockServices(Arrays.asList("net.corda.finance.contracts"), MEGA_CORP);
 
     // DOCSTART 1
     private ICommercialPaperState getPaper() {

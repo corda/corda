@@ -38,7 +38,7 @@ class CommercialPaperTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BIG_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
