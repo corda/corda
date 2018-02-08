@@ -92,7 +92,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                     hostAndPort = NetworkHostAndPort(HOST, 0),
                     database = database,
                     csrCertPathAndKey = null,
-                    doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jiraConfig = null),
+                    doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null),
                     startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.

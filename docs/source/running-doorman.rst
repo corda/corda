@@ -33,33 +33,38 @@ Allowed parameters are:
 
 :mode: must be one of: DOORMAN (default), CA_KEYGEN, ROOT_KEYGEN.
 
-:approveAll: Whether to approve all request (defaults to false), this is for debug only.
-
 :database: database properties. The same (including its default value) as for node configuration (see :doc:`corda-configuration-file`).
 
 :dataSourceProperties: datasource properties
 
-:jiraConfig: The Jira configuration
+:doorman: Doorman specific configuration
 
-    :address: The URL to use to connect to Jira
+    :approveAll: Whether to approve all request (defaults to false), this is for debug only.
 
-    :projectCode: The project code on Jira
+    :approveInterval: How often to process Jira approved requests in seconds.
 
-    :username: Username for Jira
+    :jira: The Jira configuration
 
-    :password: Password for Jira
+        :address: The URL to use to connect to Jira
 
-    :doneTransitionCode: Jira status to put approved tickets in
+        :projectCode: The project code on Jira
+
+        :username: Username for Jira
+
+        :password: Password for Jira
+
+
+:networkMap: Network map specific configuration
+
+    :cacheTimeout: Network map cache entry expiry time (in milliseconds)
+
+    :signInterval: How often to sign the network map in seconds
 
 :keystorePath: Path for the keystore. If not set (or null is passed) doorman will NOT perform any signing.
     This is required in case of the HSM integration where signing process is offloaded (from doorman) to an external service
     that binds with an HSM.
 
 :rootStorePath: Path for the root keystore
-
-:approveInterval: How often to process Jira approved requests in seconds. This will also be added to the http header, to be use as poll interval in Corda client.
-
-:signInterval: How often to sign the network map in seconds
 
 Bootstrapping the network parameters
 ------------------------------------

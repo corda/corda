@@ -49,12 +49,15 @@ class HsmPermissionTest : HsmBaseTest() {
         val hsmSigningServiceConfig = createHsmSigningServiceConfig()
         val signer = HsmCsrSigner(
                 mock(),
-                hsmSigningServiceConfig.loadRootKeyStore(),
+                hsmSigningServiceConfig.csrSigning!!.loadRootKeyStore(),
                 "",
                 null,
                 3650,
                 Authenticator(
-                        provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.doormanKeyGroup),
+                        provider = createProvider(
+                                hsmSigningServiceConfig.csrSigning!!.keyGroup,
+                                hsmSigningServiceConfig.keySpecifier,
+                                hsmSigningServiceConfig.device),
                         inputReader = userInput)
         )
 
@@ -102,12 +105,15 @@ class HsmPermissionTest : HsmBaseTest() {
         val hsmSigningServiceConfig = createHsmSigningServiceConfig()
         val signer = HsmCsrSigner(
                 mock(),
-                hsmSigningServiceConfig.loadRootKeyStore(),
+                hsmSigningServiceConfig.csrSigning!!.loadRootKeyStore(),
                 "trustpass",
                 null,
                 3650,
                 Authenticator(
-                        provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.doormanKeyGroup),
+                        provider = createProvider(
+                                hsmSigningServiceConfig.csrSigning!!.keyGroup,
+                                hsmSigningServiceConfig.keySpecifier,
+                                hsmSigningServiceConfig.device),
                         inputReader = userInput)
         )
 

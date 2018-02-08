@@ -2,7 +2,6 @@ package com.r3.corda.networkmanage.hsm.authentication
 
 import CryptoServerJCE.CryptoServerProvider
 import com.r3.corda.networkmanage.common.signer.AuthenticationException
-import com.r3.corda.networkmanage.hsm.configuration.Parameters
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -116,8 +115,14 @@ data class CryptoServerProviderConfig(
 
 /**
  * Creates an instance of [CryptoServerProvider] that corresponds to the HSM.
+ *
+ * @param keyGroup HSM key group.
+ * @param keySpecifier HSM key specifier.
+ * @param device HSM device address.
+ *
+ * @return preconfigured instance of [CryptoServerProvider]
  */
-fun Parameters.createProvider(keyGroup: String): CryptoServerProvider {
+fun createProvider(keyGroup: String, keySpecifier: Int, device: String): CryptoServerProvider {
     val config = CryptoServerProviderConfig(
             Device = device,
             KeyGroup = keyGroup,
@@ -126,6 +131,13 @@ fun Parameters.createProvider(keyGroup: String): CryptoServerProvider {
     return createProvider(config)
 }
 
+/**
+ * Creates an instance of [CryptoServerProvider] configured accordingly to the passed configuration.
+ *
+ * @param config crypto server provider configuration.
+ *
+ * @return preconfigured instance of [CryptoServerProvider]
+ */
 fun createProvider(config: CryptoServerProviderConfig): CryptoServerProvider {
     val cfgBuffer = ByteArrayOutputStream()
     val writer = cfgBuffer.writer(Charsets.UTF_8)

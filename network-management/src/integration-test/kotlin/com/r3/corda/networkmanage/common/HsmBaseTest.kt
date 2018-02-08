@@ -5,8 +5,10 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.HsmSimulator
 import com.r3.corda.networkmanage.hsm.authentication.InputReader
+import com.r3.corda.networkmanage.hsm.configuration.AuthenticationParameters
+import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateParameters
+import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateParameters
 import com.r3.corda.networkmanage.hsm.configuration.Parameters
-import com.r3.corda.networkmanage.hsm.generator.AuthMode
 import com.r3.corda.networkmanage.hsm.generator.CertificateConfiguration
 import com.r3.corda.networkmanage.hsm.generator.GeneratorParameters
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
@@ -18,6 +20,8 @@ import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
 import java.util.*
+import com.r3.corda.networkmanage.hsm.authentication.AuthMode as SigningServiceAuthMode
+import com.r3.corda.networkmanage.hsm.generator.AuthMode as GeneratorAuthMode
 
 abstract class HsmBaseTest {
     companion object {
@@ -55,7 +59,7 @@ abstract class HsmBaseTest {
         private fun createHsmUserConfigs(username: String): List<UserAuthenticationParameters> {
             return listOf(UserAuthenticationParameters(
                     username = username,
-                    authMode = AuthMode.PASSWORD,
+                    authMode = GeneratorAuthMode.PASSWORD,
                     authToken = "INTEGRATION_TEST",
                     keyFilePassword = null))
         }
@@ -75,7 +79,7 @@ abstract class HsmBaseTest {
 
     @Before
     fun generateDbName() {
-        rootKeyStoreFile =  tempFolder.root.toPath() / "truststore.jks"
+        rootKeyStoreFile = tempFolder.root.toPath() / "truststore.jks"
         dbName = random63BitValue().toString()
     }
 
@@ -118,12 +122,27 @@ abstract class HsmBaseTest {
                 dataSourceProperties = mock(),
                 device = "${hsmSimulator.port}@${hsmSimulator.host}",
                 keySpecifier = 1,
-                rootKeyStoreFile = rootKeyStoreFile,
-                rootKeyStorePassword = TRUSTSTORE_PASSWORD,
-                doormanKeyGroup = DOORMAN_CERT_KEY_GROUP,
-                networkMapKeyGroup = NETWORK_MAP_CERT_KEY_GROUP,
-                validDays = 3650,
-                csrCertCrlDistPoint = "http://test.com/revoked.crl"
+                csrSigning = DoormanCertificateParameters(
+                        rootKeyStoreFile = rootKeyStoreFile,
+                        keyGroup = DOORMAN_CERT_KEY_GROUP,
+                        validDays = 3650,
+                        rootKeyStorePassword = TRUSTSTORE_PASSWORD,
+                        crlDistributionPoint = "http://test.com/revoked.crl",
+                        authParameters = AuthenticationParameters(
+                                mode = SigningServiceAuthMode.PASSWORD,
+                                threshold = 2
+                        )
+                ),
+                networkMapSigning = NetworkMapCertificateParameters(
+                        username = "INTEGRATION_TEST",
+                        keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
+                        authParameters = AuthenticationParameters(
+                                mode = SigningServiceAuthMode.PASSWORD,
+                                password = "INTEGRATION_TEST",
+                                threshold = 2
+                        )
+
+                )
         )
     }
 

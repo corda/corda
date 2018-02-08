@@ -83,13 +83,14 @@ class NetworkManagementServer : Closeable {
                                   serverStatus: NetworkManagementServerStatus): RegistrationWebService {
         logger.info("Starting Doorman server.")
         val requestService = if (config.approveAll) {
+            require(config.jira == null) { "Jira configuration cannot be specified when the approveAll parameter is set to true." }
             logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
             ApproveAllCertificateRequestStorage(PersistentCertificateRequestStorage(database))
         } else {
             PersistentCertificateRequestStorage(database)
         }
 
-        val jiraConfig = config.jiraConfig
+        val jiraConfig = config.jira
         val requestProcessor = if (jiraConfig != null) {
             val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
             val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode)

@@ -19,8 +19,8 @@ data class NetworkManagementServerParameters(// TODO: Move local signing to sign
         val database: DatabaseConfig = DatabaseConfig(),
         val mode: Mode,
 
-        val doormanConfig: DoormanConfig?,
-        val networkMapConfig: NetworkMapConfig?,
+        val doorman: DoormanConfig?,
+        val networkMap: NetworkMapConfig?,
 
         val updateNetworkParameters: Path?,
         val trustStorePassword: String?,
@@ -51,7 +51,7 @@ data class NetworkManagementServerParameters(// TODO: Move local signing to sign
 }
 
 data class DoormanConfig(val approveAll: Boolean = false,
-                         val jiraConfig: JiraConfig? = null,
+                         val jira: JiraConfig? = null,
                          val approveInterval: Long = NetworkManagementServerParameters.DEFAULT_APPROVE_INTERVAL.toMillis())
 
 data class NetworkMapConfig(val cacheTimeout: Long,
@@ -59,9 +59,10 @@ data class NetworkMapConfig(val cacheTimeout: Long,
                             val signInterval: Long = NetworkManagementServerParameters.DEFAULT_SIGN_INTERVAL.toMillis())
 
 enum class Mode {
-    // TODO CA_KEYGEN now also generates the nework map cert, so it should be renamed.
+    // TODO CA_KEYGEN now also generates the network map cert, so it should be renamed.
     DOORMAN,
-    CA_KEYGEN, ROOT_KEYGEN
+    CA_KEYGEN,
+    ROOT_KEYGEN
 }
 
 data class JiraConfig(

@@ -1,0 +1,52 @@
+package com.r3.corda.networkmanage.hsm.processor
+
+import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
+import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
+import com.r3.corda.networkmanage.hsm.authentication.AuthMode
+import com.r3.corda.networkmanage.hsm.authentication.Authenticator
+import com.r3.corda.networkmanage.hsm.authentication.createProvider
+import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateParameters
+import com.r3.corda.networkmanage.hsm.signer.HsmSigner
+import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+
+class NetworkMapProcessor(private val parameters: NetworkMapCertificateParameters,
+                          private val device: String,
+                          private val keySpecifier: Int,
+                          private val database: CordaPersistence) {
+    companion object {
+        val logger = contextLogger()
+    }
+
+    init {
+        parameters.authParameters.run {
+            requireNotNull(password)
+            require(mode != AuthMode.CARD_READER)
+            if (mode == AuthMode.KEY_FILE) {
+                require(keyFilePath != null) { "Key file path cannot be null when authentication mode is ${AuthMode.KEY_FILE}" }
+            }
+        }
+    }
+
+    fun run() {
+        logger.info("Starting network map processor.")
+        parameters.run {
+            val networkMapStorage = PersistentNetworkMapStorage(database)
+            val signer = HsmSigner(
+                    Authenticator(
+                            AuthMode.KEY_FILE,
+                            username,
+                            authParameters.keyFilePath,
+                            authParameters.password,
+                            authParameters.threshold,
+                            provider = createProvider(keyGroup, keySpecifier, device)))
+            val networkMapSigner = NetworkMapSigner(networkMapStorage, signer)
+            try {
+                logger.info("Executing network map signing...")
+                networkMapSigner.signNetworkMap()
+            } catch (e: Exception) {
+                logger.error("Exception thrown while signing network map", e)
+            }
+        }
+    }
+}

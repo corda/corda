@@ -144,7 +144,7 @@ class NodeRegistrationTest : IntegrationTest() {
                     serverAddress,
                     configureDatabase(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true)),
                     CertPathAndKey(listOf(csrCa.certificate, rootCaCert), csrCa.keyPair.private),
-                    DoormanConfig(approveAll = true, jiraConfig = null, approveInterval = timeoutMillis),
+                    DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
                     networkParameters?.let {
                         NetworkMapStartParams(
                                 LocalSigner(networkMapCa),

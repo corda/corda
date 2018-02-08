@@ -4,10 +4,10 @@ Running the signing service
 The signing service is a bridge between the networking service and the HSM infrastructure. It is responsible for retrieving
 pending requests for signatures and managing the process of securing these signatures from an HSM infrastructure.
 
-The signing service has a console-based user interface (designed for the manual signing process of the certificate signing requests),
-which upon successful startup should display different options to the user.
-At the same time, it connects to the database (which is expected to be shared with Doorman)
-and periodically polls it and if needed automatically signs the following: network map and certificate revocation list.
+The signing service has two execution modes. Each mode focuses on signing one of the two different types of data: certificate signing requests and network map.
+Signing of the network map is an automatic process (i.e. does not require human intervention) that retrieves from the database the network map data to be signed.
+Certificate signing requests, on the other hand, require human-in-the-loop to be processed and therefore the signing process relies on the console-based interface, that allows for user interaction.
+Depending on the configuration each of those processes can be enabled or disabled (see below for more details).
 
 See the :doc:`signing-service` for a more detailed description of the service.
 
@@ -28,52 +28,51 @@ Allowed parameters are:
 :device: HSM connection string. It is of the following format 3001@127.0.0.1, where 3001 is the port number.
     Default value: "3001@127.0.0.1"
 
-:rootKeyStoreFile: Location of the key store (trust store) containing the root certificate.
+:keySpecifier: HSM key specifier. This parameter is vendor specific (see Utimaco docs).
 
-:rootKeyStorePassword: Password for the key store (trust store) containing the root certificate.
-
-:networkMapKeyGroup: HSM key group for the network map certificate key. This parameter is vendor specific (see Utimaco docs).
-
-:doormanKeyGroup: HSM key group for the doorman certificate key. This parameter is vendor specific (see Utimaco docs).
-
-:keySpecifier: HSM key specifier. This parameter is vendor specific (see Utimaco docs). Default value: 1.
-
-:rootPrivateKeyPassword: Private key password for the root certificate.
-
-:csrPrivateKeyPassword: Private key password for the intermediate certificate used to sign certficate signing requests.
-
-:csrCertCrlDistPoint: Certificate revocation list location for the node CA certificate.
-
-:csrCertCrlIssuer: Certificate revocation list issuer. The expected value is of the X500 name format - e.g. "L=London, C=GB, OU=Org Unit, CN=Service Name".
-                   If not specified, the node CA certificate issuer is considered also as the CRL issuer.
-
-:databaseProperties: Database properties.
+:database: Database properties.
 
 :dataSourceProperties: Data source properties. It should describe (or point to) the Doorman database.
 
-:networkMapPrivateKeyPassword: Private key password for the intermediate certificate used to sign the network map.
+:csrSigning: CSR signing process configuration parameters. If specified, the signing service will sign approved CSRs.
 
-:validDays: Number of days issued signatures are valid for.
+    :validDays: Number of days issued signatures are valid for.
 
-:signAuthThreshold: Minimum authentication strength threshold required for certificate signing requests.
-    Default value: 2
+    :rootKeyStoreFile: Location of the key store (trust store) containing the root certificate.
 
-:keyGenAuthThreshold: Minimum authentication strength threshold required for key generation.
-    Default value: 2
+    :rootKeyStorePassword: Password for the key store (trust store) containing the root certificate.
 
-:authMode: Authentication mode, used when validating a user for certificate signing request signature.
-    Allowed values are:
-        "PASSWORD" (default) - type-in password authentication
-        CARD_READER - smart card reader authentication
-        KEY_FILE - key file authentication
+    :keyGroup: HSM key group for the doorman certificate key. This parameter is vendor specific (see Utimaco docs).
 
-:authKeyFilePath: Authentication key file. It is used when the 'authMode' is set to "KEY_FILE"
-    or for the automated signing process - e.g. network map, certificate revocation list. Default value: null
+    :crlDistributionPoint: Certificate revocation list location for the node CA certificate.
 
-:authKeyFilePassword: Authentication key file password. It is used when the 'authMode' is set to "KEY_FILE"
-        or for the automated signing process - e.g. network map, certificate revocation list. Default value: null
+    :authParameters: Authentication configuration for the CSR signing process.
 
-:signInterval: Interval (in milliseconds) in which all automated signing happens. Default value: 60000 milliseconds
+        :mode: Authentication mode. Allowed values are: PASSWORD, CARD_READER and KEY_FILE
+
+        :password: Key file password. Valid only if the authentication mode is set to KEY_FILE.
+
+        :keyFilePath: Key file path. Valid only if authentication mode is set to KEY_FILE.
+
+        :threshold: Minimum authentication strength threshold required for certificate signing requests.
+
+:networkMapSigning: Network map signing process configuration parameters. If specified, the signing service will sign the network map.
+
+    :username: HSM username to be used when communicating with the HSM.
+
+    :keyGroup: HSM key group for the network map certificate key. This parameter is vendor specific (see Utimaco docs).
+
+    :authParameters: Authentication configuration for the CSR signing process.
+
+            :mode: Authentication mode. Allowed values are: PASSWORD and KEY_FILE
+
+            :password: If the authentication mode is set to KEY_FILE, then it is the key file password.
+                       If the authentication mode is set to PASSWORD, then it is the password string.
+
+            :keyFilePath: Key file path. Valid only if authentication mode is set to KEY_FILE.
+
+            :threshold: Minimum authentication strength threshold required for certificate signing requests.
+
 
 Expected behaviour and output upon the service start-up
 -------------------------------------------------------

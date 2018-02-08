@@ -6,10 +6,14 @@ import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorag
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createClientCertificate
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveCertAndKeyPair
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.buildCertPath
 import org.bouncycastle.asn1.x500.X500Name
+import java.io.PrintStream
 
 /**
  * Encapsulates certificate signing logic
@@ -19,7 +23,12 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
                    private val csrCertCrlDistPoint: String,
                    private val csrCertCrlIssuer: String?,
                    private val validDays: Int,
-                   private val authenticator: Authenticator) : CertificateSigningRequestSigner {
+                   private val authenticator: Authenticator,
+                   private val printStream: PrintStream = System.out) : CertificateSigningRequestSigner {
+
+    companion object {
+        val logger = contextLogger()
+    }
 
     /**
      * Signs the provided list of approved certificate signing requests. By signature we mean creation of the client-level certificate
@@ -33,11 +42,12 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
      */
     override fun sign(toSign: List<ApprovedCertificateRequestData>) {
         authenticator.connectAndAuthenticate { provider, signers ->
-            // This should be changed once we allow for more certificates in the chain. Preferably we should use
-            // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
-            val rootCert = rootKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
+            logger.debug("Retrieving the root certificate ${CORDA_ROOT_CA} from HSM...")
+            val rootCert = rootKeyStore.getCertificate(CORDA_ROOT_CA)
+            logger.debug("Initializing doorman key store...")
             val keyStore = getAndInitializeKeyStore(provider)
-            val doormanCertAndKey = retrieveCertAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, keyStore)
+            logger.debug("Retrieving the doorman certificate $CORDA_INTERMEDIATE_CA from HSM...")
+            val doormanCertAndKey = retrieveCertAndKeyPair(CORDA_INTERMEDIATE_CA, keyStore)
             toSign.forEach {
                 val nodeCaCert = createClientCertificate(
                         CertificateType.NODE_CA,
@@ -47,12 +57,15 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
                         provider,
                         csrCertCrlDistPoint,
                         csrCertCrlIssuer?.let { X500Name(it) })
-                it.certPath = X509Utilities.buildCertPath(nodeCaCert, doormanCertAndKey.certificate, rootCert)
+                it.certPath = buildCertPath(nodeCaCert, doormanCertAndKey.certificate, rootCert)
             }
+            logger.debug("Storing signed CSRs...")
             storage.store(toSign, signers)
-            println("The following certificates have been signed by $signers:")
+            printStream.println("The following certificates have been signed by $signers:")
+            logger.debug("The following certificates have been signed by $signers:")
             toSign.forEachIndexed { index, data ->
-                println("${index + 1} ${data.request.subject}")
+                printStream.println("${index + 1} ${data.request.subject}")
+                logger.debug("${index + 1} ${data.request.subject}")
             }
         }
     }

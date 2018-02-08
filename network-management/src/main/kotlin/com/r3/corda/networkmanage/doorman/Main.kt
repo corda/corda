@@ -71,15 +71,15 @@ fun main(args: Array<String>) {
                     val networkManagementServer = NetworkManagementServer()
                     val networkParameters = updateNetworkParameters?.let {
                         // TODO This check shouldn't be needed. Fix up the config design.
-                        requireNotNull(networkMapConfig) { "'networkMapConfig' config is required for applying network parameters" }
+                        requireNotNull(networkMap) { "'networkMapConfig' config is required for applying network parameters" }
                         println("Parsing network parameters from '${it.toAbsolutePath()}'...")
                         parseNetworkParametersFrom(it)
                     }
-                    val networkMapStartParams = networkMapConfig?.let {
+                    val networkMapStartParams = networkMap?.let {
                         NetworkMapStartParams(csrAndNetworkMap?.second, networkParameters, it)
                     }
 
-                    networkManagementServer.start(NetworkHostAndPort(host, port), persistence, csrAndNetworkMap?.first, doormanConfig, networkMapStartParams)
+                    networkManagementServer.start(NetworkHostAndPort(host, port), persistence, csrAndNetworkMap?.first, doorman, networkMapStartParams)
 
                     Runtime.getRuntime().addShutdownHook(thread(start = false) {
                         networkManagementServer.close()

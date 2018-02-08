@@ -62,14 +62,18 @@ class HsmSigningServiceTest : HsmBaseTest() {
 
         // given HSM CSR signer
         val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val doormanCertificateConfig = hsmSigningServiceConfig.csrSigning!!
         val signer = HsmCsrSigner(
                 mock(),
-                hsmSigningServiceConfig.loadRootKeyStore(),
+                doormanCertificateConfig.loadRootKeyStore(),
                 "",
                 null,
                 3650,
                 Authenticator(
-                        provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.doormanKeyGroup),
+                        provider = createProvider(
+                                doormanCertificateConfig.keyGroup,
+                                hsmSigningServiceConfig.keySpecifier,
+                                hsmSigningServiceConfig.device),
                         inputReader = userInput)
         )
 
@@ -119,8 +123,12 @@ class HsmSigningServiceTest : HsmBaseTest() {
 
         // given HSM network map signer
         val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val networkMapCertificateConfig = hsmSigningServiceConfig.networkMapSigning!!
         val hsmDataSigner = HsmSigner(Authenticator(
-                provider = hsmSigningServiceConfig.createProvider(hsmSigningServiceConfig.networkMapKeyGroup),
+                provider = createProvider(
+                        networkMapCertificateConfig.keyGroup,
+                        hsmSigningServiceConfig.keySpecifier,
+                        hsmSigningServiceConfig.device),
                 inputReader = userInput))
 
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))

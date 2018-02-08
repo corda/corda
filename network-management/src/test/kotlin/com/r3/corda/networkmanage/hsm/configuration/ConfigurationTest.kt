@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigException
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.File
+import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -15,9 +16,18 @@ class ConfigurationTest : TestBase() {
 
     @Test
     fun `config file is parsed correctly`() {
-        val paramsWithPassword = parseParameters("--config-file", validConfigPath)
-        assertEquals(AuthMode.PASSWORD, paramsWithPassword.authMode)
-        assertEquals("3001@192.168.0.1", paramsWithPassword.device)
+        val parameters = parseParameters("--config-file", validConfigPath)
+        assertEquals("3001@192.168.0.1", parameters.device)
+        val doormanCertParameters = parameters.csrSigning!!
+        assertEquals(AuthMode.PASSWORD, doormanCertParameters.authParameters.mode)
+        assertEquals(2, doormanCertParameters.authParameters.threshold)
+        assertEquals(3650, doormanCertParameters.validDays)
+        val nmParams = parameters.networkMapSigning!!
+        assertEquals(AuthMode.KEY_FILE, nmParams.authParameters.mode)
+        assertEquals(Paths.get("./Administrator.KEY"), nmParams.authParameters.keyFilePath)
+        assertEquals(2, nmParams.authParameters.threshold)
+        assertEquals("PASSWORD", nmParams.authParameters.password)
+        assertEquals("TEST_USERNAME", nmParams.username)
     }
 
     @Test

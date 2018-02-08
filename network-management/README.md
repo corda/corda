@@ -106,28 +106,29 @@ The doorman service can use JIRA to manage the certificate signing request appro
 basedir = "."
 host = localhost
 port = 0
-
-#For local signing
 rootStorePath = ${basedir}"/certificates/rootstore.jks"
 keystorePath = ${basedir}"/certificates/caKeystore.jks"
 keystorePassword = "password"
 caPrivateKeyPassword = "password"
 
-# Database config
 dataSourceProperties {
   dataSourceClassName = org.h2.jdbcx.JdbcDataSource
   "dataSource.url" = "jdbc:h2:file:"${basedir}"/persistence;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=0;AUTO_SERVER_PORT="${h2port}
   "dataSource.user" = sa
   "dataSource.password" = ""
 }
+
+database {
+    runMigration = true
+}
+
 h2port = 0
 
-# Doorman config
 # Comment out this section if running without doorman service
-doormanConfig {
+doorman {
   approveInterval = 10000
   approveAll = false
-  jiraConfig {
+  jira {
     address = "https://doorman-jira-host.com/"
     projectCode = "TD"
     username = "username"
@@ -135,9 +136,8 @@ doormanConfig {
   }
 }
 
-# Network map config
 # Comment out this section if running without network map service
-networkMapConfig {
+networkMap {
   cacheTimeout = 600000
   signInterval = 10000
 }
