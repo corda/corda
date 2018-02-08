@@ -3,6 +3,9 @@ API: Identity
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-identity`.
 
+.. warning:: The ``confidential-identities`` module is still not stabilised, so this API may change in future releases.
+   See :doc:`corda-api`.
+
 .. contents::
 
 Party
