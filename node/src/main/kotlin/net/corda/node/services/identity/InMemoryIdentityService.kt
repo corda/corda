@@ -4,11 +4,11 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
@@ -25,7 +25,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
 class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
-                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = contextLogger()
     }
