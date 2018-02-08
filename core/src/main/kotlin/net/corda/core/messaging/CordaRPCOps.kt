@@ -13,6 +13,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -23,6 +24,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import rx.Observable
+import java.io.IOException
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
@@ -71,6 +73,24 @@ sealed class StateMachineUpdate {
 
     data class Removed(override val id: StateMachineRunId, val result: Try<*>) : StateMachineUpdate()
 }
+
+// DOCSTART 1
+/**
+ * Data class containing information about the scheduled network parameters update. The info is emitted every time node
+ * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
+ * @property hash new [NetworkParameters] hash
+ * @property parameters new [NetworkParameters] data structure
+ * @property description description of the update
+ * @property updateDeadline deadline for accepting this update using [CordaRPCOps.acceptNewNetworkParameters]
+ */
+@CordaSerializable
+data class ParametersUpdateInfo(
+        val hash: SecureHash,
+        val parameters: NetworkParameters,
+        val description: String,
+        val updateDeadline: Instant
+)
+// DOCEND 1
 
 @CordaSerializable
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
@@ -204,6 +224,29 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
+
+    /**
+     * Returns [DataFeed] object containing information on currently scheduled parameters update (null if none are currently scheduled)
+     * and observable with future update events. Any update that occurs before the deadline automatically cancels the current one.
+     * Only the latest update can be accepted.
+     * Note: This operation may be restricted only to node administrators.
+     */
+    // TODO This operation should be restricted to just node admins.
+    @RPCReturnsObservables
+    fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
+
+    /**
+     * Accept network parameters with given hash, hash is obtained through [networkParametersFeed] method.
+     * Information is sent back to the zone operator that the node accepted the parameters update - this process cannot be
+     * undone.
+     * Only parameters that are scheduled for update can be accepted, if different hash is provided this method will fail.
+     * Note: This operation may be restricted only to node administrators.
+     * @param parametersHash hash of network parameters to accept
+     * @throws IllegalArgumentException if network map advertises update with different parameters hash then the one accepted by node's operator.
+     * @throws IOException if failed to send the approval to network map
+     */
+    // TODO This operation should be restricted to just node admins.
+    fun acceptNewNetworkParameters(parametersHash: SecureHash)
 
     /**
      * Start the given flow with the given arguments. [logicType] must be annotated

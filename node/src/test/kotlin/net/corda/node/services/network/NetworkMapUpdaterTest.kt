@@ -7,19 +7,27 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.div
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
+import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.createDevNetworkMapCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.*
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.assertThat
@@ -27,8 +35,11 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import rx.schedulers.TestScheduler
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.test.assertEquals
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -39,13 +50,16 @@ class NetworkMapUpdaterTest {
     private val baseDir = fs.getPath("/node")
     private val networkMapCache = createMockNetworkMapCache()
     private val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedNodeInfo>()
+    private val networkParamsMap = HashMap<SecureHash, NetworkParameters>()
+    private val networkMapCa: CertificateAndKeyPair = createDevNetworkMapCa()
     private val cacheExpiryMs = 100
     private val networkMapClient = createMockNetworkMapClient()
     private val scheduler = TestScheduler()
     private val networkParametersHash = SecureHash.randomSHA256()
     private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-    private val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, networkParametersHash)
+    private val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, networkParametersHash, baseDir)
     private val nodeInfoBuilder = TestNodeInfoBuilder()
+    private var parametersUpdate: ParametersUpdate? = null
 
     @After
     fun cleanUp() {
@@ -180,17 +194,72 @@ class NetworkMapUpdaterTest {
         assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfo.serialize().hash)
     }
 
+    @Test
+    fun `emit new parameters update info on parameters update from network map`() {
+        val paramsFeed = updater.track()
+        val snapshot = paramsFeed.snapshot
+        val updates = paramsFeed.updates.bufferUntilSubscribed()
+        assertEquals(null, snapshot)
+        val newParameters = testNetworkParameters(emptyList(), epoch = 2)
+        val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
+        scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
+        updater.subscribeToNetworkMap()
+        updates.expectEvents(isStrict = false) {
+            sequence(
+                    expect { update: ParametersUpdateInfo ->
+                        assertThat(update.updateDeadline == updateDeadline)
+                        assertThat(update.description == "Test update")
+                        assertThat(update.hash == newParameters.serialize().hash)
+                        assertThat(update.parameters == newParameters)
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun `ack network parameters update`() {
+        val newParameters = testNetworkParameters(emptyList(), epoch = 314)
+        scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
+        updater.subscribeToNetworkMap()
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        val newHash = newParameters.serialize().hash
+        val keyPair = Crypto.generateKeyPair()
+        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair)})
+        verify(networkMapClient).ackNetworkParametersUpdate(any())
+        val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
+        val signedNetworkParams = updateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
+        val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+        assertEquals(newParameters, paramsFromFile)
+    }
+
+    private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant) {
+        val nextParamsHash = nextParameters.serialize().hash
+        networkParamsMap[nextParamsHash] = nextParameters
+        parametersUpdate = ParametersUpdate(nextParamsHash, description, updateDeadline)
+    }
+
     private fun createMockNetworkMapClient(): NetworkMapClient {
         return mock {
+            on { trustedRoot }.then {
+                DEV_ROOT_CA.certificate
+            }
             on { publish(any()) }.then {
                 val signedNodeInfo: SignedNodeInfo = uncheckedCast(it.arguments[0])
                 nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
             }
             on { getNetworkMap() }.then {
-                NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), networkParametersHash), cacheExpiryMs.millis)
+                NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), networkParametersHash, parametersUpdate), cacheExpiryMs.millis)
             }
             on { getNodeInfo(any()) }.then {
                 nodeInfoMap[it.arguments[0]]?.verified()
+            }
+            on { getNetworkParameters(any()) }.then {
+                val paramsHash: SecureHash = uncheckedCast(it.arguments[0])
+                networkParamsMap[paramsHash]?.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+            }
+            on { ackNetworkParametersUpdate(any()) }.then {
+                Unit
             }
         }
     }

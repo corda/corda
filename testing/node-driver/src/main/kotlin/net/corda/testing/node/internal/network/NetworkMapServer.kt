@@ -1,6 +1,7 @@
 package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -9,8 +10,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.ParametersUpdate
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -21,6 +23,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
 import java.io.InputStream
 import java.net.InetSocketAddress
+import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
@@ -46,6 +49,8 @@ class NetworkMapServer(private val cacheTimeout: Duration,
             field = networkParameters
         }
     private val service = InMemoryNetworkMapService()
+    private var parametersUpdate: ParametersUpdate? = null
+    private var nextNetworkParameters: NetworkParameters? = null
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
@@ -80,6 +85,21 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         service.removeNodeInfo(nodeInfo)
     }
 
+    fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant) {
+        nextNetworkParameters = nextParameters
+        parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, updateDeadline)
+    }
+
+    fun advertiseNewParameters() {
+        networkParameters = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
+        nextNetworkParameters = null
+        parametersUpdate = null
+    }
+
+    fun latestParametersAccepted(publicKey: PublicKey): SecureHash? {
+        return service.latestAcceptedParametersMap[publicKey]
+    }
+
     override fun close() {
         server.stop()
     }
@@ -87,6 +107,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
     @Path("network-map")
     inner class InMemoryNetworkMapService {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy {
             networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         }
@@ -108,10 +129,20 @@ class NetworkMapServer(private val cacheTimeout: Duration,
             }.build()
         }
 
+        @POST
+        @Path("ack-parameters")
+        @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+        fun ackNetworkParameters(input: InputStream): Response {
+            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val hash = signedParametersHash.verified()
+            latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
+            return ok().build()
+        }
+
         @GET
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNetworkMap(): Response {
-            val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash)
+            val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
             return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${cacheTimeout.seconds}").build()
         }
@@ -137,8 +168,14 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         @Path("network-parameters/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNetworkParameter(@PathParam("var") hash: String): Response {
-            require(signedNetParams.raw.hash == SecureHash.parse(hash))
-            return Response.ok(signedNetParams.serialize().bytes).build()
+            val requestedHash = SecureHash.parse(hash)
+            val requestedParameters = if (requestedHash == signedNetParams.raw.hash) {
+                signedNetParams
+            } else if (requestedHash == nextNetworkParameters?.serialize()?.hash) {
+                nextNetworkParameters?.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+            } else null
+            requireNotNull(requestedParameters)
+            return Response.ok(requestedParameters!!.serialize().bytes).build()
         }
 
         @GET
