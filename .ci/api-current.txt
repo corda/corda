@@ -3907,7 +3907,6 @@ public final class net.corda.testing.node.MockNetwork extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.StartedMockNode getDefaultNotaryNode()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters getDefaultParameters()
   public final boolean getInitialiseSerialization()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.InMemoryMessagingNetwork getMessagingNetwork()
   public final boolean getNetworkSendManuallyPumped()
   public final int getNextNodeId()
   @org.jetbrains.annotations.NotNull public final List getNotaryNodes()
@@ -4103,10 +4102,7 @@ public final class net.corda.testing.node.NotarySpec extends java.lang.Object
 ##
 public final class net.corda.testing.node.StartedMockNode extends java.lang.Object
   public <init>()
-  public final void disableDBCloseOnStop()
   @org.jetbrains.annotations.NotNull public final List findStateMachines(Class)
-  @org.jetbrains.annotations.NotNull public final List getAllStateMachines()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.api.CheckpointStorage getCheckpointStorage()
   @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration getConfiguration()
   @org.jetbrains.annotations.NotNull public final net.corda.nodeapi.internal.persistence.CordaPersistence getDatabase()
   public final int getId()
@@ -4114,11 +4110,8 @@ public final class net.corda.testing.node.StartedMockNode extends java.lang.Obje
   @org.jetbrains.annotations.NotNull public final net.corda.node.services.messaging.MessagingService getNetwork()
   @org.jetbrains.annotations.NotNull public final net.corda.node.services.api.StartedNodeServices getServices()
   @org.jetbrains.annotations.NotNull public final net.corda.node.services.statemachine.StateMachineManager getSmm()
-  @org.jetbrains.annotations.NotNull public final rx.Observable internalRegisterFlowFactory(Class, net.corda.node.internal.InitiatedFlowFactory, Class, boolean)
-  public final void manuallyCloseDB()
   @org.jetbrains.annotations.Nullable public final net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer pumpReceive(boolean)
   @org.jetbrains.annotations.NotNull public final rx.Observable registerInitiatedFlow(Class)
-  public final void setAcceptableLiveFiberCountOnStop(int)
   public final void setMessagingServiceSpy(net.corda.testing.node.MessagingServiceSpy)
   public final void stop()
 ##
