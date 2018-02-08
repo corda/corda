@@ -9,10 +9,14 @@ $ gradlew generateApi
 See [here](../../docs/source/corda-api.rst) for Corda's public API strategy. We will need to
 apply this plugin to other modules in future Corda releases as those modules' APIs stabilise.
 
-Basically, this plugin will document a module's `public` and `protected` classes/methods/fields,
+This plugin will document a module's `public` and `protected` classes/methods/fields,
 excluding those from our `*.internal.*` packgages, any synthetic methods, bridge methods, or methods
 identified as having Kotlin's  `internal` scope. (Kotlin doesn't seem to have implemented `internal`
 scope for classes or fields yet as these are currently `public` inside the `.class` file.)
+
+To cater for the fact that moving methods up into a super class is binary compatible change, the scanner not only lists
+out methods declared in a class but also those inherited from its super types. This effectively means moving a method up
+the type heirarchy only shows up as an additional line in the output file.
 
 ## Usage
 Include this line in the `build.gradle` file of every Corda module that exports public API:
