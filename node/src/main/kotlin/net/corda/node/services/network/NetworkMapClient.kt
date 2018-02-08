@@ -2,11 +2,13 @@ package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.checkOkResponse
-import net.corda.core.internal.openHttpConnection
-import net.corda.core.internal.responseAs
+import net.corda.core.crypto.SignedData
+import net.corda.core.internal.*
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
@@ -16,38 +18,40 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
-import okhttp3.CacheControl
-import okhttp3.Headers
 import rx.Subscription
+import rx.subjects.PublishSubject
 import java.io.BufferedReader
 import java.io.Closeable
 import java.net.URL
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509Certificate) {
+class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certificate) {
     companion object {
         private val logger = contextLogger()
     }
-
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
 
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
         logger.trace { "Publishing NodeInfo to $publishURL." }
-        publishURL.openHttpConnection().apply {
-            doOutput = true
-            requestMethod = "POST"
-            setRequestProperty("Content-Type", "application/octet-stream")
-            outputStream.use { signedNodeInfo.serialize().open().copyTo(it) }
-            checkOkResponse()
-        }
+        publishURL.post(signedNodeInfo.serialize())
         logger.trace { "Published NodeInfo to $publishURL successfully." }
+    }
+
+    fun ackNetworkParametersUpdate(signedParametersHash: SignedData<SecureHash>) {
+        val ackURL = URL("$networkMapUrl/ack-parameters")
+        logger.trace { "Sending network parameters with hash ${signedParametersHash.raw.deserialize()} approval to $ackURL." }
+        ackURL.post(signedParametersHash.serialize())
+        logger.trace { "Sent network parameters approval to $ackURL successfully." }
     }
 
     fun getNetworkMap(): NetworkMapResponse {
@@ -90,12 +94,26 @@ data class NetworkMapResponse(val networkMap: NetworkMap, val cacheMaxAge: Durat
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
                         private val networkMapClient: NetworkMapClient?,
-                        private val currentParametersHash: SecureHash) : Closeable {
+                        private val currentParametersHash: SecureHash,
+                        private val baseDirectory: Path) : Closeable {
     companion object {
         private val logger = contextLogger()
         private val retryInterval = 1.minutes
     }
 
+    private var newNetworkParameters: Pair<ParametersUpdate, SignedDataWithCert<NetworkParameters>>? = null
+
+    fun track(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
+        val currentUpdateInfo = newNetworkParameters?.let {
+            ParametersUpdateInfo(it.first.newParametersHash, it.second.verified(), it.first.description, it.first.updateDeadline)
+        }
+        return DataFeed(
+                currentUpdateInfo,
+                parametersUpdatesTrack
+        )
+    }
+
+    private val parametersUpdatesTrack: PublishSubject<ParametersUpdateInfo> = PublishSubject.create<ParametersUpdateInfo>()
     private val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
     private var fileWatcherSubscription: Subscription? = null
 
@@ -130,8 +148,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             override fun run() {
                 val nextScheduleDelay = try {
                     val (networkMap, cacheTimeout) = networkMapClient.getNetworkMap()
-                    // TODO NetworkParameters updates are not implemented yet. Every mismatch should result in node shutdown.
+                    networkMap.parametersUpdate?.let { handleUpdateNetworkParameters(it) }
                     if (currentParametersHash != networkMap.networkParameterHash) {
+                        // TODO This needs special handling (node omitted update process/didn't accept new parameters or didn't restart on updateDeadline)
                         logger.error("Node is using parameters with hash: $currentParametersHash but network map is advertising: ${networkMap.networkParameterHash}.\n" +
                                 "Please update node to use correct network parameters file.\"")
                         System.exit(1)
@@ -180,5 +199,33 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             }
         }
         executor.submit(task)
+    }
+
+    private fun handleUpdateNetworkParameters(update: ParametersUpdate) {
+        if (update.newParametersHash == newNetworkParameters?.first?.newParametersHash) { // This update was handled already.
+            return
+        }
+        val newParameters = networkMapClient?.getNetworkParameters(update.newParametersHash)
+        if (newParameters != null) {
+            logger.info("Downloaded new network parameters: $newParameters from the update: $update")
+            newNetworkParameters = Pair(update, newParameters)
+            parametersUpdatesTrack.onNext(ParametersUpdateInfo(update.newParametersHash, newParameters.verifiedNetworkMapCert(networkMapClient!!.trustedRoot), update.description, update.updateDeadline))
+        }
+    }
+
+    fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
+        networkMapClient ?: throw IllegalStateException("Network parameters updates are not support without compatibility zone configured")
+        // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them. Add persisting of newest parameters from update.
+        val (_, newParams) = newNetworkParameters ?: throw IllegalArgumentException("Couldn't find parameters update for the hash: $parametersHash")
+        val newParametersHash = newParams.verifiedNetworkMapCert(networkMapClient.trustedRoot).serialize().hash // We should check that we sign the right data structure hash.
+        if (parametersHash == newParametersHash) {
+            // The latest parameters have priority.
+            newParams.serialize()
+                    .open()
+                    .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
+            networkMapClient.ackNetworkParametersUpdate(sign(parametersHash))
+        } else {
+            throw IllegalArgumentException("Refused to accept parameters with hash $parametersHash because network map advertises update with hash $newParametersHash. Please check newest version")
+        }
     }
 }
