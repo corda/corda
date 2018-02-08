@@ -8,7 +8,7 @@ import org.apache.logging.log4j.LogManager
 private val log = LogManager.getLogger("com.r3.corda.networkmanage.hsm.generator.Main")
 
 fun main(args: Array<String>) {
-    run(parseParameters(parseCommandLine(*args).configFile))
+    run(parseParameters(parseCommandLine(*args)?.configFile))
 }
 
 fun run(parameters: GeneratorParameters) {

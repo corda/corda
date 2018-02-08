@@ -8,6 +8,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_FILE
+import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -55,7 +57,7 @@ fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrust
 fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
     certificatesDirectory.createDirectories()
     if (!trustStoreFile.exists()) {
-        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks"), "trustpass").save(trustStoreFile, trustStorePassword)
+        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_TRUST_STORE_FILE"), "$DEV_CA_TRUST_STORE_PASS").save(trustStoreFile, trustStorePassword)
     }
     if (!sslKeystore.exists() || !nodeKeystore.exists()) {
         val (nodeKeyStore) = createDevKeyStores(myLegalName)

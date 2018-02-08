@@ -13,7 +13,7 @@ import javax.security.auth.x500.X500Principal
 import kotlin.system.exitProcess
 
 // TODO The cert subjects need to be configurable
-private const val CORDA_X500_BASE = "O=R3 HoldCo LLC,OU=Corda,L=New York,C=US"
+const val CORDA_X500_BASE = "O=R3 HoldCo LLC,OU=Corda,L=New York,C=US"
 const val NETWORK_ROOT_TRUSTSTORE_FILENAME = "network-root-truststore.jks"
 
 /** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
