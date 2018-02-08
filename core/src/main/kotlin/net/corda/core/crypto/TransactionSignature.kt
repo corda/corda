@@ -16,7 +16,9 @@ import java.util.*
  * @property partialMerkleTree required when multi-transaction signing is utilised.
  */
 @CordaSerializable
-class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree? = null) : DigitalSignature(bytes) {
+class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree?) : DigitalSignature(bytes) {
+    constructor(bytes: ByteArray, by: PublicKey, signatureMetadata: SignatureMetadata) : this(bytes, by, signatureMetadata, null)
+
     /**
      * Function to verify a [SignableData] object's signature.
      * Note that [SignableData] contains the id of the transaction and extra metadata, such as DLT's platform version.
