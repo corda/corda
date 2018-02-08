@@ -92,9 +92,9 @@ class NodeAttachmentService(
 
             @ElementCollection
             @Column(name = "contract_class_name")
-            @CollectionTable(name="node_attachments_contract_class_name", joinColumns = arrayOf(
+            @CollectionTable(name = "node_attachments_contract_class_name", joinColumns = arrayOf(
                     JoinColumn(name = "att_id", referencedColumnName = "att_id")),
-                    foreignKey = ForeignKey(name="FK__ctr_class__attachments") )
+                    foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
 
@@ -257,11 +257,11 @@ class NodeAttachmentService(
     }
 
     override fun importAttachment(jar: InputStream): AttachmentId {
-        return import(jar, null, null)
+        return import(jar, null, null, null)
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
-        return import(jar, uploader, filename)
+        return import(jar, uploader, filename, null)
     }
 
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
@@ -276,7 +276,7 @@ class NodeAttachmentService(
             currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
-    private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
+    private fun import(jar: InputStream, uploader: String?, filename: String?, contractClassNames: List<ContractClassName>?): AttachmentId {
         require(jar !is JarInputStream)
 
         // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
@@ -289,7 +289,7 @@ class NodeAttachmentService(
         if (!hasAttachment(id)) {
             checkIsAValidJAR(ByteArrayInputStream(bytes))
             val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename)
+            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
             session.save(attachment)
             attachmentCount.inc()
             log.info("Stored new attachment $id")
@@ -307,29 +307,12 @@ class NodeAttachmentService(
         }
     }
 
-    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
-        //TODO - TUDOR - refactor
-        require(jar !is JarInputStream)
-
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        checkIsAValidJAR(ByteArrayInputStream(bytes))
-        val id = SecureHash.SHA256(hs.hash().asBytes())
-
-        log.warn("${this} save dbattach: ${contractClassNames}  ${id} ${bytes.size}")
-        if (!hasAttachment(id)) {
-            checkIsAValidJAR(ByteArrayInputStream(bytes))
-            val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, contractClassNames = contractClassNames)
-            session.save(attachment)
-            attachmentCount.inc()
-            log.info("Stored new attachment $id")
-//        } else {
-//            throw java.nio.file.FileAlreadyExistsException(id.toString())
-        }
-        return id
-
-    }
+    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId =
+            try {
+                import(jar, null, null, contractClassNames)
+            } catch (faee: java.nio.file.FileAlreadyExistsException) {
+                AttachmentId.parse(faee.message!!)
+            }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
@@ -352,6 +335,5 @@ class NodeAttachmentService(
 
         return results.map { AttachmentId.parse(it.attId) }
     }
-
 
 }
