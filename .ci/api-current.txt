@@ -1,3 +1,7 @@
+@net.corda.core.serialization.CordaSerializable public class net.corda.client.rpc.RPCException extends net.corda.core.CordaRuntimeException
+  public <init>(String)
+  public <init>(String, Throwable)
+##
 @net.corda.core.serialization.CordaSerializable public class net.corda.core.CordaException extends java.lang.Exception implements net.corda.core.CordaThrowable
   public <init>()
   public <init>(String)
@@ -4023,6 +4027,7 @@ public final class net.corda.testing.node.MockNodeKt extends java.lang.Object
   public long getAttachmentContentCacheSizeBytes()
   @org.jetbrains.annotations.NotNull public java.nio.file.Path getCertificatesDirectory()
   public boolean getDetectPublicIp()
+  public boolean getNoLocalShell()
   @org.jetbrains.annotations.NotNull public java.nio.file.Path getNodeKeystore()
   @org.jetbrains.annotations.NotNull public java.nio.file.Path getSslKeystore()
   public long getTransactionCacheSizeBytes()
@@ -4225,9 +4230,6 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public int getServerProtocolVersion()
   public void notifyServerAndClose()
 ##
-public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException
-  public <init>(String)
-##
 @net.corda.core.DoNotImplement public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable
   public abstract void forceClose()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.RPCOps getProxy()
@@ -4240,9 +4242,6 @@ public class net.corda.client.rpc.RPCException extends net.corda.core.CordaRunti
 ##
 public @interface net.corda.client.rpc.RPCSinceVersion
   public abstract int version()
-##
-public final class net.corda.client.rpc.UtilsKt extends java.lang.Object
-  public static final void notUsed(rx.Observable)
 ##
 public final class net.corda.testing.contracts.DummyContract extends java.lang.Object implements net.corda.core.contracts.Contract
   public <init>()
@@ -4704,3 +4703,4 @@ public final class net.corda.testing.services.MockCordappProvider extends net.co
   @org.jetbrains.annotations.Nullable public net.corda.core.crypto.SecureHash getContractAttachmentID(String)
   @org.jetbrains.annotations.NotNull public final List getCordappRegistry()
 ##
+

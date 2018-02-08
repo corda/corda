@@ -18,7 +18,6 @@ import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
 import rx.Notification
-import rx.Observable
 import java.time.Instant
 import java.util.*
 
