@@ -3,7 +3,6 @@ package net.corda.core.internal
 import net.corda.core.node.NetworkParameters
 
 object NodeProperties {
-    // TODO: Use [NetworkParameters] once it's available in corda core.
     private var _networkParameters: NetworkParameters? = null
 
     var networkParameters: NetworkParameters
