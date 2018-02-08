@@ -215,7 +215,7 @@ Start the nodes by running the following command from the root of the ``cordapp-
 * Unix/Mac OSX: ``kotlin-source/build/nodes/runnodes``
 * Windows: ``call kotlin-source\build\nodes\runnodes.bat``
 
-.. warn:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
+.. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
    nodes may fail to start.
 
 For each node, the ``runnodes`` script creates a node tab/window:
