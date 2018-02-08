@@ -94,7 +94,7 @@ class ValidatingNotaryServiceTests {
 
     private fun runClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
-        val future = aliceServices.startFlow(flow).resultFuture
+        val future = aliceServices.startFlow(flow)
         mockNet.runNetwork()
         return future
     }

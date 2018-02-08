@@ -170,6 +170,14 @@ UNRELEASED
 * Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
   This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
 
+* A ``CordaInternal`` attribute has been added to identify properties that are not intended to form part of the
+  public api and as such are not intended for public use. This is alongside the existing ``DoNotImplement`` attribute for classes which
+  provide Corda functionality to user applications, but should not be implemented by consumers, and any classes which
+  are defined in ``.internal`` packages, which are also not for public use.
+
+* Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
+  only for internal use
+
 .. _changelog_v1:
 
 Release 1.0
