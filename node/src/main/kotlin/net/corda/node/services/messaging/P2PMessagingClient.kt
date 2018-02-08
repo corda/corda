@@ -284,8 +284,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             val controlPacket = message.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = producerSession!!.createMessage(false)
             artemisMessage.writeBodyBufferBytes(controlPacket)
-            producer!!.send(BRIDGE_CONTROL, artemisMessage)
-            producerSession!!.commit()
+            sendMessage(BRIDGE_CONTROL, artemisMessage)
         }
     }
 
@@ -544,7 +543,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     "Send to: $mqAddress topic: ${message.topicSession.topic} " +
                             "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}"
                 }
-                producer!!.send(mqAddress, artemisMessage)
+                sendMessage(mqAddress, artemisMessage)
                 retryId?.let {
                     database.transaction {
                         messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
@@ -582,7 +581,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
         state.locked {
             log.trace { "Retry #$retryCount sending message $message to $address for $retryId" }
-            producer!!.send(address, message)
+            sendMessage(address, message)
         }
 
         scheduledMessageRedeliveries[retryId] = messagingExecutor.schedule({
@@ -666,5 +665,11 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             is PartyInfo.SingleNode -> NodeAddress(partyInfo.party.owningKey, partyInfo.addresses.single())
             is PartyInfo.DistributedNode -> ServiceAddress(partyInfo.party.owningKey)
         }
+    }
+
+    private fun InnerState.sendMessage(address: String, message: ClientMessage) {
+
+        producer!!.send(address, message)
+        producerSession!!.commit()
     }
 }
