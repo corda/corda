@@ -521,7 +521,8 @@ Corda installs four initiating subflow pairs on each node by default:
 * ``SwapIdentitiesFlow``/``SwapIdentitiesHandler``, which is used to exchange confidential identities with a
   counterparty
 
-.. warning:: The ``confidential-identities`` module is still not stabilised, so the
+.. warning:: ``SwapIdentitiesFlow``/``SwapIdentitiesHandler`` are only installed if the ``confidential-identities`` module 
+   is included. The ``confidential-identities`` module  is still not stabilised, so the
    ``SwapIdentitiesFlow``/``SwapIdentitiesHandler`` API may change in future releases. See :doc:`corda-api`.
 
 Corda also provides a number of built-in inlined subflows that should be used for handling common tasks. The most
