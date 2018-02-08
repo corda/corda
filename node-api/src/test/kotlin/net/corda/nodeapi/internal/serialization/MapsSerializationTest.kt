@@ -6,7 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.services.statemachine.SessionData
+import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.amqpSpecific
@@ -41,7 +41,7 @@ class MapsSerializationTest {
 
     @Test
     fun `check list can be serialized as part of SessionData`() {
-        val sessionData = SessionData(123, smallMap.serialize())
+        val sessionData = DataSessionMessage(smallMap.serialize())
         assertEqualAfterRoundTripSerialization(sessionData)
         assertEquals(smallMap, sessionData.payload.deserialize())
     }

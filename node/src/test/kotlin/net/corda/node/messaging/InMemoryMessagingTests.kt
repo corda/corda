@@ -3,7 +3,6 @@ package net.corda.node.messaging
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
-import net.corda.node.services.messaging.createMessage
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNetwork
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -51,10 +50,10 @@ class InMemoryMessagingTests {
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
-        node2.network.addMessageHandler { msg, _ ->
+        node2.network.addMessageHandler("test.topic") { msg, _ ->
             node2.network.send(msg, node3.network.myAddress)
         }
-        node3.network.addMessageHandler { msg, _ ->
+        node3.network.addMessageHandler("test.topic") { msg, _ ->
             finalDelivery = msg
         }
 
@@ -63,7 +62,7 @@ class InMemoryMessagingTests {
 
         mockNet.runNetwork(rounds = 1)
 
-        assertTrue(Arrays.equals(finalDelivery!!.data, bits))
+        assertTrue(Arrays.equals(finalDelivery!!.data.bytes, bits))
     }
 
     @Test
@@ -75,7 +74,7 @@ class InMemoryMessagingTests {
         val bits = "test-content".toByteArray()
 
         var counter = 0
-        listOf(node1, node2, node3).forEach { it.network.addMessageHandler { _, _ -> counter++ } }
+        listOf(node1, node2, node3).forEach { it.network.addMessageHandler("test.topic") { _, _ -> counter++ } }
         node1.network.send(node2.network.createMessage("test.topic", data = bits), rigorousMock<AllPossibleRecipients>())
         mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
