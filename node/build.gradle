@@ -56,7 +56,6 @@ processTestResources {
 dependencies {
     compile project(':node-api')
     compile project(":confidential-identities")
-    compile project(':client:rpc')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Log4J: logging framework (with SLF4J bindings)
