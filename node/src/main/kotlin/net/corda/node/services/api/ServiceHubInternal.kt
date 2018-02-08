@@ -20,6 +20,7 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
@@ -65,6 +66,7 @@ interface ServiceHubInternal : ServiceHub {
     val database: CordaPersistence
     val configuration: NodeConfiguration
     val nodeProperties: NodePropertiesStore
+    val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }

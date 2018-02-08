@@ -9,6 +9,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -20,6 +21,13 @@ import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
 class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext) : CordaRPCOps {
+    override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> = guard("networkParametersFeed") {
+        implementation.networkParametersFeed()
+    }
+
+    override fun acceptNewNetworkParameters(parametersHash: SecureHash) = guard("acceptNewNetworkParameters") {
+        implementation.acceptNewNetworkParameters(parametersHash)
+    }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash = guard("uploadAttachmentWithMetadata") {
         implementation.uploadAttachmentWithMetadata(jar, uploader, filename)

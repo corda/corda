@@ -1,12 +1,13 @@
 buildscript {
     ext {
-        springBootVersion = '1.5.7.RELEASE'
+        springBootVersion = '1.5.10.RELEASE'
     }
     repositories {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
+        classpath "io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE"
     }
 }
 
@@ -16,6 +17,7 @@ buildscript {
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 ext['selenium.version'] = "$selenium_version"
+ext['jackson.version'] = "$jackson_version"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
