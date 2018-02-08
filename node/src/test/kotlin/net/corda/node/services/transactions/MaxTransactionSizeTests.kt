@@ -17,6 +17,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.startFlow
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -69,7 +70,7 @@ class MaxTransactionSizeTests {
             mockNet.runNetwork()
             future.getOrThrow()
         }
-        assertTrue(exception.message?.contains("Transaction exceeded network's maximum transaction size limit") ?: false)
+        assertThat(exception).hasMessageContaining("Transaction exceeded network's maximum transaction size limit")
     }
 
     @Test
@@ -92,7 +93,7 @@ class MaxTransactionSizeTests {
             mockNet.runNetwork()
             future.getOrThrow()
         }
-        assertTrue(ex.message?.contains("Counterparty flow on O=Bob Plc, L=Rome, C=IT had an internal error and has terminated") ?: false)
+        assertThat(ex).hasMessageContaining("Counterparty flow on O=Bob Plc, L=Rome, C=IT had an internal error and has terminated")
     }
 
     @StartableByRPC

@@ -5,7 +5,7 @@ import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.internal.NodeProperties
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -125,10 +125,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     private fun checkTransactionSize(ltx: LedgerTransaction) {
-        var remainingTransactionSize = NodeProperties.networkParameters.maxTransactionSize
+        var remainingTransactionSize = GlobalProperties.networkParameters.maxTransactionSize
 
         fun minus(size: Int) {
-            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : ${NodeProperties.networkParameters.maxTransactionSize} bytes." }
+            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : ${GlobalProperties.networkParameters.maxTransactionSize} bytes." }
             remainingTransactionSize -= size
         }
 
