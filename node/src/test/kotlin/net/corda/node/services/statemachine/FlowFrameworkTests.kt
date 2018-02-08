@@ -26,6 +26,7 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -33,9 +34,10 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.pumpReceive
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -60,21 +62,21 @@ class FlowFrameworkTests {
         }
     }
 
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
-    private lateinit var aliceNode: StartedMockNode
-    private lateinit var bobNode: StartedMockNode
+    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var bobNode: StartedNode<MockNode>
     private lateinit var notaryIdentity: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
 
-    private fun StartedMockNode.flushSmm() {
+    private fun StartedNode<*>.flushSmm() {
         (this.smm as StateMachineManagerImpl).executor.flush()
     }
 
     @Before
     fun start() {
-        mockNet = MockNetwork(
+        mockNet = InternalMockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
                 cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts")
         )
@@ -98,7 +100,7 @@ class FlowFrameworkTests {
     @Test
     fun `newly added flow is preserved on restart`() {
         aliceNode.services.startFlow(NoOpFlow(nonTerminating = true))
-        aliceNode.setAcceptableLiveFiberCountOnStop(1)
+        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         val restoredFlow = aliceNode.restartAndGetRestoredFlow<NoOpFlow>()
         assertThat(restoredFlow.flowStarted).isTrue()
     }
@@ -124,7 +126,7 @@ class FlowFrameworkTests {
         assertThatThrownBy {
             fiber.resultFuture.getOrThrow()
         }.isSameAs(exceptionDuringSuspend)
-        assertThat(aliceNode.allStateMachines).isEmpty()
+        assertThat(aliceNode.smm.allStateMachines).isEmpty()
         // Make sure the fiber does actually terminate
         assertThat(fiber.isTerminated).isTrue()
     }
@@ -136,22 +138,22 @@ class FlowFrameworkTests {
 
         // We push through just enough messages to get only the payload sent
         bobNode.pumpReceive()
-        bobNode.disableDBCloseOnStop()
-        bobNode.setAcceptableLiveFiberCountOnStop(1)
-        bobNode.stop()
+        bobNode.internals.disableDBCloseOnStop()
+        bobNode.internals.acceptableLiveFiberCountOnStop = 1
+        bobNode.dispose()
         mockNet.runNetwork()
         val restoredFlow = bobNode.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
-    
+
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
         aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         bobNode.flushSmm()
-        bobNode.disableDBCloseOnStop()
-        bobNode.stop() // kill receiver
+        bobNode.internals.disableDBCloseOnStop()
+        bobNode.dispose() // kill receiver
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
@@ -176,15 +178,15 @@ class FlowFrameworkTests {
         }
         // Make sure the add() has finished initial processing.
         bobNode.flushSmm()
-        bobNode.disableDBCloseOnStop()
+        bobNode.internals.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
-        bobNode.stop()
+        bobNode.dispose()
         bobNode.database.transaction {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size) // confirm checkpoint
             bobNode.services.networkMapCache.clearNetworkMapCache()
         }
-        val node2b = mockNet.createNode(MockNodeParameters(bobNode.id))
-        bobNode.manuallyCloseDB()
+        val node2b = mockNet.createNode(MockNodeParameters(bobNode.internals.id))
+        bobNode.internals.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         mockNet.runNetwork()
@@ -236,8 +238,8 @@ class FlowFrameworkTests {
                 //There's no session end from the other flows as they're manually suspended
         )
 
-        bobNode.setAcceptableLiveFiberCountOnStop(1)
-        charlieNode.setAcceptableLiveFiberCountOnStop(1)
+        bobNode.internals.acceptableLiveFiberCountOnStop = 1
+        charlieNode.internals.acceptableLiveFiberCountOnStop = 1
     }
 
     @Test
@@ -250,7 +252,7 @@ class FlowFrameworkTests {
         charlieNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(charliePayload, it) }
         val multiReceiveFlow = ReceiveFlow(bob, charlie).nonTerminating()
         aliceNode.services.startFlow(multiReceiveFlow)
-        aliceNode.setAcceptableLiveFiberCountOnStop(1)
+        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         mockNet.runNetwork()
         assertThat(multiReceiveFlow.receivedPayloads[0]).isEqualTo(bobPayload)
         assertThat(multiReceiveFlow.receivedPayloads[1]).isEqualTo(charliePayload)
@@ -654,21 +656,21 @@ class FlowFrameworkTests {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
-    private inline fun <reified P : FlowLogic<*>> StartedMockNode.restartAndGetRestoredFlow() = run {
+    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow() = internals.run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
         val newNode = mockNet.createNode(MockNodeParameters(id, configuration.myLegalName))
-        newNode.setAcceptableLiveFiberCountOnStop(1)
+        newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork()
         newNode.getSingleFlow<P>().first
     }
 
-    private inline fun <reified P : FlowLogic<*>> StartedMockNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
-        return findStateMachines(P::class.java).single()
+    private inline fun <reified P : FlowLogic<*>> StartedNode<*>.getSingleFlow(): Pair<P, CordaFuture<*>> {
+        return smm.findStateMachines(P::class.java).single()
     }
 
-    private inline fun <reified P : FlowLogic<*>> StartedMockNode.registerFlowFactory(
+    private inline fun <reified P : FlowLogic<*>> StartedNode<*>.registerFlowFactory(
             initiatingFlowClass: KClass<out FlowLogic<*>>,
             initiatedFlowVersion: Int = 1,
             noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
@@ -689,7 +691,7 @@ class FlowFrameworkTests {
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
 
-    private fun StartedMockNode.sendSessionMessage(message: SessionMessage, destination: Party) {
+    private fun StartedNode<*>.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
             send(createMessage(StateMachineManagerImpl.sessionTopic, message.serialize().bytes), address)
@@ -700,8 +702,8 @@ class FlowFrameworkTests {
         assertThat(receivedSessionMessages).containsExactly(*expected)
     }
 
-    private fun assertSessionTransfers(node: StartedMockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
-        val actualForNode = receivedSessionMessages.filter { it.from == node.id || it.to == node.services.networkService.myAddress }
+    private fun assertSessionTransfers(node: StartedNode<MockNode>, vararg expected: SessionTransfer): List<SessionTransfer> {
+        val actualForNode = receivedSessionMessages.filter { it.from == node.internals.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
     }
@@ -732,8 +734,8 @@ class FlowFrameworkTests {
         else -> message
     }
 
-    private infix fun StartedMockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
-    private infix fun Pair<Int, SessionMessage>.to(node: StartedMockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
+    private infix fun StartedNode<MockNode>.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)
+    private infix fun Pair<Int, SessionMessage>.to(node: StartedNode<*>): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
     private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTracker.Step>>>
         get() {

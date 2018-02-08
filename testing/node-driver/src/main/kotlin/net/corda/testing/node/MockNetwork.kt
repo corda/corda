@@ -85,8 +85,6 @@ class StartedMockNode {
     val database get() = node.database
     val id get() = node.internals.id
     val configuration get() = node.internals.configuration
-    val allStateMachines get() = node.smm.allStateMachines
-    val checkpointStorage get() = node.checkpointStorage
     val smm get() = node.smm
     val info get() = node.services.myInfo
     val network get() = node.network
@@ -109,12 +107,6 @@ class StartedMockNode {
      */
     fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) = node.setMessagingServiceSpy(messagingServiceSpy)
 
-    /** Leave the node database connection open when the node is stopped **/
-    fun disableDBCloseOnStop() = node.internals.disableDBCloseOnStop()
-
-    /** Close the node database connection**/
-    fun manuallyCloseDB() = node.internals.manuallyCloseDB()
-
     /** Stop the node **/
     fun stop() = node.internals.stop()
 
@@ -123,22 +115,8 @@ class StartedMockNode {
         return (services.networkService as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
     }
 
-    /** Set the acceptable number of fibers than can be live when the node stops. Default is 0. **/
-    fun setAcceptableLiveFiberCountOnStop(number: Int) {
-        node.internals.acceptableLiveFiberCountOnStop = number
-    }
-
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */
     fun <F : FlowLogic<*>> findStateMachines(flowClass: Class<F>): List<Pair<F, CordaFuture<*>>> = node.smm.findStateMachines(flowClass)
-
-    /**
-     * Register an flow factory for initiating a new flow of type [initiatedFlowClass]
-     * on receiving of a flow of type[initiatingFlowClass].
-     */
-    fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                       flowFactory: InitiatedFlowFactory<F>,
-                                                       initiatedFlowClass: Class<F>,
-                                                       track: Boolean): Observable<F> = node.internalRegisterFlowFactory(initiatingFlowClass, flowFactory, initiatedFlowClass, track)
 }
 
 /**
@@ -171,7 +149,6 @@ class MockNetwork(
     private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(cordappPackages, defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, initialiseSerialization, notarySpecs)
     val defaultNotaryNode get() = StartedMockNode().initialise(internalMockNetwork.defaultNotaryNode)
     val defaultNotaryIdentity get() = internalMockNetwork.defaultNotaryIdentity
-    val messagingNetwork get() = internalMockNetwork.messagingNetwork
     val notaryNodes get() = internalMockNetwork.notaryNodes.map { StartedMockNode().initialise(it) }
     val nextNodeId get() = internalMockNetwork.nextNodeId
 
