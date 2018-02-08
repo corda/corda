@@ -4703,4 +4703,3 @@ public final class net.corda.testing.services.MockCordappProvider extends net.co
   @org.jetbrains.annotations.Nullable public net.corda.core.crypto.SecureHash getContractAttachmentID(String)
   @org.jetbrains.annotations.NotNull public final List getCordappRegistry()
 ##
-
