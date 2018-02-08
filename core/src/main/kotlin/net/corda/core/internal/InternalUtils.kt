@@ -26,6 +26,7 @@ import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
@@ -353,3 +354,5 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     val signature = Crypto.doSign(privateKey, serialised.bytes)
     return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
 }
+
+fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }

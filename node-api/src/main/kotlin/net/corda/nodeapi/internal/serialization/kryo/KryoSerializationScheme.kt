@@ -6,6 +6,7 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.ByteBufferInputStream
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
@@ -85,7 +86,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
         val dataBytes = kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")
         return context.kryo {
-            kryoInput(dataBytes.open()) {
+            kryoInput(ByteBufferInputStream(dataBytes)) {
                 if (context.objectReferencesEnabled) {
                     uncheckedCast(readClassAndObject(this))
                 } else {

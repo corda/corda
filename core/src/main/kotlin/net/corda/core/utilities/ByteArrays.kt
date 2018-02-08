@@ -5,6 +5,8 @@ package net.corda.core.utilities
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
+import java.lang.Math.max
+import java.lang.Math.min
 import java.nio.ByteBuffer
 import javax.xml.bind.DatatypeConverter
 
@@ -28,7 +30,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
     fun open() = ByteArrayInputStream(_bytes, offset, size)
 
     /**
-     * Create a sub-sequence backed by the same array.
+     * Create a sub-sequence, that may be backed by a new byte array.
      *
      * @param offset The offset within this sequence to start the new sequence.  Note: not the offset within the backing array.
      * @param size The size of the intended sub sequence.
@@ -38,7 +40,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
         require(offset >= 0)
         require(offset + size <= this.size)
         // Intentionally use bytes rather than _bytes, to mirror the copy-or-not behaviour of that property.
-        return if (offset == 0 && size == this.size) this else of(bytes, this.offset + offset, size)
+        return if (offset == 0 && size == this.size) this else OpaqueBytesSubSequence(bytes, this.offset + offset, size)
     }
 
     companion object {
@@ -56,19 +58,26 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
     /**
      * Take the first n bytes of this sequence as a sub-sequence.  See [subSequence] for further semantics.
      */
-    fun take(n: Int) = subSequence(0, n)
+    fun take(n: Int): ByteSequence = subSequence(0, n)
 
-    /** Return a [subSequence] of all but the first n bytes of this sequence. */
-    fun skip(n: Int) = subSequence(n, size - n)
-
-    /** A read-only [ByteBuffer] view of this sequence. */
-    fun asReadOnlyBuffer() = ByteBuffer.wrap(_bytes, offset, size).asReadOnlyBuffer()!!
+    /**
+     * A new read-only [ByteBuffer] view of this sequence or part of it.
+     * If [start] or [end] are negative then [IllegalArgumentException] is thrown, otherwise they are clamped if necessary.
+     * This method cannot be used to get bytes before [offset] or after [offset]+[size], and never makes a new array.
+     */
+    fun slice(start: Int = 0, end: Int = size): ByteBuffer {
+        require(start >= 0)
+        require(end >= 0)
+        val clampedStart = min(start, size)
+        val clampedEnd = min(end, size)
+        return ByteBuffer.wrap(_bytes, offset + clampedStart, max(0, clampedEnd - clampedStart)).asReadOnlyBuffer()
+    }
 
     /** Write this sequence to an [OutputStream]. */
     fun writeTo(output: OutputStream) = output.write(_bytes, offset, size)
 
     /** Write this sequence to a [ByteBuffer]. */
-    fun putTo(buffer: ByteBuffer) = buffer.put(_bytes, offset, size)!!
+    fun putTo(buffer: ByteBuffer): ByteBuffer = buffer.put(_bytes, offset, size)
 
     /**
      * Copy this sequence, complete with new backing array.  This can be helpful to break references to potentially
@@ -77,7 +86,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
     fun copy(): ByteSequence = of(copyBytes())
 
     /** Same as [copy] but returns just the new byte array. */
-    fun copyBytes() = _bytes.copyOfRange(offset, offset + size)
+    fun copyBytes(): ByteArray = _bytes.copyOfRange(offset, offset + size)
 
     /**
      * Compare byte arrays byte by byte.  Arrays that are shorter are deemed less than longer arrays if all the bytes

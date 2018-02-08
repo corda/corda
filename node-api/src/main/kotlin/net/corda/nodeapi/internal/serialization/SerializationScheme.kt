@@ -4,6 +4,7 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.AttachmentsClassLoader
@@ -11,7 +12,6 @@ import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import org.slf4j.LoggerFactory
 import java.io.NotSerializableException
-import java.lang.Math.min
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
@@ -88,7 +88,7 @@ open class SerializationFactoryImpl : SerializationFactory() {
 
     private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, CordaSerializationMagic> {
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
-        val magic = CordaSerializationMagic(byteSequence.take(min(byteSequence.size, magicSize)).copyBytes())
+        val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
         val lookupKey = magic to target
         return schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
