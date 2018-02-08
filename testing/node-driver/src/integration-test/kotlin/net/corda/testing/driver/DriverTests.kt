@@ -27,10 +27,11 @@ class DriverTests {
     private companion object {
         val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+
         fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = nodeInfo.addresses.single()
             // Check that the port is bound
-            addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
+            addressMustBeBound(executorService, hostAndPort, (this as? OutOfProcess)?.process)
         }
 
         fun nodeMustBeDown(handle: NodeHandle) {

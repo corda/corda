@@ -98,7 +98,7 @@ class StartedMockNode {
         return this
     }
 
-    /** Register a flow that is registered by another flow **/
+    /** Register a flow that is initiated by another flow **/
     fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>) = node.registerInitiatedFlow(initiatedFlowClass)
 
     /**

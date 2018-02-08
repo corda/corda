@@ -653,7 +653,7 @@ class DriverDSLImpl(
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
-                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit).initialise(node)
+                        InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
             }
@@ -682,7 +682,7 @@ class DriverDSLImpl(
                         }
                         processDeathFuture.cancel(false)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
-                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
+                        OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
                 }
             }

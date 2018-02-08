@@ -15,6 +15,7 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -26,7 +27,7 @@ import java.util.*
 
 class DistributedServiceTests {
     private lateinit var alice: NodeHandle
-    private lateinit var notaryNodes: List<NodeHandle.OutOfProcess>
+    private lateinit var notaryNodes: List<OutOfProcess>
     private lateinit var aliceProxy: CordaRPCOps
     private lateinit var raftNotaryIdentity: Party
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
@@ -49,7 +50,7 @@ class DistributedServiceTests {
         ) {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
-            notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as NodeHandle.OutOfProcess }
+            notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as OutOfProcess }
 
             assertThat(notaryNodes).hasSize(3)
 

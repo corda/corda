@@ -12,7 +12,7 @@ import net.corda.testing.core.BOC_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.chooseIdentity
-import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.poll
@@ -37,7 +37,7 @@ class TraderDemoTest {
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
-            ).map { (it.getOrThrow() as NodeHandle.InProcess) }
+            ).map { (it.getOrThrow() as InProcess) }
             nodeA.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
                 val client = CordaRPCClient(it.configuration.rpcOptions.address!!)

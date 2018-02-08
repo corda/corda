@@ -13,15 +13,18 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import rx.Observable
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
@@ -34,80 +37,90 @@ import java.util.concurrent.atomic.AtomicInteger
 data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHandles: CordaFuture<List<NodeHandle>>)
 
 @DoNotImplement
-sealed class NodeHandle : AutoCloseable {
-    abstract val nodeInfo: NodeInfo
+interface NodeHandle : AutoCloseable {
+    val nodeInfo: NodeInfo
     /**
      * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one
      * will be added and that will be used.
      */
-    abstract val rpc: CordaRPCOps
-    abstract val configuration: NodeConfiguration
-    abstract val webAddress: NetworkHostAndPort
-    abstract val useHTTPS: Boolean
-
+    val rpc: CordaRPCOps
+    val configuration: NodeConfiguration
+    val webAddress: NetworkHostAndPort
+    val useHTTPS: Boolean
     /**
      * Stops the referenced node.
      */
-    abstract fun stop()
-
-    /**
-     * Closes and stops the node.
-     */
-    override fun close() = stop()
-
-    data class OutOfProcess(
-            override val nodeInfo: NodeInfo,
-            override val rpc: CordaRPCOps,
-            override val configuration: NodeConfiguration,
-            override val webAddress: NetworkHostAndPort,
-            override val useHTTPS: Boolean,
-            val debugPort: Int?,
-            val process: Process,
-            private val onStopCallback: () -> Unit
-    ) : NodeHandle() {
-        override fun stop() {
-            with(process) {
-                destroy()
-                waitFor()
-            }
-            onStopCallback()
-        }
-    }
-
-    data class InProcess(
-            override val nodeInfo: NodeInfo,
-            override val rpc: CordaRPCOps,
-            override val configuration: NodeConfiguration,
-            override val webAddress: NetworkHostAndPort,
-            override val useHTTPS: Boolean,
-            val nodeThread: Thread,
-            private val onStopCallback: () -> Unit
-    ) : NodeHandle() {
-        override fun stop() {
-            node.dispose()
-            with(nodeThread) {
-                interrupt()
-                join()
-            }
-            onStopCallback()
-        }
-        private lateinit var node: StartedNode<Node>
-        val database get() = node.database
-        val services get() = node.services
-        fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(initiatedFlowClass)
-        internal fun initialise(node: StartedNode<Node>) : InProcess {
-            this.node = node
-            return this
-        }
-    }
+    fun stop()
 
     /**
      * Connects to node through RPC.
      *
      * @param sslConfiguration specifies SSL options.
      */
-    @JvmOverloads
-    fun rpcClientToNode(sslConfiguration: SSLConfiguration? = null): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
+    fun rpcClientToNode(sslConfiguration: SSLConfiguration? = null): CordaRPCClient
+}
+
+@DoNotImplement
+interface OutOfProcess : NodeHandle {
+    val process: Process
+}
+
+@DoNotImplement
+interface InProcess : NodeHandle {
+    val database: CordaPersistence
+    val services: StartedNodeServices
+    /**
+     * Register a flow that is initiated by another flow
+     */
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
+}
+
+internal data class OutOfProcessImpl(
+        override val nodeInfo: NodeInfo,
+        override val rpc: CordaRPCOps,
+        override val configuration: NodeConfiguration,
+        override val webAddress: NetworkHostAndPort,
+        override val useHTTPS: Boolean,
+        val debugPort: Int?,
+        override val process: Process,
+        private val onStopCallback: () -> Unit
+) : OutOfProcess {
+    override fun stop() {
+        with(process) {
+            destroy()
+            waitFor()
+        }
+        onStopCallback()
+    }
+
+    override fun close() = stop()
+    override fun rpcClientToNode(sslConfiguration: SSLConfiguration?): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
+}
+
+internal data class InProcessImpl(
+        override val nodeInfo: NodeInfo,
+        override val rpc: CordaRPCOps,
+        override val configuration: NodeConfiguration,
+        override val webAddress: NetworkHostAndPort,
+        override val useHTTPS: Boolean,
+        private val nodeThread: Thread,
+        private val onStopCallback: () -> Unit,
+        private val node: StartedNode<Node>
+) : InProcess {
+    override val database: CordaPersistence get() = node.database
+    override val services: StartedNodeServices get() = node.services
+    override fun stop() {
+        node.dispose()
+        with(nodeThread) {
+            interrupt()
+            join()
+        }
+        onStopCallback()
+    }
+
+    override fun close() = stop()
+    override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> = node.registerInitiatedFlow(initiatedFlowClass)
+    override fun rpcClientToNode(sslConfiguration: SSLConfiguration?): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
 }
 
 data class WebserverHandle(
@@ -155,7 +168,7 @@ data class NodeParameters(
 
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
                      val jmxHttpServerPortAllocation: PortAllocation? =
-                        if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+                     if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
 
 /**
  * [driver] allows one to start up nodes like this:
@@ -182,7 +195,7 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
- * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block. 
+ * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block.
  *     It will wait for them to be shut down externally instead.
  * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.

@@ -12,13 +12,11 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.driver.DriverDSL
-import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -114,15 +112,15 @@ class P2PMessagingTest {
         }
     }
 
-    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<NodeHandle.InProcess>) -> Unit) {
+    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
         driver(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))) {
-            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as NodeHandle.InProcess) })
+            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }
     }
 
-    private fun DriverDSL.startAlice(): NodeHandle.InProcess {
+    private fun DriverDSL.startAlice(): InProcess {
         return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
-                .map { (it as NodeHandle.InProcess) }
+                .map { (it as InProcess) }
                 .getOrThrow()
     }
 
@@ -137,7 +135,7 @@ class P2PMessagingTest {
      * either ignore them or respond, depending on the value of [CrashingNodes.ignoreRequests], initially set to true.
      * This may be used to simulate scenarios where nodes receive request messages but crash before sending back a response.
      */
-    private fun simulateCrashingNodes(distributedServiceNodes: List<NodeHandle.InProcess>, dummyTopic: String, responseMessage: String): CrashingNodes {
+    private fun simulateCrashingNodes(distributedServiceNodes: List<InProcess>, dummyTopic: String, responseMessage: String): CrashingNodes {
         val crashingNodes = CrashingNodes(
                 requestsReceived = AtomicInteger(0),
                 firstRequestReceived = CountDownLatch(1),
@@ -166,7 +164,7 @@ class P2PMessagingTest {
         return crashingNodes
     }
 
-    private fun assertAllNodesAreUsed(participatingServiceNodes: List<NodeHandle.InProcess>, serviceName: CordaX500Name, originatingNode: NodeHandle.InProcess) {
+    private fun assertAllNodesAreUsed(participatingServiceNodes: List<InProcess>, serviceName: CordaX500Name, originatingNode: InProcess) {
         // Setup each node in the distributed service to return back it's NodeInfo so that we can know which node is being used
         participatingServiceNodes.forEach { node ->
             node.respondWith(node.services.myInfo)
@@ -187,7 +185,7 @@ class P2PMessagingTest {
         assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map { it.services.myInfo })
     }
 
-    private fun NodeHandle.InProcess.respondWith(message: Any) {
+    private fun InProcess.respondWith(message: Any) {
         services.networkService.addMessageHandler(javaClass.name) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = services.networkService.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
@@ -195,7 +193,7 @@ class P2PMessagingTest {
         }
     }
 
-    private fun NodeHandle.InProcess.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
+    private fun InProcess.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
         val request = TestRequest(replyTo = services.networkService.myAddress)
         return services.networkService.sendRequest(javaClass.name, request, target)
     }

@@ -13,9 +13,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.driver.InProcess
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.startFlow
@@ -34,7 +34,7 @@ class RaftNotaryServiceTests {
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
         ) {
-            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as NodeHandle.InProcess) }.getOrThrow()
+            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcess) }.getOrThrow()
             val inputState = issueState(bankA, defaultNotaryIdentity)
 
             val firstTxBuilder = TransactionBuilder(defaultNotaryIdentity)
@@ -60,7 +60,7 @@ class RaftNotaryServiceTests {
         }
     }
 
-    private fun issueState(nodeHandle: NodeHandle.InProcess, notary: Party): StateAndRef<*> {
+    private fun issueState(nodeHandle: InProcess, notary: Party): StateAndRef<*> {
         return nodeHandle.database.transaction {
 
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.chooseIdentity().ref(0))

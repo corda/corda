@@ -14,8 +14,8 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.InProcess
 import net.corda.testing.node.User
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.performance.div
 import net.corda.testing.node.NotarySpec
@@ -23,10 +23,8 @@ import net.corda.testing.node.internal.InternalDriverDSL
 import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
 import net.corda.testing.node.internal.performance.startReporter
 import net.corda.testing.node.internal.performance.startTightLoopInjector
-import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
@@ -79,7 +77,7 @@ class NodePerformanceTests {
     fun `empty flow rate`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
-            a as NodeHandle.InProcess
+            a as InProcess
             val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->
                 startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 2000L / TimeUnit.SECONDS) {
@@ -97,7 +95,7 @@ class NodePerformanceTests {
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
-            val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
+            val notary = defaultNotaryNode.getOrThrow() as InProcess
             val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.services.monitoringService.metrics)
             notary.rpcClientToNode().use("A", "A") { connection ->
                 println("ISSUING")
