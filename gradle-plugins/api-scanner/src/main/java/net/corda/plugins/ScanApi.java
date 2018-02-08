@@ -8,13 +8,12 @@ import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
-import org.gradle.api.tasks.CompileClasspath;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.OutputFiles;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Inherited;
 import java.lang.reflect.InvocationTargetException;
@@ -26,7 +25,9 @@ import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.StreamSupport;
 
-import static java.util.Collections.*;
+import static java.util.Collections.sort;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("unused")
@@ -221,7 +222,7 @@ public class ScanApi extends DefaultTask {
                 }
 
                 writeClass(writer, classInfo, javaClass.getModifiers());
-                writeMethods(writer, classInfo.getMethodAndConstructorInfo());
+                writeMethods(writer, classInfo);
                 writeFields(writer, classInfo.getFieldInfo());
                 writer.println("##");
             });
@@ -270,15 +271,67 @@ public class ScanApi extends DefaultTask {
             writer.println();
         }
 
-        private void writeMethods(PrintWriter writer, List<MethodInfo> methods) {
-            sort(methods);
-            for (MethodInfo method : methods) {
-                if (isVisible(method.getAccessFlags()) // Only public and protected methods
-                        && isValid(method.getAccessFlags(), METHOD_MASK) // Excludes bridge and synthetic methods
-                        && !isKotlinInternalScope(method)) {
-                    writer.append("  ").println(filterAnnotationsFor(method));
-                }
+        /**
+         * Write out all the visible and supported methods of the given class, including any that are inherited from
+         * its superclasses and superinterfaces. Methods inherited from JRE classes are ignored as they're considered
+         * stable.
+         */
+        private void writeMethods(PrintWriter writer, ClassInfo classInfo) {
+            List<ClassInfo> classHeirarchy = explodeClassHeirarchy(classInfo);
+
+            // First pre-populate the seen set with any inherited methods from Java
+            Set<MethodKey> seen = classHeirarchy
+                    .stream()
+                    .filter(c -> c.getClassName().startsWith("java.") || c.getClassName().startsWith("javax."))
+                    .flatMap(c -> {
+                        try {
+                            // It's safe to load the class in as it's a JRE one, and the scanner doesn't include them in
+                            // its results
+                            return explodeClassHeirarchy(classpathLoader.loadClass(c.getClassName())).stream();
+                        } catch (ClassNotFoundException e) {
+                            throw new Error("Unable to load JRE class??", e);
+                        }
+                    })
+                    .flatMap(c -> Arrays.stream(c.getDeclaredMethods()))
+                    .filter(m -> isVisible(m.getModifiers()))
+                    .map(MethodKey::new)
+                    .collect(toCollection(HashSet::new));
+
+            classHeirarchy
+                    .stream()
+                    .flatMap(c -> c.getMethodAndConstructorInfo().stream())
+                    .filter(method -> isVisible(method.getAccessFlags()) // Only public and protected methods
+                            && isValid(method.getAccessFlags(), METHOD_MASK) // Excludes bridge and synthetic methods
+                            && !isKotlinInternalScope(method))
+                    .filter(method -> !method.isConstructor() || method.getClassName().equals(classInfo.getClassName()))  // Only include c'tors of the class under scan
+                    .filter(method -> seen.add(new MethodKey(method))) // Don't include the same overridden method
+                    .sorted(comparing(MethodInfo::getMethodName).thenComparing(MethodInfo::getTypeDescriptor))
+                    .forEach(method -> writer.append("  ").println(filterAnnotationsFor(method)));
+        }
+
+        private List<Class<?>> explodeClassHeirarchy(Class<?> clazz) {
+            List<Class<?>> exploded = new ArrayList<>();
+            explodeClassHeirarchy(clazz, exploded);
+            return exploded;
+        }
+
+        private void explodeClassHeirarchy(Class<?> clazz, List<Class<?>> exploded) {
+            exploded.add(clazz);
+            if (clazz.getSuperclass() != null) {
+                explodeClassHeirarchy(clazz.getSuperclass(), exploded);
             }
+            for (Class<?> interfaceClass : clazz.getInterfaces()) {
+                explodeClassHeirarchy(interfaceClass, exploded);
+            }
+        }
+
+        private List<ClassInfo> explodeClassHeirarchy(ClassInfo classInfo) {
+            List<ClassInfo> exploded = new ArrayList<>();
+            exploded.add(classInfo);
+            exploded.addAll(classInfo.getSuperclasses());
+            exploded.addAll(classInfo.getImplementedInterfaces());
+            exploded.addAll(classInfo.getSuperinterfaces());
+            return exploded;
         }
 
         private void writeFields(PrintWriter output, List<FieldInfo> fields) {
@@ -385,5 +438,127 @@ public class ScanApi extends DefaultTask {
             urls.add(toURL(file));
         }
         return urls.toArray(new URL[urls.size()]);
+    }
+
+
+    /**
+     * A method key for use within a single class heirarchy. This just omits the class name so that the same overridden
+     * method can be spotted in different classes.
+     */
+    private static class MethodKey {
+        final String methodName;
+        final List<String> parameterTypeNames;
+
+        private MethodKey(MethodInfo methodInfo) {
+            methodName = methodInfo.getMethodName();
+            List<String> typeStrings = parseTypeDescriptor(methodInfo.getTypeDescriptor());
+            parameterTypeNames = typeStrings.subList(0, typeStrings.size() - 1);
+        }
+
+        private MethodKey(Method method) {
+            methodName = method.getName();
+            parameterTypeNames = Arrays.stream(method.getParameterTypes()).map(Class::getName).collect(toList());
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (!(obj instanceof MethodKey)) return false;
+            MethodKey other = (MethodKey)obj;
+            return this.methodName.equals(other.methodName) && this.parameterTypeNames.equals(other.parameterTypeNames);
+        }
+
+        @Override
+        public int hashCode() {
+            return methodName.hashCode() + 31 * parameterTypeNames.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return methodName + parameterTypeNames.stream().collect(joining(", ", "(", ")"));
+        }
+    }
+
+
+    // TODO Copied from io.github.lukehutch.fastclasspathscanner.utils.ReflectionUtils but without the stripping of
+    // "java.lang" and "java.util".
+    // Upgrade to the latest verison which seems to not do this.
+    private static List<String> parseTypeDescriptor(final String typeDescriptor) {
+        final List<String> types = new ArrayList<>();
+        final StringBuilder buf = new StringBuilder();
+        for (int i = 0; i < typeDescriptor.length(); i++) {
+            int numDims = 0;
+            char c = typeDescriptor.charAt(i);
+            if (c == '(' || c == ')') {
+                // Beginning or end of arg list, ignore
+                continue;
+            } else if (c == '[') {
+                // Beginning of array, count the number of dimensions
+                numDims = 1;
+                for (i++; i < typeDescriptor.length(); i++) {
+                    c = typeDescriptor.charAt(i);
+                    if (c == '[') {
+                        numDims++;
+                    } else {
+                        break;
+                    }
+                }
+                if (i == typeDescriptor.length()) {
+                    // No type after '['
+                    throw new RuntimeException("Invalid type descriptor: " + typeDescriptor);
+                }
+            }
+            switch (c) {
+                case 'B':
+                    buf.append("byte");
+                    break;
+                case 'C':
+                    buf.append("char");
+                    break;
+                case 'D':
+                    buf.append("double");
+                    break;
+                case 'F':
+                    buf.append("float");
+                    break;
+                case 'I':
+                    buf.append("int");
+                    break;
+                case 'J':
+                    buf.append("long");
+                    break;
+                case 'S':
+                    buf.append("short");
+                    break;
+                case 'Z':
+                    buf.append("boolean");
+                    break;
+                case 'V':
+                    buf.append("void");
+                    break;
+                case 'L':
+                    final int semicolonIdx = typeDescriptor.indexOf(';', i + 1);
+                    if (semicolonIdx < 0) {
+                        // Missing ';' after class name
+                        throw new RuntimeException("Invalid type descriptor: " + typeDescriptor);
+                    }
+                    String className = typeDescriptor.substring(i + 1, semicolonIdx).replace('/', '.');
+                    if (className.isEmpty()) {
+                        throw new RuntimeException("Invalid type descriptor: " + typeDescriptor);
+                    }
+                    buf.append(className);
+                    i = semicolonIdx;
+                    break;
+                default:
+                    throw new IllegalArgumentException(
+                            "Unparseable type descriptor \"" + typeDescriptor + "\" at character '" + c + "'");
+            }
+            for (int j = 0; j < numDims; j++) {
+                buf.append("[]");
+            }
+            types.add(buf.toString());
+            buf.setLength(0);
+        }
+        return types;
     }
 }
