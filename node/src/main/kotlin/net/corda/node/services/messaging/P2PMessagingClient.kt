@@ -349,7 +349,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
     private fun resumeMessageRedelivery() {
         messagesToRedeliver.forEach { retryId, (message, target) ->
-            send(message, target, retryId)
+            sendInternal(message, target, retryId, null, false)
         }
     }
 
@@ -519,6 +519,10 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     }
 
     override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
+       sendInternal(message, target, retryId, acknowledgementHandler)
+    }
+
+    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, acknowledgementHandler: (() -> Unit)?, commitSession: Boolean = true) {
         // We have to perform sending on a different thread pool, since using the same pool for messaging and
         // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
         messagingExecutor.fetchFrom {
@@ -543,7 +547,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     "Send to: $mqAddress topic: ${message.topicSession.topic} " +
                             "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}"
                 }
-                sendMessage(mqAddress, artemisMessage)
+                sendMessage(mqAddress, artemisMessage, commitSession)
                 retryId?.let {
                     database.transaction {
                         messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
@@ -667,9 +671,11 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         }
     }
 
-    private fun InnerState.sendMessage(address: String, message: ClientMessage) {
+    private fun InnerState.sendMessage(address: String, message: ClientMessage, commitSession: Boolean = true) {
 
         producer!!.send(address, message)
-        producerSession!!.commit()
+        if (commitSession) {
+            producerSession!!.commit()
+        }
     }
 }
