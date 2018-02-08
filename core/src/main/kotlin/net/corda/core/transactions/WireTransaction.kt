@@ -125,10 +125,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     private fun checkTransactionSize(ltx: LedgerTransaction) {
-        var remainingTransactionSize = NodeProperties.maxTransactionSize
+        var remainingTransactionSize = NodeProperties.networkParameters.maxTransactionSize
 
         fun minus(size: Int) {
-            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : ${NodeProperties.maxTransactionSize} bytes." }
+            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : ${NodeProperties.networkParameters.maxTransactionSize} bytes." }
             remainingTransactionSize -= size
         }
 

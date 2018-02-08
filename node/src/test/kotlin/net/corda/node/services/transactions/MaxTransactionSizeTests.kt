@@ -65,7 +65,7 @@ class MaxTransactionSizeTests {
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4)
         }
         val exception = assertFailsWith<IllegalArgumentException> {
-            val future = aliceServices.startFlow(flow).resultFuture
+            val future = aliceServices.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }
@@ -88,7 +88,7 @@ class MaxTransactionSizeTests {
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4, verify = false)
         }
         val ex = assertFailsWith<UnexpectedFlowEndException> {
-            val future = aliceServices.startFlow(flow).resultFuture
+            val future = aliceServices.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }

@@ -1,12 +1,14 @@
 package net.corda.core.internal
 
+import net.corda.core.node.NetworkParameters
+
 object NodeProperties {
     // TODO: Use [NetworkParameters] once it's available in corda core.
-    private var _maxTransactionSize: Int? = null
+    private var _networkParameters: NetworkParameters? = null
 
-    var maxTransactionSize: Int
-        get() = _maxTransactionSize ?: throw IllegalArgumentException("Property 'maxTransactionSize' has not been initialised.")
+    var networkParameters: NetworkParameters
+        get() = _networkParameters ?: throw IllegalArgumentException("Property 'networkParameters' has not been initialised.")
         set(value) {
-            _maxTransactionSize = value
+            _networkParameters = value
         }
 }

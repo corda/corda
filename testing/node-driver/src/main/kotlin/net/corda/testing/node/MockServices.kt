@@ -32,6 +32,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.services.MockAttachmentStorage
@@ -128,7 +129,7 @@ open class MockServices private constructor(
     }
 
     init {
-        NodeProperties.maxTransactionSize = Int.MAX_VALUE
+        NodeProperties.networkParameters = testNetworkParameters(emptyList())
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal,
