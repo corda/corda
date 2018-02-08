@@ -45,13 +45,29 @@ $newAbstracts
 EOF
 `
 
+echo "-----------------------------------------"
+
+newInternalThings=$(echo "$userDiffContents" | grep "^+" | grep -P "(?<!rx).internal." | grep -P "(?<!jvm).internal.")
+internalCount=`grep -v "^$" <<EOF | wc -l
+$newInternalThings
+EOF
+`
+
+echo "Number of new internal things: "$internalCount
+if [ $internalCount -gt 0 ]; then
+    echo "$newInternalThings"
+    echo
+fi
+
+
+
 echo "Number of new abstract APIs: "$abstractCount
 if [ $abstractCount -gt 0 ]; then
     echo "$newAbstracts"
     echo
 fi
 
-badChanges=$(($removalCount + $abstractCount))
+badChanges=$(($removalCount + $abstractCount + $internalCount))
 if [ $badChanges -gt 255 ]; then
     echo "OVERFLOW! Number of bad API changes: $badChanges"
     badChanges=255
