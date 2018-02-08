@@ -13,6 +13,7 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.whitelistAllContractsForTest
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
@@ -45,7 +46,8 @@ class NetworkBootstrapper {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val arg = args.singleOrNull() ?: throw IllegalArgumentException("Expecting single argument which is the nodes' parent directory")
+            val arg = args.singleOrNull()
+                    ?: throw IllegalArgumentException("Expecting single argument which is the nodes' parent directory")
             NetworkBootstrapper().bootstrap(Paths.get(arg).toAbsolutePath().normalize())
         }
     }
@@ -84,7 +86,9 @@ class NetworkBootstrapper {
             val nodeName = confFile.fileName.toString().removeSuffix(".conf")
             println("Generating directory for $nodeName")
             val nodeDir = (directory / nodeName)
-            if (!nodeDir.exists()) { nodeDir.createDirectory() }
+            if (!nodeDir.exists()) {
+                nodeDir.createDirectory()
+            }
             confFile.moveTo(nodeDir / "node.conf", StandardCopyOption.REPLACE_EXISTING)
             Files.copy(cordaJar, (nodeDir / "corda.jar"), StandardCopyOption.REPLACE_EXISTING)
         }
@@ -165,7 +169,7 @@ class NetworkBootstrapper {
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
                 epoch = 1,
-                whitelistedContractImplementations = emptyMap()
+                whitelistedContractImplementations = whitelistAllContractsForTest
         ), overwriteFile = true)
 
         nodeDirs.forEach(copier::install)
