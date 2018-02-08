@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.whiteListHashes
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
 @CordaSerializable
@@ -22,7 +23,7 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
 
 /** An [AttachmentConstraint] that verifies that the hash is in the network parameters whitelist*/
 data class WhitelistedByZoneAttachmentConstraint(val whitelistedContractImplementations: Set<SecureHash>) : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment) = whitelistedContractImplementations.contains(attachment.id)
+    override fun isSatisfiedBy(attachment: Attachment) = if (whitelistedContractImplementations == whiteListHashes) true else whitelistedContractImplementations.contains(attachment.id)
 }
 
 /**

@@ -99,23 +99,20 @@ open class TransactionBuilder(
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
         // with an explicit [AttachmentConstraint]
         val resolvedOutputs = outputs.map { state ->
-            val whitelistedContractImplementations = cordappProvider.getZoneWhitelistedContractAttachmentIds(state.contract)
-            when {
-                state.constraint !is AutomaticHashConstraint -> state
-                whitelistedContractImplementations == whiteListHashes -> state.copy(constraint = AlwaysAcceptAttachmentConstraint)
-                else -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint(whitelistedContractImplementations))
+            if (state.constraint is AutomaticHashConstraint) {
+                state.copy(constraint = WhitelistedByZoneAttachmentConstraint(cordappProvider.getZoneWhitelistedContractAttachmentIds(state.contract)))
+            } else {
+                state
             }
         }
 
-        //todo - TUDOR - should this be the old or the new contract?
+        //todo - Mike pls confirm: The attachments added to the current transaction contain only the hashes of the current cordapps.
+        // NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
         val inputAttachments = inputs.map { stateAndRef -> getContractAttachmentId(cordappProvider, stateAndRef.state) }
         val outputAttachments = outputs.map { state -> getContractAttachmentId(cordappProvider, state) }
 
-        // create a set of unique contract attachmentIds for all input and output states
-        val contractAttachments = HashSet(inputAttachments + outputAttachments)
-
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments, notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, (attachments + inputAttachments + outputAttachments).distinct(), notary, window), privacySalt)
         }
     }
 

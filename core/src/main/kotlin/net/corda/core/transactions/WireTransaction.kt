@@ -87,7 +87,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransaction(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
-                resolveStateRef = { services.loadState(it) }
+                resolveStateRef = { services.loadState(it) },
+                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
         )
     }
 
@@ -102,7 +103,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?  //todo Mike - this is not used any more as the wiretransaction contains all the hashes
     ): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
