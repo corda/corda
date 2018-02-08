@@ -1018,11 +1018,12 @@ object Crypto {
     // Get the hash value that is actually signed.
     // the txId is returned when [partialMerkleTree] is null,
     // else the root of the tree is computed and returned.
+    // Note that the hash of the txId should be a leaf in the tree, not the txId itself.
     private fun hashSigned(txId: SecureHash, partialMerkleTree: PartialMerkleTree?): SecureHash {
         return if (partialMerkleTree != null) {
             val usedHashes = mutableListOf<SecureHash>()
             val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)
-            require(txId in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
+            require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
             root
         } else {
             txId

@@ -9,7 +9,7 @@ import java.util.*
 /**
  * A wrapper over the signature output accompanied by signer's public key and signature metadata.
  * This is similar to [DigitalSignature.WithKey], but targeted to DLT transaction signatures.
- *
+ * Note that [partialMerkleTree] should always be null when only one transaction is signed.
  * @property bytes actual bytes of the cryptographic signature.
  * @property by [PublicKey] of the signer.
  * @property signatureMetadata attached [SignatureMetadata] for this signature.
