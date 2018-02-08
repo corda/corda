@@ -5,17 +5,16 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.node.VersionInfo
-import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.node.InMemoryMessagingNetwork.TestMessagingService
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.setMessagingServiceSpy
-import rx.Observable
 import java.math.BigInteger
+import java.nio.file.Path
 
 /**
  * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryMessagingNetwork].
@@ -61,43 +60,34 @@ data class MockNetworkNotarySpec(val name: CordaX500Name, val validating: Boolea
 }
 
 /** A class that represents an unstarted mock node for testing. Do not instantiate directly, create via a [MockNetwork] **/
-class UnstartedMockNode {
-    private lateinit var node: InternalMockNetwork.MockNode
+class UnstartedMockNode private constructor(private val node: InternalMockNetwork.MockNode) {
+    companion object {
+        internal fun create(node: InternalMockNetwork.MockNode): UnstartedMockNode {
+            return UnstartedMockNode(node)
+        }
+    }
+
     val id get() = node.id
     val configuration get() = node.configuration
     /** Start the node **/
-    fun start() = StartedMockNode().initialise(node.start())
-
-    /**
-     * Intialise via internal function rather than internal constructors, as internal constructors in Kotlin
-     * are visible via the Api
-     */
-    internal fun initialise(node: InternalMockNetwork.MockNode): UnstartedMockNode {
-        this.node = node
-        return this
-    }
+    fun start() = StartedMockNode.create(node.start())
 }
 
 /** A class that represents a started mock node for testing. Do not instantiate directly, create via a [MockNetwork] **/
-class StartedMockNode {
-    private lateinit var node: StartedNode<InternalMockNetwork.MockNode>
+class StartedMockNode private constructor(private val node: StartedNode<InternalMockNetwork.MockNode>) {
+    companion object {
+        internal fun create(node: StartedNode<InternalMockNetwork.MockNode>): StartedMockNode {
+            return StartedMockNode(node)
+        }
+    }
+
     val services get() = node.services
     val database get() = node.database
     val id get() = node.internals.id
     val configuration get() = node.internals.configuration
-    val smm get() = node.smm
+    //val smm get() = node.smm
     val info get() = node.services.myInfo
     val network get() = node.network
-
-    /**
-     * Intialise via internal function rather than internal constructors, as internal constructors in Kotlin
-     * are visible via the Api
-     */
-    internal fun initialise(node: StartedNode<InternalMockNetwork.MockNode>): StartedMockNode {
-        this.node = node
-        return this
-    }
-
     /** Register a flow that is initiated by another flow **/
     fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>) = node.registerInitiatedFlow(initiatedFlowClass)
 
@@ -147,19 +137,19 @@ class MockNetwork(
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
     private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(cordappPackages, defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, initialiseSerialization, notarySpecs)
-    val defaultNotaryNode get() = StartedMockNode().initialise(internalMockNetwork.defaultNotaryNode)
-    val defaultNotaryIdentity get() = internalMockNetwork.defaultNotaryIdentity
-    val notaryNodes get() = internalMockNetwork.notaryNodes.map { StartedMockNode().initialise(it) }
-    val nextNodeId get() = internalMockNetwork.nextNodeId
+    val defaultNotaryNode get() : StartedMockNode = StartedMockNode.create(internalMockNetwork.defaultNotaryNode)
+    val defaultNotaryIdentity get() : Party = internalMockNetwork.defaultNotaryIdentity
+    val notaryNodes get() : List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }
+    val nextNodeId get() : Int = internalMockNetwork.nextNodeId
 
     /** Create a started node with the given identity. **/
-    fun createPartyNode(legalName: CordaX500Name? = null) = StartedMockNode().initialise(internalMockNetwork.createPartyNode(legalName))
+    fun createPartyNode(legalName: CordaX500Name? = null) : StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
 
     /** Create a started node with the given parameters. **/
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()) = StartedMockNode().initialise(internalMockNetwork.createNode(parameters))
+    fun createNode(parameters: MockNodeParameters = MockNodeParameters()) : StartedMockNode= StartedMockNode.create(internalMockNetwork.createNode(parameters))
 
     /** Create an unstarted node with the given parameters. **/
-    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) = UnstartedMockNode().initialise(internalMockNetwork.createUnstartedNode(parameters))
+    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) : UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
 
     /** Start all nodes that aren't already started. **/
     fun startNodes() = internalMockNetwork.startNodes()
@@ -180,5 +170,5 @@ class MockNetwork(
     fun runNetwork(rounds: Int = -1) = internalMockNetwork.runNetwork(rounds)
 
     /** Get the base directory for the given node id. **/
-    fun baseDirectory(nodeId: Int) = internalMockNetwork.baseDirectory(nodeId)
+    fun baseDirectory(nodeId: Int) : Path = internalMockNetwork.baseDirectory(nodeId)
 }
