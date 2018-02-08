@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -35,7 +36,7 @@ class MaxTransactionSizeTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"), maxTransactionSize = 3_000_000)
+        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"))
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notaryServices = mockNet.defaultNotaryNode.services
@@ -43,6 +44,7 @@ class MaxTransactionSizeTests {
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
+        GlobalProperties.networkParameters = GlobalProperties.networkParameters.copy(maxTransactionSize = 3_000_000)
     }
 
     @After
@@ -117,10 +119,9 @@ class MaxTransactionSizeTests {
             val stx = serviceHub.signInitialTransaction(tx, ourIdentity.owningKey)
             if (verify) stx.verify(serviceHub, checkSufficientSignatures = false)
             // Send to the other side and wait for it to trigger resolution from us.
-            val bob = serviceHub.identityService.wellKnownPartyFromX500Name(otherSide.name)!!
-            val bobSession = initiateFlow(bob)
-            subFlow(SendTransactionFlow(bobSession, stx))
-            bobSession.receive<Unit>()
+            val otherSideSession = initiateFlow(otherSide)
+            subFlow(SendTransactionFlow(otherSideSession, stx))
+            otherSideSession.receive<Unit>()
         }
     }
 
