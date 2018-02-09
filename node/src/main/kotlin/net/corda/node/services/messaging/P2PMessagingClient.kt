@@ -388,7 +388,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     .map { artemisMessage -> artemisMessage to artemisToCordaMessage(artemisMessage) }
                     .filter { messages -> messages.second != null }
                     .filter { messages -> !isDrainingModeOn() || messages.second!!.data.deserialize<SessionMessage>() is ExistingSessionMessage }
-                    .doOnNext { messages -> deliver(messages.first, messages.second!!) }
+                    .doOnNext { messages -> messages.deliver() }
+                    .doOnNext { messages -> messages.acknowledge() }
                     // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
                     .doOnCompleted(latch::countDown)
                     .subscribe()
@@ -431,7 +432,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         override fun toString() = "${topicSession.topic}#${data.sequence()}"
     }
 
-    private fun deliver(artemisMessage: ClientMessage, msg: ReceivedMessage): Boolean {
+    private fun deliver(msg: ReceivedMessage): Boolean {
         state.checkNotLocked()
         // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
         // or removed whilst the filter is executing will not affect anything.
@@ -455,7 +456,6 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                             log.warn("Received message ${msg.uniqueMessageId} for ${msg.topicSession} that doesn't have any registered handlers yet")
                         } else {
                             callHandlers(msg, deliverTo)
-                            artemisMessage.individualAcknowledge()
                         }
                         // TODO We will at some point need to decide a trimming policy for the id's
                         processedMessages[msg.uniqueMessageId] = Instant.now()
@@ -606,6 +606,9 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             scheduledMessageRedeliveries.remove(retryId)
         }
     }
+
+    private fun Pair<ClientMessage, ReceivedMessage?>.deliver() = deliver(second!!)
+    private fun Pair<ClientMessage, ReceivedMessage?>.acknowledge() = first.acknowledge()
 
     private fun getMQAddress(target: MessageRecipients): String {
         return if (target == myAddress) {
