@@ -79,7 +79,7 @@ class IRSDemoTest {
                 registerIRSModule(mapper)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }
-            val nextFixingDates = getFixingDateObservable(nodeA.nodeInfo.addresses.first())
+            val nextFixingDates = getFixingDateObservable(nodeA.p2pAddress)
             val numADeals = getTradeCount(nodeAApi)
             val numBDeals = getTradeCount(nodeBApi)
 
