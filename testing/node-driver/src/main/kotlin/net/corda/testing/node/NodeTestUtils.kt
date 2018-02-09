@@ -36,8 +36,8 @@ fun ServiceHub.ledger(
         false
     }
     return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply {
+        GlobalProperties.networkParameters = testNetworkParameters(emptyList())
         if (serializationExists) {
-            GlobalProperties.networkParameters = testNetworkParameters(emptyList())
             script()
         } else {
             SerializationEnvironmentRule.run("ledger") { script() }
