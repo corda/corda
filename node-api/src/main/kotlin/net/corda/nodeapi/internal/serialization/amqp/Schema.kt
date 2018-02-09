@@ -3,7 +3,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase64
 import org.apache.qpid.proton.amqp.DescribedType
@@ -18,9 +18,7 @@ import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterFiel
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
 const val DESCRIPTOR_DOMAIN: String = "net.corda"
-
-// "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
-val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
+val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0, 0))
 
 /**
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their
