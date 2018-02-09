@@ -178,6 +178,9 @@ UNRELEASED
 * Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
   only for internal use
 
+* Provided experimental support for specifying your own webserver to be used instead of the default development
+  webserver in ``Cordform`` using the ``webserverJar`` argument
+
 .. _changelog_v1:
 
 Release 1.0
