@@ -2,7 +2,6 @@ package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party

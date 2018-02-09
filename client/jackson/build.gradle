@@ -8,11 +8,11 @@ dependencies {
     compile project(':core')
     testCompile project(':test-utils')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     // Yaml is useful for parsing strings to method calls.
     compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     // This adds support for java.time types.

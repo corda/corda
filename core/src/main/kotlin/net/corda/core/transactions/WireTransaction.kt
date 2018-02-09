@@ -5,6 +5,7 @@ import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -104,7 +105,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?  //todo Mike - this is not used any more as the wiretransaction contains all the hashes
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
@@ -114,9 +115,25 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        checkTransactionSize(ltx)
+        return ltx
+    }
+
+    private fun checkTransactionSize(ltx: LedgerTransaction) {
+        var remainingTransactionSize = GlobalProperties.networkParameters.maxTransactionSize
+
+        fun minus(size: Int) {
+            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : ${GlobalProperties.networkParameters.maxTransactionSize} bytes." }
+            remainingTransactionSize -= size
+        }
+
+        // Check attachment size first as they are most likely to go over the limit.
+        ltx.attachments.forEach { minus(it.size) }
+        minus(ltx.inputs.serialize().size)
+        minus(ltx.commands.serialize().size)
+        minus(ltx.outputs.serialize().size)
     }
 
     /**

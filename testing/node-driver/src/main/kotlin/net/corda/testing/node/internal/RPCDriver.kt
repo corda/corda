@@ -107,7 +107,7 @@ fun <A> rpcDriver(
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: RPCDriverDSL.() -> A
-) : A {
+): A {
     return genericDriver(
             driverDsl = RPCDriverDSL(
                     DriverDSLImpl(
@@ -434,7 +434,7 @@ data class RPCDriverDSL(
             minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
-        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)) , id = AuthServiceId("TEST_SECURITY_MANAGER"))
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,
