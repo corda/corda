@@ -59,7 +59,7 @@ class P2PFlowsDrainingModeTest {
                 val flow = startFlow(::InitiateSessionFlow, counterParty)
                 // this should be really fast, for the flow has already started, so 5 seconds should never be a problem
                 executor!!.submit({
-                    logger.info("Now disabling flows execution mode for $counterParty.")
+                    logger.info("Now disabling flows draining mode for $counterParty.")
                     shouldFail = false
                     initiated.setFlowsDrainingModeEnabled(false)
                 })
