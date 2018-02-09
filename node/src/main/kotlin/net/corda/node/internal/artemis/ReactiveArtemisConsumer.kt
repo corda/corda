@@ -15,19 +15,19 @@ interface ReactiveArtemisConsumer : LifecycleSupport {
 
     companion object {
 
-        fun multiplex(createSession: () -> ClientSession, queueName: String, vararg queueNames: String): ReactiveArtemisConsumer {
+        fun multiplex(createSession: () -> ClientSession, queueName: String, filter: String? = null, vararg queueNames: String): ReactiveArtemisConsumer {
 
-            return MultiplexingReactiveArtemisConsumer(setOf(queueName, *queueNames), createSession)
+            return MultiplexingReactiveArtemisConsumer(setOf(queueName, *queueNames), createSession, filter)
         }
 
-        fun multiplex(queueNames: Set<String>, createSession: () -> ClientSession): ReactiveArtemisConsumer {
+        fun multiplex(queueNames: Set<String>, createSession: () -> ClientSession, filter: String? = null): ReactiveArtemisConsumer {
 
-            return MultiplexingReactiveArtemisConsumer(queueNames, createSession)
+            return MultiplexingReactiveArtemisConsumer(queueNames, createSession, filter)
         }
     }
 }
 
-private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<String>, private val createSession: () -> ClientSession) : ReactiveArtemisConsumer {
+private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<String>, private val createSession: () -> ClientSession, private val filter: String?) : ReactiveArtemisConsumer {
 
     private var startedFlag = false
 
@@ -70,7 +70,7 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
         queueNames.forEach { queue ->
             createSession().apply {
                 start()
-                consumers += createConsumer(queue)
+                consumers += filter?.let { createConsumer(queue, it) } ?: createConsumer(queue)
                 sessions += this
             }
         }

@@ -256,6 +256,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             }
 
             inboxes.forEach { createQueueIfAbsent(it, producerSession!!) }
+            // TODO MS change here to a class-local consumer that joins 2 reactive ones, one for initial, one for non-initial
             p2pConsumer = ReactiveArtemisConsumer.multiplex(inboxes, createNewSession)
 
             registerBridgeControl(bridgeSession!!, inboxes.toList())
@@ -387,6 +388,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     .doOnError { error -> throw error }
                     .map { artemisMessage -> artemisMessage to artemisToCordaMessage(artemisMessage) }
                     .filter { messages -> messages.second != null }
+                    // TODO MS remove this line
                     .filter { messages -> !isDrainingModeOn() || messages.second!!.data.deserialize<SessionMessage>() is ExistingSessionMessage }
                     .doOnNext { messages -> messages.deliver() }
                     .doOnNext { messages -> messages.acknowledge() }
