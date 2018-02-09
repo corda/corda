@@ -144,8 +144,10 @@ class Node(private val project: Project) : CordformNode() {
     private fun installWebserverJar() {
         // If no webserver JAR is provided, the default development webserver is used.
         val webJar = if (webserverJar == null) {
+            project.logger.info("Using default development webserver.")
             Cordformation.verifyAndGetRuntimeJar(project, "corda-webserver")
         } else {
+            project.logger.info("Using custom webserver: $webserverJar.")
             File(webserverJar)
         }
         
