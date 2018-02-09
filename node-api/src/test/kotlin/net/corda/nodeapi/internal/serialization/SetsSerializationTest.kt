@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Assert.assertArrayEquals
@@ -55,7 +55,7 @@ class SetsSerializationTest {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
-            write(KryoHeaderV0_1.bytes)
+            kryoMagic.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
             write(javaEmptySetClass.name.toAscii())

@@ -40,6 +40,7 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Subscription
 import java.security.PublicKey
 import java.time.Instant
@@ -196,11 +197,10 @@ class P2PMessagingClient(config: NodeConfiguration,
 
             @Lob
             @Column
-            var message: ByteArray = ByteArray(0),
-
+            var message: ByteArray = EMPTY_BYTE_ARRAY,
             @Lob
             @Column
-            var recipients: ByteArray = ByteArray(0)
+            var recipients: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     fun start() {

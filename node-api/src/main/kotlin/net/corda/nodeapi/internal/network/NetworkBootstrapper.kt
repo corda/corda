@@ -5,12 +5,14 @@ import net.corda.cordform.CordformNode
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
-import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -18,7 +20,7 @@ import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -167,7 +169,7 @@ class NetworkBootstrapper {
                 epoch = 1
         ), overwriteFile = true)
 
-        nodeDirs.forEach(copier::install)
+        nodeDirs.forEach { copier.install(it) }
     }
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
@@ -196,8 +198,8 @@ class NetworkBootstrapper {
     }
 
     private object KryoParametersSerializationScheme : AbstractKryoSerializationScheme() {
-        override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-            return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
+        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+            return magic == kryoMagic && target == SerializationContext.UseCase.P2P
         }
 
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()

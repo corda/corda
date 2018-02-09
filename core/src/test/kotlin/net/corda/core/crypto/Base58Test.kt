@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.junit.Test
 import java.math.BigInteger
 import java.util.*
@@ -26,7 +27,7 @@ class Base58Test {
         assertEquals("1111111", Base58.encode(zeroBytes7))
 
         // test empty encode
-        assertEquals("", Base58.encode(ByteArray(0)))
+        assertEquals("", Base58.encode(EMPTY_BYTE_ARRAY))
     }
 
     @Test

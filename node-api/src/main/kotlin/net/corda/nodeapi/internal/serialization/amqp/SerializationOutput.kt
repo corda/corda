@@ -69,7 +69,7 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
         }
         val bytes = ByteArray(data.encodedSize().toInt() + 8)
         val buf = ByteBuffer.wrap(bytes)
-        buf.put(AmqpHeaderV1_0.bytes)
+        amqpMagic.putTo(buf)
         data.encode(buf)
         return SerializedBytes(bytes)
     }

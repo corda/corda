@@ -104,7 +104,7 @@ dependencies {
     // Apache JEXL: An embeddable expression evaluation library.
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
     compile "org.apache.commons:commons-jexl3:3.0"
-
+    compile 'commons-lang:commons-lang:2.6'
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 

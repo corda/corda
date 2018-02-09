@@ -68,15 +68,15 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      */
     fun buildFilteredTransaction(filtering: Predicate<Any>) = tx.buildFilteredTransaction(filtering)
 
-    /** Helper to access the inputs of the contained transaction */
+    /** Helper to access the inputs of the contained transaction. */
     val inputs: List<StateRef> get() = transaction.inputs
-    /** Helper to access the notary of the contained transaction */
+    /** Helper to access the notary of the contained transaction. */
     val notary: Party? get() = transaction.notary
 
     override val requiredSigningKeys: Set<PublicKey> get() = tx.requiredSigningKeys
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
-        // TODO: We need a much better way of structuring this data
+        // TODO: We need a much better way of structuring this data.
         val descriptions = ArrayList<String>()
         this.tx.commands.forEach { command ->
             if (command.signers.any { it in keys })
@@ -134,8 +134,18 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
-        checkSignaturesAreValid()
-        if (checkSufficientSignatures) verifyRequiredSignatures()
+        // TODO: We could probably optimise the below by
+        // a) not throwing if threshold is eventually satisfied, but some of the rest of the signatures are failing.
+        // b) omit verifying signatures when threshold requirement is met.
+        // c) omit verifying signatures from keys not included in [requiredSigningKeys].
+        // For the above to work, [checkSignaturesAreValid] should take the [requiredSigningKeys] as input
+        // and probably combine logic from signature validation and key-fulfilment
+        // in [TransactionWithSignatures.verifySignaturesExcept].
+        if (checkSufficientSignatures) {
+            verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
+        } else {
+            checkSignaturesAreValid()
+        }
         return tx.toLedgerTransaction(services)
     }
 
@@ -153,28 +163,25 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         if (isNotaryChangeTransaction()) {
-            verifyNotaryChangeTransaction(checkSufficientSignatures, services)
+            verifyNotaryChangeTransaction(services, checkSufficientSignatures)
         } else {
-            verifyRegularTransaction(checkSufficientSignatures, services)
+            verifyRegularTransaction(services, checkSufficientSignatures)
         }
     }
 
-    /**
-     * TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
-     * from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
-     * objects from the TransactionState.
-     */
-    private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
-        checkSignaturesAreValid()
-        if (checkSufficientSignatures) verifyRequiredSignatures()
-        val ltx = tx.toLedgerTransaction(services)
-        // TODO: allow non-blocking verification
+    // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
+    // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
+    // objects from the TransactionState.
+    private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
+        val ltx = toLedgerTransaction(services, checkSufficientSignatures)
+        // TODO: allow non-blocking verification.
         services.transactionVerifierService.verify(ltx).getOrThrow()
     }
 
-    private fun verifyNotaryChangeTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
+    private fun verifyNotaryChangeTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ntx = resolveNotaryChangeTransaction(services)
         if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
+        else checkSignaturesAreValid()
     }
 
     fun isNotaryChangeTransaction() = transaction is NotaryChangeWireTransaction
