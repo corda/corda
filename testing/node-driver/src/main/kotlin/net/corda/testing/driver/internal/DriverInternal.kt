@@ -19,6 +19,9 @@ import java.nio.file.Path
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
     val useHTTPS: Boolean
+    override val p2pAddress: NetworkHostAndPort get() = configuration.p2pAddress
+    override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address!!
+    override val baseDirectory: Path get() = configuration.baseDirectory
 }
 
 data class OutOfProcessImpl(
@@ -31,10 +34,7 @@ data class OutOfProcessImpl(
         override val process: Process,
         private val onStopCallback: () -> Unit
 ) : OutOfProcess, NodeHandleInternal {
-    override val p2pAddress: NetworkHostAndPort get() = configuration.p2pAddress
-    override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address!!
-    override val baseDirectory: Path get() = configuration.baseDirectory
-    override val rpcUsers: List<User> get() = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
+    override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {
         with(process) {
             destroy()
@@ -58,10 +58,7 @@ data class InProcessImpl(
 ) : InProcess, NodeHandleInternal {
     override val database: CordaPersistence get() = node.database
     override val services: StartedNodeServices get() = node.services
-    override val p2pAddress: NetworkHostAndPort get() = configuration.p2pAddress
-    override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address!!
-    override val baseDirectory: Path get() = configuration.baseDirectory
-    override val rpcUsers: List<User> get() = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
+    override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {
         node.dispose()
         with(nodeThread) {
