@@ -548,7 +548,7 @@ object Crypto {
     /**
      * Utility to simplify the act of verifying a [TransactionSignature].
      * It returns true if it succeeds, but it always throws an exception if verification fails.
-     * @param txId transaction's id or partial Merkle tree root in case of multi-transaction signing.
+     * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @return true if verification passes or throw exception if verification fails.
      * @throws InvalidKeyException if the key is invalid.
@@ -571,7 +571,7 @@ object Crypto {
      * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
      * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
      * as it avoids the risk of failing to test the result.
-     * @param txId transaction's id or partial Merkle tree root in case of multi-transaction signing.
+     * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,

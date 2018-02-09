@@ -109,7 +109,7 @@ class TransactionSignatureTest {
         assertTrue(Crypto.isValid(txId, txSignature))
         assertTrue(txSignature.isValid(txId))
 
-        // We signed the txId itself, not its hash (because it was a signature over one tx only and no partial key has been received).
+        // We signed the txId itself, not its hash (because it was a signature over one tx only and no partial tree has been received).
         assertFailsWith<SignatureException> { Crypto.doVerify(txId.sha256(), txSignature) }
     }
 
