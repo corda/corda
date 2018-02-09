@@ -23,7 +23,7 @@ class CordappProviderImplTests {
     @Test
     fun `isolated jar is loaded into the attachment store`() {
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
-        val provider = CordappProviderImpl(loader, attachmentStore, testNetworkParameters(emptyList()))
+        val provider = CordappProviderImpl(loader, attachmentStore)
         val maybeAttachmentId = provider.getCordappAttachmentId(provider.cordapps.first())
 
         Assert.assertNotNull(maybeAttachmentId)
@@ -33,14 +33,14 @@ class CordappProviderImplTests {
     @Test
     fun `empty jar is not loaded into the attachment store`() {
         val loader = CordappLoader.createDevMode(listOf(emptyJAR))
-        val provider = CordappProviderImpl(loader, attachmentStore, testNetworkParameters(emptyList()))
+        val provider = CordappProviderImpl(loader, attachmentStore)
         Assert.assertNull(provider.getCordappAttachmentId(provider.cordapps.first()))
     }
 
     @Test
     fun `test that we find a cordapp class that is loaded into the store`() {
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
-        val provider = CordappProviderImpl(loader, attachmentStore, testNetworkParameters(emptyList()))
+        val provider = CordappProviderImpl(loader, attachmentStore)
         val className = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         val expected = provider.cordapps.first()
@@ -53,7 +53,7 @@ class CordappProviderImplTests {
     @Test
     fun `test that we find an attachment for a cordapp contrat class`() {
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
-        val provider = CordappProviderImpl(loader, attachmentStore, testNetworkParameters(emptyList()))
+        val provider = CordappProviderImpl(loader, attachmentStore)
         val className = "net.corda.finance.contracts.isolated.AnotherDummyContract"
         val expected = provider.getAppContext(provider.cordapps.first()).attachmentId
         val actual = provider.getContractAttachmentID(className)

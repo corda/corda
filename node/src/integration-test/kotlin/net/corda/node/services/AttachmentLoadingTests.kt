@@ -43,7 +43,7 @@ class AttachmentLoadingTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments, testNetworkParameters(emptyList()))
+    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
     private val cordapp get() = provider.cordapps.first()
     private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = provider.getAppContext(cordapp)

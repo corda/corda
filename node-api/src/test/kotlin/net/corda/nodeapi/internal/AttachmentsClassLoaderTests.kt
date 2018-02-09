@@ -58,12 +58,13 @@ class AttachmentsClassLoaderTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments, testNetworkParameters(emptyList()))
+    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
     private val cordapp get() = cordappProvider.cordapps.first()
     private val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = cordappProvider.getAppContext(cordapp)
     private val serviceHub = rigorousMock<ServiceHub>().also {
         doReturn(attachments).whenever(it).attachments
+        doReturn(cordappProvider).whenever(it).cordappProvider
     }
 
     // These ClassLoaders work together to load 'AnotherDummyContract' in a disposable way, such that even though
@@ -279,7 +280,7 @@ class AttachmentsClassLoaderTests {
                 .withClassLoader(child)
 
         val bytes = run {
-            val wireTransaction = tx.toWireTransaction(cordappProvider, context)
+            val wireTransaction = tx.toWireTransaction(serviceHub, context)
             wireTransaction.serialize(context = context)
         }
         val copiedWireTransaction = bytes.deserialize(context = context)
@@ -303,7 +304,7 @@ class AttachmentsClassLoaderTests {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
                             .withServiceHub(serviceHub)
                             .withClassLoader(child)
-                    val wireTransaction = tx.toWireTransaction(cordappProvider, outboundContext)
+                    val wireTransaction = tx.toWireTransaction(serviceHub, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
                 }
                 // use empty attachmentStorage

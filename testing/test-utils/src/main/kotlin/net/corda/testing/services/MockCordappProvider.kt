@@ -7,13 +7,10 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.testing.common.internal.testNetworkParameters
 import java.nio.file.Paths
 import java.util.*
 
-class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage, networkParameters: NetworkParameters = testNetworkParameters(emptyList())) : CordappProviderImpl(cordappLoader, attachmentStorage, networkParameters) {
-    constructor(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage): this(cordappLoader, attachmentStorage, testNetworkParameters(emptyList()))
+class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : CordappProviderImpl(cordappLoader, attachmentStorage) {
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {

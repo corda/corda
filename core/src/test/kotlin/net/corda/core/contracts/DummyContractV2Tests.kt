@@ -15,6 +15,7 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -38,7 +39,6 @@ class DummyContractV2Tests {
         val services = rigorousMock<ServicesForResolution>().also {
             doReturn(rigorousMock<CordappProvider>().also {
                 doReturn(allOnesHash).whenever(it).getContractAttachmentID(any())
-                doReturn(setOf(allOnesHash)).whenever(it).getZoneWhitelistedContractAttachmentIds(any())
             }).whenever(it).cordappProvider
         }
         val contractUpgrade = DummyContractV2()

@@ -1,11 +1,13 @@
 package net.corda.core.contracts
 
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.GlobalProperties.networkParameters
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.whiteListHashes
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
 @CordaSerializable
+@DoNotImplement
 interface AttachmentConstraint {
     /** Returns whether the given contract attachment can be used with the [ContractState] associated with this constraint object. */
     fun isSatisfiedBy(attachment: Attachment): Boolean
@@ -21,9 +23,23 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
     override fun isSatisfiedBy(attachment: Attachment) = attachment.id == attachmentId
 }
 
-/** An [AttachmentConstraint] that verifies that the hash is in the network parameters whitelist*/
-data class WhitelistedByZoneAttachmentConstraint(val whitelistedContractImplementations: Set<SecureHash>) : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment) = if (whitelistedContractImplementations == whiteListHashes) true else whitelistedContractImplementations.contains(attachment.id)
+/** An [AttachmentConstraint] that verifies that the hash of the attachment is in the network parameters whitelist.
+ * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
+ * It allows for centralized control over the cordapps that can be used.
+ */
+object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
+    /**
+     * This sequence can be used for test/demos -  TODO - add warning on startup!
+     */
+    val whitelistAllContractsForTest = mapOf("*" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
+
+    override fun isSatisfiedBy(attachment: Attachment) = networkParameters.whitelistedContractImplementations!!.let { whitelist ->
+        when {
+            whitelist == whitelistAllContractsForTest -> true
+            attachment is ConstraintAttachment -> whitelist[attachment.stateContract]?.contains(attachment.id) ?: false
+            else -> false
+        }
+    }
 }
 
 /**
@@ -39,5 +55,17 @@ data class WhitelistedByZoneAttachmentConstraint(val whitelistedContractImplemen
 object AutomaticHashConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticHashConstraint placeholder")
+    }
+}
+
+/**
+ * Used only for passing to the Attachment constraint verification.
+ * Encapsulates a [ContractAttachment] and the state contract
+ */
+class ConstraintAttachment(val contractAttachment: ContractAttachment, val stateContract: ContractClassName) : Attachment by contractAttachment {
+    init {
+        require(stateContract in contractAttachment.allContracts) {
+            "This ConstraintAttachment was not initialised properly"
+        }
     }
 }

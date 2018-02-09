@@ -1,7 +1,5 @@
 package net.corda.testing.services
 
-import com.google.common.hash.Hashing
-import com.google.common.hash.HashingInputStream
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
@@ -30,20 +28,9 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
-    override fun importAttachment(jar: InputStream): AttachmentId {
-        // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
-        require(jar !is JarInputStream)
+    override fun importAttachment(jar: InputStream): AttachmentId = _importAttachment(jar)
 
-        val bytes = getBytes(jar)
-
-        val sha256 = bytes.sha256()
-        if (!files.containsKey(sha256)) {
-            files[sha256] = Pair(object : AbstractAttachment({ bytes }) {
-                override val id = sha256
-            }, bytes)
-        }
-        return sha256
-    }
+    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId = _importAttachment(jar, contractClassNames)
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
         return importAttachment(jar)
@@ -60,11 +47,6 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun hasAttachment(attachmentId: AttachmentId) = files.containsKey(attachmentId)
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
-        val bytes = getBytes(jar)
-        return Pair(bytes.sha256(), bytes)
-    }
-
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         try {
             return importAttachment(jar)
@@ -73,21 +55,21 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         }
     }
 
-
-    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId {
+    private fun _importAttachment(jar: InputStream, contractClassNames: List<ContractClassName>? = null): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        val id = SecureHash.SHA256(hs.hash().asBytes())
 
-        if (!files.containsKey(id)) {
-            files[id] = Pair(ContractAttachment(object : AbstractAttachment({ bytes }) {
-                override val id = id
-            }, contractClassNames.first(), contractClassNames.toSet()), bytes)
+        val bytes = getBytes(jar)
+
+        val sha256 = bytes.sha256()
+        if (!files.containsKey(sha256)) {
+            val baseAttachment = object : AbstractAttachment({ bytes }) {
+                override val id = sha256
+            }
+            val attachment = if (contractClassNames == null) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet())
+            files[sha256] = Pair(attachment, bytes)
         }
-        return id
-
+        return sha256
     }
 
 }

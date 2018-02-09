@@ -12,6 +12,7 @@ import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
@@ -44,7 +45,6 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import sun.security.ec.ECPublicKeyImpl
 import sun.security.provider.certpath.X509CertPath
-import sun.security.x509.X509CertImpl
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
@@ -197,8 +197,6 @@ object DefaultKryoCustomizer {
         }
     }
 
-    const val END_OF_CTR = "!!"
-
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
             if (kryo.serializationContext() != null) {
@@ -209,27 +207,15 @@ object DefaultKryoCustomizer {
                 output.writeBytesWithLength(buffer.toByteArray())
             }
             output.writeString(obj.contract)
-            for (contract in obj.contracts) {
-                output.writeString(contract)
-            }
-            output.writeString(END_OF_CTR)
+            kryo.writeClassAndObject(output, obj.additionalContracts)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
 
-            fun readContracts(): Set<String> {
-                val result = mutableSetOf<String>()
-                do {
-                    val contract = input.readString()
-                    if (contract != END_OF_CTR) result.add(contract)
-                } while (contract != END_OF_CTR)
-                return result
-            }
-
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()
-                val contracts = readContracts()
+                val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
 
                 val context = kryo.serializationContext()!!
                 val attachmentStorage = context.serviceHub.attachments
@@ -242,12 +228,12 @@ object DefaultKryoCustomizer {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contract, contracts)
+                return ContractAttachment(lazyAttachment, contract, additionalContracts)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
-                val contracts = readContracts()
-                return ContractAttachment(attachment, contract, contracts)
+                val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
+                return ContractAttachment(attachment, contract, additionalContracts)
             }
         }
     }

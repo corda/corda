@@ -44,9 +44,7 @@ data class GeneratedLedger(
         return transaction.toLedgerTransaction(
                 resolveIdentity = { identityMap[it] },
                 resolveAttachment = { attachmentMap[it] },
-                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) },
-                resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
-        )
+                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) })
     }
 
     val attachmentsGenerator: Generator<List<Attachment>> by lazy {

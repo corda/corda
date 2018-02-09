@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
@@ -15,7 +16,6 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.core.utilities.whitelistAllContractsForTest
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl

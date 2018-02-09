@@ -529,7 +529,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
-        val cordappProvider = makeCordappProviderImpl(cordappLoader, attachments, networkParameters)
+        val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
                 identityService,
@@ -549,8 +549,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 services, cordappProvider, this)
         return tokenizableServices
     }
-
-    protected open fun makeCordappProviderImpl(cordappLoader: CordappLoader, attachments: NodeAttachmentService, networkParameters: NetworkParameters) = CordappProviderImpl(cordappLoader, attachments, networkParameters)
 
     protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
     private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {

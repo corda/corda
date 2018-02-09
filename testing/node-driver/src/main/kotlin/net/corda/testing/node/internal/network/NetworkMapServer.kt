@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal.network
 
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.signWithCert

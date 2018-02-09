@@ -85,13 +85,26 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransaction(
-                resolveIdentity = { services.identityService.partyFromKey(it) },
+        return toLedgerTransaction(resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
-                resolveStateRef = { services.loadState(it) },
-                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
-        )
+                resolveStateRef = { services.loadState(it) })
     }
+
+    /**
+     * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
+     * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
+     *
+     * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
+     * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
+     */
+    @Deprecated("resolveContractAttachment no longer used", replaceWith = ReplaceWith("toLedgerTransaction(resolveIdentity, resolveAttachment, resolveStateRef)"))
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(
+            resolveIdentity: (PublicKey) -> Party?,
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+    ): LedgerTransaction = toLedgerTransaction(resolveIdentity, resolveAttachment, resolveStateRef)
 
     /**
      * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
@@ -104,8 +117,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            resolveStateRef: (StateRef) -> TransactionState<*>?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {

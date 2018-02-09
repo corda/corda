@@ -20,8 +20,6 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer
-import net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -38,13 +36,11 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.NotSerializableException
-import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.full.superclasses
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -1065,7 +1061,7 @@ class SerializationOutputTests {
         val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertEquals(obj.id, obj2.attachment.id)
         assertEquals(obj.contract, obj2.contract)
-        assertEquals(obj.contracts, obj2.contracts)
+        assertEquals(obj.additionalContracts, obj2.additionalContracts)
         assertArrayEquals(obj.open().readBytes(), obj2.open().readBytes())
     }
 

@@ -29,7 +29,6 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
@@ -203,8 +202,7 @@ open class MockServices private constructor(
             return NodeInfo(emptyList(), listOf(initialIdentity.identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
-    val networkParameters = testNetworkParameters(emptyList())
-    val mockCordappProvider = MockCordappProvider(cordappLoader, attachments, networkParameters )
+    val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
     override val cordappProvider: CordappProvider get() = mockCordappProvider
 
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {

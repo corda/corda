@@ -43,8 +43,6 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.core.utilities.whitelistAllContractsForTest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
@@ -322,7 +320,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
-        override fun retrieveNetworkParameters(trustRoot: X509Certificate) = super.retrieveNetworkParameters(trustRoot).copy(whitelistedContractImplementations = whitelistAllContractsForTest)
+//        override fun retrieveNetworkParameters(trustRoot: X509Certificate) = super.retrieveNetworkParameters(trustRoot).copy(whitelistedContractImplementations = whitelistAllContractsForTest)
 
         override fun startShell(rpcOps: CordaRPCOps) {
             //No mock shell

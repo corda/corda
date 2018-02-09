@@ -1,27 +1,53 @@
 package net.corda.node.internal.cordapp
 
 import com.google.common.collect.HashBiMap
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.GlobalProperties.networkParameters
+import net.corda.core.internal.GlobalProperties.useWhitelistedByZoneAttachmentConstraint
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.whiteListHashes
-import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.core.utilities.whitelistAllContractsForTest
 import java.net.URL
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage, private val networkParameters: NetworkParameters) : SingletonSerializeAsToken(), CordappProviderInternal {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
     }
+
+    /**
+     * Current known CorDapps loaded on this node
+     */
+    override val cordapps get() = cordappLoader.cordapps
+    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
+
+/*
+    init {
+        if (useWhitelistedByZoneAttachmentConstraint && networkParameters.whitelistedContractImplementations != whitelistAllContractsForTest) {
+            val whitelist = networkParameters.whitelistedContractImplementations
+                    ?: throw IllegalStateException("network parameters don't specify the whitelist")
+
+            //verify that the installed cordapps are whitelisted
+            cordappAttachments.keys.map(attachmentStorage::openAttachment).filter { it is ContractAttachment }.forEach { attch ->
+                (attch as ContractAttachment).allContracts.forEach { contractClassName ->
+                    val contractWhitelist = whitelist[contractClassName]
+                            ?: throw IllegalStateException("Contract ${contractClassName} is not whitelisted")
+                    if (attch.id !in contractWhitelist) IllegalStateException("Contract ${contractClassName} in attachment ${attch.id} is not whitelisted")
+                }
+            }
+        }
+    }
+*/
 
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
@@ -38,12 +64,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
         return getCordappForClass(contractClassName)?.let(this::getCordappAttachmentId)
     }
-
-    /**
-     * Current known CorDapps loaded on this node
-     */
-    override val cordapps get() = cordappLoader.cordapps
-    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
 
     /**
      * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID
@@ -77,12 +97,4 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
      * @return cordapp A cordapp or null if no cordapp has the given class loaded
      */
     fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
-
-    override fun getZoneWhitelistedContractAttachmentIds(contractClassName: ContractClassName): Set<AttachmentId> =
-            if (networkParameters.whitelistedContractImplementations == whitelistAllContractsForTest) {
-                whiteListHashes
-            } else {
-                networkParameters.whitelistedContractImplementations!!.get(contractClassName)?.toSet()
-                        ?: throw IllegalStateException("The contract: $contractClassName is not whitelisted.")
-            }
 }

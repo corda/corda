@@ -1,9 +1,9 @@
 package net.corda.testing.common.internal
 
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import java.time.Instant
-import net.corda.core.utilities.whitelistAllContractsForTest
 
 fun testNetworkParameters(
         notaries: List<NotaryInfo>,
