@@ -534,7 +534,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              database: CordaPersistence,
                              info: NodeInfo,
                              identityService: IdentityServiceInternal,
-                             networkMapCache: NetworkMapCacheInternal
+                             networkMapCache: NetworkMapCacheInternal,
                              nodeProperties: NodePropertiesStore): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
