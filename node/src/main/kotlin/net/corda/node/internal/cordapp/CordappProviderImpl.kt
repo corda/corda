@@ -31,8 +31,11 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     override val cordapps get() = cordappLoader.cordapps
     private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
 
-/*
     init {
+        verifyInstalledCordapps(attachmentStorage)
+    }
+
+    private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
         if (useWhitelistedByZoneAttachmentConstraint && networkParameters.whitelistedContractImplementations != whitelistAllContractsForTest) {
             val whitelist = networkParameters.whitelistedContractImplementations
                     ?: throw IllegalStateException("network parameters don't specify the whitelist")
@@ -47,7 +50,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
             }
         }
     }
-*/
 
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
