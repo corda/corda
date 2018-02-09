@@ -8,8 +8,7 @@ import java.util.*
 
 /**
  * A wrapper over the signature output accompanied by signer's public key and signature metadata.
- * This is similar to [DigitalSignature.WithKey], but targeted to DLT transaction signatures.
- * Note that [partialMerkleTree] should always be null when only one transaction is signed.
+ * This is similar to [DigitalSignature.WithKey], but targeted to DLT transaction (or block of transactions) signatures.
  * @property bytes actual bytes of the cryptographic signature.
  * @property by [PublicKey] of the signer.
  * @property signatureMetadata attached [SignatureMetadata] for this signature.
@@ -17,12 +16,16 @@ import java.util.*
  */
 @CordaSerializable
 class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree?) : DigitalSignature(bytes) {
+    /**
+     * Construct a [TransactionSignature] with [partialMerkleTree] set to null.
+     * This is the recommended constructor when signing over a single transaction.
+     * */
     constructor(bytes: ByteArray, by: PublicKey, signatureMetadata: SignatureMetadata) : this(bytes, by, signatureMetadata, null)
 
     /**
      * Function to verify a [SignableData] object's signature.
      * Note that [SignableData] contains the id of the transaction and extra metadata, such as DLT's platform version.
-     * A not null [partialMerkleTree] implies multi-transaction signing and the signature is over the root of this tree.
+     * A non-null [partialMerkleTree] implies multi-transaction signing and the signature is over the root of this tree.
      *
      * @param txId transaction's id (Merkle root), which along with [signatureMetadata] will be used to construct the [SignableData] object to be signed.
      * @throws InvalidKeyException if the key is invalid.

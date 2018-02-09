@@ -560,8 +560,7 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val hashSigned = hashSigned(txId, transactionSignature.partialMerkleTree)
-        val signableData = SignableData(hashSigned, transactionSignature.signatureMetadata)
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
@@ -580,8 +579,7 @@ object Crypto {
     @JvmStatic
     @Throws(SignatureException::class)
     fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val hashSigned = hashSigned(txId, transactionSignature.partialMerkleTree)
-        val signableData = SignableData(hashSigned, transactionSignature.signatureMetadata)
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return isValid(
                 findSignatureScheme(transactionSignature.by),
                 transactionSignature.by,
@@ -1015,11 +1013,13 @@ object Crypto {
         }
     }
 
-    // Get the hash value that is actually signed.
-    // the txId is returned when [partialMerkleTree] is null,
-    // else the root of the tree is computed and returned.
-    // Note that the hash of the txId should be a leaf in the tree, not the txId itself.
-    private fun hashSigned(txId: SecureHash, partialMerkleTree: PartialMerkleTree?): SecureHash {
+    /**
+     *  Get the hash value that is actually signed.
+     *  The txId is returned when [partialMerkleTree] is null,
+     *  else the root of the tree is computed and returned.
+     *  Note that the hash of the txId should be a leaf in the tree, not the txId itself.
+     */
+    private fun originalSignedHash(txId: SecureHash, partialMerkleTree: PartialMerkleTree?): SecureHash {
         return if (partialMerkleTree != null) {
             val usedHashes = mutableListOf<SecureHash>()
             val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)

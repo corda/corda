@@ -96,7 +96,6 @@ class TransactionSignatureTest {
     @Test
     fun `Verify one-tx signature`() {
         val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(1234567890L))
-        // Deterministically create 5 txIds.
         val txId = "aTransaction".toByteArray().sha256()
         // One-tx signature.
         val txSignature = signOneTx(txId, keyPair)
