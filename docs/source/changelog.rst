@@ -207,6 +207,9 @@ Version 3.0
   will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
   process for existing projects in the ``tools\scripts`` directory of the Corda repo.
 
+* ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
+  multiple transactions at once.
+
 .. _changelog_v1:
 
 Release 1.0
