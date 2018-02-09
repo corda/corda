@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -24,7 +23,6 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class MaxTransactionSizeTests {
     private lateinit var mockNet: MockNetwork
@@ -36,7 +34,7 @@ class MaxTransactionSizeTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"))
+        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"), maxTransactionSize = 3_000_000)
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notaryServices = mockNet.defaultNotaryNode.services
@@ -44,7 +42,6 @@ class MaxTransactionSizeTests {
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        GlobalProperties.networkParameters = GlobalProperties.networkParameters.copy(maxTransactionSize = 3_000_000)
     }
 
     @After

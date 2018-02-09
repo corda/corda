@@ -126,10 +126,6 @@ open class MockServices private constructor(
             // compiler and then the c'tor itself.
             return Throwable().stackTrace[3].className.split('.').dropLast(1).joinToString(".")
         }
-
-        init {
-            GlobalProperties.networkParameters = testNetworkParameters(emptyList())
-        }
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal,

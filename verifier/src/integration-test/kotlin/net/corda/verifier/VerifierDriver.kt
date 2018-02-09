@@ -77,7 +77,8 @@ fun <A> verifierDriver(
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
                         jmxPolicy = jmxPolicy,
-                        compatibilityZone = null
+                        compatibilityZone = null,
+                        maxTransactionSize = maxTransactionSize
                 )
         ),
         coerce = { it },

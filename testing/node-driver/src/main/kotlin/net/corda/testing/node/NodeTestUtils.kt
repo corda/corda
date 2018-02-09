@@ -9,11 +9,13 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.chooseIdentity
@@ -35,6 +37,7 @@ fun ServiceHub.ledger(
     }
     return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply {
         if (serializationExists) {
+            GlobalProperties.networkParameters = testNetworkParameters(emptyList())
             script()
         } else {
             SerializationEnvironmentRule.run("ledger") { script() }

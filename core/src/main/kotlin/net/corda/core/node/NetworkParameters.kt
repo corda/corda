@@ -17,7 +17,6 @@ import java.time.Instant
  */
 // TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
 //  It needs separate design.
-// TODO Currently maxTransactionSize is not wired.
 @CordaSerializable
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
