@@ -6,6 +6,7 @@ import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNetwork
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -93,9 +94,8 @@ class InMemoryMessagingTests {
         node1.network.addMessageHandler("valid_message") { _, _ ->
             received++
         }
-
-        val invalidMessage = node2.network.createMessage("invalid_message", data = ByteArray(0))
-        val validMessage = node2.network.createMessage("valid_message", data = ByteArray(0))
+        val invalidMessage = node2.network.createMessage("invalid_message", data = EMPTY_BYTE_ARRAY)
+        val validMessage = node2.network.createMessage("valid_message", data = EMPTY_BYTE_ARRAY)
         node2.network.send(invalidMessage, node1.network.myAddress)
         mockNet.runNetwork()
         assertEquals(0, received)
@@ -106,8 +106,8 @@ class InMemoryMessagingTests {
 
         // Here's the core of the test; previously the unhandled message would cause runNetwork() to abort early, so
         // this would fail. Make fresh messages to stop duplicate uniqueMessageId causing drops
-        val invalidMessage2 = node2.network.createMessage("invalid_message", data = ByteArray(0))
-        val validMessage2 = node2.network.createMessage("valid_message", data = ByteArray(0))
+        val invalidMessage2 = node2.network.createMessage("invalid_message", data = EMPTY_BYTE_ARRAY)
+        val validMessage2 = node2.network.createMessage("valid_message", data = EMPTY_BYTE_ARRAY)
         node2.network.send(invalidMessage2, node1.network.myAddress)
         node2.network.send(validMessage2, node1.network.myAddress)
         mockNet.runNetwork()

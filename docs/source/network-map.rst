@@ -22,6 +22,8 @@ The set of REST end-points for the network map service are as follows.
 +================+=========================================+==============================================================================================================================================+
 | POST           | /network-map/publish                    | For the node to upload its signed ``NodeInfo`` object to the network map.                                                                    |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| POST           | /network-map/ack-parameters             | For the node operator to acknowledge network map that new parameters were accepted for future update.                                        |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map                            | Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.         |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
@@ -77,3 +79,35 @@ More parameters will be added in future releases to regulate things like allowed
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
 cryptographic algorithms and rollout schedules (e.g. for moving to post quantum cryptography), parameters related to
 SGX and so on.
+
+Network parameters update process
+---------------------------------
+
+In case of the need to change network parameters Corda zone operator will start the update process. There are many reasons
+that may lead to this decision: we discovered that some new fields have to be added to enable smooth network interoperability or change
+of the existing compatibility constants is required due to upgrade or security reasons.
+
+To synchronize all nodes in the compatibility zone to use the new set of the network parameters two RPC methods exist. The process
+requires human interaction and approval of the change.
+
+When the update is about to happen the network map service starts to advertise the additional information with the usual network map
+data. It includes new network parameters hash, description of the change and the update deadline. Node queries network map server
+for the new set of parameters and emits ``ParametersUpdateInfo`` via ``CordaRPCOps::networkParametersFeed`` method to inform
+node operator about the event.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+
+Node administrator can review the change and decide if is going to accept it. The approval should be done before ``updateDeadline``.
+Nodes that don't approve before the deadline will be removed from the network map.
+If the network operator starts advertising a different set of new parameters then that new set overrides the previous set. Only the latest update can be accepted.
+To send back parameters approval to the zone operator RPC method ``fun acceptNewNetworkParameters(parametersHash: SecureHash)``
+has to be called with ``parametersHash`` from update. Notice that the process cannot be undone.
+
+Next time the node polls network map after the deadline the advertised network parameters will be the updated ones. Previous set
+of parameters will no longer be valid. At this point the node will automatically shutdown and will require the node operator
+to bring it back again.

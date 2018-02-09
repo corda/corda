@@ -11,7 +11,7 @@ import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
@@ -108,9 +108,8 @@ class CordaClassResolverTests {
         val emptyMapClass = mapOf<Any, Any>().javaClass
     }
 
-    private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)
-    private val allButBlacklistedContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, AllButBlacklisted, emptyMap(), true, SerializationContext.UseCase.P2P)
-
+    private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(kryoMagic, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)
+    private val allButBlacklistedContext: SerializationContext = SerializationContextImpl(kryoMagic, this.javaClass.classLoader, AllButBlacklisted, emptyMap(), true, SerializationContext.UseCase.P2P)
     @Test
     fun `Annotation on enum works for specialised entries`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Foo.Bar::class.java)
