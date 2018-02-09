@@ -20,7 +20,7 @@ interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
 }
 
-internal data class OutOfProcessImpl(
+data class OutOfProcessImpl(
         override val nodeInfo: NodeInfo,
         override val rpc: CordaRPCOps,
         override val configuration: NodeConfiguration,
@@ -45,7 +45,7 @@ internal data class OutOfProcessImpl(
     override fun close() = stop()
 }
 
-internal data class InProcessImpl(
+data class InProcessImpl(
         override val nodeInfo: NodeInfo,
         override val rpc: CordaRPCOps,
         override val configuration: NodeConfiguration,
