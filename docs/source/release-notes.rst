@@ -102,12 +102,28 @@ Other Functional Improvements
 
 * **Test API Stability**
 
-  A great deal of work has been carried out to refine the API's  provided to test CorDapps, making it simpler, more intuitive,
-  and generally easier. In addition, these API's have been added to the ~locked~ list of the API's we guarantee to be stable
-  over time. This should greatly increase confidence when upgrading between versions as your testing environments will not require
-  altering to work, giving confidence as you upgrade.
+  A great deal of work has been carried out to refine the APIs provided to test CorDapps, making them simpler, more intuitive,
+  and generally easier to use. In addition, these APIs have been added to the *locked* list of the APIs we guarantee to be stable
+  over time. This should greatly increase confidence when upgrading between versions, as your testing environments will work
+  without alteration.
 
-  .. note:: <<< ARC??? HOW TO UPGRADE >>>
+  .. note:: * Many classes have been moved between packages, so you will need to update your imports
+    * setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
+      they are now set directly when constructing the MockServices or MockNetwork object
+    * Key constants e.g. ALICE_KEY have been removed, you can now use TestIdentity to make your own
+    * The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
+        * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
+        * Also in transaction blocks, command takes its arguments as CommandDatas rather than lambdas
+    * The MockServices API has changed, please refer to its API documentation
+    * TestDependencyInjectionBase has been retired in favour of a JUnit Rule called SerializationEnvironmentRule
+        * This replaces the initialiseSerialization parameter of ledger/transaction and verifierDriver
+        * The withTestSerialization method is obsoleted by SerializationEnvironmentRule and has been retired
+    * MockNetwork now takes a MockNetworkParameters builder to make it more Java-friendly, like driver's DriverParameters
+        * Similarly, the MockNetwork.createNode methods now take a MockNodeParameters builder
+    * MockNode constructor parameters are now aggregated in MockNodeArgs for easier subclassing
+    * MockNetwork.Factory has been retired as you can simply use a lambda
+    * testNodeConfiguration has been retired, please use a mock object framework of your choice instead
+    * MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
 
 * **X.509 certificates**
 
