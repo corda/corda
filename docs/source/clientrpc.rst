@@ -126,6 +126,8 @@ You can provide an RPC user with the permission to perform any RPC operation (in
             ...
         ]
 
+.. _rpc_security_mgmt_ref:
+
 RPC security management
 -----------------------
 

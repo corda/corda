@@ -133,8 +133,10 @@ Other Functional Improvements
   found at see :doc:`permissioning-certificate-specification`.
 
 * **Configurable authorization and authentication data sources**
-    Corda now supports the configuration of the external sources of user authentication including support for the
-    Apace Shiro Modular Crypt Format encoded passwords. See :doc:`client` for details on configuring this.
+
+  Corda can now be configured to load user credentials and permissions from an external database and supports password
+  encryption based on the `Apache Shiro framework <https://shiro.apache.org>`_. See :ref:`RPC security management
+  <rpc_security_mgmt_ref>` for documentation.
 
 * **SSH Server**
 
