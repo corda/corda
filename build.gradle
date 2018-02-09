@@ -169,8 +169,8 @@ allprojects {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperties['java.io.tmpdir'] = buildDir
 
-        if (System.getProperty("maxParallelForks") != null) {
-            maxParallelForks = Integer.valueOf(System.getProperty("maxParallelForks"))
+        if (System.getProperty("test.maxParallelForks") != null) {
+            maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
         }
     }
 
