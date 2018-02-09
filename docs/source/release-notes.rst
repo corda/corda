@@ -66,41 +66,25 @@ Significant Changes in 3.0
       However, assuming a clean reset of the artemis data and that the nodes are consistent versions,
       data persisted via the AMQP serializer will be forward compatible.
 
-* **The Network Map Service**
+* **New Network Map Service**:
 
-  The network map service concept has been re-designed, more information can be found in :doc:`network-map`. Essentially, the
-  previous design was never intended to be final but was rather a quick implementation in the earliest days of the Corda project
-  to unblock higher priority items. It suffers from numerous disadvantages including lack of scalability, as one node is expected
-  to hold open and manage connections to every node on the network; not reliable; hard to defend against DoS attacks; etc.
+  This release introduces the new network map architecture. The network map service has been completely redesigned and
+  implemented to enable future increased network scalability and redundancy, reduced runtime operational overhead,
+  support for multiple notaries, and administration of network compatibility zones (CZ) and business networks.
 
-  * There is no longer a special network map node for distributing the network map to the other nodes. Instead the network
-    map is now a collection of signed ``NodeInfo`` files distributed via HTTP.
+  A Corda Compatibility Zone is defined as a grouping of participants and services (notaries, oracles,
+  doorman, network map server) configured within an operational Corda network to be interoperable and compatible with
+  each other.
 
-  * The ``certificateSigningService`` configuration has been replaced by the ``compatibilityZoneURL`` which is the base
-    URL for the doorman registration and for downloading the network map. There is also an end-point for the node to publish
-    its node-info object, which the node does each time it changes. ``networkMapService`` config has been removed.
+  We introduce the concept of network parameters, which will be used in a future version of Corda to specify precisely
+  the set of constants (or ranges of constants) upon which the nodes within a network need to agree in order to be assured
+  of seamless inter-operation. Additional security controls ensure that all network map data is now signed, thus reducing
+  the power of the network operator to tamper with the map.
 
-  * To support local and test deployments, the node polls the ``additional-node-infos`` directory for these signed ``NodeInfo``
-    objects which are stored in its local cache. On startup the node generates its own signed file with the filename format
-    "nodeInfo-*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
+  There is also support for a group of nodes to operate locally in a private network, which is achieved by copying the
+  node's signed info file to other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
 
-    Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
-    parameter is no longer needed.
-
-  * For test deployments we've introduced a bootstrapping tool (see :doc:`setting-up-a-corda-network`).
-
-  * ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
-    removed. The configuration of notaries has been simplified into a single ``notary`` config object. See
-    :doc:`corda-configuration-file` for more details.
-
-  * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
-    to correctly inter-operate.
-
-    .. note:: The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
-      their X500 name.
-
-  * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
-    Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+  Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
 
 Other Functional Improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
