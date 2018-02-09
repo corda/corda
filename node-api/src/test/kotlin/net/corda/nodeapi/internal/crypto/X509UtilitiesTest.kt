@@ -14,7 +14,7 @@ import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
@@ -314,7 +314,7 @@ class X509UtilitiesTest {
     @Test
     fun `serialize - deserialize X509Certififcate`() {
         val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(KryoHeaderV0_1,
+        val context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
@@ -329,7 +329,7 @@ class X509UtilitiesTest {
     @Test
     fun `serialize - deserialize X509CertPath`() {
         val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(KryoHeaderV0_1,
+        val context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),

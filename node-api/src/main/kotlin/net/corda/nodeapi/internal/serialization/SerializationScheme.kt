@@ -4,9 +4,12 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.AttachmentsClassLoader
+import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import org.slf4j.LoggerFactory
 import java.io.NotSerializableException
 import java.util.*
@@ -15,17 +18,7 @@ import java.util.concurrent.ExecutionException
 
 val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
 
-object NotSupportedSerializationScheme : SerializationScheme {
-    private fun doThrow(): Nothing = throw UnsupportedOperationException("Serialization scheme not supported.")
-
-    override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean = doThrow()
-
-    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T = doThrow()
-
-    override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> = doThrow()
-}
-
-data class SerializationContextImpl(override val preferredSerializationVersion: VersionHeader,
+data class SerializationContextImpl(override val preferredSerializationVersion: SerializationMagic,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
@@ -76,14 +69,14 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
         })
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: VersionHeader) = copy(preferredSerializationVersion = versionHeader)
+    override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)
 }
 
-private const val HEADER_SIZE: Int = 8
-
-fun ByteSequence.obtainHeaderSignature(): VersionHeader = take(HEADER_SIZE).copy()
-
 open class SerializationFactoryImpl : SerializationFactory() {
+    companion object {
+        private val magicSize = sequenceOf(kryoMagic, amqpMagic).map { it.size }.distinct().single()
+    }
+
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 
     private val registeredSchemes: MutableCollection<SerializationScheme> = Collections.synchronizedCollection(mutableListOf())
@@ -91,19 +84,17 @@ open class SerializationFactoryImpl : SerializationFactory() {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     // TODO: This is read-mostly. Probably a faster implementation to be found.
-    private val schemes: ConcurrentHashMap<Pair<ByteSequence, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
+    private val schemes: ConcurrentHashMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
 
-    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, VersionHeader> {
-        // truncate sequence to 8 bytes, and make sure it's a copy to avoid holding onto large ByteArrays
-        val lookupKey = byteSequence.obtainHeaderSignature() to target
-        val scheme = schemes.computeIfAbsent(lookupKey) {
-            registeredSchemes
-                    .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
-                    .forEach { return@computeIfAbsent it }
+    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, CordaSerializationMagic> {
+        // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
+        val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
+        val lookupKey = magic to target
+        return schemes.computeIfAbsent(lookupKey) {
+            registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: $lookupKey, registeredSchemes are: $registeredSchemes")
-            NotSupportedSerializationScheme
-        }
-        return scheme to lookupKey.first
+            throw UnsupportedOperationException("Serialization scheme not supported.")
+        } to magic
     }
 
     @Throws(NotSerializableException::class)
@@ -115,9 +106,9 @@ open class SerializationFactoryImpl : SerializationFactory() {
     override fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T> {
         return asCurrent {
             withCurrentContext(context) {
-                val (scheme, versionHeader) = schemeFor(byteSequence, context.useCase)
+                val (scheme, magic) = schemeFor(byteSequence, context.useCase)
                 val deserializedObject = scheme.deserialize(byteSequence, clazz, context)
-                ObjectWithCompatibleContext(deserializedObject, context.withPreferredSerializationVersion(versionHeader))
+                ObjectWithCompatibleContext(deserializedObject, context.withPreferredSerializationVersion(magic))
             }
         }
     }
@@ -149,9 +140,7 @@ open class SerializationFactoryImpl : SerializationFactory() {
 
 
 interface SerializationScheme {
-    // byteSequence expected to just be the 8 bytes necessary for versioning
-    fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean
-
+    fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 

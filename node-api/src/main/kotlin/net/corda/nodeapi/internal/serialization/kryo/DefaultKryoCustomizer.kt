@@ -200,7 +200,7 @@ object DefaultKryoCustomizer {
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
             if (kryo.serializationContext() != null) {
-                output.writeBytes(obj.attachment.id.bytes)
+                obj.attachment.id.writeTo(output)
             } else {
                 val buffer = ByteArrayOutputStream()
                 obj.attachment.open().use { it.copyTo(buffer) }

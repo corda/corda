@@ -26,6 +26,7 @@ import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
@@ -372,3 +373,5 @@ inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> Dig
 inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
     return SignedData(this, keyPair.sign(this.bytes))
 }
+
+fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }

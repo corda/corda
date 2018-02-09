@@ -2,16 +2,16 @@ package net.corda.node.serialization
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.utilities.ByteSequence
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.node.services.messaging.RpcServerObservableSerializer
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.nodeapi.internal.serialization.kryo.RPCKryo
 
 class KryoServerSerializationScheme : AbstractKryoSerializationScheme() {
-    override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-        return byteSequence == KryoHeaderV0_1 && target != SerializationContext.UseCase.RPCClient
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+        return magic == kryoMagic && target != SerializationContext.UseCase.RPCClient
     }
 
     override fun rpcClientKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()

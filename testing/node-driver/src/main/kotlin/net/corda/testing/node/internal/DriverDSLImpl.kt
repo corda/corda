@@ -15,6 +15,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
@@ -38,7 +39,6 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.core.node.NotaryInfo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -88,7 +88,8 @@ class DriverDSLImpl(
         extraCordappPackagesToScan: List<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
-        val compatibilityZone: CompatibilityZoneParams?
+        val compatibilityZone: CompatibilityZoneParams?,
+        val maxTransactionSize: Int
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -700,7 +701,7 @@ class DriverDSLImpl(
      * The local version of the network map, which is a bunch of classes that copy the relevant files to the node directories.
      */
     private inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
-        val networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaryInfos).copy(whitelistedContractImplementations = whitelistAllContractsForTest))
+        val networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaryInfos, maxTransactionSize = maxTransactionSize))
         // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
         // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
         // Investigate whether we can avoid that.
@@ -956,6 +957,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = JmxPolicy(),
+        maxTransactionSize: Int,
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
@@ -973,7 +975,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     notarySpecs = notarySpecs,
-                    compatibilityZone = null
+                    compatibilityZone = null,
+                    maxTransactionSize = maxTransactionSize
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1015,6 +1018,7 @@ fun <A> internalDriver(
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
+        maxTransactionSize: Int = DriverParameters().maxTransactionSize,
         compatibilityZone: CompatibilityZoneParams? = null,
         dsl: DriverDSLImpl.() -> A
 ): A {
@@ -1031,7 +1035,8 @@ fun <A> internalDriver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = compatibilityZone
+                    compatibilityZone = compatibilityZone,
+                    maxTransactionSize = maxTransactionSize
             ),
             coerce = { it },
             dsl = dsl,

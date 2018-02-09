@@ -37,8 +37,8 @@ import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStra
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.pumpReceive
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.pumpReceive
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -296,14 +296,16 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             resultFuture.getOrThrow()
-        }.withMessageContaining(String::class.java.name)  // Make sure the exception message mentions the type the flow was expecting to receive
+        }
     }
 
     @Test
     fun `receiving unexpected session end before entering sendAndReceive`() {
         bobNode.registerFlowFactory(WaitForOtherSideEndBeforeSendAndReceive::class) { NoOpFlow() }
         val sessionEndReceived = Semaphore(0)
-        receivedSessionMessagesObservable().filter { it.message is SessionEnd }.subscribe { sessionEndReceived.release() }
+        receivedSessionMessagesObservable().filter {
+            it.message is ExistingSessionMessage && it.message.payload is EndSessionMessage
+        }.subscribe { sessionEndReceived.release() }
         val resultFuture = aliceNode.services.startFlow(
                 WaitForOtherSideEndBeforeSendAndReceive(bob, sessionEndReceived)).resultFuture
         mockNet.runNetwork()
@@ -356,7 +358,7 @@ class FlowFrameworkTests {
         assertSessionTransfers(
                 aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
                 bobNode sent sessionConfirm() to aliceNode,
-                bobNode sent erroredEnd() to aliceNode
+                bobNode sent errorMessage() to aliceNode
         )
     }
 
@@ -389,10 +391,11 @@ class FlowFrameworkTests {
         assertSessionTransfers(
                 aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
                 bobNode sent sessionConfirm() to aliceNode,
-                bobNode sent erroredEnd(erroringFlow.get().exceptionThrown) to aliceNode
+                bobNode sent errorMessage(erroringFlow.get().exceptionThrown) to aliceNode
         )
         // Make sure the original stack trace isn't sent down the wire
-        assertThat((receivedSessionMessages.last().message as ErrorSessionEnd).errorResponse!!.stackTrace).isEmpty()
+        val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
+        assertThat((lastMessage.payload as ErrorSessionMessage).flowException!!.stackTrace).isEmpty()
     }
 
     @Test
@@ -438,7 +441,7 @@ class FlowFrameworkTests {
                 aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
                 bobNode sent sessionConfirm() to aliceNode,
                 bobNode sent sessionData("Hello") to aliceNode,
-                aliceNode sent erroredEnd() to bobNode
+                aliceNode sent errorMessage() to bobNode
         )
     }
 
@@ -603,20 +606,20 @@ class FlowFrameworkTests {
 
     @Test
     fun `unknown class in session init`() {
-        aliceNode.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, "version", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
-        val reject = receivedSessionMessages.last().message as SessionReject
-        assertThat(reject.errorMessage).isEqualTo("Don't know not.a.real.Class")
+        val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
+        assertThat((lastMessage.payload as RejectSessionMessage).message).isEqualTo("Don't know not.a.real.Class")
     }
 
     @Test
     fun `non-flow class in session init`() {
-        aliceNode.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, "version", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, String::class.java.name, 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
-        val reject = receivedSessionMessages.last().message as SessionReject
-        assertThat(reject.errorMessage).isEqualTo("${String::class.java.name} is not a flow")
+        val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
+        assertThat((lastMessage.payload as RejectSessionMessage).message).isEqualTo("${String::class.java.name} is not a flow")
     }
 
     @Test
@@ -682,14 +685,14 @@ class FlowFrameworkTests {
         return observable.toFuture()
     }
 
-    private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
+    private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
+        return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
     }
 
-    private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "")
-    private fun sessionData(payload: Any) = SessionData(0, payload.serialize())
-    private val normalEnd = NormalSessionEnd(0)
-    private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
+    private fun sessionConfirm(flowVersion: Int = 1) = ExistingSessionMessage(SessionId(0), ConfirmSessionMessage(SessionId(0), FlowInfo(flowVersion, "")))
+    private fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), DataSessionMessage(payload.serialize()))
+    private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
+    private fun errorMessage(errorResponse: FlowException? = null) = ExistingSessionMessage(SessionId(0), ErrorSessionMessage(errorResponse, 0))
 
     private fun StartedNode<*>.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
@@ -709,7 +712,9 @@ class FlowFrameworkTests {
     }
 
     private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: MessageRecipients) {
-        val isPayloadTransfer: Boolean get() = message is SessionData || message is SessionInit && message.firstPayload != null
+        val isPayloadTransfer: Boolean get() =
+            message is ExistingSessionMessage && message.payload is DataSessionMessage ||
+                    message is InitialSessionMessage && message.firstPayload != null
         override fun toString(): String = "$from sent $message to $to"
     }
 
@@ -718,7 +723,7 @@ class FlowFrameworkTests {
     }
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
-        return filter { it.message.topicSession == StateMachineManagerImpl.sessionTopic }.map {
+        return filter { it.message.topic == StateMachineManagerImpl.sessionTopic }.map {
             val from = it.sender.id
             val message = it.message.data.deserialize<SessionMessage>()
             SessionTransfer(from, sanitise(message), it.recipients)
@@ -726,12 +731,23 @@ class FlowFrameworkTests {
     }
 
     private fun sanitise(message: SessionMessage) = when (message) {
-        is SessionData -> message.copy(recipientSessionId = 0)
-        is SessionInit -> message.copy(initiatorSessionId = 0, appName = "")
-        is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0, appName = "")
-        is NormalSessionEnd -> message.copy(recipientSessionId = 0)
-        is ErrorSessionEnd -> message.copy(recipientSessionId = 0)
-        else -> message
+        is InitialSessionMessage -> message.copy(initiatorSessionId = SessionId(0), initiationEntropy = 0, appName = "")
+        is ExistingSessionMessage -> {
+            val payload = message.payload
+            message.copy(
+                    recipientSessionId = SessionId(0),
+                    payload = when (payload) {
+                        is ConfirmSessionMessage -> payload.copy(
+                                initiatedSessionId = SessionId(0),
+                                initiatedFlowInfo = payload.initiatedFlowInfo.copy(appName = "")
+                        )
+                        is ErrorSessionMessage -> payload.copy(
+                                errorId = 0
+                        )
+                        else -> payload
+                    }
+            )
+        }
     }
 
     private infix fun StartedNode<MockNode>.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)

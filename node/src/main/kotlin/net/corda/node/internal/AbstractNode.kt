@@ -14,7 +14,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.GlobalProperties.networkParameters
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -194,13 +194,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
-        check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
+        GlobalProperties.networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
+        check(GlobalProperties.networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
-            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
+            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, GlobalProperties.networkParameters.notaries).start(), identityService)
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
@@ -239,7 +239,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
-                networkParameters.serialize().hash,
+                GlobalProperties.networkParameters.serialize().hash,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 

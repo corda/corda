@@ -1,27 +1,25 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
 import java.util.concurrent.ConcurrentHashMap
-import java.io.ByteArrayOutputStream
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.ByteBufferInputStream
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.serialization.*
-import net.corda.core.internal.LazyPool
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.SerializationScheme
 import java.security.PublicKey
 
-// "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
-val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray(Charsets.UTF_8))
+val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0, 1))
 
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
@@ -73,65 +71,41 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         }
     }
 
-    private fun <T : Any> withContext(kryo: Kryo, context: SerializationContext, block: (Kryo) -> T): T {
-        kryo.context.ensureCapacity(context.properties.size)
-        context.properties.forEach { kryo.context.put(it.key, it.value) }
-        try {
-            return block(kryo)
-        } finally {
-            kryo.context.clear()
+    private fun <T : Any> SerializationContext.kryo(task: Kryo.() -> T): T {
+        return getPool(this).run { kryo ->
+            kryo.context.ensureCapacity(properties.size)
+            properties.forEach { kryo.context.put(it.key, it.value) }
+            try {
+                kryo.task()
+            } finally {
+                kryo.context.clear()
+            }
         }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        val pool = getPool(context)
-        val headerSize = KryoHeaderV0_1.size
-        val header = byteSequence.take(headerSize)
-        if (header != KryoHeaderV0_1) {
-            throw KryoException("Serialized bytes header does not match expected format.")
-        }
-        Input(byteSequence.bytes, byteSequence.offset + headerSize, byteSequence.size - headerSize).use { input ->
-            return pool.run { kryo ->
-                withContext(kryo, context) {
-                    if (context.objectReferencesEnabled) {
-                        uncheckedCast(kryo.readClassAndObject(input))
-                    } else {
-                        kryo.withoutReferences { uncheckedCast<Any?, T>(kryo.readClassAndObject(input)) }
-                    }
+        val dataBytes = kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")
+        return context.kryo {
+            kryoInput(ByteBufferInputStream(dataBytes)) {
+                if (context.objectReferencesEnabled) {
+                    uncheckedCast(readClassAndObject(this))
+                } else {
+                    withoutReferences { uncheckedCast<Any?, T>(readClassAndObject(this)) }
                 }
             }
         }
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        val pool = getPool(context)
-        return pool.run { kryo ->
-            withContext(kryo, context) {
-                serializeOutputStreamPool.run { stream ->
-                    serializeBufferPool.run { buffer ->
-                        Output(buffer).use {
-                            it.outputStream = stream
-                            it.writeBytes(KryoHeaderV0_1.bytes)
-                            if (context.objectReferencesEnabled) {
-                                kryo.writeClassAndObject(it, obj)
-                            } else {
-                                kryo.withoutReferences { kryo.writeClassAndObject(it, obj) }
-                            }
-                        }
-                        SerializedBytes(stream.toByteArray())
-                    }
+        return context.kryo {
+            SerializedBytes(kryoOutput {
+                kryoMagic.writeTo(this)
+                if (context.objectReferencesEnabled) {
+                    writeClassAndObject(this, obj)
+                } else {
+                    withoutReferences { writeClassAndObject(this, obj) }
                 }
-            }
+            })
         }
     }
 }
-
-private val serializeBufferPool = LazyPool(
-        newInstance = { ByteArray(64 * 1024) }
-)
-
-private val serializeOutputStreamPool = LazyPool(
-        clear = ByteArrayOutputStream::reset,
-        shouldReturnToPool = { it.size() < 256 * 1024 }, // Discard if it grew too large
-        newInstance = { ByteArrayOutputStream(64 * 1024) }
-)

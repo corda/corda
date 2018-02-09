@@ -106,6 +106,7 @@ fun <A> rpcDriver(
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
+        maxTransactionSize: Int = Int.MAX_VALUE,
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -122,7 +123,8 @@ fun <A> rpcDriver(
                             extraCordappPackagesToScan = extraCordappPackagesToScan,
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
-                            compatibilityZone = null
+                            compatibilityZone = null,
+                            maxTransactionSize = maxTransactionSize
                     ), externalTrace
             ),
             coerce = { it },

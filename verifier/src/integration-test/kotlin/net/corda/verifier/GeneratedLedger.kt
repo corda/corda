@@ -12,6 +12,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.testing.contracts.DummyContract
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -37,7 +38,7 @@ data class GeneratedLedger(
 
     companion object {
         val empty = GeneratedLedger(emptyList(), emptyMap(), emptySet(), emptySet())
-        val contractAttachment = ContractAttachment(GeneratedAttachment(ByteArray(0) { 0 }), DummyContract.PROGRAM_ID)
+        val contractAttachment = ContractAttachment(GeneratedAttachment(EMPTY_BYTE_ARRAY), DummyContract.PROGRAM_ID)
     }
 
     fun resolveWireTransaction(transaction: WireTransaction): LedgerTransaction {
