@@ -280,6 +280,7 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
   public abstract void extractFile(String, java.io.OutputStream)
   @org.jetbrains.annotations.NotNull public abstract List getSigners()
+  public abstract int getSize()
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public abstract jar.JarInputStream openAsJAR()
 ##
@@ -347,6 +348,7 @@ public final class net.corda.core.contracts.ComponentGroupEnum extends java.lang
   @org.jetbrains.annotations.NotNull public final String getContract()
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public List getSigners()
+  public int getSize()
   @org.jetbrains.annotations.NotNull public java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public jar.JarInputStream openAsJAR()
 ##
@@ -3584,7 +3586,7 @@ public static final class net.corda.client.jackson.StringToMethodCallParser$Unpa
 ##
 public final class net.corda.testing.driver.Driver extends java.lang.Object
   public static final Object driver(net.corda.testing.driver.DriverParameters, kotlin.jvm.functions.Function1)
-  public static final Object driver(net.corda.testing.driver.DriverParameters, boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy, kotlin.jvm.functions.Function1)
+  public static final Object driver(net.corda.testing.driver.DriverParameters, boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy, int, kotlin.jvm.functions.Function1)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.testing.driver.DriverDSL
   @org.jetbrains.annotations.NotNull public abstract java.nio.file.Path baseDirectory(net.corda.core.identity.CordaX500Name)
@@ -3599,11 +3601,12 @@ public final class net.corda.testing.driver.Driver extends java.lang.Object
 ##
 public final class net.corda.testing.driver.DriverParameters extends java.lang.Object
   public <init>()
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy, int)
   public final boolean component1()
   @org.jetbrains.annotations.NotNull public final List component10()
   @org.jetbrains.annotations.NotNull public final List component11()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.JmxPolicy component12()
+  public final int component13()
   @org.jetbrains.annotations.NotNull public final java.nio.file.Path component2()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.PortAllocation component3()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.PortAllocation component4()
@@ -3612,13 +3615,14 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public final boolean component7()
   public final boolean component8()
   public final boolean component9()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy, int)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.PortAllocation getDebugPortAllocation()
   @org.jetbrains.annotations.NotNull public final java.nio.file.Path getDriverDirectory()
   @org.jetbrains.annotations.NotNull public final List getExtraCordappPackagesToScan()
   public final boolean getInitialiseSerialization()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.JmxPolicy getJmxPolicy()
+  public final int getMaxTransactionSize()
   @org.jetbrains.annotations.NotNull public final List getNotarySpecs()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.PortAllocation getPortAllocation()
   public final boolean getStartNodesInProcess()
@@ -3892,7 +3896,7 @@ public final class net.corda.testing.node.MockKeyManagementService extends net.c
 public class net.corda.testing.node.MockNetwork extends java.lang.Object
   public <init>(List)
   public <init>(List, net.corda.testing.node.MockNetworkParameters)
-  public <init>(List, net.corda.testing.node.MockNetworkParameters, boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, kotlin.jvm.functions.Function1, boolean, List)
+  public <init>(List, net.corda.testing.node.MockNetworkParameters, boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, kotlin.jvm.functions.Function1, boolean, List, int)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork$MockNode addressToNode(net.corda.core.messaging.MessageRecipients)
   @org.jetbrains.annotations.NotNull public final java.nio.file.Path baseDirectory(int)
   @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode createNode(net.corda.testing.node.MockNodeParameters)

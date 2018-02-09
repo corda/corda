@@ -19,6 +19,7 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
@@ -42,16 +43,15 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.core.setGlobalSerialization
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
@@ -133,7 +133,8 @@ open class MockNetwork(private val cordappPackages: List<String>,
                        servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                        private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                       private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs) {
+                       private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
+                       maxTransactionSize: Int = Int.MAX_VALUE) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
@@ -228,7 +229,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
             filesystem.getPath("/nodes").createDirectory()
             val notaryInfos = generateNotaryIdentities()
             // The network parameters must be serialised before starting any of the nodes
-            networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+            networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos, maxTransactionSize = maxTransactionSize))
             @Suppress("LeakingThis")
             notaryNodes = createNotaries()
         } catch (t: Throwable) {
