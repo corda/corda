@@ -8,6 +8,7 @@ import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
@@ -77,7 +78,7 @@ class CryptoUtilsTest {
 
         // test for empty data signing
         try {
-            Crypto.doSign(privKey, ByteArray(0))
+            Crypto.doSign(privKey, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -85,7 +86,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -93,7 +94,7 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, EMPTY_BYTE_ARRAY, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -132,7 +133,7 @@ class CryptoUtilsTest {
 
         // test for empty data signing
         try {
-            Crypto.doSign(privKey, ByteArray(0))
+            Crypto.doSign(privKey, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -140,7 +141,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -148,7 +149,7 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, EMPTY_BYTE_ARRAY, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -187,7 +188,7 @@ class CryptoUtilsTest {
 
         // test for empty data signing
         try {
-            Crypto.doSign(privKey, ByteArray(0))
+            Crypto.doSign(privKey, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -195,7 +196,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -203,7 +204,7 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, EMPTY_BYTE_ARRAY, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -242,7 +243,7 @@ class CryptoUtilsTest {
 
         // test for empty data signing
         try {
-            Crypto.doSign(privKey, ByteArray(0))
+            Crypto.doSign(privKey, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -250,7 +251,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -258,7 +259,7 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, EMPTY_BYTE_ARRAY, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -297,7 +298,7 @@ class CryptoUtilsTest {
 
         // test for empty data signing
         try {
-            Crypto.doSign(privKey, ByteArray(0))
+            Crypto.doSign(privKey, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -305,7 +306,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, EMPTY_BYTE_ARRAY)
             fail()
         } catch (e: Exception) {
             // expected
@@ -313,7 +314,7 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, EMPTY_BYTE_ARRAY, testBytes)
             fail()
         } catch (e: Exception) {
             // expected

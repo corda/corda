@@ -13,8 +13,6 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 class OpaqueBytesSubSequenceSerializer(factory: SerializerFactory) :
         CustomSerializer.Proxy<OpaqueBytesSubSequence, OpaqueBytes>(OpaqueBytesSubSequence::class.java, OpaqueBytes::class.java, factory) {
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
-
-    override fun toProxy(obj: OpaqueBytesSubSequence): OpaqueBytes = OpaqueBytes(obj.copy().bytes)
-
+    override fun toProxy(obj: OpaqueBytesSubSequence): OpaqueBytes = OpaqueBytes(obj.copyBytes())
     override fun fromProxy(proxy: OpaqueBytes): OpaqueBytesSubSequence = OpaqueBytesSubSequence(proxy.bytes, proxy.offset, proxy.size)
 }

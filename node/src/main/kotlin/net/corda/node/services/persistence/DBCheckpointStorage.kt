@@ -5,6 +5,7 @@ import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -24,13 +25,13 @@ class DBCheckpointStorage : CheckpointStorage {
 
             @Lob
             @Column(name = "checkpoint_value")
-            var checkpoint: ByteArray = ByteArray(0)
+            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     override fun addCheckpoint(checkpoint: Checkpoint) {
         currentDBSession().save(DBCheckpoint().apply {
             checkpointId = checkpoint.id.toString()
-            this.checkpoint = checkpoint.serializedFiber.bytes
+            this.checkpoint = checkpoint.serializedFiber.bytes // XXX: Is copying the byte array necessary?
         })
     }
 

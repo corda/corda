@@ -16,6 +16,7 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -73,7 +74,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
             @Lob
             @Column(name = "identity_value")
-            var identity: ByteArray = ByteArray(0)
+            var identity: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     @Entity

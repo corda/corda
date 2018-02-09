@@ -98,9 +98,7 @@ abstract class SerializationFactory {
         val currentFactory: SerializationFactory? get() = _currentFactory.get()
     }
 }
-
-typealias VersionHeader = ByteSequence
-
+typealias SerializationMagic = ByteSequence
 /**
  * Parameters to serialization and deserialization.
  */
@@ -108,7 +106,7 @@ interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
-    val preferredSerializationVersion: VersionHeader
+    val preferredSerializationVersion: SerializationMagic
     /**
      * The class loader to use for deserialization.
      */
@@ -161,7 +159,7 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.
      */
-    fun withPreferredSerializationVersion(versionHeader: VersionHeader): SerializationContext
+    fun withPreferredSerializationVersion(magic: SerializationMagic): SerializationContext
 
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
@@ -225,6 +223,7 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
+@Suppress("unused")
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }

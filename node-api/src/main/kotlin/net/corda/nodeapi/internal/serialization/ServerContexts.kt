@@ -5,8 +5,8 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 
 object QuasarWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true
@@ -22,29 +22,25 @@ object QuasarWhitelist : ClassWhitelist {
  * MUST be kept separate!
  */
 
-val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
+val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(kryoMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.UseCase.RPCServer)
-
-val KRYO_STORAGE_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
+val KRYO_STORAGE_CONTEXT = SerializationContextImpl(kryoMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
         true,
         SerializationContext.UseCase.Storage)
-
-
-val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+val AMQP_STORAGE_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
         true,
         SerializationContext.UseCase.Storage)
-
-val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),

@@ -4,6 +4,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.*
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
@@ -12,7 +13,7 @@ import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
+val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     require(types.toSet().size == types.size) {
@@ -106,7 +107,7 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
         return SerializationOutput(serializerFactory).serialize(obj)
     }
 
-    protected fun canDeserializeVersion(byteSequence: ByteSequence): Boolean = byteSequence == AmqpHeaderV1_0
+    protected fun canDeserializeVersion(magic: CordaSerializationMagic) = magic == amqpMagic
 }
 
 // TODO: This will eventually cover server RPC as well and move to node module, but for now this is not implemented
@@ -119,9 +120,9 @@ class AMQPServerSerializationScheme(cordapps: List<Cordapp> = emptyList()) : Abs
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-        return (canDeserializeVersion(byteSequence) &&
-                (target == SerializationContext.UseCase.P2P || target == SerializationContext.UseCase.Storage))
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+        return canDeserializeVersion(magic) &&
+                (target == SerializationContext.UseCase.P2P || target == SerializationContext.UseCase.Storage)
     }
 
 }
@@ -136,9 +137,9 @@ class AMQPClientSerializationScheme(cordapps: List<Cordapp> = emptyList()) : Abs
         throw UnsupportedOperationException()
     }
 
-    override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-        return (canDeserializeVersion(byteSequence) &&
-                (target == SerializationContext.UseCase.P2P || target == SerializationContext.UseCase.Storage))
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+        return canDeserializeVersion(magic) &&
+                (target == SerializationContext.UseCase.P2P || target == SerializationContext.UseCase.Storage)
     }
 
 }
