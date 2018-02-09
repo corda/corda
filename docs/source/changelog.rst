@@ -75,6 +75,9 @@ UNRELEASED
    * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
      was needed to allow changes to the schema.
 
+   * Introduced max transaction size limit on transactions. The max transaction size parameter is set by the compatibility zone
+     operator. The parameter is distributed to Corda nodes by network map service as part of the ``NetworkParameters``.
+
 * Support for external user credentials data source and password encryption [CORDA-827].
 
 * Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using

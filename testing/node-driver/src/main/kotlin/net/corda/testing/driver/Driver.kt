@@ -165,6 +165,7 @@ fun <A> driver(
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = defaultParameters.jmxPolicy,
+        maxTransactionSize: Int = defaultParameters.maxTransactionSize,
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -180,7 +181,8 @@ fun <A> driver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = null
+                    compatibilityZone = null,
+                    maxTransactionSize = maxTransactionSize
             ),
             coerce = { it },
             dsl = dsl,
@@ -216,7 +218,8 @@ data class DriverParameters(
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
-        val jmxPolicy: JmxPolicy = JmxPolicy()
+        val jmxPolicy: JmxPolicy = JmxPolicy(),
+        val maxTransactionSize: Int = Int.MAX_VALUE
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)

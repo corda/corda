@@ -1,6 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.AddressFormatException
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -23,10 +24,9 @@ class EncodingUtilsTest {
 
     @Test
     fun `empty encoding`() {
-        val emptyByteArray = ByteArray(0)
-        assertEquals("", emptyByteArray.toBase58())
-        assertEquals("", emptyByteArray.toBase64())
-        assertEquals("", emptyByteArray.toHex())
+        assertEquals("", EMPTY_BYTE_ARRAY.toBase58())
+        assertEquals("", EMPTY_BYTE_ARRAY.toBase64())
+        assertEquals("", EMPTY_BYTE_ARRAY.toHex())
     }
 
     @Test

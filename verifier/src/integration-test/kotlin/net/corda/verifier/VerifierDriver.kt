@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.fork
@@ -22,7 +23,11 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.testing.driver.*
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.driver.JmxPolicy
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.*
@@ -59,6 +64,7 @@ fun <A> verifierDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         jmxPolicy: JmxPolicy = JmxPolicy(),
+        maxTransactionSize: Int = Int.MAX_VALUE,
         dsl: VerifierDriverDSL.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -74,7 +80,8 @@ fun <A> verifierDriver(
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
                         jmxPolicy = jmxPolicy,
-                        compatibilityZone = null
+                        compatibilityZone = null,
+                        maxTransactionSize = maxTransactionSize
                 )
         ),
         coerce = { it },
@@ -160,6 +167,7 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
     fun startVerificationRequestor(name: CordaX500Name): CordaFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
+        GlobalProperties.networkParameters = testNetworkParameters(emptyList(), maxTransactionSize = driverDSL.maxTransactionSize)
         return driverDSL.executorService.fork {
             startVerificationRequestorInternal(name, hostAndPort)
         }
@@ -182,6 +190,7 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
         val securityManager = object : ActiveMQSecurityManager {
             // We don't need auth, SSL is good enough
             override fun validateUser(user: String?, password: String?) = true
+
             override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = true
         }
 

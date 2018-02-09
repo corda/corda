@@ -46,12 +46,14 @@ data class MockNetworkParameters(
         val threadPerNode: Boolean = false,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         val initialiseSerialization: Boolean = true,
-        val notarySpecs: List<MockNetworkNotarySpec> = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME))) {
+        val notarySpecs: List<MockNetworkNotarySpec> = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
+        val maxTransactionSize: Int = Int.MAX_VALUE) {
     fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
     fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setNotarySpecs(notarySpecs: List<MockNetworkNotarySpec>) = copy(notarySpecs = notarySpecs)
+    fun setMaxTransactionSize(maxTransactionSize: Int) = copy(maxTransactionSize = maxTransactionSize)
 }
 
 /** Represents a node configuration for injection via [MockNetworkParameters] **/
@@ -132,11 +134,12 @@ open class MockNetwork(
         val threadPerNode: Boolean = defaultParameters.threadPerNode,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
         val initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs) {
+        val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
+        val maxTransactionSize: Int = defaultParameters.maxTransactionSize) {
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
-    private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(cordappPackages, defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, initialiseSerialization, notarySpecs)
+    private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(cordappPackages, defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, initialiseSerialization, notarySpecs, maxTransactionSize)
     val defaultNotaryNode get() : StartedMockNode = StartedMockNode.create(internalMockNetwork.defaultNotaryNode)
     val defaultNotaryIdentity get() : Party = internalMockNetwork.defaultNotaryIdentity
     val notaryNodes get() : List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }

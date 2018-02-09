@@ -143,7 +143,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
-                maxTransactionSize = 40000,
+                maxTransactionSize = Int.MAX_VALUE,
                 epoch = 1
         ))
         notaryIdentity = identity
