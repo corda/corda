@@ -12,6 +12,7 @@ class ScenarioHooks(private val state: ScenarioState) {
 
     @After
     fun afterScenario() {
+        state.stopNetwork()
     }
 
 }

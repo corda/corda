@@ -1,6 +1,6 @@
 buildscript {
-    ext.kotlin_version = '1.2.21'
     ext.commonsio_version = '2.6'
+    ext.commonslogging_version = '1.2'
     ext.cucumber_version = '1.2.5'
     ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
     ext.docker_client_version = '8.11.0'
@@ -48,7 +48,7 @@ dependencies {
 
     // Library
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     compile("com.github.corda.crash:crash.shell:$crash_version") {
@@ -61,23 +61,30 @@ dependencies {
         exclude group: "org.bouncycastle"
     }
 
+    compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+
+    compile "commons-io:commons-io:$commonsio_version"
+    compile "commons-logging:commons-logging:$commonslogging_version"
     compile "com.spotify:docker-client:$docker_client_version"
+    compile "io.reactivex:rxjava:$rxjava_version"
+
+    compile project(':finance')
+    compile project(':node-api')
+    compile project(':client:rpc')
 
     // Unit Tests
 
     testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
 
     // Scenarios / End-to-End Tests
 
     scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
-    scenarioCompile "org.assertj:assertj-core:$assertj_version"
-    scenarioCompile "org.slf4j:log4j-over-slf4j:$slf4j_version"
-    scenarioCompile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    scenarioCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    scenarioCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
-    scenarioCompile "commons-io:commons-io:$commonsio_version"
 
 }
 
@@ -103,5 +110,5 @@ task scenarios(type: Test) {
     outputs.upToDateWhen { false }
 }
 
-scenarios.mustRunAfter test
-scenarios.dependsOn test
+//scenarios.mustRunAfter test
+//scenarios.dependsOn test
