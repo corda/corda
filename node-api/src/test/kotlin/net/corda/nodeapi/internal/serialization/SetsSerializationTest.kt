@@ -4,10 +4,10 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.services.statemachine.SessionData
+import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.internal.kryoSpecific
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -32,19 +32,19 @@ class SetsSerializationTest {
     }
 
     @Test
-    fun `check set can be serialized as part of SessionData`() {
+    fun `check set can be serialized as part of DataSessionMessage`() {
         run {
-            val sessionData = SessionData(123, setOf(1).serialize())
+            val sessionData = DataSessionMessage(setOf(1).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(setOf(1), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, setOf(1, 2).serialize())
+            val sessionData = DataSessionMessage(setOf(1, 2).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(setOf(1, 2), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, emptySet<Int>().serialize())
+            val sessionData = DataSessionMessage(emptySet<Int>().serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(emptySet<Int>(), sessionData.payload.deserialize())
         }

@@ -17,17 +17,27 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class FlowSessionInternal(
         val flow: FlowLogic<*>,
         val flowSession : FlowSession,
-        val ourSessionId: Long,
+        val ourSessionId: SessionId,
         val initiatingParty: Party?,
         var state: FlowSessionState,
         var retryable: Boolean = false) {
-    val receivedMessages = ConcurrentLinkedQueue<ReceivedSessionMessage<*>>()
+    val receivedMessages = ConcurrentLinkedQueue<ReceivedSessionMessage>()
     val fiber: FlowStateMachineImpl<*> get() = flow.stateMachine as FlowStateMachineImpl<*>
 
     override fun toString(): String {
         return "${javaClass.simpleName}(flow=$flow, ourSessionId=$ourSessionId, initiatingParty=$initiatingParty, state=$state)"
     }
+
+    fun getPeerSessionId(): SessionId {
+        val sessionState = state
+        return when (sessionState) {
+            is FlowSessionState.Initiated -> sessionState.peerSessionId
+            else -> throw IllegalStateException("We've somehow held onto a non-initiated session: $this")
+        }
+    }
 }
+
+data class ReceivedSessionMessage(val peerParty: Party, val message: ExistingSessionMessage)
 
 /**
  * [FlowSessionState] describes the session's state.
@@ -50,7 +60,7 @@ sealed class FlowSessionState {
         override val sendToParty: Party get() = otherParty
     }
 
-    data class Initiated(val peerParty: Party, val peerSessionId: Long, val context: FlowInfo) : FlowSessionState() {
+    data class Initiated(val peerParty: Party, val peerSessionId: SessionId, val context: FlowInfo) : FlowSessionState() {
         override val sendToParty: Party get() = peerParty
     }
 }
