@@ -96,7 +96,6 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
 
     private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {
         val className = clazz.canonicalName
-        handle.rpc
         return ProcessUtilities.startJavaProcessImpl(
                 className = className, // cannot directly get class for this, so just use string
                 jdwpPort = debugPort,
