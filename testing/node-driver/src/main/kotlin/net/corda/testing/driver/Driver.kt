@@ -47,7 +47,6 @@ interface NodeHandle : AutoCloseable {
     val rpcAddress: NetworkHostAndPort
     val rpcUsers: List<User>
     val baseDirectory: Path
-    val useHTTPS: Boolean
     /**
      * Stops the referenced node.
      */

@@ -18,6 +18,7 @@ import java.nio.file.Path
 
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
+    val useHTTPS: Boolean
 }
 
 data class OutOfProcessImpl(

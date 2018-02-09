@@ -45,6 +45,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -356,7 +357,7 @@ class DriverDSLImpl(
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
-        val protocol = if (handle.useHTTPS) "https://" else "http://"
+        val protocol = if ((handle as NodeHandleInternal).useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 

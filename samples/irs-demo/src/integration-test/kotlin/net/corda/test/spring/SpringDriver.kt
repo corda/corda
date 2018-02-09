@@ -7,6 +7,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.WebserverHandle
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.*
 import okhttp3.OkHttpClient
@@ -71,7 +72,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process, checkUrl: String): WebserverHandle {
-        val protocol = if (handle.useHTTPS) "https://" else "http://"
+        val protocol = if ((handle as NodeHandleInternal).useHTTPS) "https://" else "http://"
         val url = URL(URL("$protocol${handle.webAddress}"), checkUrl)
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).build()
 
