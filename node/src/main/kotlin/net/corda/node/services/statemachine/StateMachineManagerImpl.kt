@@ -341,7 +341,7 @@ class StateMachineManagerImpl(
         logger.trace { "Received $sessionInit from $sender" }
         val senderSessionId = sessionInit.initiatorSessionId
 
-        fun sendSessionReject(message: String) = sendSessionMessage(sender, ExistingSessionMessage(senderSessionId, RejectSessionMessage(message, random63BitValue())))
+        fun sendSessionReject(message: String) = sendSessionMessage(sender, ExistingSessionMessage(senderSessionId, RejectSessionMessage(message, errorId = sessionInit.initiatorSessionId.toLong)))
 
         val (session, initiatedFlowFactory) = try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionInit)
