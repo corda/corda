@@ -166,6 +166,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         var bridgeSession: ClientSession? = null
         var bridgeNotifyConsumer: ClientConsumer? = null
         var networkChangeSubscription: Subscription? = null
+
+        fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
 
     private val messagesToRedeliver = database.transaction {
@@ -236,7 +238,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
             // size of 1MB is acknowledged.
-            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, false, false, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
+            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
             producerSession = createNewSession()
             bridgeSession = createNewSession()
@@ -353,7 +355,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
     private fun resumeMessageRedelivery() {
         messagesToRedeliver.forEach { retryId, (message, target) ->
-            sendInternal(message, target, retryId, null, false)
+            sendInternal(message, target, retryId, null)
         }
     }
 
@@ -523,7 +525,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
        sendInternal(message, target, retryId, acknowledgementHandler)
     }
 
-    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, acknowledgementHandler: (() -> Unit)?, commitSession: Boolean = true) {
+    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, acknowledgementHandler: (() -> Unit)?) {
         // We have to perform sending on a different thread pool, since using the same pool for messaging and
         // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
         messagingExecutor.fetchFrom {
@@ -548,7 +550,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     "Send to: $mqAddress topic: ${message.topicSession.topic} " +
                             "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}"
                 }
-                sendMessage(mqAddress, artemisMessage, commitSession)
+                sendMessage(mqAddress, artemisMessage)
                 retryId?.let {
                     database.transaction {
                         messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
@@ -669,14 +671,6 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         return when (partyInfo) {
             is PartyInfo.SingleNode -> NodeAddress(partyInfo.party.owningKey, partyInfo.addresses.single())
             is PartyInfo.DistributedNode -> ServiceAddress(partyInfo.party.owningKey)
-        }
-    }
-
-    private fun InnerState.sendMessage(address: String, message: ClientMessage, commitSession: Boolean = true) {
-
-        producer!!.send(address, message)
-        if (commitSession) {
-            producerSession!!.commit()
         }
     }
 }
