@@ -41,7 +41,7 @@ class AbstractNodeTests {
     }
 
     @Test
-    fun `H2 fix is applied parallel`() {
+    fun `H2 fix is applied`() {
 
         val pool = Executors.newFixedThreadPool(10)
 
@@ -61,16 +61,6 @@ class AbstractNodeTests {
         // a) we expect to run all the runs, that's how the test passes
         // b) it would require relatively complex handling (futures+threads), which is not worth it
         //    because of a)
-    }
-
-    @Test
-    fun `H2 fix is applied`() {
-        repeat(if (relaxedThoroughness) 1 else 100) {
-            // Two "nodes" seems to be the magic number to reproduce the problem:
-            val urls = (0 until 2).map { freshURL() }
-            // Haven't been able to reproduce in a warm JVM:
-            assertEquals(0, startJavaProcess<ColdJVM>(urls).waitFor())
-        }
     }
 }
 
