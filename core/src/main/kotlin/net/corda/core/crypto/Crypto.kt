@@ -55,7 +55,7 @@ import javax.crypto.spec.SecretKeySpec
  * However, only the schemes returned by {@link #listSupportedSignatureSchemes()} are supported.
  * Note that Corda currently supports the following signature schemes by their code names:
  * <p><ul>
- * <li>RSA_SHA256 (RSA using SHA256 as hash algorithm and MGF1 (with SHA256) as mask generation function).
+ * <li>RSA_SHA256 (RSA PKCS#1 using SHA256 as hash algorithm).
  * <li>ECDSA_SECP256K1_SHA256 (ECDSA using the secp256k1 Koblitz curve and SHA256 as hash algorithm).
  * <li>ECDSA_SECP256R1_SHA256 (ECDSA using the secp256r1 (NIST P-256) curve and SHA256 as hash algorithm).
  * <li>EDDSA_ED25519_SHA512 (EdDSA using the ed255519 twisted Edwards curve and SHA512 as hash algorithm).
@@ -64,7 +64,8 @@ import javax.crypto.spec.SecretKeySpec
  */
 object Crypto {
     /**
-     * RSA signature scheme using SHA256 for message hashing.
+     * RSA PKCS#1 signature scheme using SHA256 for message hashing.
+     * The actual algorithm id is 1.2.840.113549.1.1.1
      * Note: Recommended key size >= 3072 bits.
      */
     @JvmField
@@ -75,7 +76,7 @@ object Crypto {
             listOf(AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null)),
             BouncyCastleProvider.PROVIDER_NAME,
             "RSA",
-            "SHA256WITHRSAEncryption",
+            "SHA256WITHRSA",
             null,
             3072,
             "RSA_SHA256 signature scheme using SHA256 as hash algorithm."
@@ -547,7 +548,7 @@ object Crypto {
     /**
      * Utility to simplify the act of verifying a [TransactionSignature].
      * It returns true if it succeeds, but it always throws an exception if verification fails.
-     * @param txId transaction's id (Merkle root).
+     * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @return true if verification passes or throw exception if verification fails.
      * @throws InvalidKeyException if the key is invalid.
@@ -559,7 +560,7 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
@@ -569,7 +570,7 @@ object Crypto {
      * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
      * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
      * as it avoids the risk of failing to test the result.
-     * @param txId transaction's id (Merkle root).
+     * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -578,7 +579,7 @@ object Crypto {
     @JvmStatic
     @Throws(SignatureException::class)
     fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return isValid(
                 findSignatureScheme(transactionSignature.by),
                 transactionSignature.by,
@@ -1011,4 +1012,21 @@ object Crypto {
             else -> decodePrivateKey(key.encoded)
         }
     }
+
+    /**
+     *  Get the hash value that is actually signed.
+     *  The txId is returned when [partialMerkleTree] is null,
+     *  else the root of the tree is computed and returned.
+     *  Note that the hash of the txId should be a leaf in the tree, not the txId itself.
+     */
+    private fun originalSignedHash(txId: SecureHash, partialMerkleTree: PartialMerkleTree?): SecureHash {
+        return if (partialMerkleTree != null) {
+            val usedHashes = mutableListOf<SecureHash>()
+            val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)
+            require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
+            root
+        } else {
+            txId
+        }
+     }
 }
