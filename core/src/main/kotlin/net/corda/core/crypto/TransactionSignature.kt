@@ -26,7 +26,6 @@ class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMet
      * Function to verify a [SignableData] object's signature.
      * Note that [SignableData] contains the id of the transaction and extra metadata, such as DLT's platform version.
      * A non-null [partialMerkleTree] implies multi-transaction signing and the signature is over the root of this tree.
-     *
      * @param txId transaction's id (Merkle root), which along with [signatureMetadata] will be used to construct the [SignableData] object to be signed.
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
