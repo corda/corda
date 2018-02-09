@@ -3,10 +3,12 @@ package net.corda.behave.network
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.seconds
+import org.junit.Ignore
 import org.junit.Test
 
 class NetworkTests {
 
+    @Ignore
     @Test
     fun `network of two nodes can be spun up`() {
         val network = Network
@@ -21,6 +23,7 @@ class NetworkTests {
         }
     }
 
+    @Ignore
     @Test
     fun `network of three nodes and mixed databases can be spun up`() {
         val network = Network
