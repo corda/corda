@@ -1,9 +1,9 @@
 package net.corda.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -14,7 +14,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.send
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.driver.DriverDSL
@@ -27,6 +29,7 @@ import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest {
@@ -50,19 +53,12 @@ class P2PMessagingTest {
                 alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
 
-            val dummyTopic = "dummy.topic"
             val responseMessage = "response"
 
-            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, dummyTopic, responseMessage)
+            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, responseMessage)
 
             // Send a single request with retry
-            val responseFuture = with(alice.network) {
-                val request = TestRequest(replyTo = myAddress)
-                val responseFuture = onNext<Any>(dummyTopic, request.sessionID)
-                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
-                send(msg, serviceAddress, retryId = request.sessionID)
-                responseFuture
-            }
+            val responseFuture = alice.receiveFrom(serviceAddress, retryId = 0)
             crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
             // The request wasn't successful.
             assertThat(responseFuture.isDone).isFalse()
@@ -83,19 +79,12 @@ class P2PMessagingTest {
                 alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
 
-            val dummyTopic = "dummy.topic"
             val responseMessage = "response"
 
-            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, dummyTopic, responseMessage)
-
-            val sessionId = random63BitValue()
+            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, responseMessage)
 
             // Send a single request with retry
-            with(alice.network) {
-                val request = TestRequest(sessionId, myAddress)
-                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
-                send(msg, serviceAddress, retryId = request.sessionID)
-            }
+            alice.receiveFrom(serviceAddress, retryId = 0)
 
             // Wait until the first request is received
             crashingNodes.firstRequestReceived.await()
@@ -108,7 +97,13 @@ class P2PMessagingTest {
 
             // Restart the node and expect a response
             val aliceRestarted = startAlice()
-            val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow()
+
+            val responseFuture = openFuture<Any>()
+            aliceRestarted.network.runOnNextMessage("test.response") {
+                responseFuture.set(it.data.deserialize())
+            }
+            val response = responseFuture.getOrThrow()
+
             assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
             assertThat(response).isEqualTo(responseMessage)
         }
@@ -133,11 +128,12 @@ class P2PMessagingTest {
     )
 
     /**
-     * Sets up the [distributedServiceNodes] to respond to [dummyTopic] requests. All nodes will receive requests and
-     * either ignore them or respond, depending on the value of [CrashingNodes.ignoreRequests], initially set to true.
-     * This may be used to simulate scenarios where nodes receive request messages but crash before sending back a response.
+     * Sets up the [distributedServiceNodes] to respond to "test.request" requests. All nodes will receive requests and
+     * either ignore them or respond to "test.response", depending on the value of [CrashingNodes.ignoreRequests],
+     * initially set to true. This may be used to simulate scenarios where nodes receive request messages but crash
+     * before sending back a response.
      */
-    private fun simulateCrashingNodes(distributedServiceNodes: List<StartedNode<*>>, dummyTopic: String, responseMessage: String): CrashingNodes {
+    private fun simulateCrashingNodes(distributedServiceNodes: List<StartedNode<*>>, responseMessage: String): CrashingNodes {
         val crashingNodes = CrashingNodes(
                 requestsReceived = AtomicInteger(0),
                 firstRequestReceived = CountDownLatch(1),
@@ -146,7 +142,7 @@ class P2PMessagingTest {
 
         distributedServiceNodes.forEach {
             val nodeName = it.info.chooseIdentity().name
-            it.network.addMessageHandler(dummyTopic) { netMessage, _ ->
+            it.network.addMessageHandler("test.request") { netMessage, _ ->
                 crashingNodes.requestsReceived.incrementAndGet()
                 crashingNodes.firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -158,7 +154,7 @@ class P2PMessagingTest {
                 } else {
                     println("sending response")
                     val request = netMessage.data.deserialize<TestRequest>()
-                    val response = it.network.createMessage(dummyTopic, request.sessionID, responseMessage.serialize().bytes)
+                    val response = it.network.createMessage("test.response", responseMessage.serialize().bytes)
                     it.network.send(response, request.replyTo)
                 }
             }
@@ -188,19 +184,39 @@ class P2PMessagingTest {
     }
 
     private fun StartedNode<*>.respondWith(message: Any) {
-        network.addMessageHandler(javaClass.name) { netMessage, _ ->
+        network.addMessageHandler("test.request") { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = network.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
+            val response = network.createMessage("test.response", message.serialize().bytes)
             network.send(response, request.replyTo)
         }
     }
 
-    private fun StartedNode<*>.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
-        val request = TestRequest(replyTo = network.myAddress)
-        return network.sendRequest(javaClass.name, request, target)
+    private fun StartedNode<*>.receiveFrom(target: MessageRecipients, retryId: Long? = null): CordaFuture<Any> {
+        val response = openFuture<Any>()
+        network.runOnNextMessage("test.response") { netMessage ->
+            response.set(netMessage.data.deserialize())
+        }
+        network.send("test.request", TestRequest(replyTo = network.myAddress), target, retryId = retryId)
+        return response
+    }
+
+    /**
+     * Registers a handler for the given topic and session that runs the given callback with the message and then removes
+     * itself. This is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback
+     * doesn't take the registration object, unlike the callback to [MessagingService.addMessageHandler].
+     *
+     * @param topic identifier for the topic and session to listen for messages arriving on.
+     */
+    inline fun MessagingService.runOnNextMessage(topic: String, crossinline callback: (ReceivedMessage) -> Unit) {
+        val consumed = AtomicBoolean()
+        addMessageHandler(topic) { msg, reg ->
+            removeMessageHandler(reg)
+            check(!consumed.getAndSet(true)) { "Called more than once" }
+            check(msg.topic == topic) { "Topic/session mismatch: ${msg.topic} vs $topic" }
+            callback(msg)
+        }
     }
 
     @CordaSerializable
-    private data class TestRequest(override val sessionID: Long = random63BitValue(),
-                                   override val replyTo: SingleMessageRecipient) : ServiceRequestMessage
+    private data class TestRequest(val replyTo: SingleMessageRecipient)
 }

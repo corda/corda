@@ -126,7 +126,7 @@ class ArtemisMessagingTest {
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
-        assertEquals("first msg", String(actual.data))
+        assertEquals("first msg", String(actual.data.bytes))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 

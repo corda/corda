@@ -72,6 +72,7 @@
       <module name="irs-demo-web_test" target="1.8" />
       <module name="irs-demo_integrationTest" target="1.8" />
       <module name="irs-demo_main" target="1.8" />
+      <module name="irs-demo_systemTest" target="1.8" />
       <module name="irs-demo_test" target="1.8" />
       <module name="isolated_main" target="1.8" />
       <module name="isolated_test" target="1.8" />
