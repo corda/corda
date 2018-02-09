@@ -275,11 +275,11 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
-        services.nodeProperties.setFlowsDrainingModeEnabled(enabled)
+        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
     }
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
-        return services.nodeProperties.isFlowsDrainingModeEnabled()
+        return services.nodeProperties.flowsDrainingMode.isEnabled()
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

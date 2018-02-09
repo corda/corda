@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.events.bus.InMemoryEventBus
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
@@ -27,6 +26,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import rx.subjects.PublishSubject
 import java.net.ServerSocket
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -174,7 +174,7 @@ class ArtemisMessagingTest {
                     networkMapCache,
                     maxMessageSize = maxMessageSize,
                     isDrainingModeOn = { false },
-                    events = { InMemoryEventBus().events }).apply {
+                    drainingModeWasChangedEvents = PublishSubject.create<Boolean>()).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

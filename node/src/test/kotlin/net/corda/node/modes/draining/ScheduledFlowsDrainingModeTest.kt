@@ -72,7 +72,7 @@ class ScheduledFlowsDrainingModeTest {
         val latch = CountDownLatch(1)
         var shouldFail = true
 
-        aliceNode.services.nodeProperties.setFlowsDrainingModeEnabled(true)
+        aliceNode.services.nodeProperties.flowsDrainingMode.setEnabled(true)
         val scheduledStates = aliceNode.services
                 .vaultService
                 .updates
@@ -84,7 +84,7 @@ class ScheduledFlowsDrainingModeTest {
             executor!!.schedule({
                 logger.info("Disabling flows draining mode")
                 shouldFail = false
-                aliceNode.services.nodeProperties.setFlowsDrainingModeEnabled(false)
+                aliceNode.services.nodeProperties.flowsDrainingMode.setEnabled(false)
             }, 5, TimeUnit.SECONDS)
         }.subscribe()
 

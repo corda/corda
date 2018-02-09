@@ -41,8 +41,11 @@ class NodeSchedulerServiceTest {
     private val flowStarter = rigorousMock<FlowStarter>().also {
         doReturn(openFuture<FlowStateMachine<*>>()).whenever(it).startFlow(any<FlowLogic<*>>(), any())
     }
+    private val flowsDraingMode = rigorousMock<NodePropertiesStore.FlowsDrainingModeOperations>().also {
+        doReturn(false).whenever(it).isEnabled()
+    }
     private val nodeProperties = rigorousMock<NodePropertiesStore>().also {
-        doReturn(false).whenever(it).isFlowsDrainingModeEnabled()
+        doReturn(flowsDraingMode).whenever(it).flowsDrainingMode
     }
     private val transactionStates = mutableMapOf<StateRef, TransactionState<*>>()
     private val stateLoader = rigorousMock<StateLoader>().also {

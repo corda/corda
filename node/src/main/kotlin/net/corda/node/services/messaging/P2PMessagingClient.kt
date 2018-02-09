@@ -14,10 +14,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.sequence
+import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
-import net.corda.node.events.Event
-import net.corda.node.events.FlowsDrainingModeSetEvent
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
@@ -94,7 +95,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                          advertisedAddress: NetworkHostAndPort = serverAddress,
                          private val maxMessageSize: Int,
                          private val isDrainingModeOn: () -> Boolean,
-                         private val events: () -> Observable<Event>
+                         private val drainingModeWasChangedEvents: Observable<Boolean>
 ) : SingletonSerializeAsToken(), MessagingService {
     companion object {
         private val log = contextLogger()
@@ -368,10 +369,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                 if (p2pConsumer == null) {
                     return
                 }
-                eventsSubscription = events()
-                        .filterIsInstance<FlowsDrainingModeSetEvent>()
-                        .doOnError { error -> throw error }
-                        .filter { event -> event.value == false }
+                eventsSubscription = drainingModeWasChangedEvents.filter { value -> value == false }
                         .doOnNext { _ ->
                             p2pConsumer?.reconnect()
                         }

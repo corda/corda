@@ -290,7 +290,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                 } else {
                     val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
                     scheduledFlow = when {
-                        nodeProperties.isFlowsDrainingModeEnabled() -> {
+                        nodeProperties.flowsDrainingMode.isEnabled() -> {
                             log.warn("Ignoring scheduled flow start because of draining mode. FlowLogic: $flowLogic.")
                             awaitWithDeadline(clock, Instant.now() + drainingModePollPeriod)
                             null

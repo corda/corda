@@ -1,7 +1,17 @@
 package net.corda.node.services.api
 
-interface NodePropertiesStore {
-    fun setFlowsDrainingModeEnabled(enabled: Boolean)
+import rx.Observable
 
-    fun isFlowsDrainingModeEnabled(): Boolean
+interface NodePropertiesStore {
+
+    val flowsDrainingMode: FlowsDrainingModeOperations
+
+    interface FlowsDrainingModeOperations {
+
+        fun setEnabled(enabled: Boolean)
+
+        fun isEnabled(): Boolean
+
+        val values: Observable<Boolean>
+    }
 }

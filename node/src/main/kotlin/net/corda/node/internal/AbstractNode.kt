@@ -27,8 +27,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
-import net.corda.node.events.bus.EventBus
-import net.corda.node.events.bus.InMemoryEventBus
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -199,7 +197,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         log.info("Node starting up ...")
-        val eventBus: EventBus = InMemoryEventBus()
         initCertificate()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
@@ -212,8 +209,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val (keyPairs, info) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
-            val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, eventBus::publish)
-            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache, nodeProperties, eventBus)
+            val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
+            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, database, info, identityService, networkMapCache, nodeProperties)
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
@@ -542,8 +539,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              info: NodeInfo,
                              identityService: IdentityServiceInternal,
                              networkMapCache: NetworkMapCacheInternal,
-                             nodeProperties: NodePropertiesStore,
-                             eventBus: EventBus): MutableList<Any> {
+                             nodeProperties: NodePropertiesStore): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
@@ -560,7 +556,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 info,
                 networkMapCache,
                 nodeProperties)
-        network = makeMessagingService(database, info, { nodeProperties.isFlowsDrainingModeEnabled() }, eventBus)
+        network = makeMessagingService(database, info, nodeProperties)
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
@@ -717,7 +713,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         _started = null
     }
 
-    protected abstract fun makeMessagingService(database: CordaPersistence, info: NodeInfo, isDrainingModeOn: () -> Boolean, eventBus: EventBus): MessagingService
+    protected abstract fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore): MessagingService
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
     private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
