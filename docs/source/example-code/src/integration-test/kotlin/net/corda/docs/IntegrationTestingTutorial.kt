@@ -1,5 +1,6 @@
 package net.corda.docs
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -45,10 +46,10 @@ class IntegrationTestingTutorial {
             // END 1
 
             // START 2
-            val aliceClient = alice.rpcClientToNode()
+            val aliceClient = CordaRPCClient(alice.rpcAddress)
             val aliceProxy = aliceClient.start("aliceUser", "testPassword1").proxy
 
-            val bobClient = bob.rpcClientToNode()
+            val bobClient = CordaRPCClient(bob.rpcAddress)
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
             // END 2
 

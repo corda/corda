@@ -2,7 +2,6 @@
 
 package net.corda.testing.driver
 
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -16,7 +15,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
@@ -44,21 +42,18 @@ interface NodeHandle : AutoCloseable {
      * will be added and that will be used.
      */
     val rpc: CordaRPCOps
-    val configuration: NodeConfiguration
+    val p2pAddress: NetworkHostAndPort
     val webAddress: NetworkHostAndPort
+    val rpcAddress: NetworkHostAndPort
+    val rpcUsers: List<User>
+    val baseDirectory: Path
     val useHTTPS: Boolean
     /**
      * Stops the referenced node.
      */
     fun stop()
-
-    /**
-     * Connects to node through RPC.
-     *
-     * @param sslConfiguration specifies SSL options.
-     */
-    fun rpcClientToNode(sslConfiguration: SSLConfiguration? = null): CordaRPCClient
 }
+
 
 @DoNotImplement
 interface OutOfProcess : NodeHandle {
@@ -73,54 +68,6 @@ interface InProcess : NodeHandle {
      * Register a flow that is initiated by another flow
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
-}
-
-internal data class OutOfProcessImpl(
-        override val nodeInfo: NodeInfo,
-        override val rpc: CordaRPCOps,
-        override val configuration: NodeConfiguration,
-        override val webAddress: NetworkHostAndPort,
-        override val useHTTPS: Boolean,
-        val debugPort: Int?,
-        override val process: Process,
-        private val onStopCallback: () -> Unit
-) : OutOfProcess {
-    override fun stop() {
-        with(process) {
-            destroy()
-            waitFor()
-        }
-        onStopCallback()
-    }
-
-    override fun close() = stop()
-    override fun rpcClientToNode(sslConfiguration: SSLConfiguration?): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
-}
-
-internal data class InProcessImpl(
-        override val nodeInfo: NodeInfo,
-        override val rpc: CordaRPCOps,
-        override val configuration: NodeConfiguration,
-        override val webAddress: NetworkHostAndPort,
-        override val useHTTPS: Boolean,
-        private val nodeThread: Thread,
-        private val onStopCallback: () -> Unit,
-        private val node: StartedNode<Node>
-) : InProcess {
-    override val database: CordaPersistence get() = node.database
-    override val services: StartedNodeServices get() = node.services
-    override fun stop() {
-        node.dispose()
-        with(nodeThread) {
-            interrupt()
-            join()
-        }
-        onStopCallback()
-    }
-
-    override fun close() = stop()
-    override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> = node.registerInitiatedFlow(initiatedFlowClass)
-    override fun rpcClientToNode(sslConfiguration: SSLConfiguration?): CordaRPCClient = CordaRPCClient(configuration.rpcOptions.address!!, sslConfiguration = sslConfiguration)
 }
 
 data class WebserverHandle(

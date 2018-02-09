@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
@@ -63,7 +64,7 @@ class DistributedServiceTests {
 
             // Connect to Alice and the notaries
             fun connectRpc(node: NodeHandle): CordaRPCOps {
-                val client = node.rpcClientToNode()
+                val client = CordaRPCClient(node.rpcAddress)
                 return client.start("test", "test").proxy
             }
             aliceProxy = connectRpc(alice)

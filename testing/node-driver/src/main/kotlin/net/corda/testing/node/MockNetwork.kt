@@ -59,7 +59,7 @@ data class MockNetworkNotarySpec(val name: CordaX500Name, val validating: Boolea
     constructor(name: CordaX500Name) : this(name, validating = true)
 }
 
-/** A class that represents an unstarted mock node for testing. Do not instantiate directly, create via a [MockNetwork] **/
+/** A class that represents an unstarted mock node for testing. **/
 class UnstartedMockNode private constructor(private val node: InternalMockNetwork.MockNode) {
     companion object {
         internal fun create(node: InternalMockNetwork.MockNode): UnstartedMockNode {
@@ -73,7 +73,7 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
     fun start() = StartedMockNode.create(node.start())
 }
 
-/** A class that represents a started mock node for testing. Do not instantiate directly, create via a [MockNetwork] **/
+/** A class that represents a started mock node for testing. **/
 class StartedMockNode private constructor(private val node: StartedNode<InternalMockNetwork.MockNode>) {
     companion object {
         internal fun create(node: StartedNode<InternalMockNetwork.MockNode>): StartedMockNode {
@@ -125,7 +125,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-class MockNetwork(
+open class MockNetwork(
         val cordappPackages: List<String>,
         val defaultParameters: MockNetworkParameters = MockNetworkParameters(),
         val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,

@@ -15,6 +15,7 @@ import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
@@ -81,7 +82,7 @@ class DriverTests {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().configuration.baseDirectory
+            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
@@ -106,7 +107,7 @@ class DriverTests {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
         driver {
-            val baseDirectory = defaultNotaryNode.getOrThrow().configuration.baseDirectory
+            val baseDirectory = defaultNotaryNode.getOrThrow().baseDirectory
             assertThat(baseDirectory / "process-id").exists()
         }
 

@@ -44,6 +44,8 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.driver.*
+import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
@@ -832,10 +834,10 @@ class DriverDSLImpl(
             val className = "net.corda.webserver.WebServer"
             return ProcessUtilities.startCordaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
+                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                            "-Dname=node-${handle.p2pAddress}-webserver",
                             "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                     ),
                     errorLogPath = Paths.get("error.$className.log"),
