@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.GlobalProperties.networkParameters
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div

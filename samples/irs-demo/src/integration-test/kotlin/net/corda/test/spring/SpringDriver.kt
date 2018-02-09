@@ -29,6 +29,7 @@ fun <A> springDriver(
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        maxTransactionSize: Int = defaultParameters.maxTransactionSize,
         dsl: SpringBootDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -44,6 +45,7 @@ fun <A> springDriver(
             extraCordappPackagesToScan = extraCordappPackagesToScan,
             notarySpecs = notarySpecs,
             driverDslWrapper = { driverDSL: DriverDSLImpl -> SpringBootDriverDSL(driverDSL) },
+            maxTransactionSize = maxTransactionSize,
             coerce = { it }, dsl = dsl
     )
 }
