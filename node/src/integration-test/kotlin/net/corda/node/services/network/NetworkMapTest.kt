@@ -8,8 +8,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -45,7 +45,7 @@ class NetworkMapTest {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
         compatibilityZone = CompatibilityZoneParams(URL("http://$address"), publishNotaries = {
-            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
         })
     }
 
