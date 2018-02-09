@@ -92,9 +92,5 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
     }
 
     override val started: Boolean
-        get() {
-            return synchronized(this) {
-                startedFlag
-            }
-        }
+        get() = startedFlag
 }
