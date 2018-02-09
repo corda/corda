@@ -36,6 +36,7 @@ import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
+import net.corda.node.services.messaging.P2PMessagingHeaders
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
 import net.corda.node.utilities.AffinityExecutor
@@ -637,8 +638,15 @@ class StateMachineManagerImpl(
         }
 
         serviceHub.networkService.apply {
-            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId)
+            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId, additionalHeaders = message.additionalHeaders())
         }
+    }
+}
+
+private fun SessionMessage.additionalHeaders(): Map<String, String> {
+    return when (this) {
+        is SessionInit -> mapOf(P2PMessagingHeaders.Type.KEY to P2PMessagingHeaders.Type.SESSION_INIT_VALUE)
+        else -> emptyMap()
     }
 }
 

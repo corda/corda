@@ -328,7 +328,7 @@ class InMemoryMessagingNetwork internal constructor(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String>) {
             check(running)
             msgSend(this, message, target)
             acknowledgementHandler?.invoke()

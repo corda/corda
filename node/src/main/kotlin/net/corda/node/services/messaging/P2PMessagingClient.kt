@@ -521,11 +521,11 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         }
     }
 
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
-       sendInternal(message, target, retryId, acknowledgementHandler)
+    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String>) {
+       sendInternal(message, target, retryId, acknowledgementHandler, additionalHeaders)
     }
 
-    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, acknowledgementHandler: (() -> Unit)?) {
+    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String> = emptyMap()) {
         // We have to perform sending on a different thread pool, since using the same pool for messaging and
         // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
         messagingExecutor.fetchFrom {
@@ -545,6 +545,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManagerImpl.sessionTopic.topic) {
                         putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
                     }
+                    additionalHeaders.forEach { key, value -> putStringProperty(key, value)}
                 }
                 log.trace {
                     "Send to: $mqAddress topic: ${message.topicSession.topic} " +

@@ -94,7 +94,8 @@ interface MessagingService {
             target: MessageRecipients,
             retryId: Long? = null,
             sequenceKey: Any = target,
-            acknowledgementHandler: (() -> Unit)? = null
+            acknowledgementHandler: (() -> Unit)? = null,
+            additionalHeaders: Map<String, String> = emptyMap()
     )
 
     /** A message with a target and sequenceKey specified. */
@@ -124,6 +125,7 @@ interface MessagingService {
      * Returns an initialised [Message] with the current time, etc, already filled in.
      *
      * @param topicSession identifier for the topic and session the message is sent to.
+     * @param additionalProperties optional additional message headers.
      */
     fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID = UUID.randomUUID()): Message
 
@@ -247,4 +249,12 @@ object TopicStringValidator {
     private val regex = "[a-zA-Z0-9.]+".toPattern()
     /** @throws IllegalArgumentException if the given topic contains invalid characters */
     fun check(tag: String) = require(regex.matcher(tag).matches())
+}
+
+object P2PMessagingHeaders {
+
+    object Type {
+        const val KEY = "corda_p2p_message_type"
+        const val SESSION_INIT_VALUE = "session_init"
+    }
 }
