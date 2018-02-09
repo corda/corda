@@ -147,7 +147,7 @@ data class NodeParameters(
 
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
                      val jmxHttpServerPortAllocation: PortAllocation? =
-                        if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+                     if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
 
 /**
  * [driver] allows one to start up nodes like this:
@@ -174,7 +174,7 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
- * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block. 
+ * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block.
  *     It will wait for them to be shut down externally instead.
  * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
@@ -198,6 +198,7 @@ fun <A> driver(
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = defaultParameters.jmxPolicy,
+        maxTransactionSize: Int = defaultParameters.maxTransactionSize,
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -213,7 +214,8 @@ fun <A> driver(
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = null
+                    compatibilityZone = null,
+                    maxTransactionSize = maxTransactionSize
             ),
             coerce = { it },
             dsl = dsl,
@@ -249,7 +251,8 @@ data class DriverParameters(
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
-        val jmxPolicy: JmxPolicy = JmxPolicy()
+        val jmxPolicy: JmxPolicy = JmxPolicy(),
+        val maxTransactionSize: Int = Int.MAX_VALUE
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
