@@ -185,8 +185,8 @@ path to the node's base directory.
 
     :port: The port to start SSH server on
 
-:exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
-    Default Jolokia access url is http://127.0.0.1:7005/jolokia/
+:jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
+    Default Jolokia access url is http://127.0.0.1:port/jolokia/
 
 :transactionCacheSizeMegaBytes: Optionally specify how much memory should be used for caching of ledger transactions in memory.
             Otherwise defaults to 8MB plus 5% of all heap memory above 300MB.
