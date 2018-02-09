@@ -56,9 +56,8 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
     private lateinit var client: CordaRPCClient
 
     @Before
-    override fun init() {
+    fun setup() {
 
-        super.init()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
     }
