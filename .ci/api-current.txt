@@ -272,6 +272,7 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
   public abstract void extractFile(String, java.io.OutputStream)
   @org.jetbrains.annotations.NotNull public abstract List getSigners()
+  public abstract int getSize()
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public abstract jar.JarInputStream openAsJAR()
 ##
@@ -339,6 +340,7 @@ public final class net.corda.core.contracts.ComponentGroupEnum extends java.lang
   @org.jetbrains.annotations.NotNull public final String getContract()
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public List getSigners()
+  public int getSize()
   @org.jetbrains.annotations.NotNull public java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public jar.JarInputStream openAsJAR()
 ##
