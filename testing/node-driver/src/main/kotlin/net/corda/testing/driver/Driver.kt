@@ -103,12 +103,12 @@ data class NodeParameters(
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "200m"
 ) {
-    fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
-    fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
-    fun setVerifierType(verifierType: VerifierType) = copy(verifierType = verifierType)
-    fun setCustomerOverrides(customOverrides: Map<String, Any?>) = copy(customOverrides = customOverrides)
-    fun setStartInSameProcess(startInSameProcess: Boolean?) = copy(startInSameProcess = startInSameProcess)
-    fun setMaximumHeapSize(maximumHeapSize: String) = copy(maximumHeapSize = maximumHeapSize)
+    fun setProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
+    fun setRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
+    fun setVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
+    fun setCustomerOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
+    fun setStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
+    fun setMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
 }
 
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,

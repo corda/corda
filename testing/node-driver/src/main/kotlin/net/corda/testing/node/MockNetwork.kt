@@ -6,13 +6,17 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NodeInfo
 import net.corda.node.VersionInfo
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.setMessagingServiceSpy
+import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
 
@@ -33,10 +37,10 @@ data class MockNodeParameters(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MockServices.MOCK_VERSION_INFO) {
-    fun setForcedID(forcedID: Int?) = copy(forcedID = forcedID)
-    fun setLegalName(legalName: CordaX500Name?) = copy(legalName = legalName)
-    fun setEntropyRoot(entropyRoot: BigInteger) = copy(entropyRoot = entropyRoot)
-    fun setConfigOverrides(configOverrides: (NodeConfiguration) -> Any?) = copy(configOverrides = configOverrides)
+    fun setForcedID(forcedID: Int?): MockNodeParameters = copy(forcedID = forcedID)
+    fun setLegalName(legalName: CordaX500Name?): MockNodeParameters = copy(legalName = legalName)
+    fun setEntropyRoot(entropyRoot: BigInteger): MockNodeParameters = copy(entropyRoot = entropyRoot)
+    fun setConfigOverrides(configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters = copy(configOverrides = configOverrides)
 }
 
 /** Helper builder for configuring a [InternalMockNetwork] from Java. */
@@ -48,12 +52,12 @@ data class MockNetworkParameters(
         val initialiseSerialization: Boolean = true,
         val notarySpecs: List<MockNetworkNotarySpec> = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
         val maxTransactionSize: Int = Int.MAX_VALUE) {
-    fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
-    fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
-    fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
-    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setNotarySpecs(notarySpecs: List<MockNetworkNotarySpec>) = copy(notarySpecs = notarySpecs)
-    fun setMaxTransactionSize(maxTransactionSize: Int) = copy(maxTransactionSize = maxTransactionSize)
+    fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean): MockNetworkParameters = copy(networkSendManuallyPumped = networkSendManuallyPumped)
+    fun setThreadPerNode(threadPerNode: Boolean): MockNetworkParameters = copy(threadPerNode = threadPerNode)
+    fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy): MockNetworkParameters = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
+    fun setInitialiseSerialization(initialiseSerialization: Boolean): MockNetworkParameters = copy(initialiseSerialization = initialiseSerialization)
+    fun setNotarySpecs(notarySpecs: List<MockNetworkNotarySpec>): MockNetworkParameters = copy(notarySpecs = notarySpecs)
+    fun setMaxTransactionSize(maxTransactionSize: Int): MockNetworkParameters = copy(maxTransactionSize = maxTransactionSize)
 }
 
 /** Represents a node configuration for injection via [MockNetworkParameters] **/
@@ -82,13 +86,13 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
         }
     }
 
-    val services get() = node.services
-    val database get() = node.database
-    val id get() = node.internals.id
-    val info get() = node.services.myInfo
-    val network get() = node.network
+    val services get() : StartedNodeServices = node.services
+    val database get() : CordaPersistence = node.database
+    val id get() : Int = node.internals.id
+    val info get() : NodeInfo = node.services.myInfo
+    val network get() : MessagingService = node.network
     /** Register a flow that is initiated by another flow **/
-    fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>) = node.registerInitiatedFlow(initiatedFlowClass)
+    fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>): Observable<F> = node.registerInitiatedFlow(initiatedFlowClass)
 
     /**
      * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing
@@ -143,13 +147,13 @@ open class MockNetwork(
     val nextNodeId get() : Int = internalMockNetwork.nextNodeId
 
     /** Create a started node with the given identity. **/
-    fun createPartyNode(legalName: CordaX500Name? = null) : StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
+    fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
 
     /** Create a started node with the given parameters. **/
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()) : StartedMockNode= StartedMockNode.create(internalMockNetwork.createNode(parameters))
+    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode = StartedMockNode.create(internalMockNetwork.createNode(parameters))
 
     /** Create an unstarted node with the given parameters. **/
-    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) : UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
+    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
 
     /** Start all nodes that aren't already started. **/
     fun startNodes() = internalMockNetwork.startNodes()
@@ -170,5 +174,5 @@ open class MockNetwork(
     fun runNetwork(rounds: Int = -1) = internalMockNetwork.runNetwork(rounds)
 
     /** Get the base directory for the given node id. **/
-    fun baseDirectory(nodeId: Int) : Path = internalMockNetwork.baseDirectory(nodeId)
+    fun baseDirectory(nodeId: Int): Path = internalMockNetwork.baseDirectory(nodeId)
 }
