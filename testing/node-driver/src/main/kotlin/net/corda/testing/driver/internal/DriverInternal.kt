@@ -19,6 +19,7 @@ import java.nio.file.Path
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
     val useHTTPS: Boolean
+    val webAddress: NetworkHostAndPort
     override val p2pAddress: NetworkHostAndPort get() = configuration.p2pAddress
     override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address!!
     override val baseDirectory: Path get() = configuration.baseDirectory

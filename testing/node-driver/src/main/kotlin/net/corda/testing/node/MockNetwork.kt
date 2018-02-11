@@ -69,8 +69,7 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
         }
     }
 
-    val id get() = node.id
-    val configuration get() = node.configuration
+    val id get() : Int = node.id
     /** Start the node **/
     fun start() = StartedMockNode.create(node.start())
 }
@@ -86,8 +85,6 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
     val services get() = node.services
     val database get() = node.database
     val id get() = node.internals.id
-    val configuration get() = node.internals.configuration
-    //val smm get() = node.smm
     val info get() = node.services.myInfo
     val network get() = node.network
     /** Register a flow that is initiated by another flow **/

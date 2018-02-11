@@ -69,7 +69,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
         val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val process = startApplication(handle, debugPort, clazz)
         driverDSL.shutdownManager.registerProcessShutdown(process)
-        val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, handle.webAddress, process)
+        val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, (handle as NodeHandleInternal).webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process, checkUrl) }
     }
 
@@ -112,7 +112,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
                 errorLogPath = Paths.get("error.$className.log"),
                 arguments = listOf(
                         "--base-directory", handle.baseDirectory.toString(),
-                        "--server.port=${handle.webAddress.port}",
+                        "--server.port=${(handle as NodeHandleInternal).webAddress.port}",
                         "--corda.host=${handle.rpcAddress}",
                         "--corda.user=${handle.rpcUsers.first().username}",
                         "--corda.password=${handle.rpcUsers.first().password}"

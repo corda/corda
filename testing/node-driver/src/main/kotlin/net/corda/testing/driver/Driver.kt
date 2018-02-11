@@ -43,7 +43,6 @@ interface NodeHandle : AutoCloseable {
      */
     val rpc: CordaRPCOps
     val p2pAddress: NetworkHostAndPort
-    val webAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort
     val rpcUsers: List<User>
     val baseDirectory: Path

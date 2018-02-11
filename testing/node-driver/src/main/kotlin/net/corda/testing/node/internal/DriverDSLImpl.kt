@@ -378,7 +378,7 @@ class DriverDSLImpl(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startWebserver(handle, debugPort, maximumHeapSize)
         shutdownManager.registerProcessShutdown(process)
-        val webReadyFuture = addressMustBeBoundFuture(executorService, handle.webAddress, process)
+        val webReadyFuture = addressMustBeBoundFuture(executorService, (handle as NodeHandleInternal).webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process) }
     }
 

@@ -10,6 +10,7 @@ import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.node.User
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.NodeHandleInternal
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
@@ -41,7 +42,7 @@ class AttachmentDemoTest {
 
             val recipientThread = supplyAsync {
                 CordaRPCClient(nodeB.rpcAddress).start(demoUser[0].username, demoUser[0].password).use {
-                    recipient(it.proxy, nodeB.webAddress.port)
+                    recipient(it.proxy, (nodeB as NodeHandleInternal).webAddress.port)
                 }
             }
 
