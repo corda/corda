@@ -3722,7 +3722,6 @@ public final class net.corda.testing.driver.JmxPolicy extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.CordaRPCOps getRpc()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.NetworkHostAndPort getRpcAddress()
   @org.jetbrains.annotations.NotNull public abstract List getRpcUsers()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.NetworkHostAndPort getWebAddress()
   public abstract void stop()
 ##
 public final class net.corda.testing.driver.NodeParameters extends java.lang.Object
@@ -4125,7 +4124,6 @@ public final class net.corda.testing.node.NotarySpec extends java.lang.Object
 ##
 public final class net.corda.testing.node.StartedMockNode extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final List findStateMachines(Class)
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration getConfiguration()
   @org.jetbrains.annotations.NotNull public final net.corda.nodeapi.internal.persistence.CordaPersistence getDatabase()
   public final int getId()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.NodeInfo getInfo()
@@ -4145,7 +4143,6 @@ public static final class net.corda.testing.node.StartedMockNode$Companion exten
   public synchronized final void setTo(java.time.Instant)
 ##
 public final class net.corda.testing.node.UnstartedMockNode extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration getConfiguration()
   public final int getId()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.StartedMockNode start()
   public static final net.corda.testing.node.UnstartedMockNode$Companion Companion
