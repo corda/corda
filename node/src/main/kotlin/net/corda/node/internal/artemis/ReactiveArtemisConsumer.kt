@@ -79,12 +79,13 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
     override fun disconnect() {
 
         synchronized(this) {
-            require(connected)
-            consumers.forEach(ClientConsumer::close)
-            sessions.forEach(ClientSession::close)
-            consumers.clear()
-            sessions.clear()
-            connected = false
+            if(connected) {
+                consumers.forEach(ClientConsumer::close)
+                sessions.forEach(ClientSession::close)
+                consumers.clear()
+                sessions.clear()
+                connected = false
+            }
         }
     }
 
