@@ -57,6 +57,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
             // Depending on 'store' method, this may insert without checking key duplication or it may avoid inserting a duplicated key.
             val existingInDb = store(key, value)
             if (existingInDb != null) { // Always reuse an existing value from the storage of a duplicated key.
+                isUnique = false
                 Optional.of(existingInDb)
             } else {
                 Optional.of(value)
