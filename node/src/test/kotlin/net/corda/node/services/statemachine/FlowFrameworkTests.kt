@@ -34,11 +34,11 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.pumpReceive
 import net.corda.testing.node.internal.startFlow
-import net.corda.testing.node.pumpReceive
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -62,7 +62,7 @@ class FlowFrameworkTests {
         }
     }
 
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
     private lateinit var aliceNode: StartedNode<MockNode>
     private lateinit var bobNode: StartedNode<MockNode>
@@ -76,7 +76,7 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(
+        mockNet = InternalMockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
                 cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts")
         )
@@ -145,7 +145,7 @@ class FlowFrameworkTests {
         val restoredFlow = bobNode.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
-    
+
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
         aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }

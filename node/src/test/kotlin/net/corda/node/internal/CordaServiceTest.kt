@@ -15,6 +15,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.cordapp.DummyRPCFlow
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -75,7 +76,7 @@ class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: Service
 
 class CordaServiceTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeA: StartedMockNode
 
     @Before
     fun start() {

@@ -7,6 +7,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.WebserverHandle
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.*
 import okhttp3.OkHttpClient
@@ -68,12 +69,12 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
         val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val process = startApplication(handle, debugPort, clazz)
         driverDSL.shutdownManager.registerProcessShutdown(process)
-        val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, handle.webAddress, process)
+        val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, (handle as NodeHandleInternal).webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process, checkUrl) }
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process, checkUrl: String): WebserverHandle {
-        val protocol = if (handle.useHTTPS) "https://" else "http://"
+        val protocol = if ((handle as NodeHandleInternal).useHTTPS) "https://" else "http://"
         val url = URL(URL("$protocol${handle.webAddress}"), checkUrl)
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).build()
 
@@ -102,19 +103,19 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
                 className = className, // cannot directly get class for this, so just use string
                 jdwpPort = debugPort,
                 extraJvmArguments = listOf(
-                        "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                        "-Dname=node-${handle.p2pAddress}-webserver",
                         "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}"
                         // Inherit from parent process
                 ),
                 classpath = ProcessUtilities.defaultClassPath,
-                workingDirectory = handle.configuration.baseDirectory,
+                workingDirectory = handle.baseDirectory,
                 errorLogPath = Paths.get("error.$className.log"),
                 arguments = listOf(
-                        "--base-directory", handle.configuration.baseDirectory.toString(),
-                        "--server.port=${handle.webAddress.port}",
-                        "--corda.host=${handle.configuration.rpcOptions.address}",
-                        "--corda.user=${handle.configuration.rpcUsers.first().username}",
-                        "--corda.password=${handle.configuration.rpcUsers.first().password}"
+                        "--base-directory", handle.baseDirectory.toString(),
+                        "--server.port=${(handle as NodeHandleInternal).webAddress.port}",
+                        "--corda.host=${handle.rpcAddress}",
+                        "--corda.user=${handle.rpcUsers.first().username}",
+                        "--corda.password=${handle.rpcUsers.first().password}"
                 ),
                 maximumHeapSize = null
         )
