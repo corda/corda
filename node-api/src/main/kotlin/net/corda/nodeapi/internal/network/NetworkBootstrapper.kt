@@ -1,20 +1,28 @@
 package net.corda.nodeapi.internal.network
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.cordform.CordformNode
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
@@ -22,6 +30,9 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -48,13 +59,16 @@ class NetworkBootstrapper {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val arg = args.singleOrNull()
-                    ?: throw IllegalArgumentException("Expecting single argument which is the nodes' parent directory")
-            NetworkBootstrapper().bootstrap(Paths.get(arg).toAbsolutePath().normalize())
+            val arg = args.firstOrNull()
+                    ?: throw IllegalArgumentException("Expecting first argument which is the nodes' parent directory")
+            val cordapps = if (args.size > 1) args.toList().drop(1) else null
+            NetworkBootstrapper().bootstrap(Paths.get(arg).toAbsolutePath().normalize(), cordapps)
         }
     }
 
-    fun bootstrap(directory: Path) {
+    fun bootstrap(directory: Path) = bootstrap(directory, null)
+
+    fun bootstrap(directory: Path, cordapps: List<String>?) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
         generateDirectoriesIfNeeded(directory)
@@ -71,7 +85,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            installNetworkParameters(notaryInfos, nodeDirs)
+            installNetworkParameters(notaryInfos, nodeDirs, if (cordapps != null) generateWhitelist(cordapps) else null)
             println("Bootstrapping complete!")
         } finally {
             _contextSerializationEnv.set(null)
@@ -162,7 +176,7 @@ class NetworkBootstrapper {
         }.distinct() // We need distinct as nodes part of a distributed notary share the same notary identity
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>) {
+    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>, whitelistPath: Path?) {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val copier = NetworkParametersCopier(NetworkParameters(
                 minimumPlatformVersion = 1,
@@ -171,11 +185,38 @@ class NetworkBootstrapper {
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
                 epoch = 1,
-                whitelistedContractImplementations = whitelistAllContractsForTest
+                whitelistedContractImplementations = if (whitelistPath != null) readContractWhitelist(whitelistPath) else whitelistAllContractsForTest
         ), overwriteFile = true)
 
         nodeDirs.forEach { copier.install(it) }
     }
+
+    private fun generateWhitelist(cordapps: List<String>): Path {
+        val tempFile = Files.createTempFile("whitelist", ".txt")
+        PrintStream(tempFile.toFile().outputStream()).use { out ->
+            cordapps.forEach { cordappJarPath ->
+                val jarHash = getJarHash(cordappJarPath)
+                val scanResult = FastClasspathScanner().addClassLoader(NetworkBootstrapper::class.java.classLoader).overrideClasspath(cordappJarPath).scan()
+                val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class.qualifiedName)).distinct()
+                contracts.forEach { contract ->
+                    out.println("${contract}:${jarHash}")
+                }
+            }
+        }
+        return tempFile
+    }
+
+    private fun getJarHash(cordappPath: String): AttachmentId = File(cordappPath).inputStream().use { jar ->
+        val hs = HashingInputStream(Hashing.sha256(), jar)
+        hs.readBytes()
+        SecureHash.SHA256(hs.hash().asBytes())
+    }
+
+    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.toFile().readLines()
+            .map { line -> line.split(":") }
+            .map { (contract, attachmenIds) ->
+                contract to (attachmenIds.split(",").map { SecureHash.SHA256(it.parseAsHex()) })
+            }.toMap()
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
 
