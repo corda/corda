@@ -67,7 +67,6 @@ interface MessagingService {
             target: MessageRecipients,
             retryId: Long? = null,
             sequenceKey: Any = target,
-            acknowledgementHandler: (() -> Unit)? = null,
             additionalHeaders: Map<String, String> = emptyMap()
     )
 

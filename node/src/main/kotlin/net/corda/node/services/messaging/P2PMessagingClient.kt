@@ -348,7 +348,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
     private fun resumeMessageRedelivery() {
         messagesToRedeliver.forEach { retryId, (message, target) ->
-            sendInternal(message, target, retryId, null)
+            sendInternal(message, target, retryId)
         }
     }
 
@@ -499,9 +499,9 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         }
     }
 
-    fun close(x: AutoCloseable?) {
+    private fun close(target: AutoCloseable?) {
         try {
-            x?.close()
+            target?.close()
         } catch (ignored: ActiveMQObjectClosedException) {
             // swallow
         }
@@ -509,11 +509,11 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
     override fun close() = stop()
 
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String>) {
-       sendInternal(message, target, retryId, acknowledgementHandler, additionalHeaders)
+    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+       sendInternal(message, target, retryId, additionalHeaders)
     }
 
-    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String> = emptyMap()) {
+    private fun sendInternal(message: Message, target: MessageRecipients, retryId: Long?, additionalHeaders: Map<String, String> = emptyMap()) {
         // We have to perform sending on a different thread pool, since using the same pool for messaging and
         // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
         messagingExecutor.fetchFrom {

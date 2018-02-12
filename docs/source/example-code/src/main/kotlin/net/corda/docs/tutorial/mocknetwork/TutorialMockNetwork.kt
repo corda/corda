@@ -79,7 +79,7 @@ class TutorialMockNetwork {
         // DOCSTART 1
         // modify message if it's 1
         nodeB.setMessagingServiceSpy(object : MessagingServiceSpy(nodeB.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String>) {
+            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
                 val messageData = message.data.deserialize<Any>() as? ExistingSessionMessage
                 val payload = messageData?.payload
 
