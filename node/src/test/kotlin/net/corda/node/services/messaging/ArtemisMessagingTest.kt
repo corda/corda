@@ -18,6 +18,8 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -140,6 +142,124 @@ class ArtemisMessagingTest {
         assertThat(received.platformVersion).isEqualTo(3)
     }
 
+    @Test
+    fun `we can fake send and receive`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
+        val fakeMsg = messagingClient.messagingExecutor!!.cordaToArtemisMessage(message)
+        fakeMsg!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+        messagingClient.deliver(fakeMsg)
+        val received = receivedMessages.take()
+        assertThat(String(received.data.bytes, Charsets.UTF_8)).isEqualTo("first msg")
+    }
+
+    @Test
+    fun `redelivery from same client is ignored`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
+        val fakeMsg = messagingClient.messagingExecutor!!.cordaToArtemisMessage(message)
+        fakeMsg!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+        messagingClient.deliver(fakeMsg)
+        messagingClient.deliver(fakeMsg)
+        val received = receivedMessages.take()
+        assertThat(String(received.data.bytes, Charsets.UTF_8)).isEqualTo("first msg")
+        val received2 = receivedMessages.poll()
+        assertThat(received2).isNull()
+    }
+
+    // Redelivery from a sender who stops and restarts (some re-sends from the sender, with sender state reset with exception of recovered checkpoints)
+    @Test
+    fun `re-send from different client is ignored`() {
+        val (messagingClient1, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient1.createMessage(TOPIC, data = "first msg".toByteArray())
+        val fakeMsg = messagingClient1.messagingExecutor!!.cordaToArtemisMessage(message)
+        fakeMsg!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+        messagingClient1.deliver(fakeMsg)
+
+        // Now change the sender
+        try {
+            val messagingClient2 = createMessagingClient()
+            startNodeMessagingClient()
+            val fakeMsg2 = messagingClient2.messagingExecutor!!.cordaToArtemisMessage(message)
+            fakeMsg2!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+
+            messagingClient1.deliver(fakeMsg2)
+            val received = receivedMessages.take()
+            assertThat(String(received.data.bytes, Charsets.UTF_8)).isEqualTo("first msg")
+            val received2 = receivedMessages.poll()
+            assertThat(received2).isNull()
+        } finally {
+            messagingClient1.stop()
+        }
+    }
+
+    // Redelivery to a receiver who stops and restarts (some re-deliveries from Artemis, but with receiver state reset)
+    @Test
+    fun `re-receive from different client is ignored`() {
+        val (messagingClient1, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient1.createMessage(TOPIC, data = "first msg".toByteArray())
+        val fakeMsg = messagingClient1.messagingExecutor!!.cordaToArtemisMessage(message)
+        fakeMsg!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+        messagingClient1.deliver(fakeMsg)
+
+        // Now change the receiver
+        try {
+            val messagingClient2 = createMessagingClient()
+            messagingClient2.addMessageHandler(TOPIC) { message, _, handle ->
+                database.transaction { handle.persistDeduplicationId() }
+                handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
+                receivedMessages.add(message)
+            }
+            startNodeMessagingClient()
+
+            messagingClient2.deliver(fakeMsg)
+
+            val received = receivedMessages.take()
+            assertThat(String(received.data.bytes, Charsets.UTF_8)).isEqualTo("first msg")
+            val received2 = receivedMessages.poll()
+            assertThat(received2).isNull()
+        } finally {
+            messagingClient1.stop()
+        }
+    }
+
+    // Re-receive on different client from re-started sender
+    @Test
+    fun `re-send from different client and re-receive from different client is ignored`() {
+        val (messagingClient1, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient1.createMessage(TOPIC, data = "first msg".toByteArray())
+        val fakeMsg = messagingClient1.messagingExecutor!!.cordaToArtemisMessage(message)
+        fakeMsg!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+        messagingClient1.deliver(fakeMsg)
+
+        // Now change the send *and* receiver
+        val messagingClient2 = createMessagingClient()
+        try {
+            startNodeMessagingClient()
+            val fakeMsg2 = messagingClient2.messagingExecutor!!.cordaToArtemisMessage(message)
+            fakeMsg2!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+
+            val messagingClient3 = createMessagingClient()
+            messagingClient3.addMessageHandler(TOPIC) { message, _, handle ->
+                database.transaction { handle.persistDeduplicationId() }
+                handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
+                receivedMessages.add(message)
+            }
+            startNodeMessagingClient()
+
+            messagingClient3.deliver(fakeMsg2)
+
+            val received = receivedMessages.take()
+            assertThat(String(received.data.bytes, Charsets.UTF_8)).isEqualTo("first msg")
+            val received2 = receivedMessages.poll()
+            assertThat(received2).isNull()
+        } finally {
+            messagingClient1.stop()
+            messagingClient2.stop()
+        }
+    }
+
+
     private fun startNodeMessagingClient() {
         messagingClient!!.start()
     }
@@ -152,6 +272,7 @@ class ArtemisMessagingTest {
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
         startNodeMessagingClient()
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
+            database.transaction { handle.persistDeduplicationId() }
             handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }

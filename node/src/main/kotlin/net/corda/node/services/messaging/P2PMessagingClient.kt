@@ -21,7 +21,6 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
@@ -102,21 +101,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val cordaVendorProperty = SimpleString("corda-vendor")
         val releaseVersionProperty = SimpleString("release-version")
         val platformVersionProperty = SimpleString("platform-version")
-        private val messageMaxRetryCount: Int = 3
+        val senderUUID = SimpleString("sender-uuid")
+        val senderSeqNo = SimpleString("send-seq-no")
 
-        fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, Instant, ProcessedMessage, String> {
-            return AppendOnlyPersistentMap(
-                    toPersistentEntityKey = { it.toString },
-                    fromPersistentEntity = { Pair(DeduplicationId(it.id), it.insertionTime) },
-                    toPersistentEntity = { key: DeduplicationId, value: Instant ->
-                        ProcessedMessage().apply {
-                            id = key.toString
-                            insertionTime = value
-                        }
-                    },
-                    persistentEntityClass = ProcessedMessage::class.java
-            )
-        }
+        private val messageMaxRetryCount: Int = 3
 
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
             return PersistentMap(
@@ -138,7 +126,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             )
         }
 
-        private class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId) : Message {
+        private class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?) : Message {
             override val debugTimestamp: Instant = Instant.now()
             override fun toString() = "$topic#${String(data.bytes)}"
         }
@@ -176,19 +164,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
-    private val processedMessages = createProcessedMessages()
-    private var messagingExecutor: MessagingExecutor? = null
-
-    @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
-    class ProcessedMessage(
-            @Id
-            @Column(name = "message_id", length = 64)
-            var id: String = "",
-
-            @Column(name = "insertion_time")
-            var insertionTime: Instant = Instant.now()
-    )
+    private val deduplicator = P2PMessageDeduplicator(database)
+    internal var messagingExecutor: MessagingExecutor? = null
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
@@ -233,7 +210,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     versionInfo,
                     this@P2PMessagingClient,
                     metricRegistry,
-                    queueBound = config.enterpriseConfiguration.tuning.maximumMessagingBatchSize
+                    queueBound = config.enterpriseConfiguration.tuning.maximumMessagingBatchSize,
+                    ourSenderUUID = deduplicator.ourSenderUUID
             )
             this@P2PMessagingClient.messagingExecutor = messagingExecutor
             messagingExecutor.start()
@@ -247,7 +225,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun InnerState.registerBridgeControl(session: ClientSession, inboxes: List<String>) {
         val bridgeNotifyQueue = "$BRIDGE_NOTIFY.${myIdentity.toStringShort()}"
-        session.createTemporaryQueue(BRIDGE_NOTIFY, RoutingType.MULTICAST, bridgeNotifyQueue)
+        if (!session.queueQuery(SimpleString(bridgeNotifyQueue)).isExists) {
+            session.createTemporaryQueue(BRIDGE_NOTIFY, RoutingType.MULTICAST, bridgeNotifyQueue)
+        }
         val bridgeConsumer = session.createConsumer(bridgeNotifyQueue)
         bridgeNotifyConsumer = bridgeConsumer
         bridgeConsumer.setMessageHandler { msg ->
@@ -354,9 +334,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             null
         } ?: return false
 
-        val message: ReceivedMessage? = artemisToCordaMessage(artemisMessage)
-        if (message != null)
-            deliver(artemisMessage, message)
+        deliver(artemisMessage)
         return true
     }
 
@@ -386,9 +364,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val platformVersion = message.required(platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }
-            log.trace { "Received message from: ${message.address} user: $user topic: $topic id: $uniqueMessageId" }
+            val receivedSenderUUID = message.getStringProperty(senderUUID)
+            val receivedSenderSeqNo = if (message.containsProperty(senderSeqNo)) message.getLongProperty(senderSeqNo) else null
+            log.trace { "Received message from: ${message.address} user: $user topic: $topic id: $uniqueMessageId senderUUID: $receivedSenderUUID senderSeqNo: $receivedSenderSeqNo" }
 
-            return ArtemisReceivedMessage(topic, CordaX500Name.parse(user), platformVersion, uniqueMessageId, message)
+            return ArtemisReceivedMessage(topic, CordaX500Name.parse(user), platformVersion, uniqueMessageId, receivedSenderUUID, receivedSenderSeqNo, message)
         } catch (e: Exception) {
             log.error("Unable to process message, ignoring it: $message", e)
             return null
@@ -404,10 +384,18 @@ class P2PMessagingClient(val config: NodeConfiguration,
                                          override val peer: CordaX500Name,
                                          override val platformVersion: Int,
                                          override val uniqueMessageId: DeduplicationId,
+                                         override val senderUUID: String?,
+                                         override val senderSeqNo: Long?,
                                          private val message: ClientMessage) : ReceivedMessage {
         override val data: ByteSequence by lazy { OpaqueBytes(ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }) }
         override val debugTimestamp: Instant get() = Instant.ofEpochMilli(message.timestamp)
         override fun toString() = "$topic#$data"
+    }
+
+    internal fun deliver(artemisMessage: ClientMessage) {
+        val message: ReceivedMessage? = artemisToCordaMessage(artemisMessage)
+        if (message != null)
+            deliver(artemisMessage, message)
     }
 
     private fun deliver(artemisMessage: ClientMessage, msg: ReceivedMessage) {
@@ -423,14 +411,13 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
             if (deliverTo != null) {
-                val isDuplicate = database.transaction { msg.uniqueMessageId in processedMessages }
-                if (isDuplicate) {
+                if (deduplicator.isDuplicate(msg)) {
                     log.trace { "Discard duplicate message ${msg.uniqueMessageId} for ${msg.topic}" }
                     return
                 }
                 val acknowledgeHandle = object : AcknowledgeHandle {
                     override fun persistDeduplicationId() {
-                        processedMessages[msg.uniqueMessageId] = Instant.now()
+                        deduplicator.persistDeduplicationId(msg)
                     }
 
                     // ACKing a message calls back into the session which isn't thread safe, so we have to ensure it
@@ -601,7 +588,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId): Message {
-        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId)
+        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId, deduplicator.ourSenderUUID)
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {

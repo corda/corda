@@ -22,6 +22,7 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.node.InMemoryMessagingNetwork.TestMessagingService
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -247,7 +248,8 @@ class InMemoryMessagingNetwork internal constructor(
     data class InMemoryMessage(override val topic: String,
                                override val data: ByteSequence,
                                override val uniqueMessageId: DeduplicationId,
-                               override val debugTimestamp: Instant = Instant.now()) : Message {
+                               override val debugTimestamp: Instant = Instant.now(),
+                               override val senderUUID: String? = null) : Message {
         override fun toString() = "$topic#${String(data.bytes)}"
     }
 
@@ -256,7 +258,9 @@ class InMemoryMessagingNetwork internal constructor(
                                                override val platformVersion: Int,
                                                override val uniqueMessageId: DeduplicationId,
                                                override val debugTimestamp: Instant,
-                                               override val peer: CordaX500Name) : ReceivedMessage
+                                               override val peer: CordaX500Name,
+                                               override val senderUUID: String? = null,
+                                               override val senderSeqNo: Long? = null) : ReceivedMessage
 
     /**
      * A [TestMessagingService] that provides a [MessagingService] abstraction that also contains the ability to

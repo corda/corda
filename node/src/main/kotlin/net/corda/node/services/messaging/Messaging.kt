@@ -126,6 +126,7 @@ interface Message {
     val data: ByteSequence
     val debugTimestamp: Instant
     val uniqueMessageId: DeduplicationId
+    val senderUUID: String?
 }
 
 // TODO Have ReceivedMessage point to the TLS certificate of the peer, and [peer] would simply be the subject DN of that.
@@ -136,6 +137,7 @@ interface ReceivedMessage : Message {
     val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
+    val senderSeqNo: Long?
 }
 
 /** A singleton that's useful for validating topic strings */

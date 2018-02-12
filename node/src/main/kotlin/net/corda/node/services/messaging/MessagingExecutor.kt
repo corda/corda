@@ -17,6 +17,7 @@ import org.apache.activemq.artemis.api.core.client.ClientSession
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
 interface AddressToArtemisQueueResolver {
@@ -38,6 +39,7 @@ class MessagingExecutor(
         val versionInfo: VersionInfo,
         val resolver: AddressToArtemisQueueResolver,
         metricRegistry: MetricRegistry,
+        val ourSenderUUID: String,
         queueBound: Int
 ) {
     private sealed class Job {
@@ -59,6 +61,7 @@ class MessagingExecutor(
     private val sendMessageSizeMetric = metricRegistry.histogram("SendMessageSize")
     private val sendLatencyMetric = metricRegistry.timer("SendLatency")
     private val sendBatchSizeMetric = metricRegistry.histogram("SendBatchSize")
+    private val ourSenderSeqNo = AtomicLong()
 
     private companion object {
         val log = contextLogger()
@@ -193,26 +196,34 @@ class MessagingExecutor(
 
     private fun sendJob(job: Job.Send) {
         val mqAddress = resolver.resolveTargetToArtemisQueue(job.target)
-        val artemisMessage = session.createMessage(true).apply {
-            putStringProperty(P2PMessagingClient.cordaVendorProperty, cordaVendor)
-            putStringProperty(P2PMessagingClient.releaseVersionProperty, releaseVersion)
-            putIntProperty(P2PMessagingClient.platformVersionProperty, versionInfo.platformVersion)
-            putStringProperty(P2PMessagingClient.topicProperty, SimpleString(job.message.topic))
-            sendMessageSizeMetric.update(job.message.data.bytes.size)
-            writeBodyBufferBytes(job.message.data.bytes)
-            // Use the magic deduplication property built into Artemis as our message identity too
-            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(job.message.uniqueMessageId.toString))
-
-            // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-            if (amqDelayMillis > 0 && job.message.topic == FlowMessagingImpl.sessionTopic) {
-                putLongProperty(org.apache.activemq.artemis.api.core.Message.HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
-            }
-        }
+        val artemisMessage = cordaToArtemisMessage(job.message)
         log.trace {
             "Send to: $mqAddress topic: ${job.message.topic} " +
                     "sessionID: ${job.message.topic} id: ${job.message.uniqueMessageId}"
         }
-        producer.send(SimpleString(mqAddress), artemisMessage) { job.sentFuture.set(Unit) }
+        producer.send(SimpleString(mqAddress), artemisMessage, { job.sentFuture.set(Unit) })
+    }
+
+    internal fun cordaToArtemisMessage(message: Message): ClientMessage? {
+        return session.createMessage(true).apply {
+            putStringProperty(P2PMessagingClient.cordaVendorProperty, cordaVendor)
+            putStringProperty(P2PMessagingClient.releaseVersionProperty, releaseVersion)
+            putIntProperty(P2PMessagingClient.platformVersionProperty, versionInfo.platformVersion)
+            putStringProperty(P2PMessagingClient.topicProperty, SimpleString(message.topic))
+            sendMessageSizeMetric.update(message.data.bytes.size)
+            writeBodyBufferBytes(message.data.bytes)
+            // Use the magic deduplication property built into Artemis as our message identity too
+            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
+            // If we are the sender (ie. we are not going through recovery of some sort), use sequence number short cut.
+            if (ourSenderUUID == message.senderUUID) {
+                putStringProperty(P2PMessagingClient.senderUUID, SimpleString(ourSenderUUID))
+                putLongProperty(P2PMessagingClient.senderSeqNo, ourSenderSeqNo.getAndIncrement())
+            }
+            // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
+            if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {
+                putLongProperty(org.apache.activemq.artemis.api.core.Message.HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
+            }
+        }
     }
 
     private fun acknowledgeJob(job: Job.Acknowledge) {
