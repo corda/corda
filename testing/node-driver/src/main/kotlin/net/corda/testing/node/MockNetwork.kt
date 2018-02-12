@@ -87,7 +87,6 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
     }
 
     val services get() : StartedNodeServices = node.services
-    val database get() : CordaPersistence = node.database
     val id get() : Int = node.internals.id
     val info get() : NodeInfo = node.services.myInfo
     val network get() : MessagingService = node.network
