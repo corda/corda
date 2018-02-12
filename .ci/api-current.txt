@@ -4003,6 +4003,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public <init>(List, net.corda.node.services.api.IdentityServiceInternal, net.corda.core.identity.CordaX500Name)
   public <init>(net.corda.core.identity.CordaX500Name)
   public <init>(net.corda.node.services.api.IdentityServiceInternal, net.corda.core.identity.CordaX500Name)
+  public final void addMockCordapp(String, net.corda.testing.services.MockAttachmentStorage)
   @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction addSignature(net.corda.core.transactions.SignedTransaction)
   @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction addSignature(net.corda.core.transactions.SignedTransaction, java.security.PublicKey)
   @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializeAsToken cordaService(Class)
@@ -4018,7 +4019,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @org.jetbrains.annotations.NotNull public net.corda.node.services.api.IdentityServiceInternal getIdentityService()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.KeyManagementService getKeyManagementService()
   @org.jetbrains.annotations.NotNull public static final net.corda.node.VersionInfo getMOCK_VERSION_INFO()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.services.MockCordappProvider getMockCordappProvider()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.NodeInfo getMyInfo()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
@@ -4137,7 +4137,7 @@ public final class net.corda.testing.node.StartedMockNode extends java.lang.Obje
 ##
 public static final class net.corda.testing.node.StartedMockNode$Companion extends java.lang.Object
 ##
-@javax.annotation.concurrent.ThreadSafe public final class net.corda.testing.node.TestClock extends net.corda.node.internal.MutableClock
+@javax.annotation.concurrent.ThreadSafe public final class net.corda.testing.node.TestClock extends net.corda.node.MutableClock
   public <init>(java.time.Clock)
   public synchronized final void advanceBy(java.time.Duration)
   public synchronized final void setTo(java.time.Instant)
@@ -4394,21 +4394,6 @@ public static final class net.corda.testing.core.SerializationEnvironmentRule$Co
 public static final class net.corda.testing.core.SerializationEnvironmentRule$apply$1 extends org.junit.runners.model.Statement
   public void evaluate()
 ##
-public final class net.corda.testing.core.SerializationTestHelpersKt extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public static final net.corda.testing.core.GlobalSerializationEnvironment setGlobalSerialization(boolean)
-##
-public static final class net.corda.testing.core.SerializationTestHelpersKt$createTestSerializationEnv$1 extends net.corda.core.serialization.internal.SerializationEnvironmentImpl
-  @org.jetbrains.annotations.NotNull public String toString()
-##
-public static final class net.corda.testing.core.SerializationTestHelpersKt$setGlobalSerialization$1 extends java.lang.Object implements net.corda.testing.core.GlobalSerializationEnvironment, net.corda.core.serialization.internal.SerializationEnvironment
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getCheckpointContext()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getP2pContext()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getRpcClientContext()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getRpcServerContext()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationFactory getSerializationFactory()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getStorageContext()
-  public void unset()
-##
 public final class net.corda.testing.core.TestConstants extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final net.corda.nodeapi.internal.crypto.CertificateAndKeyPair getDEV_INTERMEDIATE_CA()
   @org.jetbrains.annotations.NotNull public static final net.corda.nodeapi.internal.crypto.CertificateAndKeyPair getDEV_ROOT_CA()
@@ -4663,10 +4648,4 @@ public static final class net.corda.testing.services.MockAttachmentStorage$Compa
 ##
 public static final class net.corda.testing.services.MockAttachmentStorage$openAttachment$1 extends net.corda.core.internal.AbstractAttachment
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
-##
-public final class net.corda.testing.services.MockCordappProvider extends net.corda.node.internal.cordapp.CordappProviderImpl
-  public <init>(net.corda.node.internal.cordapp.CordappLoader, net.corda.core.node.services.AttachmentStorage)
-  public final void addMockCordapp(String, net.corda.testing.services.MockAttachmentStorage)
-  @org.jetbrains.annotations.Nullable public net.corda.core.crypto.SecureHash getContractAttachmentID(String)
-  @org.jetbrains.annotations.NotNull public final List getCordappRegistry()
 ##
