@@ -19,17 +19,14 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.node.User
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
-import net.corda.testing.node.internal.RPCDriverDSL
-import net.corda.testing.node.internal.rpcDriver
-import net.corda.testing.node.internal.rpcTestUser
-import net.corda.testing.node.internal.startRpcClient
-import net.corda.testing.node.MockNetwork
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.User
+import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -40,16 +37,16 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ContractUpgradeFlowTest {
-    private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var bobNode: StartedNode<MockNode>
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         notary = mockNet.defaultNotaryIdentity
@@ -103,7 +100,7 @@ class ContractUpgradeFlowTest {
 
         val result = resultFuture.getOrThrow()
 
-        fun check(node: StartedNode<*>) {
+        fun check(node: StartedNode<MockNode>) {
             val nodeStx = node.database.transaction {
                 node.services.validatedTransactions.getTransaction(result.ref.txhash)
             }
@@ -123,7 +120,7 @@ class ContractUpgradeFlowTest {
         check(bobNode)
     }
 
-    private fun RPCDriverDSL.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: StartedNode<MockNode>, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,

@@ -21,6 +21,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -63,14 +64,14 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
 }
 
 class AttachmentSerializationTest {
-    private lateinit var mockNet: MockNetwork
-    private lateinit var server: StartedNode<MockNetwork.MockNode>
-    private lateinit var client: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var server: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var client: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var serverIdentity: Party
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = InternalMockNetwork(emptyList())
         server = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         client = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
@@ -161,7 +162,7 @@ class AttachmentSerializationTest {
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
         client = mockNet.createNode(MockNodeParameters(client.internals.id, client.internals.configuration.myLegalName), { args ->
-            object : MockNetwork.MockNode(args) {
+            object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }
         })

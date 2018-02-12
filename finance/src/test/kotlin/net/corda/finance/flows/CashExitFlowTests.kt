@@ -6,11 +6,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -22,7 +21,7 @@ class CashExitFlowTests {
     private lateinit var mockNet: MockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: StartedNode<MockNode>
+    private lateinit var bankOfCordaNode: StartedMockNode
     private lateinit var bankOfCorda: Party
     private lateinit var notary: Party
 

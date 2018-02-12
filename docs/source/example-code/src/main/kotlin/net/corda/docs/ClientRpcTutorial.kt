@@ -2,6 +2,7 @@
 
 package net.corda.docs
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -53,7 +54,7 @@ fun main(args: Array<String>) {
         // END 1
 
         // START 2
-        val client = node.rpcClientToNode()
+        val client = CordaRPCClient(node.rpcAddress)
         val proxy = client.start("user", "password").proxy
 
         thread {

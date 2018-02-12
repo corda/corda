@@ -37,9 +37,9 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -68,7 +68,7 @@ class CordaRPCOpsImplTest {
         val testJar = "net/corda/node/testing/test.jar"
     }
 
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
     private lateinit var aliceNode: StartedNode<MockNode>
     private lateinit var alice: Party
     private lateinit var notary: Party
@@ -79,7 +79,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))

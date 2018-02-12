@@ -304,7 +304,7 @@ class InMemoryMessagingNetwork internal constructor(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No MockNode for party ${partyInfo.party.name}")
+                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
                 is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
             }
         }
