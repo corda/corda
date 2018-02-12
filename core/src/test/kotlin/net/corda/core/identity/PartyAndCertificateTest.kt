@@ -7,9 +7,9 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
+import net.corda.testing.internal.DEV_ROOT_CA
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test

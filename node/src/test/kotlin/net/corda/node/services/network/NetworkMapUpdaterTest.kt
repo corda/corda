@@ -28,6 +28,7 @@ import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
+import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.assertThat
