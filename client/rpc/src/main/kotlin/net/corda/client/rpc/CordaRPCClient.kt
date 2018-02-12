@@ -72,9 +72,20 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  */
 class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-        sslConfiguration: SSLConfiguration? = null
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
+    companion object {
+        internal fun getClientWithSsl(
+                hostAndPort: NetworkHostAndPort,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+                sslConfiguration: SSLConfiguration? = null
+        ) : CordaRPCClient{
+            return CordaRPCClient(hostAndPort, configuration).apply {
+                this.sslConfiguration = sslConfiguration
+            }
+        }
+    }
+
     init {
         try {
             effectiveSerializationEnv
@@ -86,6 +97,8 @@ class CordaRPCClient @JvmOverloads constructor(
             }
         }
     }
+
+    internal var sslConfiguration: SSLConfiguration? = null
 
     private val rpcClient = RPCClient<CordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
