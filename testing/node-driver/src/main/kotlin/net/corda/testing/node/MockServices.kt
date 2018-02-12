@@ -136,37 +136,42 @@ open class MockServices private constructor(
      * (you can get one from [makeTestIdentityService]) and represents the given identity.
      */
     @JvmOverloads
-    constructor(cordappPackages: List<String>, identityService: IdentityService = makeTestIdentityService(), initialIdentity: TestIdentity, vararg moreKeys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentity, moreKeys)
+    constructor(cordappPackages: List<String>, initialIdentity: TestIdentity, identityService: IdentityService = makeTestIdentityService(), vararg moreKeys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentity, moreKeys)
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
      * (you can get one from [makeTestIdentityService]) and represents the given identity.
      */
     @JvmOverloads
-    constructor(cordappPackages: List<String>, identityService: IdentityService = makeTestIdentityService(), initialIdentityName: CordaX500Name, key: KeyPair, vararg moreKeys: KeyPair) : this(cordappPackages, identityService, TestIdentity(initialIdentityName, key), *moreKeys)
+    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService(), key: KeyPair, vararg moreKeys: KeyPair) : this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, *moreKeys)
 
     /**
      * Create a mock [ServiceHub] that can't load CorDapp code, which uses the provided identity service
      * (you can get one from [makeTestIdentityService]) and which represents the given identity.
      */
     @JvmOverloads
-    constructor(cordappPackages: List<String>, identityService: IdentityService = makeTestIdentityService(), initialIdentityName: CordaX500Name) : this(cordappPackages, identityService, TestIdentity(initialIdentityName))
+    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) : this(cordappPackages, TestIdentity(initialIdentityName), identityService)
+
+    /**
+     * Create a mock [ServiceHub] that can't load CorDapp code, and which uses a default service identity.
+     */
+    constructor(cordappPackages: List<String>): this(cordappPackages, CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
     /**
      * Create a mock [ServiceHub] which uses the package of the caller to find CorDapp code. It uses the provided identity service
      * (you can get one from [makeTestIdentityService]) and which represents the given identity.
      */
     @JvmOverloads
-    constructor(identityService: IdentityService = makeTestIdentityService(), initialIdentityName: CordaX500Name, key: KeyPair, vararg moreKeys: KeyPair)
-            : this(listOf(getCallerPackage()), identityService, TestIdentity(initialIdentityName, key), *moreKeys)
+    constructor(initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService(), key: KeyPair, vararg moreKeys: KeyPair)
+            : this(listOf(getCallerPackage()), TestIdentity(initialIdentityName, key), identityService, *moreKeys)
 
     /**
      * Create a mock [ServiceHub] which uses the package of the caller to find CorDapp code. It uses the provided identity service
      * (you can get one from [makeTestIdentityService]) and which represents the given identity. It has no keys.
      */
     @JvmOverloads
-    constructor(identityService: IdentityService = makeTestIdentityService(), initialIdentityName: CordaX500Name)
-            : this(listOf(getCallerPackage()), identityService, TestIdentity(initialIdentityName))
+    constructor(initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService())
+            : this(listOf(getCallerPackage()), TestIdentity(initialIdentityName), identityService)
 
     /**
      * A helper constructor that requires at least one test identity to be registered, and which takes the package of
@@ -179,6 +184,12 @@ open class MockServices private constructor(
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity, firstIdentity.keyPair
     )
+
+    /**
+     * Create a mock [ServiceHub] which uses the package of the caller to find CorDapp code. It uses a default service
+     * identity.
+     */
+    constructor(): this(listOf(getCallerPackage()), CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
