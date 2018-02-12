@@ -13,6 +13,7 @@ import net.corda.node.services.schema.NodeSchemaService.NodeCoreV1
 import net.corda.node.services.schema.NodeSchemaService.NodeNotaryV1
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.MockNetwork
 import org.hibernate.annotations.Cascade
@@ -79,7 +80,7 @@ class NodeSchemaServiceTest {
     fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
         val tables = driver(startNodesInProcess = true) {
-            (defaultNotaryNode.getOrThrow() as InProcess).database.transaction {
+            (defaultNotaryNode.getOrThrow() as InProcessImpl).database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }
         }

@@ -27,6 +27,7 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.sql.Connection
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -60,7 +61,7 @@ interface OutOfProcess : NodeHandle {
 
 @DoNotImplement
 interface InProcess : NodeHandle {
-    val database: CordaPersistence
+    val databaseConnection: Connection
     val services: StartedNodeServices
     /**
      * Register a flow that is initiated by another flow
