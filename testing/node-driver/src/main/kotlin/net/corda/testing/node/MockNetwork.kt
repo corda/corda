@@ -152,8 +152,30 @@ open class MockNetwork(
     /** Create a started node with the given parameters. **/
     fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode = StartedMockNode.create(internalMockNetwork.createNode(parameters))
 
+    /** Create a started node with the given parameters. **/
+    @JvmOverloads
+    fun createNode(legalName: CordaX500Name? = null,
+                   forcedID: Int? = null,
+                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                   configOverrides: (NodeConfiguration) -> Any? = {},
+                   version: VersionInfo = MockServices.MOCK_VERSION_INFO): StartedMockNode {
+        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, version)
+        return StartedMockNode.create(internalMockNetwork.createNode(parameters))
+    }
+
     /** Create an unstarted node with the given parameters. **/
     fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
+
+    /** Create an unstarted node with the given parameters. **/
+    @JvmOverloads
+    fun createUnstartedNode(legalName: CordaX500Name? = null,
+                            forcedID: Int? = null,
+                            entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                            configOverrides: (NodeConfiguration) -> Any? = {},
+                            version: VersionInfo = MockServices.MOCK_VERSION_INFO): UnstartedMockNode {
+        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, version)
+        return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
+    }
 
     /** Start all nodes that aren't already started. **/
     fun startNodes() = internalMockNetwork.startNodes()
