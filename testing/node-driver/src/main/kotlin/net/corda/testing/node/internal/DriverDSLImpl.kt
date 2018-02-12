@@ -44,6 +44,9 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.driver.*
+import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
@@ -355,7 +358,7 @@ class DriverDSLImpl(
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
-        val protocol = if (handle.useHTTPS) "https://" else "http://"
+        val protocol = if ((handle as NodeHandleInternal).useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
@@ -375,7 +378,7 @@ class DriverDSLImpl(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startWebserver(handle, debugPort, maximumHeapSize)
         shutdownManager.registerProcessShutdown(process)
-        val webReadyFuture = addressMustBeBoundFuture(executorService, handle.webAddress, process)
+        val webReadyFuture = addressMustBeBoundFuture(executorService, (handle as NodeHandleInternal).webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process) }
     }
 
@@ -654,7 +657,7 @@ class DriverDSLImpl(
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
-                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, node, thread, onNodeExit)
+                        InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
             }
@@ -683,7 +686,7 @@ class DriverDSLImpl(
                         }
                         processDeathFuture.cancel(false)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
-                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
+                        OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
                 }
             }
@@ -833,10 +836,10 @@ class DriverDSLImpl(
             val className = "net.corda.webserver.WebServer"
             return ProcessUtilities.startCordaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
+                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                            "-Dname=node-${handle.p2pAddress}-webserver",
                             "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                     ),
                     errorLogPath = Paths.get("error.$className.log"),

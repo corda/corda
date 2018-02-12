@@ -1,4 +1,4 @@
-package net.corda.testing.node
+package net.corda.testing.node.internal
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
@@ -7,6 +7,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -28,6 +29,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.IdentityServiceInternal
@@ -52,8 +54,11 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.core.setGlobalSerialization
+import net.corda.testing.node.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
+import rx.Observable
 import rx.internal.schedulers.CachedThreadScheduler
 import java.math.BigInteger
 import java.nio.file.Path
@@ -63,48 +68,13 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
+fun StartedNode<InternalMockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
     return (network as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
-}
-
-/** Helper builder for configuring a [MockNetwork] from Java. */
-@Suppress("unused")
-data class MockNetworkParameters(
-        val networkSendManuallyPumped: Boolean = false,
-        val threadPerNode: Boolean = false,
-        val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-        val defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode = MockNetwork::MockNode,
-        val initialiseSerialization: Boolean = true,
-        val notarySpecs: List<MockNetwork.NotarySpec> = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME))) {
-    fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
-    fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
-    fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
-    fun setDefaultFactory(defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode) = copy(defaultFactory = defaultFactory)
-    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setNotarySpecs(notarySpecs: List<MockNetwork.NotarySpec>) = copy(notarySpecs = notarySpecs)
-}
-
-/**
- * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
- * but can be overridden to cause nodes to have stable or colliding identity/service keys.
- * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
- */
-@Suppress("unused")
-data class MockNodeParameters(
-        val forcedID: Int? = null,
-        val legalName: CordaX500Name? = null,
-        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {},
-        val version: VersionInfo = MOCK_VERSION_INFO) {
-    fun setForcedID(forcedID: Int?) = copy(forcedID = forcedID)
-    fun setLegalName(legalName: CordaX500Name?) = copy(legalName = legalName)
-    fun setEntropyRoot(entropyRoot: BigInteger) = copy(entropyRoot = entropyRoot)
-    fun setConfigOverrides(configOverrides: (NodeConfiguration) -> Any?) = copy(configOverrides = configOverrides)
 }
 
 data class MockNodeArgs(
         val config: NodeConfiguration,
-        val network: MockNetwork,
+        val network: InternalMockNetwork,
         val id: Int,
         val entropyRoot: BigInteger,
         val version: VersionInfo = MOCK_VERSION_INFO
@@ -126,19 +96,15 @@ data class MockNodeArgs(
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  */
-open class MockNetwork(private val cordappPackages: List<String>,
-                       defaultParameters: MockNetworkParameters = MockNetworkParameters(),
-                       private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
-                       private val threadPerNode: Boolean = defaultParameters.threadPerNode,
-                       servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-                       private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
-                       initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-                       private val notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
-                       maxTransactionSize: Int = Int.MAX_VALUE) {
-    /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
-    @JvmOverloads
-    constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
-
+open class InternalMockNetwork(private val cordappPackages: List<String>,
+                               defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+                               val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+                               val threadPerNode: Boolean = defaultParameters.threadPerNode,
+                               servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+                               initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                               val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
+                               maxTransactionSize: Int = Int.MAX_VALUE,
+                               val defaultFactory: (MockNodeArgs) -> MockNode = InternalMockNetwork::MockNode) {
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
@@ -158,7 +124,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
     private val serializationEnv = try {
         setGlobalSerialization(initialiseSerialization)
     } catch (e: IllegalStateException) {
-        throw IllegalStateException("Using more than one MockNetwork simultaneously is not supported.", e)
+        throw IllegalStateException("Using more than one InternalMockNetwork simultaneously is not supported.", e)
     }
     private val sharedUserCount = AtomicInteger(0)
 
@@ -329,12 +295,12 @@ open class MockNetwork(private val cordappPackages: List<String>,
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
         override fun generateKeyPair(): KeyPair {
             counter = counter.add(BigInteger.ONE)
-            // The MockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
+            // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
             return Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
         }
 
         /**
-         * MockNetwork will ensure nodes are connected to each other. The nodes themselves
+         * InternalMockNetwork will ensure nodes are connected to each other. The nodes themselves
          * won't be able to tell if that happened already or not.
          */
         override fun checkNetworkMapIsInitialized() = Unit
@@ -478,20 +444,12 @@ open class MockNetwork(private val cordappPackages: List<String>,
         busyLatch.await()
     }
 
-    data class NotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
-        constructor(name: CordaX500Name) : this(name, validating = true)
-    }
 }
 
 /**
- * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryMessagingNetwork].
+ * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing interception and modification of messages.
  */
-open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
-
-/**
- * Attach a [MessagingServiceSpy] to the [MockNetwork.MockNode] allowing interception and modification of messages.
- */
-fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
+fun StartedNode<InternalMockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
     internals.setMessagingServiceSpy(messagingServiceSpy)
 }
 
