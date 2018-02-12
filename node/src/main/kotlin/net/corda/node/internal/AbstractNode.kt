@@ -294,7 +294,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      */
     protected abstract fun getRxIoScheduler(): Scheduler
 
-    open fun startShell(pcOps: (String?, String?) -> CordaRPCOps) {
+    open fun startShell(rpcOps: (String?, String?) -> CordaRPCOps) {
         if (configuration.shouldInitCrashShell()) {
             InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
         }
