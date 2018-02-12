@@ -19,7 +19,8 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
-    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
+    override val typeDescriptor: Symbol = Symbol.valueOf(
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end

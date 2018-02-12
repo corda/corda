@@ -6,6 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
+
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
