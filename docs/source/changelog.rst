@@ -183,6 +183,9 @@ UNRELEASED
 * Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
   only for internal use
 
+* Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
+  that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
+
 .. _changelog_v1:
 
 Release 1.0

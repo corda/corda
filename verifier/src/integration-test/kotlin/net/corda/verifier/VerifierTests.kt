@@ -15,6 +15,7 @@ import net.corda.node.services.config.VerifierType
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.NotarySpec
 import org.junit.Rule
 import org.junit.Test
@@ -139,7 +140,7 @@ class VerifierTests {
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, verifierType = VerifierType.OutOfProcess))
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()
-            val notaryNode = defaultNotaryNode.getOrThrow()
+            val notaryNode = defaultNotaryNode.getOrThrow() as NodeHandleInternal
             val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
             startVerifier(notaryNode)
             aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()

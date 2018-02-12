@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.jackson.JacksonSupport
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.*
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -228,7 +229,7 @@ class FlowStackSnapshotTest {
     fun `flowStackSnapshot contains full frames when methods with side effects are called`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<SideEffectFlow>())))).get()
-            a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
+            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val stackSnapshotFrames = connection.proxy.startFlow(::SideEffectFlow).returnValue.get()
                 val iterator = stackSnapshotFrames.listIterator()
                 assertFrame("run", false, iterator.next())
@@ -243,7 +244,7 @@ class FlowStackSnapshotTest {
     fun `flowStackSnapshot contains empty frames when methods with no side effects are called`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<NoSideEffectFlow>())))).get()
-            a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
+            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val stackSnapshotFrames = connection.proxy.startFlow(::NoSideEffectFlow).returnValue.get()
                 val iterator = stackSnapshotFrames.listIterator()
                 assertFrame("run", false, iterator.next())
@@ -258,10 +259,9 @@ class FlowStackSnapshotTest {
     fun `persistFlowStackSnapshot persists empty frames to a file when methods with no side effects are called`() {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingNoSideEffectFlow>())))).get()
-
-            a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
+            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val flowId = connection.proxy.startFlow(::PersistingNoSideEffectFlow).returnValue.get()
-                val snapshotFromFile = readFlowStackSnapshotFromDir(a.configuration.baseDirectory, flowId)
+                val snapshotFromFile = readFlowStackSnapshotFromDir(a.baseDirectory, flowId)
                 val stackSnapshotFrames = convertToStackSnapshotFrames(snapshotFromFile)
                 val iterator = stackSnapshotFrames.listIterator()
                 assertFrame("call", true, iterator.next())
@@ -276,10 +276,10 @@ class FlowStackSnapshotTest {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<MultiplePersistingSideEffectFlow>())))).get()
 
-            a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
+            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val numberOfFlowSnapshots = 5
                 val flowId = connection.proxy.startFlow(::MultiplePersistingSideEffectFlow, 5).returnValue.get()
-                val fileCount = countFilesInDir(a.configuration.baseDirectory, flowId)
+                val fileCount = countFilesInDir(a.baseDirectory, flowId)
                 assertEquals(numberOfFlowSnapshots, fileCount)
             }
         }
@@ -307,9 +307,9 @@ class FlowStackSnapshotTest {
         driver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingSideEffectFlow>())))).get()
 
-            a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
+            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val flowId = connection.proxy.startFlow(::PersistingSideEffectFlow).returnValue.get()
-                val snapshotFromFile = readFlowStackSnapshotFromDir(a.configuration.baseDirectory, flowId)
+                val snapshotFromFile = readFlowStackSnapshotFromDir(a.baseDirectory, flowId)
                 var inCallCount = 0
                 var inPersistCount = 0
                 snapshotFromFile.stackFrames.forEach {

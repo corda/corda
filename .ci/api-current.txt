@@ -1013,8 +1013,10 @@ public final class net.corda.core.crypto.SignatureScheme extends java.lang.Objec
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.crypto.TransactionSignature extends net.corda.core.crypto.DigitalSignature
   public <init>(byte[], java.security.PublicKey, net.corda.core.crypto.SignatureMetadata)
+  public <init>(byte[], java.security.PublicKey, net.corda.core.crypto.SignatureMetadata, net.corda.core.crypto.PartialMerkleTree)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public final java.security.PublicKey getBy()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.crypto.PartialMerkleTree getPartialMerkleTree()
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SignatureMetadata getSignatureMetadata()
   public int hashCode()
   public final boolean isValid(net.corda.core.crypto.SecureHash)
@@ -3696,6 +3698,11 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setWaitForAllNodesToFinish(boolean)
   public String toString()
 ##
+@net.corda.core.DoNotImplement public interface net.corda.testing.driver.InProcess extends net.corda.testing.driver.NodeHandle
+  @org.jetbrains.annotations.NotNull public abstract net.corda.nodeapi.internal.persistence.CordaPersistence getDatabase()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.node.services.api.StartedNodeServices getServices()
+  @org.jetbrains.annotations.NotNull public abstract rx.Observable registerInitiatedFlow(Class)
+##
 public final class net.corda.testing.driver.JmxPolicy extends java.lang.Object
   public <init>()
   public <init>(boolean, net.corda.testing.driver.PortAllocation)
@@ -3708,60 +3715,14 @@ public final class net.corda.testing.driver.JmxPolicy extends java.lang.Object
   public int hashCode()
   public String toString()
 ##
-@net.corda.core.DoNotImplement public abstract class net.corda.testing.driver.NodeHandle extends java.lang.Object implements java.lang.AutoCloseable
-  public void close()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.node.services.config.NodeConfiguration getConfiguration()
+@net.corda.core.DoNotImplement public interface net.corda.testing.driver.NodeHandle extends java.lang.AutoCloseable
+  @org.jetbrains.annotations.NotNull public abstract java.nio.file.Path getBaseDirectory()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo getNodeInfo()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.NetworkHostAndPort getP2pAddress()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.CordaRPCOps getRpc()
-  public abstract boolean getUseHTTPS()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.NetworkHostAndPort getWebAddress()
-  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCClient rpcClientToNode()
-  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCClient rpcClientToNode(net.corda.nodeapi.internal.config.SSLConfiguration)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.NetworkHostAndPort getRpcAddress()
+  @org.jetbrains.annotations.NotNull public abstract List getRpcUsers()
   public abstract void stop()
-##
-public static final class net.corda.testing.driver.NodeHandle$InProcess extends net.corda.testing.driver.NodeHandle
-  public <init>(net.corda.core.node.NodeInfo, net.corda.core.messaging.CordaRPCOps, net.corda.node.services.config.NodeConfiguration, net.corda.core.utilities.NetworkHostAndPort, boolean, net.corda.node.internal.StartedNode, Thread, kotlin.jvm.functions.Function0)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NodeInfo component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.CordaRPCOps component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration component3()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort component4()
-  public final boolean component5()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode component6()
-  @org.jetbrains.annotations.NotNull public final Thread component7()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeHandle$InProcess copy(net.corda.core.node.NodeInfo, net.corda.core.messaging.CordaRPCOps, net.corda.node.services.config.NodeConfiguration, net.corda.core.utilities.NetworkHostAndPort, boolean, net.corda.node.internal.StartedNode, Thread, kotlin.jvm.functions.Function0)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public net.corda.node.services.config.NodeConfiguration getConfiguration()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode getNode()
-  @org.jetbrains.annotations.NotNull public net.corda.core.node.NodeInfo getNodeInfo()
-  @org.jetbrains.annotations.NotNull public final Thread getNodeThread()
-  @org.jetbrains.annotations.NotNull public net.corda.core.messaging.CordaRPCOps getRpc()
-  public boolean getUseHTTPS()
-  @org.jetbrains.annotations.NotNull public net.corda.core.utilities.NetworkHostAndPort getWebAddress()
-  public int hashCode()
-  public void stop()
-  public String toString()
-##
-public static final class net.corda.testing.driver.NodeHandle$OutOfProcess extends net.corda.testing.driver.NodeHandle
-  public <init>(net.corda.core.node.NodeInfo, net.corda.core.messaging.CordaRPCOps, net.corda.node.services.config.NodeConfiguration, net.corda.core.utilities.NetworkHostAndPort, boolean, Integer, Process, kotlin.jvm.functions.Function0)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NodeInfo component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.CordaRPCOps component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration component3()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort component4()
-  public final boolean component5()
-  @org.jetbrains.annotations.Nullable public final Integer component6()
-  @org.jetbrains.annotations.NotNull public final Process component7()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeHandle$OutOfProcess copy(net.corda.core.node.NodeInfo, net.corda.core.messaging.CordaRPCOps, net.corda.node.services.config.NodeConfiguration, net.corda.core.utilities.NetworkHostAndPort, boolean, Integer, Process, kotlin.jvm.functions.Function0)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public net.corda.node.services.config.NodeConfiguration getConfiguration()
-  @org.jetbrains.annotations.Nullable public final Integer getDebugPort()
-  @org.jetbrains.annotations.NotNull public net.corda.core.node.NodeInfo getNodeInfo()
-  @org.jetbrains.annotations.NotNull public final Process getProcess()
-  @org.jetbrains.annotations.NotNull public net.corda.core.messaging.CordaRPCOps getRpc()
-  public boolean getUseHTTPS()
-  @org.jetbrains.annotations.NotNull public net.corda.core.utilities.NetworkHostAndPort getWebAddress()
-  public int hashCode()
-  public void stop()
-  public String toString()
 ##
 public final class net.corda.testing.driver.NodeParameters extends java.lang.Object
   public <init>()
@@ -3801,6 +3762,9 @@ public final class net.corda.testing.driver.NotaryHandle extends java.lang.Objec
   public final boolean getValidating()
   public int hashCode()
   public String toString()
+##
+@net.corda.core.DoNotImplement public interface net.corda.testing.driver.OutOfProcess extends net.corda.testing.driver.NodeHandle
+  @org.jetbrains.annotations.NotNull public abstract Process getProcess()
 ##
 @net.corda.core.DoNotImplement public abstract class net.corda.testing.driver.PortAllocation extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort nextHostAndPort()
@@ -3951,142 +3915,66 @@ public final class net.corda.testing.node.MockKeyManagementService extends net.c
 public class net.corda.testing.node.MockNetwork extends java.lang.Object
   public <init>(List)
   public <init>(List, net.corda.testing.node.MockNetworkParameters)
-  public <init>(List, net.corda.testing.node.MockNetworkParameters, boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, kotlin.jvm.functions.Function1, boolean, List, int)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork$MockNode addressToNode(net.corda.core.messaging.MessageRecipients)
+  public <init>(List, net.corda.testing.node.MockNetworkParameters, boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, boolean, List, int)
   @org.jetbrains.annotations.NotNull public final java.nio.file.Path baseDirectory(int)
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode createNode(net.corda.testing.node.MockNodeParameters)
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode createNode(net.corda.testing.node.MockNodeParameters, kotlin.jvm.functions.Function1)
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode createPartyNode()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode createPartyNode(net.corda.core.identity.CordaX500Name)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork$MockNode createUnstartedNode(net.corda.testing.node.MockNodeParameters)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork$MockNode createUnstartedNode(net.corda.testing.node.MockNodeParameters, kotlin.jvm.functions.Function1)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.StartedMockNode createNode(net.corda.testing.node.MockNodeParameters)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.StartedMockNode createPartyNode(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.testing.node.MockNodeParameters)
+  @org.jetbrains.annotations.NotNull public final List getCordappPackages()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party getDefaultNotaryIdentity()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.PartyAndCertificate getDefaultNotaryIdentityAndCert()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.internal.StartedNode getDefaultNotaryNode()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.InMemoryMessagingNetwork getMessagingNetwork()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.StartedMockNode getDefaultNotaryNode()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters getDefaultParameters()
+  public final boolean getInitialiseSerialization()
+  public final int getMaxTransactionSize()
+  public final boolean getNetworkSendManuallyPumped()
   public final int getNextNodeId()
-  @org.jetbrains.annotations.NotNull public final List getNodes()
   @org.jetbrains.annotations.NotNull public final List getNotaryNodes()
+  @org.jetbrains.annotations.NotNull public final List getNotarySpecs()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy getServicePeerAllocationStrategy()
+  public final boolean getThreadPerNode()
   public final void runNetwork()
   public final void runNetwork(int)
   public final void startNodes()
   public final void stopNodes()
   public final void waitQuiescent()
 ##
-public static class net.corda.testing.node.MockNetwork$MockNode extends net.corda.node.internal.AbstractNode
-  public <init>(net.corda.testing.node.MockNodeArgs)
-  protected int acceptableLiveFiberCountOnStop()
-  protected void checkNetworkMapIsInitialized()
-  public final void disableDBCloseOnStop()
-  @org.jetbrains.annotations.NotNull protected java.security.KeyPair generateKeyPair()
-  public final int getAcceptableLiveFiberCountOnStop()
-  @org.jetbrains.annotations.NotNull public final java.math.BigInteger getCounter()
-  public final int getId()
-  @org.jetbrains.annotations.NotNull protected org.slf4j.Logger getLog()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork getMockNet()
-  @org.jetbrains.annotations.NotNull protected rx.internal.schedulers.CachedThreadScheduler getRxIoScheduler()
-  @org.jetbrains.annotations.NotNull public List getSerializationWhitelists()
-  @org.jetbrains.annotations.NotNull protected net.corda.node.utilities.AffinityExecutor getServerThread()
-  @org.jetbrains.annotations.Nullable public net.corda.node.internal.StartedNode getStarted()
-  @org.jetbrains.annotations.NotNull public final List getTestSerializationWhitelists()
-  protected Object initialiseDatabasePersistence(net.corda.node.services.api.SchemaService, net.corda.core.node.services.IdentityService, kotlin.jvm.functions.Function1)
-  @org.jetbrains.annotations.NotNull protected net.corda.node.services.transactions.BFTSMaRt$Cluster makeBFTCluster(java.security.PublicKey, net.corda.node.services.config.BFTSMaRtConfiguration)
-  @org.jetbrains.annotations.NotNull protected net.corda.core.node.services.KeyManagementService makeKeyManagementService(net.corda.node.services.api.IdentityServiceInternal, Set)
-  @org.jetbrains.annotations.NotNull protected net.corda.node.services.messaging.MessagingService makeMessagingService(net.corda.nodeapi.internal.persistence.CordaPersistence, net.corda.core.node.NodeInfo)
-  @org.jetbrains.annotations.NotNull protected net.corda.node.services.transactions.InMemoryTransactionVerifierService makeTransactionVerifierService()
-  public final void manuallyCloseDB()
-  @org.jetbrains.annotations.NotNull protected List myAddresses()
-  public final void setAcceptableLiveFiberCountOnStop(int)
-  public final void setCounter(java.math.BigInteger)
-  public final void setMessagingServiceSpy(net.corda.testing.node.MessagingServiceSpy)
-  @org.jetbrains.annotations.NotNull public net.corda.node.internal.StartedNode start()
-  protected void startMessagingService(net.corda.core.messaging.RPCOps)
-  public void startShell(net.corda.core.messaging.CordaRPCOps)
-  public static final net.corda.testing.node.MockNetwork$MockNode$Companion Companion
-##
-public static final class net.corda.testing.node.MockNetwork$MockNode$Companion extends java.lang.Object
-##
-public static final class net.corda.testing.node.MockNetwork$MockNode$makeBFTCluster$1 extends java.lang.Object implements net.corda.node.services.transactions.BFTSMaRt$Cluster
-  public void waitUntilAllReplicasHaveInitialized()
-##
-public static final class net.corda.testing.node.MockNetwork$NotarySpec extends java.lang.Object
+public final class net.corda.testing.node.MockNetworkNotarySpec extends java.lang.Object
   public <init>(net.corda.core.identity.CordaX500Name)
   public <init>(net.corda.core.identity.CordaX500Name, boolean)
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name component1()
   public final boolean component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork$NotarySpec copy(net.corda.core.identity.CordaX500Name, boolean)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkNotarySpec copy(net.corda.core.identity.CordaX500Name, boolean)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getName()
   public final boolean getValidating()
   public int hashCode()
   public String toString()
 ##
-public static final class net.corda.testing.node.MockNetwork$sharedServerThread$1 extends net.corda.node.utilities.AffinityExecutor$ServiceAffinityExecutor
-  public boolean awaitTermination(long, concurrent.TimeUnit)
-  public void shutdown()
-##
 public final class net.corda.testing.node.MockNetworkParameters extends java.lang.Object
   public <init>()
-  public <init>(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, kotlin.jvm.functions.Function1, boolean, List)
+  public <init>(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, boolean, List, int)
   public final boolean component1()
   public final boolean component2()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy component3()
-  @org.jetbrains.annotations.NotNull public final kotlin.jvm.functions.Function1 component4()
-  public final boolean component5()
-  @org.jetbrains.annotations.NotNull public final List component6()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters copy(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, kotlin.jvm.functions.Function1, boolean, List)
+  public final boolean component4()
+  @org.jetbrains.annotations.NotNull public final List component5()
+  public final int component6()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters copy(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, boolean, List, int)
   public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final kotlin.jvm.functions.Function1 getDefaultFactory()
   public final boolean getInitialiseSerialization()
+  public final int getMaxTransactionSize()
   public final boolean getNetworkSendManuallyPumped()
   @org.jetbrains.annotations.NotNull public final List getNotarySpecs()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy getServicePeerAllocationStrategy()
   public final boolean getThreadPerNode()
   public int hashCode()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setDefaultFactory(kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setInitialiseSerialization(boolean)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setMaxTransactionSize(int)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setNetworkSendManuallyPumped(boolean)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setNotarySpecs(List)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setServicePeerAllocationStrategy(net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetworkParameters setThreadPerNode(boolean)
   public String toString()
-##
-public final class net.corda.testing.node.MockNodeArgs extends java.lang.Object
-  public <init>(net.corda.node.services.config.NodeConfiguration, net.corda.testing.node.MockNetwork, int, java.math.BigInteger, net.corda.node.VersionInfo)
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork component2()
-  public final int component3()
-  @org.jetbrains.annotations.NotNull public final java.math.BigInteger component4()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.VersionInfo component5()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNodeArgs copy(net.corda.node.services.config.NodeConfiguration, net.corda.testing.node.MockNetwork, int, java.math.BigInteger, net.corda.node.VersionInfo)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.NodeConfiguration getConfig()
-  @org.jetbrains.annotations.NotNull public final java.math.BigInteger getEntropyRoot()
-  public final int getId()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNetwork getNetwork()
-  @org.jetbrains.annotations.NotNull public final net.corda.node.VersionInfo getVersion()
-  public int hashCode()
-  public String toString()
-##
-public final class net.corda.testing.node.MockNodeKt extends java.lang.Object
-  @org.jetbrains.annotations.Nullable public static final net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer pumpReceive(net.corda.node.internal.StartedNode, boolean)
-  public static final void setMessagingServiceSpy(net.corda.node.internal.StartedNode, net.corda.testing.node.MessagingServiceSpy)
-##
-@net.corda.core.DoNotImplement public abstract static class net.corda.testing.node.MockNodeKt$mockNodeConfiguration$AbstractNodeConfiguration extends java.lang.Object implements net.corda.node.services.config.NodeConfiguration
-  public <init>()
-  public long getAttachmentCacheBound()
-  public long getAttachmentContentCacheSizeBytes()
-  @org.jetbrains.annotations.NotNull public java.nio.file.Path getCertificatesDirectory()
-  public boolean getDetectPublicIp()
-  public boolean getNoLocalShell()
-  @org.jetbrains.annotations.NotNull public java.nio.file.Path getNodeKeystore()
-  @org.jetbrains.annotations.NotNull public java.nio.file.Path getSslKeystore()
-  public long getTransactionCacheSizeBytes()
-  @org.jetbrains.annotations.NotNull public java.nio.file.Path getTrustStoreFile()
-  public boolean getUseTestClock()
-  @org.jetbrains.annotations.NotNull public net.corda.nodeapi.internal.crypto.X509KeyStore loadNodeKeyStore(boolean)
-  @org.jetbrains.annotations.NotNull public net.corda.nodeapi.internal.crypto.X509KeyStore loadSslKeyStore(boolean)
-  @org.jetbrains.annotations.NotNull public net.corda.nodeapi.internal.crypto.X509KeyStore loadTrustStore(boolean)
 ##
 public final class net.corda.testing.node.MockNodeParameters extends java.lang.Object
   public <init>()
@@ -4234,10 +4122,32 @@ public final class net.corda.testing.node.NotarySpec extends java.lang.Object
   public int hashCode()
   public String toString()
 ##
+public final class net.corda.testing.node.StartedMockNode extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public final List findStateMachines(Class)
+  @org.jetbrains.annotations.NotNull public final net.corda.nodeapi.internal.persistence.CordaPersistence getDatabase()
+  public final int getId()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NodeInfo getInfo()
+  @org.jetbrains.annotations.NotNull public final net.corda.node.services.messaging.MessagingService getNetwork()
+  @org.jetbrains.annotations.NotNull public final net.corda.node.services.api.StartedNodeServices getServices()
+  @org.jetbrains.annotations.Nullable public final net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer pumpReceive(boolean)
+  @org.jetbrains.annotations.NotNull public final rx.Observable registerInitiatedFlow(Class)
+  public final void setMessagingServiceSpy(net.corda.testing.node.MessagingServiceSpy)
+  public final void stop()
+  public static final net.corda.testing.node.StartedMockNode$Companion Companion
+##
+public static final class net.corda.testing.node.StartedMockNode$Companion extends java.lang.Object
+##
 @javax.annotation.concurrent.ThreadSafe public final class net.corda.testing.node.TestClock extends net.corda.node.internal.MutableClock
   public <init>(java.time.Clock)
   public synchronized final void advanceBy(java.time.Duration)
   public synchronized final void setTo(java.time.Instant)
+##
+public final class net.corda.testing.node.UnstartedMockNode extends java.lang.Object
+  public final int getId()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.node.StartedMockNode start()
+  public static final net.corda.testing.node.UnstartedMockNode$Companion Companion
+##
+public static final class net.corda.testing.node.UnstartedMockNode$Companion extends java.lang.Object
 ##
 public final class net.corda.testing.node.User extends java.lang.Object
   public <init>(String, String, Set)
