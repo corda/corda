@@ -97,7 +97,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                          private val maxMessageSize: Int,
                          private val isDrainingModeOn: () -> Boolean,
                          private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
-) : SingletonSerializeAsToken(), MessagingService {
+) : SingletonSerializeAsToken(), MessagingService, AutoCloseable {
     companion object {
         private val log = contextLogger()
         // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
@@ -477,8 +477,6 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             check(started)
             val prevRunning = running
             running = false
-            eventsSubscription?.unsubscribe()
-            eventsSubscription = null
             networkChangeSubscription?.unsubscribe()
             require(p2pConsumer != null, {"stop can't be called twice"})
             require(producer != null, {"stop can't be called twice"})
@@ -492,6 +490,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
             close(bridgeNotifyConsumer)
             knownQueues.clear()
+            eventsSubscription?.unsubscribe()
+            eventsSubscription = null
             prevRunning
         }
         if (running && !nodeExecutor.isOnThread) {
@@ -511,6 +511,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             // swallow
         }
     }
+
+    override fun close() = stop()
 
     override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?, additionalHeaders: Map<String, String>) {
        sendInternal(message, target, retryId, acknowledgementHandler, additionalHeaders)

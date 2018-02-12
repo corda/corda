@@ -151,10 +151,11 @@ class ArtemisMessagingTest {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
-        startNodeMessagingClient()
         messagingClient.addMessageHandler(TOPIC) { message, _ ->
             receivedMessages.add(message)
         }
+        startNodeMessagingClient()
+
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
         thread(isDaemon = true) { messagingClient.run() }
 
