@@ -49,10 +49,9 @@ $newAbstracts
 EOF
 `
 
-#get 
-#newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -P "\.internal\." | grep -P "(?!(.*?extends.*?\.internal\..*?))" )
-#newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -P ".*?extends.*?\.internal\..*?" )
-newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -v "\. extends \." | grep "\.internal\." )
+#Get a list of any methods that expose classes in .internal. namespaces
+#Exclude nodeapi.internal as that is not stabalised yet
+newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -v "\.nodeapi\.internal\." | grep "\.internal\." )
 
 internalCount=`grep -v "^$" <<EOF | wc -l
 $newInternalExposures
