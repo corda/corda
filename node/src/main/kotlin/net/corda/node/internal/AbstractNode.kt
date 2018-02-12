@@ -636,7 +636,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    protected open fun makeKeyManagementService(identityService: IdentityServiceInternal, keyPairs: Set<KeyPair>): KeyManagementService {
+    protected open fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
         return PersistentKeyManagementService(identityService, keyPairs)
     }
 
