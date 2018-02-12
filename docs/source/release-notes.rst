@@ -178,7 +178,7 @@ Other Functional Improvements
 
 * **Configurable authorization and authentication data sources**
 
-  Corda can now be configured to load user credentials and permissions from an external database and supports password
+  Corda can now be configured to load RPC user credentials and permissions from an external database and supports password
   encryption based on the `Apache Shiro framework <https://shiro.apache.org>`_. See :ref:`RPC security management
   <rpc_security_mgmt_ref>` for documentation.
 
