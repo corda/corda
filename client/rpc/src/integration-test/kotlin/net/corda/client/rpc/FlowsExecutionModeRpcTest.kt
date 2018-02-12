@@ -33,17 +33,13 @@ class FlowsExecutionModeRpcTest {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.setFlowsDrainingModeEnabled(true)
-                }
+                nodeHandle.rpc.setFlowsDrainingModeEnabled(true)
                 nodeHandle.stop()
                 nodeName
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                assertThat(it.proxy.isFlowsDrainingModeEnabled()).isEqualTo(true)
-            }
+            assertThat(nodeHandle.rpc.isFlowsDrainingModeEnabled()).isEqualTo(true)
             nodeHandle.stop()
         }
     }
