@@ -97,9 +97,9 @@ class HibernateConfigurationTest {
     @Before
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
-        bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)
+        bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
@@ -115,9 +115,9 @@ class HibernateConfigurationTest {
             hibernateConfig = database.hibernateConfig
 
             // `consumeCash` expects we can self-notarise transactions
-            services = object : MockServices(cordappPackages, rigorousMock<IdentityServiceInternal>().also {
+            services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
-            }, BOB_NAME, generateKeyPair(), dummyNotary.keyPair) {
+            }, generateKeyPair(), dummyNotary.keyPair) {
                 override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, validatedTransactions, hibernateConfig)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

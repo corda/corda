@@ -19,7 +19,7 @@ class KMSUtilsTests {
         val alice = getTestPartyAndCertificate(ALICE_NAME, aliceKey.public)
         val cordappPackages = emptyList<String>()
         val ledgerIdentityService = makeTestIdentityService(alice)
-        val mockServices = MockServices(cordappPackages, ledgerIdentityService, alice.name, aliceKey)
+        val mockServices = MockServices(cordappPackages, alice.name, ledgerIdentityService, aliceKey)
         val wellKnownIdentity = mockServices.myInfo.singleIdentityAndCert()
         val confidentialIdentity = mockServices.keyManagementService.freshKeyAndCert(wellKnownIdentity, false)
         val cert = confidentialIdentity.certificate

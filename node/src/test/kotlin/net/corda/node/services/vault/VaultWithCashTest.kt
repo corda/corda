@@ -78,8 +78,8 @@ class VaultWithCashTest {
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
@@ -109,7 +109,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(cordappPackages, rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =
