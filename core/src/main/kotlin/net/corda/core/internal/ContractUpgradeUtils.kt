@@ -1,21 +1,31 @@
 package net.corda.core.internal
 
-import net.corda.core.contracts.*
-import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UpgradedContract
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.transactions.ContractUpgradeWireTransaction
 
 object ContractUpgradeUtils {
-    fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
-            stateRef: StateAndRef<OldState>,
+    fun <OldState : ContractState, NewState : ContractState> assembleUpgradeTx(
+            stateAndRef: StateAndRef<OldState>,
             upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>,
-            privacySalt: PrivacySalt
-    ): TransactionBuilder {
-        val contractUpgrade = upgradedContractClass.newInstance()
-        return TransactionBuilder(stateRef.state.notary)
-                .withItems(
-                        stateRef,
-                        StateAndContract(contractUpgrade.upgrade(stateRef.state.data), upgradedContractClass.name),
-                        Command(UpgradeCommand(upgradedContractClass.name), stateRef.state.data.participants.map { it.owningKey }),
-                        privacySalt
-                )
+            privacySalt: PrivacySalt,
+            services: ServicesForResolution
+    ): ContractUpgradeWireTransaction {
+        require(stateAndRef.state.encumbrance == null) { "Cannot upgrade an encumbered state" }
+
+        val legacyContractAttachmentId = services.cordappProvider.getContractAttachmentID(stateAndRef.state.contract)!!
+        val upgradedContractAttachmentId = services.cordappProvider.getContractAttachmentID(upgradedContractClass.name)!!
+        val inputs = listOf(stateAndRef.ref)
+        return ContractUpgradeWireTransaction(
+                inputs,
+                stateAndRef.state.notary,
+                legacyContractAttachmentId,
+                upgradedContractClass.name,
+                upgradedContractAttachmentId,
+                privacySalt
+        )
     }
 }

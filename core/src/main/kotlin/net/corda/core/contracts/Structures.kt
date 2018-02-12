@@ -254,7 +254,14 @@ annotation class LegalProseReference(val uri: String)
  * @param NewState the upgraded contract state.
  */
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
+    /**
+     * Name of the contract this is an upgraded version of, used as part of verification of upgrade transactions.
+     */
     val legacyContract: ContractClassName
+    /**
+     * A validator for the legacy (pre-upgrade) contract attachments on the transaction.
+     */
+    val legacyContractConstraint: AttachmentConstraint
     /**
      * Upgrade contract's state object to a new state object.
      *

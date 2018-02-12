@@ -5,7 +5,8 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.TransactionWithSignatures
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import java.security.SignatureException
 
 /**
@@ -25,12 +26,8 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
             val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             val notary = stx.notary
             checkNotary(notary)
-            val timeWindow: TimeWindow? = if (stx.isNotaryChangeTransaction())
-                null
-            else
-                stx.tx.timeWindow
-            val transactionWithSignatures = stx.resolveTransactionWithSignatures(serviceHub)
-            checkSignatures(transactionWithSignatures)
+            val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
+            checkSignatures(stx)
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {
@@ -41,9 +38,9 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
         }
     }
 
-    private fun checkSignatures(tx: TransactionWithSignatures) {
+    private fun checkSignatures(stx: SignedTransaction) {
         try {
-            tx.verifySignaturesExcept(service.notaryIdentityKey)
+            stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(service.notaryIdentityKey)
         } catch (e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }

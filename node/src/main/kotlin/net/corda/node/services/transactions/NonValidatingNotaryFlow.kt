@@ -6,6 +6,7 @@ import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.TransactionParts
 import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.utilities.unwrap
@@ -21,15 +22,15 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
      */
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
-        val parts = otherSideSession.receive<Any>().unwrap {
+        return otherSideSession.receive<Any>().unwrap {
             when (it) {
                 is FilteredTransaction -> {
                     it.verify()
                     it.checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     it.checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
-                    val notary = it.notary
-                    TransactionParts(it.id, it.inputs, it.timeWindow, notary)
+                    TransactionParts(it.id, it.inputs, it.timeWindow, it.notary)
                 }
+                is ContractUpgradeFilteredTransaction -> TransactionParts(it.id, it.inputs, null, it.notary)
                 is NotaryChangeWireTransaction -> TransactionParts(it.id, it.inputs, null, it.notary)
                 else -> {
                     throw IllegalArgumentException("Received unexpected transaction type: ${it::class.java.simpleName}," +
@@ -37,6 +38,5 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                 }
             }
         }
-        return parts
     }
 }
