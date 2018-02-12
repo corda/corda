@@ -1,4 +1,4 @@
-package net.corda.node.shell
+package net.corda.shell
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
@@ -14,25 +14,10 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.node.services.IdentityService
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
-import net.corda.node.internal.security.AdminSubject
-import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcAuthContext
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.shell.CordaSSHAuthInfo
-import net.corda.shell.FlowWatchPrintingSubscriber
+import net.corda.core.messaging.*
 import net.corda.shell.utlities.ANSIProgressRenderer
 import net.corda.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -68,38 +53,20 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import kotlin.concurrent.thread
 
-// TODO: Add command history.
-// TODO: Command completion.
-// TODO: Do something sensible with commands that return a future.
-// TODO: Configure default renderers, send objects down the pipeline, add commands to do json/xml/yaml outputs.
-// TODO: Add a command to view last N lines/tail/control log4j2 loggers.
-// TODO: Review or fix the JVM commands which have bitrotted and some are useless.
-// TODO: Get rid of the 'java' command, it's kind of worthless.
-// TODO: Fix up the 'dashboard' command which has some rendering issues.
-// TODO: Resurrect or reimplement the mail plugin.
-// TODO: Make it notice new shell commands added after the node started.
 
-object InteractiveShell {
+object StandaloneShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var node: StartedNode<Node>
-    @VisibleForTesting
-    internal lateinit var database: CordaPersistence
     private lateinit var rpcOps: (username: String?, credentials: String?) -> CordaRPCOps
-    private lateinit var securityManager: RPCSecurityManager
-    private lateinit var identityService: IdentityService
+    private lateinit var connection: CordaRPCOps
     private var shell: Shell? = null
-    private lateinit var nodeLegalName: CordaX500Name
-
+    private var classLoader : ClassLoader? = null
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration: NodeConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
-        this.rpcOps = cordaRPCOps
-        this.securityManager = securityManager
-        this.identityService = identityService
-        this.nodeLegalName = configuration.myLegalName
-        this.database = database
+    fun startShell(configuration: ShellConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, classLoader: ClassLoader? = null, localUserName: String? = null, localUserPassword: String? = null) {
+        rpcOps = cordaRPCOps
+        StandaloneShell.classLoader = classLoader
         val dir = configuration.baseDirectory
         val runSshDaemon = configuration.sshd != null
 
@@ -115,40 +82,52 @@ object InteractiveShell {
             config["crash.auth"] = "corda"
         }
 
-        ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        shell = ShellLifecycle(dir).start(config)
+        ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", net.corda.node.shell.standalone.RunShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", net.corda.node.shell.standalone.FlowShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", net.corda.node.shell.standalone.StartShellCommand::class.java)
+        shell = ShellLifecycle(dir).start(config, localUserName, localUserPassword)
 
-        if (runSshDaemon) {
-            Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
-        }
+        //if (runSshDaemon) { //TODO refactor
+        //    Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+        //}
     }
 
-    fun runLocalShell(node: StartedNode<Node>) {
+    fun runLocalShell(onExit: () -> Unit = {}) {
         val terminal = TerminalFactory.create()
         val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"))
-            CURRENT_RPC_CONTEXT.set(context)
+            //val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"))
+            //CURRENT_RPC_CONTEXT.set(context) //TODO
+            println(Thread.currentThread().id)
             Emoji.renderIfSupported {
                 jlineProcessor.run()
             }
+            onExit.invoke()
+            println("THREAD 1 DONE")
         }
         thread(name = "Command line shell terminator", isDaemon = true) {
             // Wait for the shell to finish.
+            println(Thread.currentThread().id)
             jlineProcessor.closed()
+            onExit.invoke()
             log.info("Command shell has exited")
-            terminal.restore()
-            node.dispose()
+            //terminal.restore()
+
+            println("THREAD 2 DONE")
         }
     }
 
+    fun connect() {
+        val x = connection.nodeInfo()
+        println(x)
+    }
+
+
     class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
-        fun start(config: Properties): Shell {
+        fun start(config: Properties, localUserName: String? = null, localUserPassword: String? = null): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
             val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
@@ -171,25 +150,23 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, securityManager, nodeLegalName)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaRemoteAuthenticationPlugin(rpcOps) //TODO szsz
                 }
             }
-            val attributes = mapOf(
-                    "ops" to rpcOps,
-                    "mapper" to yamlInputMapper
-            )
+            val attributes = emptyMap<String,Any>()
             val context = PluginContext(discovery, attributes, commandsFS, confFS, classLoader)
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, makeRPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"), "demo", "demo"), StdoutANSIProgressRenderer))
+            connection = makeRPCOps(rpcOps, localUserName, localUserPassword)
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, connection, StdoutANSIProgressRenderer))
         }
     }
 
-    private val yamlInputMapper: ObjectMapper by lazy {
+    fun createOutputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
-        JacksonSupport.createInMemoryMapper(identityService, YAMLFactory(), true).apply {
+        return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
             rpcModule.addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
@@ -221,7 +198,7 @@ object InteractiveShell {
      * the [runFlowFromString] method and starts the requested flow. Ctrl-C can be used to cancel.
      */
     @JvmStatic
-    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer) {
+    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, om: ObjectMapper) {
         val matches = rpcOps.registeredFlows().filter { nameFragment in it }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
@@ -232,11 +209,15 @@ object InteractiveShell {
             return
         }
 
-        val clazz: Class<FlowLogic<*>> = uncheckedCast(Class.forName(matches.single()))
+        val clazz: Class<FlowLogic<*>> = if (classLoader != null) {
+            uncheckedCast(Class.forName(matches.single(), true, classLoader))
+        } else {
+            uncheckedCast(Class.forName(matches.single()))
+        }
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz, om)
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
@@ -275,7 +256,7 @@ object InteractiveShell {
     fun <T> runFlowFromString(invoke: (Class<out FlowLogic<T>>, Array<out Any?>) -> FlowProgressHandle<T>,
                               inputData: String,
                               clazz: Class<out FlowLogic<T>>,
-                              om: ObjectMapper = yamlInputMapper): FlowProgressHandle<T> {
+                              om: ObjectMapper): FlowProgressHandle<T> {
         // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
         val parser = StringToMethodCallParser(clazz, om)
@@ -289,10 +270,9 @@ object InteractiveShell {
 
             try {
                 // Attempt construction with the given arguments.
-                val args = database.transaction {
-                    paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                    parser.parseArguments(clazz.name, paramNamesFromConstructor!!.zip(ctor.parameterTypes), inputData)
-                }
+                paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
+                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor!!.zip(ctor.parameterTypes), inputData)
+
                 if (args.size != ctor.parameterTypes.size) {
                     errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
                     continue
@@ -325,9 +305,8 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        database.transaction {
-            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
-        }
+        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -349,9 +328,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps): Any? {
-        val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
-
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.toLowerCase().startsWith("startflow")) {
             // The flow command provides better support and startFlow requires special handling anyway due to
@@ -364,7 +341,8 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val call = database.transaction { parser.parse(cordaRPCOps, cmd) }
+            val parser = StringToMethodCallParser(CordaRPCOps::class.java, om)//context.attributes["mapper"] as ObjectMapper)
+            val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)

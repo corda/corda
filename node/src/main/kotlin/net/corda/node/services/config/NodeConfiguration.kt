@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -248,8 +249,6 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
             }
         }
 }
-
-data class SSHDConfiguration(val port: Int)
 
 // Supported types of authentication/authorization data providers
 enum class AuthDataSourceType {

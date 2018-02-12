@@ -1,8 +1,5 @@
-package net.corda.node.shell
+package net.corda.shell
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.services.api.ServiceHubInternal
 import org.crsh.command.BaseCommand
 import org.crsh.shell.impl.command.CRaSHSession
 
@@ -12,6 +9,5 @@ import org.crsh.shell.impl.command.CRaSHSession
 open class InteractiveShellCommand : BaseCommand() {
     fun ops() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).rpcOps
     fun ansiProgressRenderer() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).ansiProgressRenderer
-    fun services() = context.attributes["services"] as ServiceHubInternal
-    fun objectMapper() = context.attributes["mapper"] as ObjectMapper
+    fun objectMapper() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).yamlInputMapper
 }

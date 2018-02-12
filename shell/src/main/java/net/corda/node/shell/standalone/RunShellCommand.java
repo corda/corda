@@ -1,8 +1,9 @@
-package net.corda.node.shell;
+package net.corda.node.shell.standalone;
 
 import net.corda.core.messaging.*;
 import net.corda.client.jackson.*;
 import net.corda.shell.InteractiveShellCommand;
+import net.corda.shell.StandaloneShell;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 
@@ -24,14 +25,14 @@ public class RunShellCommand extends InteractiveShellCommand {
             InvocationContext<Map> context,
             @Usage("The command to run") @Argument(unquote = false) List<String> command
     ) {
-        StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper());
+        StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper());//JacksonSupport.createDefaultMapper(ops()));//objectMapper());
 
         if (command == null) {
             emitHelp(context, parser);
             return null;
         }
 
-        return InteractiveShell.runRPCFromString(command, out, context, ops());
+        return StandaloneShell.runRPCFromString(command, out, context, ops(), objectMapper());
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

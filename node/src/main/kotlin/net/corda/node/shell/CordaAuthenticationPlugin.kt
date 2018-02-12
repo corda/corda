@@ -7,6 +7,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.tryAuthenticate
+import net.corda.shell.CordaSSHAuthInfo
 import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
