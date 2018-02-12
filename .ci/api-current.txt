@@ -1571,6 +1571,7 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract Iterable getVaultTransactionNotes(net.corda.core.crypto.SecureHash)
   @kotlin.Deprecated @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed internalVerifiedTransactionsFeed()
   @kotlin.Deprecated @org.jetbrains.annotations.NotNull public abstract List internalVerifiedTransactionsSnapshot()
+  public abstract boolean isFlowsDrainingModeEnabled()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed networkMapFeed()
   @org.jetbrains.annotations.NotNull public abstract List networkMapSnapshot()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed networkParametersFeed()
@@ -1583,6 +1584,7 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
   @org.jetbrains.annotations.NotNull public abstract List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)
   @org.jetbrains.annotations.NotNull public abstract List registeredFlows()
+  public abstract void setFlowsDrainingModeEnabled(boolean)
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed stateMachineRecordedTransactionMappingFeed()
   @org.jetbrains.annotations.NotNull public abstract List stateMachineRecordedTransactionMappingSnapshot()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed stateMachinesFeed()
@@ -3901,7 +3903,7 @@ public class net.corda.testing.node.MessagingServiceSpy extends java.lang.Object
   @org.jetbrains.annotations.NotNull public net.corda.core.messaging.SingleMessageRecipient getMyAddress()
   public void removeMessageHandler(net.corda.node.services.messaging.MessageHandlerRegistration)
   @co.paralleluniverse.fibers.Suspendable public void send(List)
-  @co.paralleluniverse.fibers.Suspendable public void send(net.corda.node.services.messaging.Message, net.corda.core.messaging.MessageRecipients, Long, Object)
+  @co.paralleluniverse.fibers.Suspendable public void send(net.corda.node.services.messaging.Message, net.corda.core.messaging.MessageRecipients, Long, Object, kotlin.jvm.functions.Function0, Map)
 ##
 public final class net.corda.testing.node.MockKeyManagementService extends net.corda.core.serialization.SingletonSerializeAsToken implements net.corda.core.node.services.KeyManagementService
   @org.jetbrains.annotations.NotNull public Iterable filterMyKeys(Iterable)
