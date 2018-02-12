@@ -33,7 +33,7 @@ import javax.persistence.Table
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class NodeStatePersistenceTests {
+class ONodeStatePersistenceTests {
     @Test
     fun `persistent state survives node restart`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.

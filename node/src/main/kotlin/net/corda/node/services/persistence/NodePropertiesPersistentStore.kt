@@ -42,7 +42,7 @@ private class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, 
     private val nodeSpecificFlowsExecutionModeKey = "${readPhysicalNodeId()}_flowsExecutionMode"
 
     init {
-        logger.debug({"Node's flow execution mode property key: $nodeSpecificFlowsExecutionModeKey"})
+        logger.debug { "Node's flow execution mode property key: $nodeSpecificFlowsExecutionModeKey" }
     }
 
     private val map = PersistentMap({ key -> key }, { entity -> entity.key to entity.value!! }, NodePropertiesPersistentStore::DBNodeProperty, NodePropertiesPersistentStore.DBNodeProperty::class.java)

@@ -371,10 +371,13 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                 }
                 eventsSubscription = p2pConsumer!!.messages
                         .doOnError { error -> throw error }
-                        .map { artemisMessage -> artemisMessage to artemisToCordaMessage(artemisMessage) }
-                        .filter { messages -> messages.second != null }
-                        .doOnNext { messages -> messages.deliver() }
-                        .doOnNext { messages -> messages.acknowledge() }
+                        .doOnNext { artemisMessage ->
+                            val receivedMessage = artemisToCordaMessage(artemisMessage)
+                            receivedMessage?.let {
+                                deliver(it)
+                            }
+                            artemisMessage.acknowledge()
+                        }
                         // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
                         .doOnCompleted(latch::countDown)
                         .subscribe()
