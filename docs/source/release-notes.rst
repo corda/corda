@@ -41,7 +41,7 @@ Significant Changes in 3.0
     vault states will remain valid and understood by mixed version nodes and that networks of both Corda and R3 Corda
     nodes can inter-operate without issue.
 
-    .. info:: R3 Corda is R3's commercaially supported and enhanced version of Corda
+    .. note:: R3 Corda is R3's commercaially supported and enhanced version of Corda
 
   * **AMQP Serialization**
 
