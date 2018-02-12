@@ -6,8 +6,9 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
-import net.corda.nodeapi.internal.config.User
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.SecurityConfiguration
+import net.corda.nodeapi.internal.config.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import javax.security.auth.login.FailedLoginException
@@ -30,8 +31,8 @@ class RPCSecurityManagerTest {
         checkUserActions(
                 permitted = setOf(arrayListOf("nodeInfo"), arrayListOf("notaryIdentities")),
                 permissions = setOf(
-                        Permissions.invokeRpc(CordaRPCOps::nodeInfo),
-                        Permissions.invokeRpc(CordaRPCOps::notaryIdentities)))
+                        invokeRpc(CordaRPCOps::nodeInfo),
+                        invokeRpc(CordaRPCOps::notaryIdentities)))
     }
 
     @Test
@@ -46,7 +47,7 @@ class RPCSecurityManagerTest {
     @Test
     fun `Check startFlow RPC permission implies startFlowDynamic`() {
         checkUserActions(
-                permissions = setOf(Permissions.invokeRpc("startFlow")),
+                permissions = setOf(invokeRpc("startFlow")),
                 permitted = setOf(arrayListOf("startFlow"), arrayListOf("startFlowDynamic")))
     }
 
@@ -54,7 +55,7 @@ class RPCSecurityManagerTest {
     fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
         checkUserActions(
                 permitted = setOf(arrayListOf("startTrackedFlow"), arrayListOf("startTrackedFlowDynamic")),
-                permissions = setOf(Permissions.invokeRpc("startTrackedFlow")))
+                permissions = setOf(invokeRpc("startTrackedFlow")))
     }
 
     @Test
@@ -62,6 +63,18 @@ class RPCSecurityManagerTest {
         checkUserActions(
             permissions = setOf("all"),
             permitted = allActions.map { arrayListOf(it) }.toSet())
+    }
+
+    @Test
+    fun `flows draining mode permissions`() {
+        checkUserActions(
+                permitted = setOf(arrayListOf("setFlowsDrainingModeEnabled")),
+                permissions = setOf(invokeRpc(CordaRPCOps::setFlowsDrainingModeEnabled))
+        )
+        checkUserActions(
+                permitted = setOf(arrayListOf("isFlowsDrainingModeEnabled")),
+                permissions = setOf(invokeRpc(CordaRPCOps::isFlowsDrainingModeEnabled))
+        )
     }
 
     @Test
@@ -131,11 +144,11 @@ class RPCSecurityManagerTest {
                 val call = request.first()
                 val args = request.drop(1).toTypedArray()
                 assert(subject.isPermitted(request.first(), *args)) {
-                    "User ${subject.principal} should be permitted ${call} with target '${request.toList()}'"
+                    "User ${subject.principal} should be permitted $call with target '${request.toList()}'"
                 }
                 if (args.isEmpty()) {
                     assert(subject.isPermitted(request.first(), "XXX")) {
-                        "User ${subject.principal} should be permitted ${call} with any target"
+                        "User ${subject.principal} should be permitted $call with any target"
                     }
                 }
             }
