@@ -158,6 +158,7 @@ Minor Changes
   * Pluggable serializer framework for external classes
   * A number of identified performance issues have been improved
   * Numerous bug fixes and documentation tweaks
+  * Removed dependency on Jolokia WAR file
 
 Release 2.0
 -----------
