@@ -18,7 +18,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
-        cordapps = []
         rpcSettings {
             port 10003
             adminPort 10004
@@ -29,6 +28,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         p2pPort 10005
         cordapps = []
         rpcUsers = ext.rpcUsers
+        // This configures the default cordapp for this node
+        projectCordapp {
+            config "someStringValue=test"
+        }
         rpcSettings {
             port 10007
             adminPort 10008
@@ -39,6 +42,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         p2pPort 10009
         cordapps = []
         rpcUsers = ext.rpcUsers
+        // This configures the default cordapp for this node
+        projectCordapp {
+            config project.file("src/main/config.conf")
+        }
         rpcSettings {
             port 10011
             adminPort 10012

@@ -159,3 +159,20 @@ Installing the CorDapp JAR
 At runtime, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore in order to install a CorDapp on
 a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder, where ``node_dir`` is the folder in which
 the node's JAR and configuration files are stored.
+
+CorDapp configuration files
+---------------------------
+
+CorDapp configuration files should be placed in ``<node_dir>/cordapps/config``. The name of the file should match the
+name of the JAR of the CorDapp (eg; if your CorDapp is called ``hello-0.1.jar`` the config should be ``config/hello-0.1.conf``).
+
+Config files are currently only available in the `Typesafe/Lightbend <https://github.com/lightbend/config>`_ config format.
+These files are loaded when a CorDapp context is created and so can change during runtime.
+
+CorDapp configuration can be accessed from ``CordappContext::config`` whenever a ``CordappContext`` is available.
+
+There is an example project that demonstrates in ``samples` called ``cordapp-configuration`` and API documentation in
+<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
+
+
+

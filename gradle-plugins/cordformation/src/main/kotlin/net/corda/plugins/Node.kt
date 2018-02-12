@@ -160,12 +160,12 @@ open class Node @Inject constructor(private val project: Project) : CordformNode
     }
 
     /**
-     * Configures the default cordapp automatically added to this node
+     * Configures the default cordapp automatically added to this node from this project
      *
      * @param configureClosure A groovy closure to configure a [Cordapp] object
      * @return The created and inserted [Cordapp]
      */
-    fun cordapp(configureClosure: Closure<in Cordapp>): Cordapp {
+    fun projectCordapp(configureClosure: Closure<in Cordapp>): Cordapp {
         project.configure(builtCordapp, configureClosure) as Cordapp
         return builtCordapp
     }
