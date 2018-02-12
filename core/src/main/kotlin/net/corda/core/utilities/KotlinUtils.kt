@@ -49,14 +49,6 @@ inline fun Logger.debug(msg: () -> String) {
 }
 
 /**
- * Filters out all elements that are not of the given [ELEMENT] type.
- */
-inline fun <reified ELEMENT : Any> Observable<*>.filterIsInstance(): Observable<ELEMENT> {
-
-    return filter(ELEMENT::class::isInstance).map { it as ELEMENT }
-}
-
-/**
  * Extension method for easier construction of [Duration]s in terms of integer days: `val twoDays = 2.days`.
  * @see Duration.ofDays
  */

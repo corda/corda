@@ -1,11 +1,6 @@
 package net.corda.node.internal
 
-interface LifecycleSupport : Startable, Stoppable {
-    fun restart() {
-        stop()
-        start()
-    }
-}
+interface LifecycleSupport : Startable, Stoppable
 
 interface Stoppable : AutoCloseable {
     fun stop()
@@ -26,9 +21,4 @@ interface Connectable {
     fun connect()
 
     fun disconnect()
-
-    fun reconnect() {
-        disconnect()
-        connect()
-    }
 }

@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.NodePropertiesStore.FlowsDrainingModeOperations
@@ -41,7 +42,7 @@ private class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, 
     private val nodeSpecificFlowsExecutionModeKey = "${readPhysicalNodeId()}_flowsExecutionMode"
 
     init {
-        logger.debug("Node's flow execution mode property key: $nodeSpecificFlowsExecutionModeKey")
+        logger.debug { "Node's flow execution mode property key: $nodeSpecificFlowsExecutionModeKey" }
     }
 
     private val map = PersistentMap({ key -> key }, { entity -> entity.key to entity.value!! }, NodePropertiesPersistentStore::DBNodeProperty, NodePropertiesPersistentStore.DBNodeProperty::class.java)
