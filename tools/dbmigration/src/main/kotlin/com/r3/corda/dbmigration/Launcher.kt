@@ -2,7 +2,6 @@
 
 package com.r3.corda.dbmigration
 
-import MigrationHelpers
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -10,6 +9,7 @@ import joptsimple.OptionException
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
+import net.corda.core.internal.MigrationHelpers
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.schemas.MappedSchema
@@ -147,20 +147,20 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
             }
         }
         options.has(RUN_MIGRATION) -> {
-            logger.info("Running the database migration on  ${baseDirectory}")
+            logger.info("Running the database migration on  $baseDirectory")
             runMigrationCommand { it.runMigration() }
         }
         options.has(CREATE_MIGRATION_CORDAPP) && (mode == Mode.NODE) -> {
 
             fun generateMigrationFileForSchema(schemaClass: String) {
-                logger.info("Creating database migration files for schema: ${schemaClass} into ${baseDirectory / "migration"}")
+                logger.info("Creating database migration files for schema: $schemaClass into ${baseDirectory / "migration"}")
                 try {
                     runWithDataSource(config) {
                         MigrationExporter(baseDirectory, config.dataSourceProperties, classLoader, it).generateMigrationForCorDapp(schemaClass)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    errorAndExit("Could not generate migration for ${schemaClass}: ${e.message}")
+                    errorAndExit("Could not generate migration for $schemaClass: ${e.message}")
                 }
             }
 

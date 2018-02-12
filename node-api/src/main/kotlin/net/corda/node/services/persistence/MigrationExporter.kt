@@ -1,7 +1,7 @@
 package net.corda.node.services.persistence
 
-import MigrationHelpers.migrationResourceNameForSchema
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.MigrationHelpers.migrationResourceNameForSchema
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.schemas.MappedSchema
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -53,7 +53,7 @@ class MigrationExporter(val parent: Path, val datasourceProperties: Properties, 
             createNewFile()
             appendText(LIQUIBASE_HEADER)
             appendText("\n\n")
-            appendText("--changeset ${CORDA_USER}:initial_schema_for_${mappedSchema::class.simpleName!!}")
+            appendText("--changeset $CORDA_USER:initial_schema_for_${mappedSchema::class.simpleName!!}")
             appendText("\n")
         }
 

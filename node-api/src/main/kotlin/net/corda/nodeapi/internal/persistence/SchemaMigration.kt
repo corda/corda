@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.persistence
 
-import MigrationHelpers.getMigrationResource
 import com.fasterxml.jackson.databind.ObjectMapper
 import liquibase.Contexts
 import liquibase.LabelExpression
@@ -11,6 +10,7 @@ import liquibase.database.core.MSSQLDatabase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.lockservice.LockServiceFactory
 import liquibase.resource.ClassLoaderResourceAccessor
+import net.corda.core.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import java.io.*
@@ -31,7 +31,7 @@ class SchemaMigration(
      * Main entry point to the schema migration.
      * Called during node startup.
      */
-    fun nodeStartup(): Unit {
+    fun nodeStartup() {
         when {
             databaseConfig.runMigration -> runMigration()
             failOnMigrationMissing -> checkState()
@@ -56,7 +56,7 @@ class SchemaMigration(
     /**
      * can be used from an external tool to release the lock in case something went terribly wrong
      */
-    fun forceReleaseMigrationLock(): Unit {
+    fun forceReleaseMigrationLock() {
         dataSource.connection.use { connection ->
             LockServiceFactory.getInstance().getLockService(getLiquibaseDatabase(JdbcConnection(connection))).forceReleaseLock()
         }
