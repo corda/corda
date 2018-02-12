@@ -181,8 +181,9 @@ open class MockServices private constructor(
      */
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage()),
+            firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
-            firstIdentity, firstIdentity.keyPair
+            firstIdentity.keyPair
     )
 
     /**
