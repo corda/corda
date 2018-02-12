@@ -20,7 +20,7 @@ fun CordformDefinition.clean() {
  * have terminated.
  */
 fun CordformDefinition.deployNodes(extraPackagesToScan: List<String> = emptyList()) {
-    runNodes(waitForAllNodesToFinish = true) { }
+    runNodes(waitForAllNodesToFinish = true, extraPackagesToScan = extraPackagesToScan) { }
 }
 
 /**
@@ -28,7 +28,7 @@ fun CordformDefinition.deployNodes(extraPackagesToScan: List<String> = emptyList
  * and webservers are up. After execution all these processes will be terminated.
  */
 fun CordformDefinition.deployNodesThen(extraPackagesToScan: List<String> = emptyList(), block: () -> Unit) {
-    runNodes(waitForAllNodesToFinish = false, block = block)
+    runNodes(waitForAllNodesToFinish = false, extraPackagesToScan = extraPackagesToScan, block = block)
 }
 
 private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, extraPackagesToScan: List<String> = emptyList(), block: () -> Unit) {

@@ -8,7 +8,7 @@ import org.junit.Test
 class BankOfCordaCordformTest {
     @Test
     fun `run demo`() {
-        BankOfCordaCordform().deployNodesThen {
+        BankOfCordaCordform().deployNodesThen(listOf("net.corda.finance")) {
             IssueCash.requestWebIssue(30000.POUNDS)
             IssueCash.requestRpcIssue(20000.DOLLARS)
         }
