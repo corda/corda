@@ -45,3 +45,14 @@ To get started, please follow the instructions below:
 This script will download necessary database drivers and set up
 the dependencies directory with copies of the Corda fat-JAR and
 the network bootstrapping tool.
+
+# Selective Runs
+
+If you only want to run tests of a specific tag, you can append
+the following parameter to the Gradle command:
+
+```bash
+$ ../../gradlew scenario -Ptags="@cash"
+# or
+$ ../../gradlew scenario -Ptags="@cash,@logging"
+```

@@ -14,7 +14,7 @@ class CommandTests {
 
     @Test
     fun `failed command returns non-zero`() {
-        val exitCode = Command(listOf("some-random-command-that-does-not-exist")).run()
+        val exitCode = Command(listOf("ls", "some-weird-path-that-does-not-exist")).run()
         assertThat(exitCode).isNotEqualTo(0)
     }
 

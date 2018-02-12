@@ -1,3 +1,4 @@
+@database @connectivity
 Feature: Database - Connection
   For Corda to work, a database must be running and appropriately configured.
 

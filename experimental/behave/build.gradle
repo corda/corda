@@ -108,6 +108,11 @@ task scenarios(type: Test) {
     setTestClassesDirs sourceSets.scenario.output.getClassesDirs()
     classpath = sourceSets.scenario.runtimeClasspath
     outputs.upToDateWhen { false }
+
+    if (project.hasProperty("tags")) {
+        systemProperty "cucumber.options", "--tags $tags"
+        logger.warn("Only running tests tagged with: $tags ...")
+    }
 }
 
 //scenarios.mustRunAfter test

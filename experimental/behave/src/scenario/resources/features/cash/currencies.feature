@@ -1,3 +1,4 @@
+@cash @issuance
 Feature: Cash - Issuable Currencies
   To have cash on ledger, certain nodes must have the ability to issue cash of various currencies.
 
