@@ -9,10 +9,15 @@ import net.corda.behave.logging.getLogger
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
+import net.corda.behave.seconds
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
 import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.commons.io.FileUtils
 import java.io.File
 import java.time.Duration
@@ -144,6 +149,23 @@ class Node(
                 exitLatch?.countDown()
             }
         }).start()
+    }
+
+    fun <T> rpc(action: (CordaRPCOps) -> T): T {
+        var result: T? = null
+        val user = config.users.first()
+        val address = config.nodeInterface
+        val targetHost = NetworkHostAndPort(address.host, address.rpcPort)
+        val config = CordaRPCClientConfiguration(
+                connectionMaxRetryInterval = 10.seconds
+        )
+        log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
+        CordaRPCClient(targetHost, config).use(user.username, user.password) {
+            log.info("RPC connection to ${targetHost.host}:${targetHost.port} established")
+            val client = it.proxy
+            result = action(client)
+        }
+        return result ?: error("Failed to run RPC action")
     }
 
     override fun toString(): String {

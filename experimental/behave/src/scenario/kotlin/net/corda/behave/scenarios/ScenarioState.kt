@@ -3,11 +3,7 @@ package net.corda.behave.scenarios
 import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
 import net.corda.behave.node.Node
-import net.corda.behave.seconds
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.assertThat
 
 class ScenarioState {
@@ -54,29 +50,17 @@ class ScenarioState {
         assertThat(network?.waitUntilRunning()).isTrue()
     }
 
-    fun withNetwork(action: ScenarioState.() -> Unit) {
+    inline fun <T> withNetwork(action: ScenarioState.() -> T): T {
         ensureNetworkIsRunning()
-        action()
+        return action()
     }
 
-    fun <T> withClient(nodeName: String, action: (CordaRPCOps) -> T): T {
-        var result: T? = null
+    inline fun <T> withClient(nodeName: String, crossinline action: (CordaRPCOps) -> T): T {
         withNetwork {
-            val node = node(nodeName)
-            val user = node.config.users.first()
-            val address = node.config.nodeInterface
-            val targetHost = NetworkHostAndPort(address.host, address.rpcPort)
-            val config = CordaRPCClientConfiguration(
-                    connectionMaxRetryInterval = 10.seconds
-            )
-            log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
-            CordaRPCClient(targetHost, config).use(user.username, user.password) {
-                log.info("RPC connection to ${targetHost.host}:${targetHost.port} established")
-                val client = it.proxy
-                result = action(client)
+            return node(nodeName).rpc {
+                action(it)
             }
         }
-        return result ?: error("Failed to run RPC action")
     }
 
     fun stopNetwork() {
