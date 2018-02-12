@@ -51,7 +51,7 @@ EOF
 
 #Get a list of any methods that expose classes in .internal. namespaces
 #Exclude nodeapi.internal as that is not stabalised yet
-newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -v "\.nodeapi\.internal\." | grep "\.internal\." )
+newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "\.internal\." )
 
 internalCount=`grep -v "^$" <<EOF | wc -l
 $newInternalExposures
