@@ -1,8 +1,11 @@
 package net.corda.core.cordapp
 
+import net.corda.core.DoNotImplement
+
 /**
  * Provides access to cordapp configuration independent of the configuration provider.
  */
+@DoNotImplement
 interface CordappConfig {
     /**
      * Check if a config exists at path
