@@ -670,7 +670,6 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     }
 }
 
-// TODO MS try this
 private class P2PMessagingConsumer(
         queueNames: Set<String>,
         createSession: () -> ClientSession,
@@ -688,6 +687,7 @@ private class P2PMessagingConsumer(
 
     private var initialConsumer = multiplex(queueNames, createSession, initialSessionMessages)
     private var existingConsumer = multiplex(queueNames, createSession, existingSessionMessages)
+    private val subscriptions = mutableSetOf<Subscription>()
 
     override fun start() {
 
@@ -695,8 +695,8 @@ private class P2PMessagingConsumer(
             require(!startedFlag)
             drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { pauseInitial() }.subscribe()
             drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext { resumeInitial() }.subscribe()
-            initialConsumer.messages.doOnNext(messages::onNext).subscribe()
-            existingConsumer.messages.doOnNext(messages::onNext).subscribe()
+            subscriptions += initialConsumer.messages.doOnNext(messages::onNext).subscribe()
+            subscriptions += existingConsumer.messages.doOnNext(messages::onNext).subscribe()
             if (!isDrainingModeOn()) {
                 initialConsumer.start()
             }
@@ -711,6 +711,8 @@ private class P2PMessagingConsumer(
             if (startedFlag) {
                 initialConsumer.stop()
                 existingConsumer.stop()
+                subscriptions.forEach(Subscription::unsubscribe)
+                subscriptions.clear()
                 startedFlag = false
             }
             messages.onCompleted()
@@ -730,7 +732,10 @@ private class P2PMessagingConsumer(
 
     private fun resumeInitial() {
 
-        if (initialConsumer.started && !initialConsumer.connected) {
+        if(!initialConsumer.started) {
+            initialConsumer.start()
+        }
+        if (!initialConsumer.connected) {
             initialConsumer.connect()
         }
     }
