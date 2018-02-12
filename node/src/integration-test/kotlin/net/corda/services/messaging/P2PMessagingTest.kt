@@ -12,15 +12,13 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.driver.DriverDSL
-import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -44,13 +42,14 @@ class P2PMessagingTest {
         }
     }
 
+    
     @Test
     fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
         startDriverWithDistributedService { distributedServiceNodes ->
             val alice = startAlice()
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
-                alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
+                alice.services.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
 
             val responseMessage = "response"
@@ -76,7 +75,7 @@ class P2PMessagingTest {
             val alice = startAlice()
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
-                alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
+                alice.services.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
 
             val responseMessage = "response"
@@ -89,7 +88,7 @@ class P2PMessagingTest {
             // Wait until the first request is received
             crashingNodes.firstRequestReceived.await()
             // Stop alice's node after we ensured that the first request was delivered and ignored.
-            alice.dispose()
+            alice.stop()
             val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
             assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
 
@@ -99,7 +98,7 @@ class P2PMessagingTest {
             val aliceRestarted = startAlice()
 
             val responseFuture = openFuture<Any>()
-            aliceRestarted.network.runOnNextMessage("test.response") {
+            aliceRestarted.services.networkService.runOnNextMessage("test.response") {
                 responseFuture.set(it.data.deserialize())
             }
             val response = responseFuture.getOrThrow()
@@ -109,15 +108,16 @@ class P2PMessagingTest {
         }
     }
 
-    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<StartedNode<Node>>) -> Unit) {
+
+    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
         driver(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))) {
-            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as NodeHandle.InProcess).node })
+            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }
     }
 
-    private fun DriverDSL.startAlice(): StartedNode<Node> {
+    private fun DriverDSL.startAlice(): InProcess {
         return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
-                .map { (it as NodeHandle.InProcess).node }
+                .map { (it as InProcess) }
                 .getOrThrow()
     }
 
@@ -133,7 +133,7 @@ class P2PMessagingTest {
      * initially set to true. This may be used to simulate scenarios where nodes receive request messages but crash
      * before sending back a response.
      */
-    private fun simulateCrashingNodes(distributedServiceNodes: List<StartedNode<*>>, responseMessage: String): CrashingNodes {
+    private fun simulateCrashingNodes(distributedServiceNodes: List<InProcess>, responseMessage: String): CrashingNodes {
         val crashingNodes = CrashingNodes(
                 requestsReceived = AtomicInteger(0),
                 firstRequestReceived = CountDownLatch(1),
@@ -141,8 +141,8 @@ class P2PMessagingTest {
         )
 
         distributedServiceNodes.forEach {
-            val nodeName = it.info.chooseIdentity().name
-            it.network.addMessageHandler("test.request") { netMessage, _ ->
+            val nodeName = it.services.myInfo.chooseIdentity().name
+            it.services.networkService.addMessageHandler("test.request") { netMessage, _ ->
                 crashingNodes.requestsReceived.incrementAndGet()
                 crashingNodes.firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -154,21 +154,21 @@ class P2PMessagingTest {
                 } else {
                     println("sending response")
                     val request = netMessage.data.deserialize<TestRequest>()
-                    val response = it.network.createMessage("test.response", responseMessage.serialize().bytes)
-                    it.network.send(response, request.replyTo)
+                    val response = it.services.networkService.createMessage("test.response", responseMessage.serialize().bytes)
+                    it.services.networkService.send(response, request.replyTo)
                 }
             }
         }
         return crashingNodes
     }
 
-    private fun assertAllNodesAreUsed(participatingServiceNodes: List<StartedNode<*>>, serviceName: CordaX500Name, originatingNode: StartedNode<*>) {
+    private fun assertAllNodesAreUsed(participatingServiceNodes: List<InProcess>, serviceName: CordaX500Name, originatingNode: InProcess) {
         // Setup each node in the distributed service to return back it's NodeInfo so that we can know which node is being used
         participatingServiceNodes.forEach { node ->
-            node.respondWith(node.info)
+            node.respondWith(node.services.myInfo)
         }
         val serviceAddress = originatingNode.services.networkMapCache.run {
-            originatingNode.network.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
+            originatingNode.services.networkService.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
         }
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection
@@ -180,23 +180,23 @@ class P2PMessagingTest {
                 break
             }
         }
-        assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map(StartedNode<*>::info))
+        assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map { it.services.myInfo })
     }
-
-    private fun StartedNode<*>.respondWith(message: Any) {
-        network.addMessageHandler("test.request") { netMessage, _ ->
+    
+    private fun InProcess.respondWith(message: Any) {
+        services.networkService.addMessageHandler("test.request") { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = network.createMessage("test.response", message.serialize().bytes)
-            network.send(response, request.replyTo)
+            val response = services.networkService.createMessage("test.response", message.serialize().bytes)
+            services.networkService.send(response, request.replyTo)
         }
     }
 
-    private fun StartedNode<*>.receiveFrom(target: MessageRecipients, retryId: Long? = null): CordaFuture<Any> {
+    private fun InProcess.receiveFrom(target: MessageRecipients, retryId: Long? = null): CordaFuture<Any> {
         val response = openFuture<Any>()
-        network.runOnNextMessage("test.response") { netMessage ->
+        services.networkService.runOnNextMessage("test.response") { netMessage ->
             response.set(netMessage.data.deserialize())
         }
-        network.send("test.request", TestRequest(replyTo = network.myAddress), target, retryId = retryId)
+        services.networkService.send("test.request", TestRequest(replyTo = services.networkService.myAddress), target, retryId = retryId)
         return response
     }
 

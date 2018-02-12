@@ -125,9 +125,12 @@ public class ListsSerializationJavaTest {
 
     // Have to have own version as Kotlin inline functions cannot be easily called from Java
     private static <T> void assertEqualAfterRoundTripSerialization(T container, Class<T> clazz) throws Exception {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                evolutionSerializerGetter,
+                fingerPrinter);
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(container);
         DeserializationInput des = new DeserializationInput(factory1);

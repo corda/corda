@@ -1,15 +1,15 @@
-package net.corda.testing.node
+package net.corda.testing.node.internal
 
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
-class MockNetworkTests {
+class InternalMockNetworkTests {
     @Test
     fun `does not leak serialization env if init fails`() {
         val e = Exception("didn't work")
         assertThatThrownBy {
-            object : MockNetwork(emptyList(), initialiseSerialization = true) {
+            object : InternalMockNetwork(emptyList(), initialiseSerialization = true) {
                 override fun createNotaries() = throw e
             }
         }.isSameAs(e)

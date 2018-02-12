@@ -38,8 +38,9 @@ class Node(private val project: Project) : CordformNode() {
         private set
     internal lateinit var containerName: String
         private set
-
     internal var rpcSettings: RpcSettings = RpcSettings()
+        private set
+    internal var webserverJar: String? = null
         private set
 
     /**
@@ -77,6 +78,17 @@ class Node(private val project: Project) : CordformNode() {
      */
     fun sshdPort(sshdPort: Int?) {
         config = config.withValue("sshd.port", ConfigValueFactory.fromAnyRef(sshdPort))
+    }
+
+    /**
+     * The webserver JAR to be used by this node.
+     *
+     * If not provided, the default development webserver is used.
+     *
+     * @param webserverJar The file path of the webserver JAR to use.
+     */
+    fun webserverJar(webserverJar: String) {
+        this.webserverJar = webserverJar
     }
 
     internal fun build() {
@@ -130,7 +142,15 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the corda webserver JAR to the node directory
      */
     private fun installWebserverJar() {
-        val webJar = Cordformation.verifyAndGetRuntimeJar(project, "corda-webserver")
+        // If no webserver JAR is provided, the default development webserver is used.
+        val webJar = if (webserverJar == null) {
+            project.logger.info("Using default development webserver.")
+            Cordformation.verifyAndGetRuntimeJar(project, "corda-webserver")
+        } else {
+            project.logger.info("Using custom webserver: $webserverJar.")
+            File(webserverJar)
+        }
+        
         project.copy {
             it.apply {
                 from(webJar)

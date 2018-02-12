@@ -15,6 +15,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.toFuture
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -78,7 +79,7 @@ class IRSDemoTest {
                 registerIRSModule(mapper)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }
-            val nextFixingDates = getFixingDateObservable(nodeA.configuration)
+            val nextFixingDates = getFixingDateObservable(nodeA.rpcAddress)
             val numADeals = getTradeCount(nodeAApi)
             val numBDeals = getTradeCount(nodeBApi)
 
@@ -102,8 +103,8 @@ class IRSDemoTest {
         return getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
     }
 
-    private fun getFixingDateObservable(config: NodeConfiguration): Observable<LocalDate?> {
-        val client = CordaRPCClient(config.rpcOptions.address!!)
+    private fun getFixingDateObservable(address: NetworkHostAndPort): Observable<LocalDate?> {
+        val client = CordaRPCClient(address)
         val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 

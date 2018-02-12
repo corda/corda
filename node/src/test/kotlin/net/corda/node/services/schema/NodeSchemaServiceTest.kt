@@ -11,7 +11,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.schema.NodeSchemaService.NodeCoreV1
 import net.corda.node.services.schema.NodeSchemaService.NodeNotaryV1
-import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.MockNetwork
@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 class NodeSchemaServiceTest {
     /**
-     * Note: this test requires explicitly registering custom contract schemas with a MockNode
+     * Note: this test requires explicitly registering custom contract schemas with a StartedMockNode
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {
@@ -79,7 +79,7 @@ class NodeSchemaServiceTest {
     fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
         val tables = driver(startNodesInProcess = true) {
-            (defaultNotaryNode.getOrThrow() as NodeHandle.InProcess).node.database.transaction {
+            (defaultNotaryNode.getOrThrow() as InProcess).database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }
         }

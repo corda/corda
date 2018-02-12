@@ -183,7 +183,7 @@ class NetworkBootstrapper {
                 notaries = notaryInfos,
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
-                maxTransactionSize = 40000,
+                maxTransactionSize = Int.MAX_VALUE,
                 epoch = 1,
                 whitelistedContractImplementations = if (whitelistPath != null) readContractWhitelist(whitelistPath) else whitelistAllContractsForTest
         ), overwriteFile = true)

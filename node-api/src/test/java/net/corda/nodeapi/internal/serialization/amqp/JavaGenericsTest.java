@@ -29,7 +29,8 @@ public class JavaGenericsTest {
         SerializerFactory factory = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter());
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
 
         SerializationOutput ser = new SerializationOutput(factory);
         SerializedBytes<?> bytes = ser.serialize(a1);
@@ -44,7 +45,8 @@ public class JavaGenericsTest {
         SerializerFactory factory = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter());
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
 
        return (new SerializationOutput(factory)).serialize(a);
     }
@@ -59,7 +61,8 @@ public class JavaGenericsTest {
         SerializerFactory factory = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter());
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
 
         DeserializationInput des = new DeserializationInput(factory);
         return des.deserialize(bytes, A.class);
@@ -83,7 +86,8 @@ public class JavaGenericsTest {
         SerializerFactory factory = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter());
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
 
         SerializedBytes<?> bytes = forceWildcardSerializeFactory(new A(new Inner(29)), factory);
         Inner i = (Inner)forceWildcardDeserializeFactory(bytes, factory).getT();
