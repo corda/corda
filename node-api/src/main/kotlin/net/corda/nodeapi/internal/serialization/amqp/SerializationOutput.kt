@@ -3,7 +3,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
-import net.corda.nodeapi.internal.serialization.Instruction
+import net.corda.nodeapi.internal.serialization.SectionId
 import net.corda.nodeapi.internal.serialization.kryo.byteArrayOutput
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -75,11 +75,11 @@ open class SerializationOutput @JvmOverloads constructor(internal val serializer
             try {
                 amqpMagic.writeTo(stream)
                 if (encoding != null) {
-                    Instruction.ENCODING.writeTo(stream)
+                    SectionId.ENCODING.writeTo(stream)
                     (encoding as CordaSerializationEncoding).writeTo(stream)
                     stream = encoding.wrap(stream)
                 }
-                Instruction.DATA_AND_STOP.writeTo(stream)
+                SectionId.DATA_AND_STOP.writeTo(stream)
                 stream.asByteBuffer(data.encodedSize().toInt(), data::encode)
             } finally {
                 stream.close()

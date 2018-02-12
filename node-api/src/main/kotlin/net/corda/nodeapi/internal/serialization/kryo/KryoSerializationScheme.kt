@@ -16,7 +16,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.Instruction
+import net.corda.nodeapi.internal.serialization.SectionId
 import net.corda.nodeapi.internal.serialization.SerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 import java.security.PublicKey
@@ -91,9 +91,9 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
             kryoInput(ByteBufferInputStream(dataBytes)) {
                 val result: T
                 loop@ while (true) {
-                    when (Instruction.vals.readFrom(this)) {
-                        Instruction.ENCODING -> substitute(CordaSerializationEncoding.vals.readFrom(this)::wrap)
-                        Instruction.DATA_AND_STOP, Instruction.ALT_DATA_AND_STOP -> {
+                    when (SectionId.reader.readFrom(this)) {
+                        SectionId.ENCODING -> substitute(CordaSerializationEncoding.reader.readFrom(this)::wrap)
+                        SectionId.DATA_AND_STOP, SectionId.ALT_DATA_AND_STOP -> {
                             result = if (context.objectReferencesEnabled) {
                                 uncheckedCast(readClassAndObject(this))
                             } else {
@@ -113,11 +113,11 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
             SerializedBytes(kryoOutput {
                 kryoMagic.writeTo(this)
                 context.encoding?.let { encoding ->
-                    Instruction.ENCODING.writeTo(this)
+                    SectionId.ENCODING.writeTo(this)
                     (encoding as CordaSerializationEncoding).writeTo(this)
                     substitute(encoding::wrap)
                 }
-                Instruction.ALT_DATA_AND_STOP.writeTo(this) // XXX: Change to DATA_AND_STOP?
+                SectionId.ALT_DATA_AND_STOP.writeTo(this) // Forward-compatible in null-encoding case.
                 if (context.objectReferencesEnabled) {
                     writeClassAndObject(this, obj)
                 } else {

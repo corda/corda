@@ -5,7 +5,7 @@ import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
-import net.corda.nodeapi.internal.serialization.Instruction
+import net.corda.nodeapi.internal.serialization.SectionId
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedByte
@@ -54,15 +54,15 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
         }
 
         @Throws(NotSerializableException::class)
-        fun <T> getDataBytes(byteSequence: ByteSequence, task: (ByteBuffer) -> T): T {
+        fun <T> withDataBytes(byteSequence: ByteSequence, task: (ByteBuffer) -> T): T {
             // Check that the lead bytes match expected header
             val amqpSequence = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
             var stream: InputStream = ByteBufferInputStream(amqpSequence)
             try {
                 while (true) {
-                    when (Instruction.vals.readFrom(stream)) {
-                        Instruction.ENCODING -> stream = CordaSerializationEncoding.vals.readFrom(stream).wrap(stream)
-                        Instruction.DATA_AND_STOP, Instruction.ALT_DATA_AND_STOP -> return task(stream.asByteBuffer())
+                    when (SectionId.reader.readFrom(stream)) {
+                        SectionId.ENCODING -> stream = CordaSerializationEncoding.reader.readFrom(stream).wrap(stream)
+                        SectionId.DATA_AND_STOP, SectionId.ALT_DATA_AND_STOP -> return task(stream.asByteBuffer())
                     }
                 }
             } finally {
@@ -80,7 +80,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
 
     @Throws(NotSerializableException::class)
     internal fun getEnvelope(byteSequence: ByteSequence): Envelope {
-        return getDataBytes(byteSequence) { dataBytes ->
+        return withDataBytes(byteSequence) { dataBytes ->
             val data = Data.Factory.create()
             val expectedSize = dataBytes.remaining()
             if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")

@@ -3,7 +3,7 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.nodeapi.internal.serialization.Ord.Bytecode
+import net.corda.nodeapi.internal.serialization.Septet.OrdinalWriter
 import org.iq80.snappy.SnappyFramedInputStream
 import org.iq80.snappy.SnappyFramedOutputStream
 import java.io.OutputStream
@@ -19,22 +19,22 @@ class CordaSerializationMagic(bytes: ByteArray) : OpaqueBytes(bytes) {
     }
 }
 
-enum class Instruction : Bytecode {
+enum class SectionId : OrdinalWriter {
     /** Serialization data follows, and then discard the rest of the stream (if any) as legacy data may have trailing garbage. */
     DATA_AND_STOP,
-    /** Identical behaviour to [DATA_AND_STOP], historically used by kryo. */
+    /** Identical behaviour to [DATA_AND_STOP], historically used for Kryo. Do not use in new code. */
     ALT_DATA_AND_STOP,
     /** The ordinal of a [CordaSerializationEncoding] follows, which should be used to decode the remainder of the stream. */
     ENCODING;
 
     companion object {
-        val vals = Vals(values())
+        val reader = OrdinalReader(values())
     }
 
-    override val ord = Ord(ordinal)
+    override val septet = Septet(ordinal)
 }
 
-enum class CordaSerializationEncoding : SerializationEncoding, Bytecode {
+enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
     DEFLATE {
         override fun wrap(stream: OutputStream) = DeflaterOutputStream(stream)
         override fun wrap(stream: InputStream) = InflaterInputStream(stream)
@@ -45,10 +45,10 @@ enum class CordaSerializationEncoding : SerializationEncoding, Bytecode {
     };
 
     companion object {
-        val vals = Vals(values())
+        val reader = OrdinalReader(values())
     }
 
-    override val ord = Ord(ordinal)
+    override val septet = Septet(ordinal)
     abstract fun wrap(stream: OutputStream): OutputStream
     abstract fun wrap(stream: InputStream): InputStream
 }

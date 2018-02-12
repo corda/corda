@@ -201,7 +201,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
             this.register(TransformTypes.DESCRIPTOR, TransformTypes.Companion)
         }
         EncoderImpl(decoder)
-        DeserializationInput.getDataBytes(bytes) {
+        DeserializationInput.withDataBytes(bytes) {
             decoder.setByteBuffer(it)
             // Check that a vanilla AMQP decoder can deserialize without schema.
             val result = decoder.readObject() as Envelope
