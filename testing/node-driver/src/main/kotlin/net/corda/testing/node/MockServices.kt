@@ -229,7 +229,7 @@ open class MockServices private constructor(
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) = throw UnsupportedOperationException()
 
-    fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
+    fun addMockCordapp(contractClassName: ContractClassName) {
         mockCordappProvider.addMockCordapp(contractClassName, attachments)
     }
 }

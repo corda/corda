@@ -59,7 +59,6 @@ data class InProcessImpl(
         private val node: StartedNode<Node>
 ) : InProcess, NodeHandleInternal {
     val database: CordaPersistence = node.database
-    override val databaseConnection: Connection = node.database.createSession()
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {

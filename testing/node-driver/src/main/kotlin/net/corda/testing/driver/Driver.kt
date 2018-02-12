@@ -61,7 +61,6 @@ interface OutOfProcess : NodeHandle {
 
 @DoNotImplement
 interface InProcess : NodeHandle {
-    val databaseConnection: Connection
     val services: StartedNodeServices
     /**
      * Register a flow that is initiated by another flow

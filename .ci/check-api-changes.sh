@@ -26,7 +26,7 @@ EOF
 
 echo "Number of API removals/changes: "$removalCount
 if [ $removalCount -gt 0 ]; then
-    echo "$removals"`
+    echo "$removals"
     echo
 fi
 

@@ -61,7 +61,9 @@ class InMemoryMessagingNetwork private constructor(
         internal fun create(
                 sendManuallyPumped: Boolean,
                 servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                messagesInFlight: ReusableLatch = ReusableLatch()) = InMemoryMessagingNetwork(sendManuallyPumped, servicePeerAllocationStrategy, messagesInFlight)
+                messagesInFlight: ReusableLatch = ReusableLatch()): InMemoryMessagingNetwork {
+            return InMemoryMessagingNetwork(sendManuallyPumped, servicePeerAllocationStrategy, messagesInFlight)
+        }
     }
 
     private var counter = 0   // -1 means stopped.
@@ -121,7 +123,8 @@ class InMemoryMessagingNetwork private constructor(
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
-        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) } ?: emptyList() //TODO only notary can be distributed?
+        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) }
+                ?: emptyList() //TODO only notary can be distributed?
         synchronized(this) {
             val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
             handleEndpointMap[peerHandle] = node
@@ -310,7 +313,8 @@ class InMemoryMessagingNetwork private constructor(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
+                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name]
+                        ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
                 is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
             }
         }

@@ -38,7 +38,7 @@ class LedgerTransactionQueryTests {
 
     @Before
     fun setup() {
-        services.addMockCordapp(DummyContract.PROGRAM_ID, services.attachments)
+        services.addMockCordapp(DummyContract.PROGRAM_ID)
     }
 
     interface Commands {
