@@ -7,7 +7,6 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -29,12 +28,15 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
-import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.*
+import net.corda.node.services.config.BFTSMaRtConfiguration
+import net.corda.node.services.config.CertChainPolicyConfig
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -48,12 +50,19 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MessagingServiceSpy
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.*
+import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
@@ -262,7 +271,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -277,7 +286,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             network = messagingServiceSpy
         }
 
-        override fun makeKeyManagementService(identityService: IdentityServiceInternal, keyPairs: Set<KeyPair>): KeyManagementService {
+        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 

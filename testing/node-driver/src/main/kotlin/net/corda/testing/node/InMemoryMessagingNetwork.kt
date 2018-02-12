@@ -336,7 +336,7 @@ class InMemoryMessagingNetwork private constructor(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {

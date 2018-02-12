@@ -161,6 +161,12 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
         implementation.vaultTrackByWithSorting(contractStateType, criteria, sorting)
     }
 
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) = guard("setFlowsDrainingModeEnabled") {
+        implementation.setFlowsDrainingModeEnabled(enabled)
+    }
+
+    override fun isFlowsDrainingModeEnabled(): Boolean = guard("isFlowsDrainingModeEnabled", implementation::isFlowsDrainingModeEnabled)
+
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, action: () -> RESULT) = guard(methodName, emptyList(), action)
 
