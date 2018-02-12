@@ -6,9 +6,12 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
 * Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
   In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
   This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
+
+* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
 
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
@@ -184,6 +187,9 @@ UNRELEASED
 
 * Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
   only for internal use
+
+* Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
+  that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
 
 .. _changelog_v1:
 

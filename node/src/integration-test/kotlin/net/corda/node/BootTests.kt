@@ -1,6 +1,7 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
@@ -25,7 +26,7 @@ class BootTests {
     fun `java deserialization is disabled`() {
         driver {
             val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
-            val future = startNode(rpcUsers = listOf(user)).getOrThrow().rpcClientToNode().
+            val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
             assertThatThrownBy { future.getOrThrow() }.isInstanceOf(InvalidClassException::class.java).hasMessage("filter status: REJECTED")
         }
@@ -37,7 +38,7 @@ class BootTests {
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val alice = startNode(providedName = ALICE_NAME).get()
-            val logFolder = alice.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
+            val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()
             // Start second Alice, should fail
             assertThatThrownBy {

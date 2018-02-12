@@ -30,6 +30,7 @@ import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Test
@@ -38,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
-class NodePair(private val mockNet: MockNetwork) {
+class NodePair(private val mockNet: InternalMockNetwork) {
     private class ServerLogic(private val session: FlowSession, private val running: AtomicBoolean) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -81,8 +82,8 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
-        object : MockNetwork.MockNode(args) {
+    private val mockNet = InternalMockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
+        object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
                 val realVault = super.makeVaultService(keyManagementService, stateLoader, hibernateConfig)
                 return object : VaultServiceInternal by realVault {

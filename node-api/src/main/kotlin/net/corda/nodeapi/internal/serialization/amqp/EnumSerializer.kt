@@ -11,8 +11,9 @@ import java.lang.reflect.Type
  */
 class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
-    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")!!
     private val typeNotation: TypeNotation
+    override val typeDescriptor = Symbol.valueOf(
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
 
     init {
         typeNotation = RestrictedType(

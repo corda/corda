@@ -11,6 +11,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.testing.core.*
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
@@ -32,7 +33,7 @@ class FlowsExecutionModeRpcTest {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
-                nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.setFlowsDrainingModeEnabled(true)
                 }
                 nodeHandle.stop()
@@ -40,11 +41,10 @@ class FlowsExecutionModeRpcTest {
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                 assertThat(it.proxy.isFlowsDrainingModeEnabled()).isEqualTo(true)
             }
             nodeHandle.stop()
-            result
         }
     }
 }

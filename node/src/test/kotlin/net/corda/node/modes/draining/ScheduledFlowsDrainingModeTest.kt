@@ -22,6 +22,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -36,9 +37,9 @@ import kotlin.test.fail
 
 class ScheduledFlowsDrainingModeTest {
 
-    private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var bobNode: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
@@ -51,7 +52,7 @@ class ScheduledFlowsDrainingModeTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity
