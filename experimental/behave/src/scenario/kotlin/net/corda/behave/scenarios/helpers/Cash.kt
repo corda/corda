@@ -21,8 +21,9 @@ class Cash(state: ScenarioState) : Substeps(state) {
                     log.info("Can issue $issuableCurrency")
                 }
                 return@withClient config.issuableCurrencies.size
-            } catch (_: Exception) {
-                return@withClient 0
+            } catch (ex: Exception) {
+                log.warn("Failed to retrieve cash configuration data", ex)
+                throw ex
             }
         }
     }

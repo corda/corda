@@ -7,7 +7,7 @@ mkdir -p deps/corda/${VERSION}/apps
 mkdir -p deps/drivers
 
 # Copy Corda capsule into deps
-cp $(ls ../../node/capsule/build/libs/corda-*.jar | tail -n1) deps/corda/${VERSION}/corda.jar
+cp -v $(ls ../../node/capsule/build/libs/corda-*.jar | tail -n1) deps/corda/${VERSION}/corda.jar
 
 # Download database drivers
 curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/h2-1.4.196.jar" > deps/drivers/h2-1.4.196.jar
@@ -20,5 +20,5 @@ cd ../..
 
 # Copy build artefacts into deps
 cd experimental/behave
-cp ../../tools/bootstrapper/build/libs/*.jar deps/corda/${VERSION}/network-bootstrapper.jar
-cp ../../finance/build/libs/corda-finance-*.jar deps/corda/${VERSION}/apps/corda-finance.jar
+cp -v $(ls ../../tools/bootstrapper/build/libs/*.jar | tail -n1) deps/corda/${VERSION}/network-bootstrapper.jar
+cp -v $(ls ../../finance/build/libs/corda-finance-*.jar | tail -n1) deps/corda/${VERSION}/apps/corda-finance.jar
