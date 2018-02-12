@@ -114,7 +114,8 @@ open class Baseform : DefaultTask() {
             val cd = loadCordformDefinition()
             // If the user has specified their own directory (even if it's the same default path) then let them know
             // it's not used and should just rely on the one in CordformDefinition
-            require(directory === Cordform.defaultDirectory) {
+            require(directory === defaultDirectory) {
+                project.logger.info("User has used '$directory', default directory is '${defaultDirectory}'")
                 "'directory' cannot be used when 'definitionClass' is specified. Use CordformDefinition.nodesDirectory instead."
             }
             directory = cd.nodesDirectory

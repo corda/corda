@@ -12,12 +12,9 @@ import java.nio.file.Paths
  */
 @Suppress("unused")
 open class Cordform : Baseform() {
-
     internal companion object {
         val nodeJarName = "corda.jar"
-        internal val defaultDirectory: Path = Paths.get("build", "nodes")
     }
-
 
     /**
      * Returns a node by name.
