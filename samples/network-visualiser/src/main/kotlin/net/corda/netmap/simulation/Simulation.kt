@@ -10,9 +10,12 @@ import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.node.*
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.TestClock
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.MockNodeArgs
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.math.BigInteger
@@ -24,7 +27,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.allOf
 import java.util.concurrent.Future
 
-internal val MockNode.place get() = configuration.myLegalName.locality.let { CityDatabase[it] }!!
+internal val InternalMockNetwork.MockNode.place get() = configuration.myLegalName.locality.let { CityDatabase[it] }!!
 
 /**
  * Base class for network simulations that are based on the unit test / mock environment.
@@ -50,7 +53,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val bankLocations = listOf(Pair("London", "GB"), Pair("Frankfurt", "DE"), Pair("Rome", "IT"))
 
-    class RatesOracleNode(args: MockNodeArgs) : MockNode(args) {
+    class RatesOracleNode(args: MockNodeArgs) : InternalMockNetwork.MockNode(args) {
         companion object {
             // TODO: Make a more realistic legal name
             val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
@@ -67,7 +70,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val mockNet = MockNetwork(
+    val mockNet = InternalMockNetwork(
             networkSendManuallyPumped = networkSendManuallyPumped,
             threadPerNode = runAsync,
             cordappPackages = listOf("net.corda.finance.contract", "net.corda.irs"))
@@ -77,8 +80,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val regulators = listOf(mockNet.createUnstartedNode(defaultParams.copy(legalName = DUMMY_REGULATOR.name)))
     val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleNode.RATES_SERVICE_NAME), ::RatesOracleNode)
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
-    val serviceProviders: List<MockNode> = listOf(mockNet.defaultNotaryNode.internals, ratesOracle)
-    val banks: List<MockNode> = bankLocations.mapIndexed { i, (city, country) ->
+    val serviceProviders: List<InternalMockNetwork.MockNode> = listOf(mockNet.defaultNotaryNode.internals, ratesOracle)
+    val banks: List<InternalMockNetwork.MockNode> = bankLocations.mapIndexed { i, (city, country) ->
         val legalName = CordaX500Name(organisation = "Bank ${'A' + i}", locality = city, country = country)
         // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
         mockNet.createUnstartedNode(defaultParams.copy(legalName = legalName, entropyRoot = BigInteger.valueOf(i.toLong())))
@@ -86,12 +89,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val clocks = (serviceProviders + regulators + banks).map { it.platformClock as TestClock }
 
     // These are used from the network visualiser tool.
-    private val _allFlowSteps = PublishSubject.create<Pair<MockNode, ProgressTracker.Change>>()
-    private val _doneSteps = PublishSubject.create<Collection<MockNode>>()
+    private val _allFlowSteps = PublishSubject.create<Pair<InternalMockNetwork.MockNode, ProgressTracker.Change>>()
+    private val _doneSteps = PublishSubject.create<Collection<InternalMockNetwork.MockNode>>()
     @Suppress("unused")
-    val allFlowSteps: Observable<Pair<MockNode, ProgressTracker.Change>> = _allFlowSteps
+    val allFlowSteps: Observable<Pair<InternalMockNetwork.MockNode, ProgressTracker.Change>> = _allFlowSteps
     @Suppress("unused")
-    val doneSteps: Observable<Collection<MockNode>> = _doneSteps
+    val doneSteps: Observable<Collection<InternalMockNetwork.MockNode>> = _doneSteps
 
     private var pumpCursor = 0
 
@@ -120,7 +123,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
      * A place for simulations to stash human meaningful text about what the node is "thinking", which might appear
      * in the UI somewhere.
      */
-    val extraNodeLabels: MutableMap<MockNode, String> = Collections.synchronizedMap(HashMap())
+    val extraNodeLabels: MutableMap<InternalMockNetwork.MockNode, String> = Collections.synchronizedMap(HashMap())
 
     /**
      * Iterates the simulation by one step.
@@ -151,7 +154,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         return null
     }
 
-    protected fun showProgressFor(nodes: List<StartedNode<MockNode>>) {
+    protected fun showProgressFor(nodes: List<StartedNode<InternalMockNetwork.MockNode>>) {
         nodes.forEach { node ->
             node.smm.changes.filter { it is StateMachineManager.Change.Add }.subscribe {
                 linkFlowProgress(node.internals, it.logic)
@@ -159,7 +162,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    private fun linkFlowProgress(node: MockNode, flow: FlowLogic<*>) {
+    private fun linkFlowProgress(node: InternalMockNetwork.MockNode, flow: FlowLogic<*>) {
         val pt = flow.progressTracker ?: return
         pt.changes.subscribe { change: ProgressTracker.Change ->
             // Runs on node thread.
@@ -168,14 +171,14 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
 
-    protected fun showConsensusFor(nodes: List<MockNode>) {
+    protected fun showConsensusFor(nodes: List<InternalMockNetwork.MockNode>) {
         val node = nodes.first()
         node.started!!.smm.changes.filter { it is StateMachineManager.Change.Add }.first().subscribe {
             linkConsensus(nodes, it.logic)
         }
     }
 
-    private fun linkConsensus(nodes: Collection<MockNode>, flow: FlowLogic<*>) {
+    private fun linkConsensus(nodes: Collection<InternalMockNetwork.MockNode>, flow: FlowLogic<*>) {
         flow.progressTracker?.changes?.subscribe { _: ProgressTracker.Change ->
             // Runs on node thread.
             if (flow.progressTracker!!.currentStep == ProgressTracker.DONE) {

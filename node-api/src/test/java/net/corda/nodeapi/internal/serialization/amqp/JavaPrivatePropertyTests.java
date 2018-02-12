@@ -76,9 +76,9 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateBooleanWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter);
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -89,9 +89,10 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateBooleanWithNoConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter);
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
+
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -103,9 +104,9 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void testCapitilsationOfIs() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter);
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -119,9 +120,9 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateIntWithBoolean() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter);
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -134,9 +135,10 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter);
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
+
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -164,9 +166,11 @@ public class JavaPrivatePropertyTests {
     @Test
     public void singlePrivateWithConstructorAndGetter()
             throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
         SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(), evolutionSerializerGetter);
+                ClassLoader.getSystemClassLoader(),
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
+
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 

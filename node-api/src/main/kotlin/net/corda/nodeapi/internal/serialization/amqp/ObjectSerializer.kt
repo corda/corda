@@ -31,7 +31,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     private val typeName = nameForType(clazz)
 
-    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
+    override val typeDescriptor = Symbol.valueOf(
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
 
     // We restrict to only those annotated or whitelisted
     private val interfaces = interfacesForSerialization(clazz, factory)

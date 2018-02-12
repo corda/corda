@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.internal.InputStreamAndHash
@@ -73,7 +74,7 @@ class LargeTransactionsTest {
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.testing.contracts"), portAllocation = PortAllocation.RandomFree) {
             val rpcUser = User("admin", "admin", setOf("ALL"))
             val (alice, _) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()
-            alice.rpcClientToNode().use(rpcUser.username, rpcUser.password) {
+            CordaRPCClient(alice.rpcAddress).use(rpcUser.username, rpcUser.password) {
                 val hash1 = it.proxy.uploadAttachment(bigFile1.inputStream)
                 val hash2 = it.proxy.uploadAttachment(bigFile2.inputStream)
                 val hash3 = it.proxy.uploadAttachment(bigFile3.inputStream)

@@ -13,6 +13,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.hibernate.annotations.Type
 import java.io.Serializable
 import java.util.*
@@ -45,7 +46,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
 
             @Column(name = "requesting_party_key", length = 255)
             @Type(type = "corda-wrapper-binary")
-            var owningKey: ByteArray = ByteArray(0)
+            var owningKey: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 
     @Entity

@@ -13,7 +13,7 @@ import net.corda.finance.utils.ScreenCoordinate
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.netmap.simulation.place
 import net.corda.testing.core.chooseIdentity
-import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import java.util.*
 
 class VisualiserViewModel {
@@ -25,10 +25,10 @@ class VisualiserViewModel {
         }
     }
 
-    inner class NodeWidget(val node: MockNetwork.MockNode, val innerDot: Circle, val outerDot: Circle, val longPulseDot: Circle,
+    inner class NodeWidget(val node: InternalMockNetwork.MockNode, val innerDot: Circle, val outerDot: Circle, val longPulseDot: Circle,
                            val pulseAnim: Animation, val longPulseAnim: Animation,
                            val nameLabel: Label, val statusLabel: Label) {
-        fun position(nodeCoords: (node: MockNetwork.MockNode) -> ScreenCoordinate) {
+        fun position(nodeCoords: (node: InternalMockNetwork.MockNode) -> ScreenCoordinate) {
             val (x, y) = nodeCoords(node)
             innerDot.centerX = x
             innerDot.centerY = y
@@ -47,7 +47,7 @@ class VisualiserViewModel {
 
     val trackerBoxes = HashMap<ProgressTracker, TrackerWidget>()
     val doneTrackers = ArrayList<ProgressTracker>()
-    val nodesToWidgets = HashMap<MockNetwork.MockNode, NodeWidget>()
+    val nodesToWidgets = HashMap<InternalMockNetwork.MockNode, NodeWidget>()
 
     var bankCount: Int = 0
     var serviceCount: Int = 0
@@ -78,7 +78,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun nodeMapCoords(node: MockNetwork.MockNode): ScreenCoordinate {
+    fun nodeMapCoords(node: InternalMockNetwork.MockNode): ScreenCoordinate {
         // For an image of the whole world, we use:
         // return node.place.coordinate.project(mapImage.fitWidth, mapImage.fitHeight, 85.0511, -85.0511, -180.0, 180.0)
 
@@ -128,7 +128,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: CordaX500Name = CordaX500Name(organisation = "Bank of Bologna", locality = "Bologna", country = "IT"),
+    fun makeNodeWidget(forNode: InternalMockNetwork.MockNode, type: String, label: CordaX500Name = CordaX500Name(organisation = "Bank of Bologna", locality = "Bologna", country = "IT"),
                        nodeType: NetworkMapVisualiser.NodeType, index: Int): NodeWidget {
         fun emitRadarPulse(initialRadius: Double, targetRadius: Double, duration: Double): Pair<Circle, Animation> {
             val pulse = Circle(initialRadius).apply {
@@ -180,7 +180,7 @@ class VisualiserViewModel {
         return widget
     }
 
-    fun fireBulletBetweenNodes(senderNode: MockNetwork.MockNode, destNode: MockNetwork.MockNode, startType: String, endType: String) {
+    fun fireBulletBetweenNodes(senderNode: InternalMockNetwork.MockNode, destNode: InternalMockNetwork.MockNode, startType: String, endType: String) {
         val sx = nodesToWidgets[senderNode]!!.innerDot.centerX
         val sy = nodesToWidgets[senderNode]!!.innerDot.centerY
         val dx = nodesToWidgets[destNode]!!.innerDot.centerX

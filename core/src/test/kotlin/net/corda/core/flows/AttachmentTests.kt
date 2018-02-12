@@ -15,6 +15,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -27,11 +28,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class AttachmentTests {
-    lateinit var mockNet: MockNetwork
+    lateinit var mockNet: InternalMockNetwork
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = InternalMockNetwork(emptyList())
     }
 
     @After
@@ -100,7 +101,7 @@ class AttachmentTests {
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME), nodeFactory = { args ->
-            object : MockNetwork.MockNode(args) {
+            object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
         })

@@ -13,6 +13,7 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
@@ -37,7 +38,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.messaging.TopicSession
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.newNamedSingleThreadExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -72,7 +72,7 @@ class StateMachineManagerImpl(
 
     companion object {
         private val logger = contextLogger()
-        internal val sessionTopic = TopicSession("platform.session")
+        internal val sessionTopic = "platform.session"
 
         init {
             Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
@@ -121,8 +121,8 @@ class StateMachineManagerImpl(
     private val totalStartedFlows = metrics.counter("Flows.Started")
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
 
-    private val openSessions = ConcurrentHashMap<Long, FlowSessionInternal>()
-    private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
+    private val openSessions = ConcurrentHashMap<SessionId, FlowSessionInternal>()
+    private val recentlyClosedSessions = ConcurrentHashMap<SessionId, Party>()
 
     // Context for tokenized services in checkpoints
     private lateinit var tokenizableServices: List<Any>
@@ -281,7 +281,7 @@ class StateMachineManagerImpl(
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
-                is SessionInit -> onSessionInit(sessionMessage, message, sender)
+                is InitialSessionMessage -> onSessionInit(sessionMessage, message, sender)
             }
         } else {
             logger.error("Unknown peer $peer in $sessionMessage")
@@ -294,15 +294,15 @@ class StateMachineManagerImpl(
             session.fiber.pushToLoggingContext()
             session.fiber.logger.trace { "Received $message on $session from $sender" }
             if (session.retryable) {
-                if (message is SessionConfirm && session.state is FlowSessionState.Initiated) {
+                if (message.payload is ConfirmSessionMessage && session.state is FlowSessionState.Initiated) {
                     session.fiber.logger.trace { "Ignoring duplicate confirmation for session ${session.ourSessionId} – session is idempotent" }
                     return
                 }
-                if (message !is SessionConfirm) {
-                    serviceHub.networkService.cancelRedelivery(session.ourSessionId)
+                if (message.payload !is ConfirmSessionMessage) {
+                    serviceHub.networkService.cancelRedelivery(session.ourSessionId.toLong)
                 }
             }
-            if (message is SessionEnd) {
+            if (message.payload is EndSessionMessage || message.payload is ErrorSessionMessage) {
                 openSessions.remove(message.recipientSessionId)
             }
             session.receivedMessages += ReceivedSessionMessage(sender, message)
@@ -317,9 +317,9 @@ class StateMachineManagerImpl(
         } else {
             val peerParty = recentlyClosedSessions.remove(message.recipientSessionId)
             if (peerParty != null) {
-                if (message is SessionConfirm) {
+                if (message.payload is ConfirmSessionMessage) {
                     logger.trace { "Received session confirmation but associated fiber has already terminated, so sending session end" }
-                    sendSessionMessage(peerParty, NormalSessionEnd(message.initiatedSessionId))
+                    sendSessionMessage(peerParty, ExistingSessionMessage(message.payload.initiatedSessionId, EndSessionMessage))
                 } else {
                     logger.trace { "Ignoring session end message for already closed session: $message" }
                 }
@@ -336,12 +336,12 @@ class StateMachineManagerImpl(
         return waitingForResponse?.shouldResume(message, session) ?: false
     }
 
-    private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
+    private fun onSessionInit(sessionInit: InitialSessionMessage, receivedMessage: ReceivedMessage, sender: Party) {
 
         logger.trace { "Received $sessionInit from $sender" }
         val senderSessionId = sessionInit.initiatorSessionId
 
-        fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(senderSessionId, message))
+        fun sendSessionReject(message: String) = sendSessionMessage(sender, ExistingSessionMessage(senderSessionId, RejectSessionMessage(message, errorId = sessionInit.initiatorSessionId.toLong)))
 
         val (session, initiatedFlowFactory) = try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionInit)
@@ -354,11 +354,11 @@ class StateMachineManagerImpl(
             val session = FlowSessionInternal(
                     flow,
                     flowSession,
-                    random63BitValue(),
+                    SessionId.createRandom(newSecureRandom()),
                     sender,
                     FlowSessionState.Initiated(sender, senderSessionId, FlowInfo(senderFlowVersion, sessionInit.appName)))
             if (sessionInit.firstPayload != null) {
-                session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
+                session.receivedMessages += ReceivedSessionMessage(sender, ExistingSessionMessage(session.ourSessionId, DataSessionMessage(sessionInit.firstPayload)))
             }
             openSessions[session.ourSessionId] = session
             val context = InvocationContext.peer(sender.name)
@@ -386,19 +386,19 @@ class StateMachineManagerImpl(
             is InitiatedFlowFactory.CorDapp -> initiatedFlowFactory.flowVersion to initiatedFlowFactory.appName
         }
 
-        sendSessionMessage(sender, SessionConfirm(senderSessionId, session.ourSessionId, ourFlowVersion, appName), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass}" }
+        sendSessionMessage(sender, ExistingSessionMessage(senderSessionId, ConfirmSessionMessage(session.ourSessionId, FlowInfo(ourFlowVersion, appName))), session.fiber)
+        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatorFlowClassName}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }
 
-    private fun getInitiatedFlowFactory(sessionInit: SessionInit): InitiatedFlowFactory<*> {
+    private fun getInitiatedFlowFactory(sessionInit: InitialSessionMessage): InitiatedFlowFactory<*> {
         val initiatingFlowClass = try {
-            Class.forName(sessionInit.initiatingFlowClass, true, classloader).asSubclass(FlowLogic::class.java)
+            Class.forName(sessionInit.initiatorFlowClassName, true, classloader).asSubclass(FlowLogic::class.java)
         } catch (e: ClassNotFoundException) {
-            throw SessionRejectException("Don't know ${sessionInit.initiatingFlowClass}")
+            throw SessionRejectException("Don't know ${sessionInit.initiatorFlowClassName}")
         } catch (e: ClassCastException) {
-            throw SessionRejectException("${sessionInit.initiatingFlowClass} is not a flow")
+            throw SessionRejectException("${sessionInit.initiatorFlowClassName} is not a flow")
         }
         return serviceHub.getFlowFactory(initiatingFlowClass) ?:
                 throw SessionRejectException("$initiatingFlowClass is not registered")
@@ -492,7 +492,7 @@ class StateMachineManagerImpl(
     private fun FlowSessionInternal.endSession(context: InvocationContext, exception: Throwable?, propagated: Boolean) {
         val initiatedState = state as? FlowSessionState.Initiated ?: return
         val sessionEnd = if (exception == null) {
-            NormalSessionEnd(initiatedState.peerSessionId)
+            EndSessionMessage
         } else {
             val errorResponse = if (exception is FlowException && (!propagated || initiatingParty != null)) {
                 // Only propagate this FlowException if our local flow threw it or it was propagated to us and we only
@@ -501,9 +501,9 @@ class StateMachineManagerImpl(
             } else {
                 null
             }
-            ErrorSessionEnd(initiatedState.peerSessionId, errorResponse)
+            ErrorSessionMessage(errorResponse, 0)
         }
-        sendSessionMessage(initiatedState.peerParty, sessionEnd, fiber)
+        sendSessionMessage(initiatedState.peerParty, ExistingSessionMessage(initiatedState.peerSessionId, sessionEnd), fiber)
         recentlyClosedSessions[ourSessionId] = initiatedState.peerParty
     }
 
@@ -573,14 +573,14 @@ class StateMachineManagerImpl(
     }
 
     private fun processSendRequest(ioRequest: SendRequest) {
-        val retryId = if (ioRequest.message is SessionInit) {
+        val retryId = if (ioRequest.message is InitialSessionMessage) {
             with(ioRequest.session) {
                 openSessions[ourSessionId] = this
-                if (retryable) ourSessionId else null
+                if (retryable) ourSessionId.toLong else null
             }
         } else null
         sendSessionMessage(ioRequest.session.state.sendToParty, ioRequest.message, ioRequest.session.fiber, retryId)
-        if (ioRequest !is ReceiveRequest<*>) {
+        if (ioRequest !is ReceiveRequest) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
             resumeFiber(ioRequest.session.fiber)
         }
@@ -625,12 +625,15 @@ class StateMachineManagerImpl(
             // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
                 is KryoException,
                 is NotSerializableException -> {
-                    if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
-                    logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
-                            "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
-                    // The subclass may have overridden toString so we use that
-                    val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
-                    message.copy(errorResponse = FlowException(exMessage)).serialize()
+                    if (message is ExistingSessionMessage && message.payload is ErrorSessionMessage && message.payload.flowException != null) {
+                        logger.warn("Something in ${message.payload.flowException.javaClass.name} is not serialisable. " +
+                                "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
+                        // The subclass may have overridden toString so we use that
+                        val exMessage = message.payload.flowException.message
+                        message.copy(payload = message.payload.copy(flowException = FlowException(exMessage))).serialize()
+                    } else {
+                        throw e
+                    }
                 }
                 else -> throw e
             }

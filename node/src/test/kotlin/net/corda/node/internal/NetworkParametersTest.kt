@@ -27,7 +27,7 @@ class NetworkParametersTest {
     private val mockNet = MockNetwork(
             emptyList(),
             MockNetworkParameters(networkSendManuallyPumped = true),
-            notarySpecs = listOf(MockNetwork.NotarySpec(DUMMY_NOTARY_NAME)))
+            notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)))
 
     @After
     fun tearDown() {

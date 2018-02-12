@@ -7,7 +7,7 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
@@ -98,7 +98,7 @@ class SerializationTokenTest {
         val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(this.context)))
         val stream = ByteArrayOutputStream()
         Output(stream).use {
-            it.write(KryoHeaderV0_1.bytes)
+            kryoMagic.writeTo(it)
             kryo.writeClass(it, SingletonSerializeAsToken::class.java)
             kryo.writeObject(it, emptyList<Any>())
         }
