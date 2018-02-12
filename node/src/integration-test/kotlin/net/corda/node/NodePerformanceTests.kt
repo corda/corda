@@ -15,6 +15,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.node.User
 import net.corda.testing.driver.driver
@@ -47,7 +48,7 @@ class NodePerformanceTests {
 
     @Test
     fun `empty flow per second`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
 
             CordaRPCClient(a.rpcAddress).use("A", "A") { connection ->
