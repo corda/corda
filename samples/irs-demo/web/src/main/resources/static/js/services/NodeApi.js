@@ -1,44 +1,48 @@
 'use strict';
 
-define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
-    angular.module('irsViewer').factory('nodeService', ($http) => {
-        return new (function() {
-            let date = new Date(2016, 0, 1, 0, 0, 0);
-            let curLoading = {};
-            let serverAddr = ''; // Leave empty to target the same host this page is served from
+define(['angular', 'lodash', 'viewmodel/Deal'], function (angular, _, dealViewModel) {
+    angular.module('irsViewer').factory('nodeService', function ($http) {
+        return new function () {
+            var _this = this;
 
-            let load = (type, promise) => {
+            var date = new Date(2016, 0, 1, 0, 0, 0);
+            var curLoading = {};
+            var serverAddr = ''; // Leave empty to target the same host this page is served from
+
+            var load = function load(type, promise) {
                 curLoading[type] = true;
-                return promise.then((arg) => {
+                return promise.then(function (arg) {
                     curLoading[type] = false;
                     return arg;
-                }, (arg) => {
+                }, function (arg) {
                     curLoading[type] = false;
                     throw arg;
                 });
             };
 
-            let endpoint = (target) => serverAddr + target;
+            var endpoint = function endpoint(target) {
+                return serverAddr + target;
+            };
 
-            let changeDateOnNode = (newDate) => {
-                const dateStr = formatDateForNode(newDate);
-                return load('date', $http.put(endpoint('/api/irs/demodate'), "\"" + dateStr + "\"")).then((resp) => {
+            var changeDateOnNode = function changeDateOnNode(newDate) {
+                var dateStr = formatDateForNode(newDate);
+                return load('date', $http.put(endpoint('/api/irs/demodate'), "\"" + dateStr + "\"")).then(function (resp) {
                     date = newDate;
-                    return this.getDateModel(date);
+                    return _this.getDateModel(date);
                 });
             };
 
-            this.getDate = () => {
-                return load('date', $http.get(endpoint('/api/irs/demodate'))).then((resp) => {
-                    const dateParts = resp.data;
+            this.getDate = function () {
+                return load('date', $http.get(endpoint('/api/irs/demodate'))).then(function (resp) {
+                    var dateParts = resp.data;
                     date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]); // JS uses 0 based months
-                    return this.getDateModel(date);
+                    return _this.getDateModel(date);
                 });
             };
 
-            this.updateDate = (type) => {
-                let newDate = date;
-                switch(type) {
+            this.updateDate = function (type) {
+                var newDate = date;
+                switch (type) {
                     case "year":
                         newDate.setFullYear(date.getFullYear() + 1);
                         break;
@@ -55,22 +59,22 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                 return changeDateOnNode(newDate);
             };
 
-            this.getDeals = () => {
-                return load('deals', $http.get(endpoint('/api/irs/deals'))).then((resp) => {
+            this.getDeals = function () {
+                return load('deals', $http.get(endpoint('/api/irs/deals'))).then(function (resp) {
                     return resp.data.reverse();
                 });
             };
 
-            this.getDeal = (dealId) => {
-                return load('deal' + dealId, $http.get(endpoint('/api/irs/deals/' + dealId))).then((resp) => {
+            this.getDeal = function (dealId) {
+                return load('deal' + dealId, $http.get(endpoint('/api/irs/deals/' + dealId))).then(function (resp) {
                     // Do some data modification to simplify the model
-                    let deal = resp.data;
+                    var deal = resp.data;
                     deal.fixedLeg.fixedRate.value = (deal.fixedLeg.fixedRate.ratioUnit.value * 100).toString().slice(0, 6);
                     return deal;
                 });
             };
 
-            this.getDateModel = (date) => {
+            this.getDateModel = function (date) {
                 return {
                     "year": date.getFullYear(),
                     "month": date.getMonth() + 1, // JS uses 0 based months
@@ -78,24 +82,23 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                 };
             };
 
-            this.isLoading = () => {
-                return _.reduce(Object.keys(curLoading), (last, key) => {
-                    return (last || curLoading[key]);
+            this.isLoading = function () {
+                return _.reduce(Object.keys(curLoading), function (last, key) {
+                    return last || curLoading[key];
                 }, false);
             };
 
-            this.newDeal = () => {
+            this.newDeal = function () {
                 return dealViewModel;
             };
 
-            this.createDeal = (deal) => {
-                return load('create-deal', $http.post(endpoint('/api/irs/deals'), deal.toJson()))
-                .then((resp) => {
+            this.createDeal = function (deal) {
+                return load('create-deal', $http.post(endpoint('/api/irs/deals'), deal.toJson())).then(function (resp) {
                     return deal.tradeId;
-                }, (resp) => {
+                }, function (resp) {
                     throw resp;
-                })
-            }
-        });
+                });
+            };
+        }();
     });
 });

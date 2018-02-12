@@ -15,6 +15,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
@@ -40,7 +41,7 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::nodeInfo),
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
-        driver(
+        driver(DriverParameters(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
                 notarySpecs = listOf(
                         NotarySpec(
@@ -48,7 +49,7 @@ class DistributedServiceTests {
                                 rpcUsers = listOf(testUser),
                                 cluster = DummyClusterSpec(clusterSize = 3, compositeServiceIdentity = compositeIdentity))
                 )
-        ) {
+        )) {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
             notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as OutOfProcess }

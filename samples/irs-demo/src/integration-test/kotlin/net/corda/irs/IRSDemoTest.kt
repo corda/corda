@@ -28,6 +28,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.chooseIdentity
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -50,12 +51,12 @@ class IRSDemoTest {
 
     @Test
     fun `runs IRS demo`() {
-        springDriver(
+        springDriver(DriverParameters(
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),
                 isDebug = true,
                 extraCordappPackagesToScan = listOf("net.corda.irs")
-        ) {
+        )) {
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = rpcUsers),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers),
