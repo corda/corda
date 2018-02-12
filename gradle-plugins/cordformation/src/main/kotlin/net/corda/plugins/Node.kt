@@ -384,7 +384,7 @@ open class Node @Inject constructor(private val project: Project) : CordformNode
         val cordappName = if (cordapp.project != null) cordapp.project.name else cordapp.coordinates
         val cordappFile = cordappConfiguration.files {
             when {
-                it is ProjectDependency -> it.dependencyProject == cordapp.project!!
+                (it is ProjectDependency) && (cordapp.project != null) -> it.dependencyProject == cordapp.project
                 cordapp.coordinates != null -> {
                     // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
                     @Suppress("RemoveRedundantCallsOfConversionMethods")
