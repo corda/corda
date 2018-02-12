@@ -7,7 +7,7 @@ mkdir -p deps/corda/${VERSION}/apps
 mkdir -p deps/drivers
 
 # Copy Corda capsule into deps
-cp ../../node/capsule/build/libs/corda-*.jar deps/corda/${VERSION}/corda.jar
+cp $(ls ../../node/capsule/build/libs/corda-*.jar | tail -n1) deps/corda/${VERSION}/corda.jar
 
 # Download database drivers
 curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/h2-1.4.196.jar" > deps/drivers/h2-1.4.196.jar
