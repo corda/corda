@@ -31,13 +31,17 @@ if [ $removalCount -gt 0 ]; then
 fi
 
 # Adding new abstract methods could also break the API.
-# However, first exclude anything with the @DoNotImplement annotation.
+# However, first exclude classes marked with the @DoNotImplement annotation, or
+# any internal inlined classes which are not part of the public API
 
 function forUserImpl() {
-    awk '/DoNotImplement/,/^##/{ next }{ print }' $1
+    awk '/(DoNotImplement|\$\$inlined\$)/,/^##/{ next }{ print }' $1
 }
 
 userDiffContents=`diff -u <(forUserImpl $apiCurrent) <(forUserImpl $APIHOME/../build/api/api-corda-*.txt) | tail -n +3`
+
+##Remove any methods that are marked with CordaInteral attribute
+userDiffContents=`sed '/@net.corda.core.CordaInternal/d' <<< $userDiffContents`
 
 newAbstracts=$(echo "$userDiffContents" | grep "^+" | grep "\(public\|protected\) abstract")
 abstractCount=`grep -v "^$" <<EOF | wc -l
@@ -45,21 +49,21 @@ $newAbstracts
 EOF
 `
 
-echo "-----------------------------------------"
+#get 
+#newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -P "\.internal\." | grep -P "(?!(.*?extends.*?\.internal\..*?))" )
+#newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -P ".*?extends.*?\.internal\..*?" )
+newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep -v "\. extends \." | grep "\.internal\." )
 
-newInternalThings=$(echo "$userDiffContents" | grep "^+" | grep -P "(?<!rx).internal." | grep -P "(?<!jvm).internal.")
 internalCount=`grep -v "^$" <<EOF | wc -l
-$newInternalThings
+$newInternalExposures
 EOF
 `
 
-echo "Number of new internal things: "$internalCount
+echo "Number of new internal class exposures: "$internalCount
 if [ $internalCount -gt 0 ]; then
-    echo "$newInternalThings"
+    echo "$newInternalExposures"
     echo
 fi
-
-
 
 echo "Number of new abstract APIs: "$abstractCount
 if [ $abstractCount -gt 0 ]; then

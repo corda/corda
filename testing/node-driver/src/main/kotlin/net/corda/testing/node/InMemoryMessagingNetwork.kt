@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
@@ -49,9 +50,9 @@ import kotlin.concurrent.thread
  */
 @ThreadSafe
 class InMemoryMessagingNetwork internal constructor(
-        private val sendManuallyPumped: Boolean,
-        private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-        private val messagesInFlight: ReusableLatch = ReusableLatch()
+        @CordaInternal private val sendManuallyPumped: Boolean,
+        @CordaInternal private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+        @CordaInternal private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
         private const val MESSAGES_LOG_NAME = "messages"
