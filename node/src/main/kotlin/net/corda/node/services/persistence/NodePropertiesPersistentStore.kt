@@ -46,14 +46,15 @@ private class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, 
 
     private val map = PersistentMap({ key -> key }, { entity -> entity.key to entity.value!! }, NodePropertiesPersistentStore::DBNodeProperty, NodePropertiesPersistentStore.DBNodeProperty::class.java)
 
-    override val values = PublishSubject.create<Boolean>()!!
+    override val values = PublishSubject.create<Pair<Boolean, Boolean>>()!!
 
     override fun setEnabled(enabled: Boolean) {
 
+        var oldValue: Boolean? = null
         persistence.transaction {
-            map.put(nodeSpecificFlowsExecutionModeKey, enabled.toString())
+            oldValue = map.put(nodeSpecificFlowsExecutionModeKey, enabled.toString())?.toBoolean() ?: false
         }
-        values.onNext(enabled)
+        values.onNext(oldValue!! to enabled)
     }
 
     override fun isEnabled(): Boolean {

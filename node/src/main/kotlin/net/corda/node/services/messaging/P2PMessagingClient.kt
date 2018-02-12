@@ -19,11 +19,10 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
-import net.corda.node.internal.artemis.ReactiveArtemisConsumer
+import net.corda.node.internal.LifecycleSupport
+import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multiplex
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.statemachine.ExistingSessionMessage
-import net.corda.node.services.statemachine.SessionMessage
 import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -44,12 +43,10 @@ import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
-import rx.Observable
-import org.apache.activemq.artemis.api.core.client.ClientConsumer
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import rx.Observable
 import rx.Subscription
+import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -99,7 +96,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                          advertisedAddress: NetworkHostAndPort = serverAddress,
                          private val maxMessageSize: Int,
                          private val isDrainingModeOn: () -> Boolean,
-                         private val drainingModeWasChangedEvents: Observable<Boolean>
+                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
 ) : SingletonSerializeAsToken(), MessagingService {
     companion object {
         private val log = contextLogger()
@@ -159,7 +156,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         var started = false
         var running = false
         var eventsSubscription: Subscription? = null
-        var p2pConsumer: ReactiveArtemisConsumer? = null
+        var p2pConsumer: P2PMessagingConsumer? = null
         var locator: ServerLocator? = null
         var producer: ClientProducer? = null
         var producerSession: ClientSession? = null
@@ -256,8 +253,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             }
 
             inboxes.forEach { createQueueIfAbsent(it, producerSession!!) }
-            // TODO MS change here to a class-local consumer that joins 2 reactive ones, one for initial, one for non-initial
-            p2pConsumer = ReactiveArtemisConsumer.multiplex(inboxes, createNewSession)
+            p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
 
             registerBridgeControl(bridgeSession!!, inboxes.toList())
             enumerateBridges(bridgeSession!!, inboxes.toList())
@@ -366,6 +362,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
      * Starts the p2p event loop: this method only returns once [stop] has been called.
      */
     fun run() {
+
+        val latch = CountDownLatch(1)
         try {
             val consumer = state.locked {
                 check(started) { "start must be called first" }
@@ -375,26 +373,17 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                 if (p2pConsumer == null) {
                     return
                 }
-                eventsSubscription = drainingModeWasChangedEvents.filter { value -> value == false }
-                        .doOnNext { _ ->
-                            p2pConsumer?.reconnect()
-                        }
+                eventsSubscription = p2pConsumer!!.messages
+                        .doOnError { error -> throw error }
+                        .map { artemisMessage -> artemisMessage to artemisToCordaMessage(artemisMessage) }
+                        .filter { messages -> messages.second != null }
+                        .doOnNext { messages -> messages.deliver() }
+                        .doOnNext { messages -> messages.acknowledge() }
+                        // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
+                        .doOnCompleted(latch::countDown)
                         .subscribe()
                 p2pConsumer!!
             }
-
-            val latch = CountDownLatch(1)
-            consumer.messages
-                    .doOnError { error -> throw error }
-                    .map { artemisMessage -> artemisMessage to artemisToCordaMessage(artemisMessage) }
-                    .filter { messages -> messages.second != null }
-                    // TODO MS remove this line
-                    .filter { messages -> !isDrainingModeOn() || messages.second!!.data.deserialize<SessionMessage>() is ExistingSessionMessage }
-                    .doOnNext { messages -> messages.deliver() }
-                    .doOnNext { messages -> messages.acknowledge() }
-                    // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
-                    .doOnCompleted(latch::countDown)
-                    .subscribe()
             consumer.start()
             latch.await()
         } finally {
@@ -679,4 +668,74 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             is PartyInfo.DistributedNode -> ServiceAddress(partyInfo.party.owningKey)
         }
     }
+}
+
+// TODO MS try this
+private class P2PMessagingConsumer(
+        queueNames: Set<String>,
+        createSession: () -> ClientSession,
+        private val isDrainingModeOn: () -> Boolean,
+        private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>) : LifecycleSupport {
+
+    private companion object {
+        private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY}=${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}"
+        private const val existingSessionMessages = "${P2PMessagingHeaders.Type.KEY}<>${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}"
+    }
+
+    private var startedFlag = false
+
+    val messages: PublishSubject<ClientMessage> = PublishSubject.create<ClientMessage>()
+
+    private var initialConsumer = multiplex(queueNames, createSession, initialSessionMessages)
+    private var existingConsumer = multiplex(queueNames, createSession, existingSessionMessages)
+
+    override fun start() {
+
+        synchronized(this) {
+            require(!startedFlag)
+            drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { pauseInitial() }.subscribe()
+            drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext { resumeInitial() }.subscribe()
+            initialConsumer.messages.doOnNext(messages::onNext).subscribe()
+            existingConsumer.messages.doOnNext(messages::onNext).subscribe()
+            if (!isDrainingModeOn()) {
+                initialConsumer.start()
+            }
+            existingConsumer.start()
+            startedFlag = true
+        }
+    }
+
+    override fun stop() {
+
+        synchronized(this) {
+            if (startedFlag) {
+                initialConsumer.stop()
+                existingConsumer.stop()
+                startedFlag = false
+            }
+            messages.onCompleted()
+        }
+    }
+
+    override val started: Boolean
+        get() = startedFlag
+
+
+    private fun pauseInitial() {
+
+        if (initialConsumer.started && initialConsumer.connected) {
+            initialConsumer.disconnect()
+        }
+    }
+
+    private fun resumeInitial() {
+
+        if (initialConsumer.started && !initialConsumer.connected) {
+            initialConsumer.connect()
+        }
+    }
+
+    private fun Pair<Boolean, Boolean>.switchedOff() = first && !second
+
+    private fun Pair<Boolean, Boolean>.switchedOn() = !first && second
 }

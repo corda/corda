@@ -1,5 +1,6 @@
 package net.corda.node.internal.artemis
 
+import net.corda.node.internal.Connectable
 import net.corda.node.internal.LifecycleSupport
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -7,11 +8,9 @@ import org.apache.activemq.artemis.api.core.client.ClientSession
 import rx.Observable
 import rx.subjects.PublishSubject
 
-interface ReactiveArtemisConsumer : LifecycleSupport {
+interface ReactiveArtemisConsumer : LifecycleSupport, Connectable {
 
     val messages: Observable<ClientMessage>
-
-    fun reconnect()
 
     companion object {
 
@@ -30,6 +29,7 @@ interface ReactiveArtemisConsumer : LifecycleSupport {
 private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<String>, private val createSession: () -> ClientSession, private val filter: String?) : ReactiveArtemisConsumer {
 
     private var startedFlag = false
+    override var connected = false
 
     override val messages: PublishSubject<ClientMessage> = PublishSubject.create<ClientMessage>()
 
@@ -56,38 +56,35 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
         }
     }
 
-    override fun reconnect() {
+    override fun connect() {
 
         synchronized(this) {
-            require(startedFlag)
-            disconnect()
-            connect()
+            require(!connected)
+            queueNames.forEach { queue ->
+                createSession().apply {
+                    start()
+                    consumers += filter?.let { createConsumer(queue, it) } ?: createConsumer(queue)
+                    sessions += this
+                }
+            }
+            consumers.forEach { consumer ->
+                consumer.setMessageHandler { message ->
+                    messages.onNext(message)
+                }
+            }
+            connected = true
         }
     }
 
-    private fun connect() {
-
-        queueNames.forEach { queue ->
-            createSession().apply {
-                start()
-                consumers += filter?.let { createConsumer(queue, it) } ?: createConsumer(queue)
-                sessions += this
-            }
-        }
-        consumers.forEach { consumer ->
-            consumer.setMessageHandler { message ->
-                messages.onNext(message)
-            }
-        }
-    }
-
-    private fun disconnect() {
+    override fun disconnect() {
 
         synchronized(this) {
+            require(connected)
             consumers.forEach(ClientConsumer::close)
             sessions.forEach(ClientSession::close)
             consumers.clear()
             sessions.clear()
+            connected = false
         }
     }
 

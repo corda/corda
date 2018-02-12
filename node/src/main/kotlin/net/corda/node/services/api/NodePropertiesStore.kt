@@ -12,6 +12,6 @@ interface NodePropertiesStore {
 
         fun isEnabled(): Boolean
 
-        val values: Observable<Boolean>
+        val values: Observable<Pair<Boolean, Boolean>>
     }
 }

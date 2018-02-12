@@ -18,3 +18,17 @@ interface Startable {
 
     val started: Boolean
 }
+
+interface Connectable {
+
+    val connected: Boolean
+
+    fun connect()
+
+    fun disconnect()
+
+    fun reconnect() {
+        disconnect()
+        connect()
+    }
+}

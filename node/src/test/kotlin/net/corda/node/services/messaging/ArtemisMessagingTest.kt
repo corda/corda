@@ -174,7 +174,7 @@ class ArtemisMessagingTest {
                     networkMapCache,
                     maxMessageSize = maxMessageSize,
                     isDrainingModeOn = { false },
-                    drainingModeWasChangedEvents = PublishSubject.create<Boolean>()).apply {
+                    drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>()).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }
