@@ -166,7 +166,14 @@ open class MockNetwork(
     /** Create an unstarted node with the given parameters. **/
     fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
 
-    /** Create an unstarted node with the given parameters. **/
+    /** Create an unstarted node with the given parameters.
+     * @param legalName the node's legal name.
+     * @param forcedID a unique identifier for the node.
+     * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
+     * but can be overridden to cause nodes to have stable or colliding identity/service keys.
+     * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
+     * @param version the mock node's platform, release, revision and vendor versions.
+     */
     @JvmOverloads
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
