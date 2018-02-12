@@ -44,7 +44,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = ext.rpcUsers
         // This configures the default cordapp for this node
         projectCordapp {
-            config project.file("src/main/config.conf")
+            config project.file("src/config.conf")
         }
         rpcSettings {
             port 10011
