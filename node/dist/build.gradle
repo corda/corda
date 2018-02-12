@@ -1,0 +1,146 @@
+description 'Corda Node Executable Image'
+
+evaluationDependsOn(":node")
+evaluationDependsOn(":docs")
+evaluationDependsOn(":launcher")
+
+def outputDir = "$buildDir/release"
+
+configurations {
+    launcherClasspath
+}
+
+sourceSets {
+    binFiles {
+        resources {
+            srcDir file('src/main/resources/bin')
+        }
+    }
+    licenseFiles {
+        resources {
+            srcDir file('src/main/resources/license')
+        }
+    }
+}
+
+dependencies {
+    launcherClasspath "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    launcherClasspath "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    launcherClasspath "org.slf4j:jul-to-slf4j:$slf4j_version"
+    launcherClasspath "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    launcherClasspath "org.apache.logging.log4j:log4j-web:${log4j_version}"
+    launcherClasspath "com.google.guava:guava:$guava_version"
+    launcherClasspath "de.javakaffee:kryo-serializers:0.41"
+    launcherClasspath project(':launcher')
+}
+
+task copyLauncherLibs(type: Copy, dependsOn: [project(':launcher').jar]) {
+    from configurations.launcherClasspath
+    into "$buildDir/tmp/launcher-lib"
+}
+
+task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
+    def isLinux = System.properties['os.name'].toLowerCase().contains('linux')
+    def isMac = System.properties['os.name'].toLowerCase().contains('mac')
+
+    if (!isLinux && !isMac)
+        throw new GradleException("Preparing distribution package is currently only supported on Linux/Mac")
+
+    def distributionDir = "${buildDir}/tmp/"
+
+    def relativeDir
+    if (isLinux) relativeDir = "launcher"
+    else relativeDir = "launcher.app/Contents"
+
+    ext {
+        launcherBinDir = "${distributionDir}/bundles/$relativeDir"
+    }
+
+    workingDir project.projectDir
+
+    def extraArgs = [
+            "-BjvmOptions=-javaagent:../../lib/quasar-core-${quasar_version}-jdk8.jar=${project(':node:capsule').quasarExcludeExpression}",
+            '-BuserJvmOptions=-Xmx=4g',
+            '-BuserJvmOptions=-XX\\:=+UseG1GC',
+            '-BjvmProperties=java.system.class.loader=net.corda.launcher.Loader'
+    ]
+
+    doFirst {
+        def launcherLib = copyLauncherLibs.destinationDir
+        def srcfiles = []
+        def classpath = []
+
+        fileTree(launcherLib).forEach({ file ->
+            srcfiles.add("-srcfiles")
+            srcfiles.add(file.name)
+            classpath.add(file.name)
+        })
+
+        commandLine = [
+                'javapackager',
+                '-deploy',
+                '-nosign',
+                '-native', 'image',
+                '-outdir', "$distributionDir",
+                '-outfile', 'launcher',
+                '-name', 'launcher',
+                "-BmainJar=${project(':launcher').jar.archiveName}",
+                "-Bclasspath=${classpath.join(":")}",
+                '-appclass', 'net.corda.launcher.Launcher',
+                '-srcdir', "$launcherLib"
+        ] + srcfiles + extraArgs
+    }
+}
+
+task installNodeLib(type: Copy, dependsOn: [project(':node').jar]) {
+    from project(':node').configurations.runtime
+    from project(':node').jar
+    into "${outputDir}/lib"
+}
+
+task installLauncher(type: Copy, dependsOn: [buildLauncher, installNodeLib]) {
+    from buildLauncher.launcherBinDir
+    into "${outputDir}/launcher"
+
+    doLast {
+        def classpath = []
+
+        fileTree("${outputDir}/lib").forEach({ file ->
+            classpath.add("../lib/" + file.getName())
+        })
+
+        new File("${outputDir}/launcher/runtime.properties").text = [
+                "classpath=${classpath.join(':')}",
+                "plugins=./drivers:./cordapps"].join("\n")
+    }
+}
+
+task installStartupScripts(type: Copy) {
+    from sourceSets.binFiles.resources
+    into "$outputDir/bin"
+}
+
+task installReadmeFiles(type: Copy) {
+    from sourceSets.licenseFiles.resources
+    into "$outputDir"
+}
+
+task installDocs(type: Copy, dependsOn: [project(':docs').tasks['makeDocs']]) {
+    from(project(':docs').buildDir)
+    into "$outputDir/docs"
+}
+
+task buildNode(dependsOn: [installLauncher,
+                           installNodeLib,
+                           installDocs,
+                           installStartupScripts,
+                           installReadmeFiles]) {
+
+    doLast {
+        new File("${outputDir}/cordapps").mkdirs()
+        new File("${outputDir}/drivers").mkdirs()
+        println ("Stand-alone Corda Node application available at:")
+        println ("${outputDir}")
+    }
+}
+
