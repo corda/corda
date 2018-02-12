@@ -65,7 +65,7 @@ class BankOfCordaCordform : CordformDefinition() {
 object DeployNodes {
     @JvmStatic
     fun main(args: Array<String>) {
-        BankOfCordaCordform().deployNodes(listOf("net.corda.finance"))
+        BankOfCordaCordform().nodeRunner().scanPackages(listOf("net.corda.finance")).deployAndRunNodes()
     }
 }
 
