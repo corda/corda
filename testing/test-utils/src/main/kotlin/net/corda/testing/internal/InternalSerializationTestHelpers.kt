@@ -13,7 +13,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 
-internal val inVMExecutors = ConcurrentHashMap<SerializationEnvironment, ExecutorService>()
+val inVMExecutors = ConcurrentHashMap<SerializationEnvironment, ExecutorService>()
 
 /**
  * For example your test class uses [SerializationEnvironmentRule] but you want to turn it off for one method.

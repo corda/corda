@@ -26,7 +26,7 @@ EOF
 
 echo "Number of API removals/changes: "$removalCount
 if [ $removalCount -gt 0 ]; then
-    echo "$removals"
+    echo "$removals"`
     echo
 fi
 
@@ -49,8 +49,8 @@ $newAbstracts
 EOF
 `
 
-#Get a list of any methods that expose classes in .internal. namespaces
-#Exclude nodeapi.internal as that is not stabalised yet
+#Get a list of any methods that expose classes in .internal. namespaces, and any classes which extend/implement
+#an internal class
 newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "\.internal\." )
 
 internalCount=`grep -v "^$" <<EOF | wc -l

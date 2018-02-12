@@ -218,8 +218,9 @@ open class MockServices private constructor(
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) = throw UnsupportedOperationException()
 
-    fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage)
-            = mockCordappProvider.addMockCordapp(contractClassName, attachments)
+    fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
+        mockCordappProvider.addMockCordapp(contractClassName, attachments)
+    }
 }
 
 class MockKeyManagementService(val identityService: IdentityServiceInternal,

@@ -49,14 +49,19 @@ import kotlin.concurrent.thread
  *     a service is addressed.
  */
 @ThreadSafe
-class InMemoryMessagingNetwork internal constructor(
-        @CordaInternal private val sendManuallyPumped: Boolean,
-        @CordaInternal private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-        @CordaInternal private val messagesInFlight: ReusableLatch = ReusableLatch()
+class InMemoryMessagingNetwork private constructor(
+        private val sendManuallyPumped: Boolean,
+        private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+        private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
         private const val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
+
+        internal fun create(
+                sendManuallyPumped: Boolean,
+                servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+                messagesInFlight: ReusableLatch = ReusableLatch()) = InMemoryMessagingNetwork(sendManuallyPumped, servicePeerAllocationStrategy, messagesInFlight)
     }
 
     private var counter = 0   // -1 means stopped.

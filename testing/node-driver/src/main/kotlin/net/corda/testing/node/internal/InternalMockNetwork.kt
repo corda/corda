@@ -113,7 +113,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
     private val busyLatch = ReusableLatch()
-    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
+    val messagingNetwork = InMemoryMessagingNetwork.create(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
     private val networkParameters: NetworkParametersCopier
