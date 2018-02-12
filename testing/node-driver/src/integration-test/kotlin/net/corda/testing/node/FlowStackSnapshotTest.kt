@@ -10,6 +10,7 @@ import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.junit.Ignore
 import org.junit.Test
@@ -227,7 +228,7 @@ fun assertFrame(expectedMethod: String, expectedEmpty: Boolean, frame: StackSnap
 class FlowStackSnapshotTest {
     @Test
     fun `flowStackSnapshot contains full frames when methods with side effects are called`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<SideEffectFlow>())))).get()
             CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val stackSnapshotFrames = connection.proxy.startFlow(::SideEffectFlow).returnValue.get()
@@ -242,7 +243,7 @@ class FlowStackSnapshotTest {
 
     @Test
     fun `flowStackSnapshot contains empty frames when methods with no side effects are called`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<NoSideEffectFlow>())))).get()
             CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val stackSnapshotFrames = connection.proxy.startFlow(::NoSideEffectFlow).returnValue.get()
@@ -257,7 +258,7 @@ class FlowStackSnapshotTest {
 
     @Test
     fun `persistFlowStackSnapshot persists empty frames to a file when methods with no side effects are called`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingNoSideEffectFlow>())))).get()
             CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
                 val flowId = connection.proxy.startFlow(::PersistingNoSideEffectFlow).returnValue.get()
@@ -273,7 +274,7 @@ class FlowStackSnapshotTest {
 
     @Test
     fun `persistFlowStackSnapshot persists multiple snapshots in different files`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<MultiplePersistingSideEffectFlow>())))).get()
 
             CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
@@ -304,7 +305,7 @@ class FlowStackSnapshotTest {
 
     @Test
     fun `persistFlowStackSnapshot stack traces are aligned with stack objects`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingSideEffectFlow>())))).get()
 
             CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
