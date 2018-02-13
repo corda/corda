@@ -2,7 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.GlobalProperties.networkParameters
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
@@ -23,23 +23,25 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
     override fun isSatisfiedBy(attachment: Attachment) = attachment.id == attachmentId
 }
 
-/** An [AttachmentConstraint] that verifies that the hash of the attachment is in the network parameters whitelist.
+/**
+ * An [AttachmentConstraint] that verifies that the hash of the attachment is in the network parameters whitelist.
  * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
  * It allows for centralized control over the cordapps that can be used.
  */
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     /**
-     * This sequence can be used for test/demos -  TODO - add warning on startup!
+     * This sequence can be used for test/demos
      */
-    val whitelistAllContractsForTest = mapOf("*" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
+    val whitelistAllContractsForTest get() = mapOf("*" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
-    override fun isSatisfiedBy(attachment: Attachment) = networkParameters.whitelistedContractImplementations!!.let { whitelist ->
-        when {
-            whitelist == whitelistAllContractsForTest -> true
-            attachment is ConstraintAttachment -> whitelist[attachment.stateContract]?.contains(attachment.id) ?: false
-            else -> false
-        }
-    }
+    override fun isSatisfiedBy(attachment: Attachment) =
+            (GlobalProperties.networkParameters.whitelistedContractImplementations ?: emptyMap()).let { whitelist ->
+                when {
+                    whitelist == whitelistAllContractsForTest -> true
+                    attachment is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
+                    else -> false
+                }
+            }
 }
 
 /**

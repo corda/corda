@@ -9,6 +9,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.parse
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
@@ -59,14 +60,12 @@ class NetworkBootstrapper {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val arg = args.firstOrNull()
+            val baseNodeDirectory = args.firstOrNull()
                     ?: throw IllegalArgumentException("Expecting first argument which is the nodes' parent directory")
             val cordapps = if (args.size > 1) args.toList().drop(1) else null
-            NetworkBootstrapper().bootstrap(Paths.get(arg).toAbsolutePath().normalize(), cordapps)
+            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordapps)
         }
     }
-
-    fun bootstrap(directory: Path) = bootstrap(directory, null)
 
     fun bootstrap(directory: Path, cordapps: List<String>?) {
         directory.createDirectories()
@@ -85,7 +84,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            installNetworkParameters(notaryInfos, nodeDirs, if (cordapps != null) generateWhitelist(cordapps) else null)
+            installNetworkParameters(notaryInfos, nodeDirs, cordapps?.let { generateWhitelist(it) })
             println("Bootstrapping complete!")
         } finally {
             _contextSerializationEnv.set(null)
@@ -214,8 +213,8 @@ class NetworkBootstrapper {
 
     private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.toFile().readLines()
             .map { line -> line.split(":") }
-            .map { (contract, attachmenIds) ->
-                contract to (attachmenIds.split(",").map { SecureHash.SHA256(it.parseAsHex()) })
+            .map { (contract, attachmentIds) ->
+                contract to (attachmentIds.split(",").map(::parse))
             }.toMap()
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"

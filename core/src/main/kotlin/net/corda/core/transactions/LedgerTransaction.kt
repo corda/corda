@@ -87,7 +87,7 @@ data class LedgerTransaction(
     /**
      * Verify that all contract constraints are valid for each state before running any contract code
      *
-     * In case the transaction was created on this node then the attachments will contain the hash of the current cordapp jars
+     * In case the transaction was created on this node then the attachments will contain the hash of the current cordapp jars.
      * In case this verifies an older transaction or one originated on a different node, then this verifies that the attachments
      * are valid.
      *
@@ -97,11 +97,14 @@ data class LedgerTransaction(
         val contractAttachments = attachments.filterIsInstance<ContractAttachment>()
 
         (inputs.map { it.state } + outputs).forEach { state ->
-            val contractAttachment = contractAttachments.find { state.contract in it.allContracts }
-                    ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+            val stateAttachments = contractAttachments.filter { state.contract in it.allContracts }
+            if (stateAttachments.isEmpty()) throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
-            if (!state.constraint.isSatisfiedBy(ConstraintAttachment(contractAttachment, state.contract))) {
-                throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
+            //in case multiple attachments have been added for the same contract, verify all
+            stateAttachments.distinctBy { it.id }.forEach { contractAttachment ->
+                if (!state.constraint.isSatisfiedBy(ConstraintAttachment(contractAttachment, state.contract))) {
+                    throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
+                }
             }
         }
     }

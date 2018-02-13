@@ -2,13 +2,12 @@ package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.GlobalProperties.useWhitelistedByZoneAttachmentConstraint
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
@@ -103,7 +102,7 @@ open class TransactionBuilder(
         val resolvedOutputs = outputs.map { state ->
             when {
                 state.constraint !is AutomaticHashConstraint -> state
-                useWhitelistedByZoneAttachmentConstraint -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
+                useWhitelistedByZoneAttachmentConstraint(state.contract) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
                 else -> services.cordappProvider.getContractAttachmentID(state.contract)?.let {
                     state.copy(constraint = HashAttachmentConstraint(it))
                 } ?: throw MissingContractAttachments(listOf(state))
@@ -115,17 +114,19 @@ open class TransactionBuilder(
         }
     }
 
+    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName): Boolean =
+            contractClassName in (GlobalProperties.networkParameters.whitelistedContractImplementations?.keys ?: emptySet())
+
     /**
      * The attachments added to the current transaction contain only the hashes of the current cordapps.
      * NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
      * TODO - review this logic
      */
-    private fun makeContractAttachments(services: ServicesForResolution): List<AttachmentId> {
-        fun getContractAttachmentId(state: TransactionState<ContractState>) = services.cordappProvider.getContractAttachmentID(state.contract)
-                ?: throw MissingContractAttachments(listOf(state))
-
-        return (inputsWithTransactionState + outputs).map(::getContractAttachmentId).distinct()
-    }
+    private fun makeContractAttachments(services: ServicesForResolution): List<AttachmentId> =
+            (inputsWithTransactionState + outputs).map { state ->
+                services.cordappProvider.getContractAttachmentID(state.contract)
+                        ?: throw MissingContractAttachments(listOf(state))
+            }.distinct()
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)

@@ -3,13 +3,11 @@ package net.corda.node.internal.cordapp
 import com.google.common.collect.HashBiMap
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint
 import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.GlobalProperties.networkParameters
-import net.corda.core.internal.GlobalProperties.useWhitelistedByZoneAttachmentConstraint
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -36,16 +34,23 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     }
 
     private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
-        if (useWhitelistedByZoneAttachmentConstraint && networkParameters.whitelistedContractImplementations != whitelistAllContractsForTest) {
-            val whitelist = networkParameters.whitelistedContractImplementations
-                    ?: throw IllegalStateException("network parameters don't specify the whitelist")
+        val whitelist = GlobalProperties.networkParameters.whitelistedContractImplementations
 
-            //verify that the installed cordapps are whitelisted
-            cordappAttachments.keys.map(attachmentStorage::openAttachment).filter { it is ContractAttachment }.forEach { attch ->
-                (attch as ContractAttachment).allContracts.forEach { contractClassName ->
-                    val contractWhitelist = whitelist[contractClassName]
-                            ?: throw IllegalStateException("Contract ${contractClassName} is not whitelisted")
-                    if (attch.id !in contractWhitelist) IllegalStateException("Contract ${contractClassName} in attachment ${attch.id} is not whitelisted")
+        if (whitelist == null) {
+            log.warn("The network parameters don't specify the contract implementation whitelist. Contact your zone operator. See https://docs.corda.net/network-map.html")
+            return
+        }
+
+        if (whitelist == whitelistAllContractsForTest) {
+            log.warn("The network parameters are configured for development or demo mode. See https://docs.corda.net/network-map.html")
+            return
+        }
+
+        // Verify that the installed contract classes correspond with the whitelist hash
+        cordappAttachments.keys.map(attachmentStorage::openAttachment).filter { it is ContractAttachment }.forEach { attch ->
+            ((attch as ContractAttachment).allContracts intersect whitelist.keys).forEach { contractClassName ->
+                if (attch.id !in whitelist[contractClassName]!!) {
+                    log.error("Contract ${contractClassName} found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
                 }
             }
         }

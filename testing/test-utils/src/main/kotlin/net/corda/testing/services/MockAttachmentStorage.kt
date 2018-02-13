@@ -28,18 +28,15 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
-    override fun importAttachment(jar: InputStream): AttachmentId = _importAttachment(jar)
+    override fun importAttachment(jar: InputStream): AttachmentId = importAttachmentInternal(jar)
 
-    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId = _importAttachment(jar, contractClassNames)
+    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId = importAttachmentInternal(jar, contractClassNames)
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
         return importAttachment(jar)
     }
 
-    override fun openAttachment(id: SecureHash): Attachment? {
-        val f = files[id] ?: return null
-        return f.first
-    }
+    override fun openAttachment(id: SecureHash): Attachment? = files[id]?.first
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         throw NotImplementedError("Querying for attachments not implemented")
@@ -55,19 +52,16 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         }
     }
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
-        val bytes = getBytes(jar)
-        return Pair(bytes.sha256(), bytes)
-    }
+    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = getBytes(jar).let { bytes -> Pair(bytes.sha256(), bytes) }
 
-    private fun _importAttachment(jar: InputStream, contractClassNames: List<ContractClassName>? = null): AttachmentId {
+    private fun importAttachmentInternal(jar: InputStream, contractClassNames: List<ContractClassName>? = null): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
 
         val bytes = getBytes(jar)
 
         val sha256 = bytes.sha256()
-        if (!files.containsKey(sha256)) {
+        if (sha256 !in files.keys) {
             val baseAttachment = object : AbstractAttachment({ bytes }) {
                 override val id = sha256
             }

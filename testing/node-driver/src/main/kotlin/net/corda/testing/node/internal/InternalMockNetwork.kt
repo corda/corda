@@ -281,8 +281,6 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
-//        override fun retrieveNetworkParameters(trustRoot: X509Certificate) = super.retrieveNetworkParameters(trustRoot).copy(whitelistedContractImplementations = whitelistAllContractsForTest)
-
         override fun startShell(rpcOps: CordaRPCOps) {
             //No mock shell
         }
