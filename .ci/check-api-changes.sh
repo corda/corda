@@ -33,7 +33,7 @@ fi
 # Adding new abstract methods could also break the API.
 # However, first exclude classes marked with the @DoNotImplement annotation
 function forUserImpl() {
-    awk '/(DoNotImplement)/,/^##/{ next }{ print }' $1
+    awk '/DoNotImplement/,/^##/{ next }{ print }' $1
 }
 
 userDiffContents=`diff -u <(forUserImpl $apiCurrent) <(forUserImpl $APIHOME/../build/api/api-corda-*.txt) | tail -n +3`
