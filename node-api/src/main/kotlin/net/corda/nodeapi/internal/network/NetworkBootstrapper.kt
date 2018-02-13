@@ -96,10 +96,7 @@ class NetworkBootstrapper {
         for (confFile in confFiles) {
             val nodeName = confFile.fileName.toString().removeSuffix(".conf")
             println("Generating directory for $nodeName")
-            val nodeDir = (directory / nodeName)
-            if (!nodeDir.exists()) {
-                nodeDir.createDirectory()
-            }
+            val nodeDir = (directory / nodeName).createDirectories()
             confFile.moveTo(nodeDir / "node.conf", StandardCopyOption.REPLACE_EXISTING)
             Files.copy(cordaJar, (nodeDir / "corda.jar"), StandardCopyOption.REPLACE_EXISTING)
         }
