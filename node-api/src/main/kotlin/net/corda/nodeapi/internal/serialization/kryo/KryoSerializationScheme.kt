@@ -92,7 +92,11 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                 val result: T
                 loop@ while (true) {
                     when (SectionId.reader.readFrom(this)) {
-                        SectionId.ENCODING -> substitute(CordaSerializationEncoding.reader.readFrom(this)::wrap)
+                        SectionId.ENCODING -> {
+                            val encoding = CordaSerializationEncoding.reader.readFrom(this)
+                            context.encodingWhitelist.acceptEncoding(encoding) || throw KryoException(encodingNotPermittedFormat.format(encoding))
+                            substitute(encoding::wrap)
+                        }
                         SectionId.DATA_AND_STOP, SectionId.ALT_DATA_AND_STOP -> {
                             result = if (context.objectReferencesEnabled) {
                                 uncheckedCast(readClassAndObject(this))

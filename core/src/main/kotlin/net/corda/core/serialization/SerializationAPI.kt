@@ -125,6 +125,10 @@ interface SerializationContext {
      */
     val whitelist: ClassWhitelist
     /**
+     * A whitelist that determines (mostly for security purposes) whether a particular encoding may be used when deserializing.
+     */
+    val encodingWhitelist: EncodingWhitelist
+    /**
      * A map of any addition properties specific to the particular use case.
      */
     val properties: Map<Any, Any>
@@ -240,4 +244,9 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
 
 interface ClassWhitelist {
     fun hasListed(type: Class<*>): Boolean
+}
+
+@DoNotImplement
+interface EncodingWhitelist {
+    fun acceptEncoding(encoding: SerializationEncoding): Boolean
 }

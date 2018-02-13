@@ -1,10 +1,13 @@
 package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.internal.FetchDataFlow
@@ -16,8 +19,8 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import net.corda.testing.internal.rigorousMock
+import org.assertj.core.api.Assertions.*
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -30,10 +33,7 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @RunWith(Parameterized::class)
 class KryoTests(private val compression: CordaSerializationEncoding?) {
@@ -56,7 +56,10 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
                 emptyMap(),
                 true,
                 SerializationContext.UseCase.Storage,
-                compression)
+                compression,
+                rigorousMock<EncodingWhitelist>().also {
+                    if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
+                })
     }
 
     @Test
@@ -318,5 +321,16 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val compressed = data.serialize(factory, context)
         assertEquals(.5, compressed.size.toDouble() / data.size, .03)
         assertArrayEquals(data, compressed.deserialize(factory, context))
+    }
+
+    @Test
+    fun `a particular encoding can be banned for deserialization`() {
+        compression ?: return
+        doReturn(false).whenever(context.encodingWhitelist).acceptEncoding(compression)
+        val compressed = "whatever".serialize(factory, context)
+        catchThrowable { compressed.deserialize(factory, context) }.run {
+            assertSame<Any>(KryoException::class.java, javaClass)
+            assertEquals(encodingNotPermittedFormat.format(compression), message)
+        }
     }
 }

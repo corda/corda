@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization
 
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -52,3 +53,6 @@ enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
     abstract fun wrap(stream: OutputStream): OutputStream
     abstract fun wrap(stream: InputStream): InputStream
 }
+
+@VisibleForTesting
+internal val encodingNotPermittedFormat = "Encoding not permitted: %s"
