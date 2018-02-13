@@ -2,6 +2,9 @@
 
 package net.corda.core.internal
 
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappConfig
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
@@ -375,3 +378,7 @@ inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
 }
 
 fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }
+
+fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
+    return CordappContext(cordapp, attachmentId, classLoader, config)
+}

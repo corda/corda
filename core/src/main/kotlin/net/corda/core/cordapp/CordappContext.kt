@@ -13,5 +13,11 @@ import net.corda.core.crypto.SecureHash
  * @property attachmentId For CorDapps containing [Contract] or [UpgradedContract] implementations this will be populated
  * with the attachment containing those class files
  * @property classLoader the classloader used to load this cordapp's classes
+ * @property config Configuration for this CorDapp
  */
-class CordappContext(val cordapp: Cordapp, val attachmentId: SecureHash?, val classLoader: ClassLoader, val config: CordappConfig)
+class CordappContext internal constructor(
+        val cordapp: Cordapp,
+        val attachmentId: SecureHash?,
+        val classLoader: ClassLoader,
+        val config: CordappConfig
+)

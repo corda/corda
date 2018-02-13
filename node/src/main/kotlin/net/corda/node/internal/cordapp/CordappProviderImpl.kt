@@ -6,6 +6,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.cordapp.CordappConfigProvider
+import net.corda.core.internal.createCordappContext
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -56,7 +57,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
 
     private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
         val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it.jarPath }
-        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importOrGetAttachment(it) }}
+        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importOrGetAttachment(it) } }
         return attachmentIds.zip(cordappsWithAttachments).toMap()
     }
 
@@ -68,7 +69,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
         return contextCache.computeIfAbsent(cordapp, {
-            CordappContext(
+            createCordappContext(
                     cordapp,
                     getCordappAttachmentId(cordapp),
                     cordappLoader.appClassLoader,
