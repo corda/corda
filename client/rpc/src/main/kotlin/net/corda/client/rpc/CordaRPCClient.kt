@@ -73,7 +73,7 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
 class CordaRPCClient private constructor(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-        private var sslConfiguration: SSLConfiguration? = null
+        sslConfiguration: SSLConfiguration? = null
 ) {
     @JvmOverloads
     constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(hostAndPort, configuration, null)
