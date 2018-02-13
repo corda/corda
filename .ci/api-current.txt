@@ -1233,7 +1233,6 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   @org.jetbrains.annotations.Nullable public net.corda.core.utilities.ProgressTracker getProgressTracker()
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.StateMachineRunId getRunId()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.ServiceHub getServiceHub()
-  @net.corda.core.CordaInternal @org.jetbrains.annotations.NotNull public final net.corda.core.internal.FlowStateMachine getStateMachine()
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowSession initiateFlow(net.corda.core.identity.Party)
   @co.paralleluniverse.fibers.Suspendable public final void persistFlowStackSnapshot()
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.utilities.UntrustworthyData receive(Class, net.corda.core.identity.Party)
@@ -1242,7 +1241,6 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   public final void recordAuditEvent(String, String, Map)
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable public void send(net.corda.core.identity.Party, Object)
   @kotlin.Deprecated @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, net.corda.core.identity.Party, Object)
-  @net.corda.core.CordaInternal public final void setStateMachine(net.corda.core.internal.FlowStateMachine)
   @co.paralleluniverse.fibers.Suspendable @kotlin.jvm.JvmStatic public static final void sleep(java.time.Duration)
   @co.paralleluniverse.fibers.Suspendable public Object subFlow(net.corda.core.flows.FlowLogic)
   @org.jetbrains.annotations.Nullable public final net.corda.core.messaging.DataFeed track()
@@ -3701,7 +3699,6 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public String toString()
 ##
 @net.corda.core.DoNotImplement public interface net.corda.testing.driver.InProcess extends net.corda.testing.driver.NodeHandle
-  @org.jetbrains.annotations.NotNull public abstract java.sql.Connection getDatabaseConnection()
   @org.jetbrains.annotations.NotNull public abstract net.corda.node.services.api.StartedNodeServices getServices()
   @org.jetbrains.annotations.NotNull public abstract rx.Observable registerInitiatedFlow(Class)
 ##
@@ -3888,10 +3885,6 @@ public static final class net.corda.testing.node.InMemoryMessagingNetwork$Servic
   @org.jetbrains.annotations.Nullable public abstract net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer pumpReceive(boolean)
   public abstract void stop()
 ##
-public static final class net.corda.testing.node.InMemoryMessagingNetwork$pumpSend$$inlined$schedule$1 extends java.util.TimerTask
-  public <init>(net.corda.testing.node.InMemoryMessagingNetwork, net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer, net.corda.core.internal.concurrent.OpenFuture)
-  public void run()
-##
 public class net.corda.testing.node.MessagingServiceSpy extends java.lang.Object implements net.corda.node.services.messaging.MessagingService
   public <init>(net.corda.node.services.messaging.MessagingService)
   @org.jetbrains.annotations.NotNull public net.corda.node.services.messaging.MessageHandlerRegistration addMessageHandler(String, kotlin.jvm.functions.Function2)
@@ -4018,7 +4011,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public <init>(List, net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService)
   public <init>(net.corda.core.identity.CordaX500Name)
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService)
-  public final void addMockCordapp(String, net.corda.testing.services.MockAttachmentStorage)
+  public final void addMockCordapp(String)
   @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction addSignature(net.corda.core.transactions.SignedTransaction)
   @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction addSignature(net.corda.core.transactions.SignedTransaction, java.security.PublicKey)
   @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializeAsToken cordaService(Class)
