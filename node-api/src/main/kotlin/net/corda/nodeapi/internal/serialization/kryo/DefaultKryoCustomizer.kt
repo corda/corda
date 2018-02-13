@@ -211,7 +211,6 @@ object DefaultKryoCustomizer {
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
-
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()

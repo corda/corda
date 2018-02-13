@@ -2,7 +2,6 @@ package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort

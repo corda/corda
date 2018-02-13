@@ -1,6 +1,5 @@
 package net.corda.node.utilities.registration
 
-import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
@@ -80,7 +79,7 @@ class NodeRegistrationTest {
     fun `node registration correct root cert`() {
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
-                publishNotaries = { server.networkParameters = testNetworkParameters(it).copy(whitelistedContractImplementations = whitelistAllContractsForTest) },
+                publishNotaries = { server.networkParameters = testNetworkParameters(it) },
                 rootCert = DEV_ROOT_CA.certificate)
         internalDriver(
                 portAllocation = portAllocation,

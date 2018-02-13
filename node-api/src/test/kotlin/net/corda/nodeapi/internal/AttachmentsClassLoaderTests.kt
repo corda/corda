@@ -280,7 +280,7 @@ class AttachmentsClassLoaderTests {
                 .withClassLoader(child)
 
         val bytes = run {
-            val wireTransaction = tx.toWireTransaction(serviceHub, context)
+            val wireTransaction = tx.toWireTransaction(cordappProvider, context)
             wireTransaction.serialize(context = context)
         }
         val copiedWireTransaction = bytes.deserialize(context = context)
@@ -304,7 +304,7 @@ class AttachmentsClassLoaderTests {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
                             .withServiceHub(serviceHub)
                             .withClassLoader(child)
-                    val wireTransaction = tx.toWireTransaction(serviceHub, outboundContext)
+                    val wireTransaction = tx.toWireTransaction(cordappProvider, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
                 }
                 // use empty attachmentStorage

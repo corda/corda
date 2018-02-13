@@ -2,6 +2,7 @@ package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -91,9 +92,9 @@ open class TransactionBuilder(
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services.cordappProvider)
 
-    internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+    internal fun toWireTransactionWithContext(cordappProvider: CordappProvider, serializationContext: SerializationContext? = null): WireTransaction {
 
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints or WhitelistedByZoneAttachmentConstraint based on a global parameter.
         // The AutomaticHashConstraint allows for less boiler plate when constructing transactions since for the typical case the named contract
@@ -103,14 +104,14 @@ open class TransactionBuilder(
             when {
                 state.constraint !is AutomaticHashConstraint -> state
                 useWhitelistedByZoneAttachmentConstraint(state.contract) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
-                else -> services.cordappProvider.getContractAttachmentID(state.contract)?.let {
+                else -> cordappProvider.getContractAttachmentID(state.contract)?.let {
                     state.copy(constraint = HashAttachmentConstraint(it))
                 } ?: throw MissingContractAttachments(listOf(state))
             }
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services), notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(cordappProvider), notary, window), privacySalt)
         }
     }
 
@@ -122,9 +123,9 @@ open class TransactionBuilder(
      * NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
      * TODO - review this logic
      */
-    private fun makeContractAttachments(services: ServicesForResolution): List<AttachmentId> =
+    private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> =
             (inputsWithTransactionState + outputs).map { state ->
-                services.cordappProvider.getContractAttachmentID(state.contract)
+                cordappProvider.getContractAttachmentID(state.contract)
                         ?: throw MissingContractAttachments(listOf(state))
             }.distinct()
 
@@ -132,7 +133,7 @@ open class TransactionBuilder(
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
     internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext) =
-            toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
+            toWireTransactionWithContext(services.cordappProvider, serializationContext).toLedgerTransaction(services)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {

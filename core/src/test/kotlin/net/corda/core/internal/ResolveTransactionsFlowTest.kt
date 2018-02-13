@@ -9,8 +9,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
 import org.junit.After

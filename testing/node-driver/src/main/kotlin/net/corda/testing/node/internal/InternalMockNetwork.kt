@@ -68,7 +68,6 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -161,8 +160,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
      */
     val defaultNotaryIdentity: Party
         get() {
-            return defaultNotaryNode.info.legalIdentities.singleOrNull()
-                    ?: throw IllegalStateException("Default notary has multiple identities")
+            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
         }
 
     /**
@@ -171,8 +169,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
      */
     val defaultNotaryIdentityAndCert: PartyAndCertificate
         get() {
-            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull()
-                    ?: throw IllegalStateException("Default notary has multiple identities")
+            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
         }
 
     /**
