@@ -31,17 +31,12 @@ if [ $removalCount -gt 0 ]; then
 fi
 
 # Adding new abstract methods could also break the API.
-# However, first exclude classes marked with the @DoNotImplement annotation, or
-# any internal inlined classes which are not part of the public API
-
+# However, first exclude classes marked with the @DoNotImplement annotation
 function forUserImpl() {
-    awk '/(DoNotImplement|\$\$inlined\$)/,/^##/{ next }{ print }' $1
+    awk '/(DoNotImplement)/,/^##/{ next }{ print }' $1
 }
 
 userDiffContents=`diff -u <(forUserImpl $apiCurrent) <(forUserImpl $APIHOME/../build/api/api-corda-*.txt) | tail -n +3`
-
-##Remove any methods that are marked with CordaInteral attribute
-userDiffContents=`sed '/@net.corda.core.CordaInternal/d' <<< $userDiffContents`
 
 newAbstracts=$(echo "$userDiffContents" | grep "^+" | grep "\(public\|protected\) abstract")
 abstractCount=`grep -v "^$" <<EOF | wc -l
