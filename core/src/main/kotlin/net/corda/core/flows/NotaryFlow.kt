@@ -9,10 +9,12 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.generateSignature
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -78,10 +80,11 @@ class NotaryFlow {
         protected fun notarise(notaryParty: Party): UntrustworthyData<List<TransactionSignature>> {
             return try {
                 val session = initiateFlow(notaryParty)
+                val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
                 if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                    sendAndReceiveValidating(session)
+                    sendAndReceiveValidating(session, requestSignature)
                 } else {
-                    sendAndReceiveNonValidating(notaryParty, session)
+                    sendAndReceiveNonValidating(notaryParty, session, requestSignature)
                 }
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
@@ -92,19 +95,20 @@ class NotaryFlow {
         }
 
         @Suspendable
-        protected open fun sendAndReceiveValidating(session: FlowSession): UntrustworthyData<List<TransactionSignature>> {
-            subFlow(SendTransactionWithRetry(session, stx))
+        private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<List<TransactionSignature>> {
+            val payload = NotarisationPayload(stx, signature)
+            subFlow(NotarySendTransactionFlow(session, payload))
             return session.receive()
         }
 
         @Suspendable
-        protected open fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession): UntrustworthyData<List<TransactionSignature>> {
-            val tx: Any = if (stx.isNotaryChangeTransaction()) {
+        private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<List<TransactionSignature>> {
+            val tx: CoreTransaction = if (stx.isNotaryChangeTransaction()) {
                 stx.notaryChangeTx // Notary change transactions do not support filtering
             } else {
                 stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
             }
-            return session.sendAndReceiveWithRetry(tx)
+            return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))
         }
 
         protected fun validateResponse(response: UntrustworthyData<List<TransactionSignature>>, notaryParty: Party): List<TransactionSignature> {
@@ -118,16 +122,16 @@ class NotaryFlow {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
             sig.verify(txId)
         }
-    }
 
-    /**
-     * The [SendTransactionWithRetry] flow is equivalent to [SendTransactionFlow] but using [sendAndReceiveWithRetry]
-     * instead of [sendAndReceive], [SendTransactionWithRetry] is intended to be use by the notary client only.
-     */
-    private class SendTransactionWithRetry(otherSideSession: FlowSession, stx: SignedTransaction) : SendTransactionFlow(otherSideSession, stx) {
-        @Suspendable
-        override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
-            return otherSideSession.sendAndReceiveWithRetry(payload)
+        /**
+         * The [NotarySendTransactionFlow] flow is similar to [SendTransactionFlow], but uses [NotarisationPayload] as the
+         * initial message, and retries message delivery.
+         */
+        private class NotarySendTransactionFlow(otherSide: FlowSession, payload: NotarisationPayload) : DataVendingFlow(otherSide, payload) {
+            @Suspendable
+            override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
+                return otherSideSession.sendAndReceiveWithRetry(payload)
+            }
         }
     }
 
@@ -199,7 +203,8 @@ sealed class NotaryError {
         override fun toString() = "Current time $currentTime is outside the time bounds specified by the transaction: $txTimeWindow"
 
         companion object {
-            @JvmField @Deprecated("Here only for binary compatibility purposes, do not use.")
+            @JvmField
+            @Deprecated("Here only for binary compatibility purposes, do not use.")
             val INSTANCE = TimeWindowInvalid(Instant.EPOCH, TimeWindow.fromOnly(Instant.EPOCH))
         }
     }
@@ -210,7 +215,11 @@ sealed class NotaryError {
 
     object WrongNotary : NotaryError()
 
-    data class General(val cause: String): NotaryError() {
-        override fun toString() = cause
+    data class General(val cause: Throwable) : NotaryError() {
+        override fun toString() = cause.toString()
+    }
+
+    data class RequestSignatureInvalid(val cause: Throwable) : NotaryError() {
+        override fun toString() = "Request signature invalid: $cause"
     }
 }

@@ -3,24 +3,35 @@ package net.corda.node.services.transactions
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sign
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.internal.generateSignature
+import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.testing.core.ALICE_NAME
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.statemachine.InitialSessionMessage
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -34,6 +45,7 @@ import kotlin.test.assertTrue
 class NotaryServiceTests {
     private lateinit var mockNet: MockNetwork
     private lateinit var notaryServices: StartedNodeServices
+    private lateinit var aliceNode: StartedMockNode
     private lateinit var aliceServices: StartedNodeServices
     private lateinit var notary: Party
     private lateinit var alice: Party
@@ -41,7 +53,8 @@ class NotaryServiceTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        aliceServices = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME)).services
+        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        aliceServices = aliceNode.services
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that
         notary = mockNet.defaultNotaryIdentity
         alice = aliceServices.myInfo.singleIdentity()
@@ -157,6 +170,70 @@ class NotaryServiceTests {
         val notaryError = ex.error as NotaryError.Conflict
         assertEquals(notaryError.txId, stx2.id)
         notaryError.conflict.verified()
+    }
+
+    @Test
+    fun `should reject when notarisation request not signed by the requesting party`() {
+        runNotarisationAndInterceptClientPayload { originalPayload ->
+            val transaction = originalPayload.signedTransaction
+            val randomKeyPair = Crypto.generateKeyPair()
+            val bytesToSign = NotarisationRequest(transaction.inputs, transaction.id).serializedBytes
+            val modifiedSignature = NotarisationRequestSignature(randomKeyPair.sign(bytesToSign))
+            originalPayload.copy(requestSignature = modifiedSignature)
+        }
+    }
+
+    @Test
+    fun `should reject when incorrect notarisation request signed - inputs don't match`() {
+        runNotarisationAndInterceptClientPayload { originalPayload ->
+            val transaction = originalPayload.signedTransaction
+            val wrongInputs = listOf(StateRef(SecureHash.randomSHA256(), 0))
+            val request = NotarisationRequest(wrongInputs, transaction.id)
+            val modifiedSignature = request.generateSignature(aliceNode.services)
+            originalPayload.copy(requestSignature = modifiedSignature)
+        }
+    }
+
+    @Test
+    fun `should reject when incorrect notarisation request signed - transaction id doesn't match`() {
+        runNotarisationAndInterceptClientPayload { originalPayload ->
+            val transaction = originalPayload.signedTransaction
+            val wrongTransactionId = SecureHash.randomSHA256()
+            val request = NotarisationRequest(transaction.inputs, wrongTransactionId)
+            val modifiedSignature = request.generateSignature(aliceNode.services)
+            originalPayload.copy(requestSignature = modifiedSignature)
+        }
+    }
+
+    private fun runNotarisationAndInterceptClientPayload(payloadModifier: (NotarisationPayload) -> NotarisationPayload) {
+        aliceNode.setMessagingServiceSpy(object : MessagingServiceSpy(aliceNode.network) {
+            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+                val messageData = message.data.deserialize<Any>() as? InitialSessionMessage
+                val payload = messageData?.firstPayload!!.deserialize()
+
+                if (payload is NotarisationPayload) {
+                    val alteredPayload = payloadModifier(payload)
+                    val alteredMessageData = messageData.copy(firstPayload = alteredPayload.serialize())
+                    val alteredMessage = InMemoryMessagingNetwork.InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData.serialize().bytes), message.uniqueMessageId)
+                    messagingService.send(alteredMessage, target, retryId)
+
+                } else {
+                    messagingService.send(message, target, retryId)
+                }
+            }
+        })
+
+        val stx = run {
+            val inputState = issueState(aliceServices, alice)
+            val tx = TransactionBuilder(notary)
+                    .addInputState(inputState)
+                    .addCommand(dummyCommand(alice.owningKey))
+            aliceServices.signInitialTransaction(tx)
+        }
+
+        val future = runNotaryClient(stx)
+        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
+        assertThat(ex.error).isInstanceOf(NotaryError.RequestSignatureInvalid::class.java)
     }
 
     private fun runNotaryClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
