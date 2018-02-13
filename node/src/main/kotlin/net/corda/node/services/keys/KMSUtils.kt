@@ -3,6 +3,7 @@ package net.corda.node.services.keys
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.CertRole
+import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -27,7 +28,7 @@ import java.time.Duration
  * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
  * @return X.509 certificate and path to the trust root.
  */
-fun freshCertificate(identityService: IdentityServiceInternal,
+fun freshCertificate(identityService: IdentityService,
                      subjectPublicKey: PublicKey,
                      issuer: PartyAndCertificate,
                      issuerSigner: ContentSigner,
@@ -45,7 +46,11 @@ fun freshCertificate(identityService: IdentityServiceInternal,
             window)
     val ourCertPath = X509Utilities.buildCertPath(ourCertificate, issuer.certPath.x509Certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
-    identityService.justVerifyAndRegisterIdentity(anonymisedIdentity)
+    if (identityService is IdentityServiceInternal) {
+        identityService.justVerifyAndRegisterIdentity(anonymisedIdentity)
+    } else {
+        identityService.verifyAndRegisterIdentity(anonymisedIdentity)
+    }
     return anonymisedIdentity
 }
 
