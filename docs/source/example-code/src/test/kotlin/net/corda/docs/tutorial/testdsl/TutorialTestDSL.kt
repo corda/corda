@@ -38,11 +38,11 @@ class CommercialPaperTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityService>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityService>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BIG_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
-    }, MEGA_CORP.name)
+    })
 
     // DOCSTART 1
     fun getPaper(): ICommercialPaperState = CommercialPaper.State(
