@@ -96,8 +96,8 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
-        bocServices = MockServices(cordappPackages, rigorousMock(), bankOfCorda)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
+        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock())
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
@@ -137,7 +137,7 @@ class NodeVaultServiceTest {
             assertThat(w1).hasSize(3)
 
             val originalVault = vaultService
-            val services2 = object : MockServices(emptyList(), rigorousMock(), MEGA_CORP.name) {
+            val services2 = object : MockServices(emptyList(), MEGA_CORP.name, rigorousMock()) {
                 override val vaultService: NodeVaultService get() = originalVault
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -480,7 +480,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-        val megaCorpServices = MockServices(cordappPackages, rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
         database.transaction {
             val freshKey = identity.owningKey
 
@@ -587,9 +587,9 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
             doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
-        }, MEGA_CORP.name)
+        })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 

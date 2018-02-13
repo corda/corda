@@ -173,10 +173,13 @@ public class JavaSerializationOutputTests {
 
     private Object serdes(Object obj) throws NotSerializableException {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
         SerializerFactory factory2 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(obj);
 

@@ -1,10 +1,7 @@
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.Actor
-import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -353,6 +350,21 @@ interface CordaRPCOps : RPCOps {
 
     /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
+
+    /** Sets the value of the node's flows draining mode.
+     * If this mode is [enabled], the node will reject new flows through RPC, ignore scheduled flows, and do not process
+     * initial session messages, meaning that P2P counter-parties will not be able to initiate new flows involving the node.
+     *
+     * @param enabled whether the flows draining mode will be enabled.
+     * */
+    fun setFlowsDrainingModeEnabled(enabled: Boolean)
+
+    /**
+     * Returns whether the flows draining mode is enabled.
+     *
+     * @see setFlowsDrainingModeEnabled
+     */
+    fun isFlowsDrainingModeEnabled(): Boolean
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

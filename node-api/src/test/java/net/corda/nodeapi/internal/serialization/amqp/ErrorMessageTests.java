@@ -32,10 +32,12 @@ public class ErrorMessageTests {
     @Test
     public void testJavaConstructorAnnotations() {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
 
         SerializationOutput ser = new SerializationOutput(factory1);
 

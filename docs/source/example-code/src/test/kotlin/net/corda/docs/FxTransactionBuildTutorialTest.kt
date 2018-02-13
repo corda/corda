@@ -7,9 +7,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -18,8 +18,8 @@ import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeA: StartedMockNode
+    private lateinit var nodeB: StartedMockNode
     private lateinit var notary: Party
 
     @Before

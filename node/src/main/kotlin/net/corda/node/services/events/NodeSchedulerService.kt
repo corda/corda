@@ -24,12 +24,14 @@ import net.corda.core.utilities.trace
 import net.corda.node.internal.CordaClock
 import net.corda.node.internal.MutableClock
 import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
@@ -60,6 +62,8 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val serverThread: Executor,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
+                           private val nodeProperties: NodePropertiesStore,
+                           private val drainingModePollPeriod: Duration,
                            private val log: Logger = staticLog,
                            private val scheduledStates: MutableMap<StateRef, ScheduledStateRef> = createMap())
     : SchedulerService, SingletonSerializeAsToken() {
@@ -285,10 +289,19 @@ class NodeSchedulerService(private val clock: CordaClock,
                     scheduledStatesQueue.add(newState)
                 } else {
                     val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
-                    log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                    scheduledFlow = flowLogic
-                    scheduledStates.remove(scheduledState.ref)
-                    scheduledStatesQueue.remove(scheduledState)
+                    scheduledFlow = when {
+                        nodeProperties.flowsDrainingMode.isEnabled() -> {
+                            log.warn("Ignoring scheduled flow start because of draining mode. FlowLogic: $flowLogic.")
+                            awaitWithDeadline(clock, Instant.now() + drainingModePollPeriod)
+                            null
+                        }
+                        else -> {
+                            log.trace { "Scheduler starting FlowLogic $flowLogic" }
+                            scheduledStates.remove(scheduledState.ref)
+                            scheduledStatesQueue.remove(scheduledState)
+                            flowLogic
+                        }
+                    }
                 }
             }
             // and schedule the next one

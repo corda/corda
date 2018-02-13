@@ -15,12 +15,11 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation
-import net.corda.node.services.statemachine.SessionConfirm
-import net.corda.node.services.statemachine.SessionEnd
-import net.corda.node.services.statemachine.SessionInit
+import net.corda.node.services.statemachine.*
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.time.format.DateTimeFormatter
@@ -107,8 +106,8 @@ class NetworkMapVisualiser : Application() {
         }
         // Fire the message bullets between nodes.
         simulation.mockNet.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
-            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
+            val senderNode: InternalMockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
+            val destNode: InternalMockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
 
             if (transferIsInteresting(msg)) {
                 viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()
@@ -116,7 +115,7 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Pulse all parties in a trade when the trade completes
-        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<MockNetwork.MockNode> ->
+        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<InternalMockNetwork.MockNode> ->
             nodes.forEach { viewModel.nodesToWidgets[it]!!.longPulseAnim.play() }
         }
 
@@ -342,12 +341,16 @@ class NetworkMapVisualiser : Application() {
     private fun transferIsInteresting(transfer: InMemoryMessagingNetwork.MessageTransfer): Boolean {
         // Loopback messages are boring.
         if (transfer.sender == transfer.recipients) return false
-        val message = transfer.message.data.deserialize<Any>()
+        val message = transfer.message.data.deserialize<SessionMessage>()
         return when (message) {
-            is SessionEnd -> false
-            is SessionConfirm -> false
-            is SessionInit -> message.firstPayload != null
-            else -> true
+            is InitialSessionMessage -> message.firstPayload != null
+            is ExistingSessionMessage -> when (message.payload) {
+                is ConfirmSessionMessage -> false
+                is DataSessionMessage -> true
+                is ErrorSessionMessage -> true
+                is RejectSessionMessage -> true
+                is EndSessionMessage -> false
+            }
         }
     }
 }

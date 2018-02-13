@@ -1,5 +1,6 @@
 package net.corda.bank
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
@@ -37,11 +38,11 @@ class BankOfCordaRPCClientTest {
             ).map { it.getOrThrow() }
 
             // Bank of Corda RPC Client
-            val bocClient = nodeBankOfCorda.rpcClientToNode()
+            val bocClient = CordaRPCClient(nodeBankOfCorda.rpcAddress)
             val bocProxy = bocClient.start("bocManager", "password1").proxy
 
             // Big Corporation RPC Client
-            val bigCorpClient = nodeBigCorporation.rpcClientToNode()
+            val bigCorpClient = CordaRPCClient(nodeBigCorporation.rpcAddress)
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
 
             // Register for Bank of Corda Vault updates

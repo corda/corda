@@ -3,7 +3,7 @@ package net.corda.nodeapi.internal.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.*
-import net.corda.node.services.statemachine.SessionData
+import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.Envelope
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
@@ -47,17 +47,17 @@ class ListsSerializationTest {
     @Test
     fun `check list can be serialized as part of SessionData`() {
         run {
-            val sessionData = SessionData(123, listOf(1).serialize())
+            val sessionData = DataSessionMessage(listOf(1).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(listOf(1), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, listOf(1, 2).serialize())
+            val sessionData = DataSessionMessage(listOf(1, 2).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(listOf(1, 2), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, emptyList<Int>().serialize())
+            val sessionData = DataSessionMessage(emptyList<Int>().serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(emptyList<Int>(), sessionData.payload.deserialize())
         }

@@ -27,6 +27,10 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     }
 
     protected val attachmentData: ByteArray by lazy(dataLoader)
+
+    // TODO: read file size information from metadata instead of loading the data.
+    override val size: Int get() = attachmentData.size
+
     override fun open(): InputStream = attachmentData.inputStream()
     override val signers by lazy {
         // Can't start with empty set if we're doing intersections. Logically the null means "all possible signers":

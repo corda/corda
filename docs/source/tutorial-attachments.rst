@@ -11,7 +11,7 @@ locally so they are not re-requested if encountered again. Attachments typically
 * Metadata about a transaction, such as PDF version of an invoice being settled
 * Shared information to be permanently recorded on the ledger
 
-To add attachments the file must first be added to uploaded to the node, which returns a unique ID that can be added
+To add attachments the file must first be uploaded to the node, which returns a unique ID that can be added
 using ``TransactionBuilder.addAttachment()``. Attachments can be uploaded and downloaded via RPC and the Corda
 :doc:`shell`.
 
