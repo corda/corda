@@ -65,9 +65,10 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"), rigorousMock<IdentityServiceInternal>().also {
-        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }, MEGA_CORP.name)
+    private val ledgerServices = MockServices(listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"), MEGA_CORP.name,
+            rigorousMock<IdentityServiceInternal>().also {
+                doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            })
 
     @Test
     fun `state can be encumbered`() {

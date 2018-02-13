@@ -160,7 +160,7 @@ class DriverDSLImpl(
                 config.corda.rpcUsers[0].run { client.start(username, password) }
             } catch (e: Exception) {
                 if (processDeathFuture.isDone) throw e
-                log.error("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
+                log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
                 null
             }
         }

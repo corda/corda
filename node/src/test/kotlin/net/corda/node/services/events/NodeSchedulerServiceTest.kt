@@ -12,6 +12,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.StateLoader
 import net.corda.core.utilities.days
 import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.internal.doLookup
@@ -23,6 +24,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.slf4j.Logger
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 
 class NodeSchedulerServiceTest {
@@ -38,6 +40,12 @@ class NodeSchedulerServiceTest {
     }
     private val flowStarter = rigorousMock<FlowStarter>().also {
         doReturn(openFuture<FlowStateMachine<*>>()).whenever(it).startFlow(any<FlowLogic<*>>(), any())
+    }
+    private val flowsDraingMode = rigorousMock<NodePropertiesStore.FlowsDrainingModeOperations>().also {
+        doReturn(false).whenever(it).isEnabled()
+    }
+    private val nodeProperties = rigorousMock<NodePropertiesStore>().also {
+        doReturn(flowsDraingMode).whenever(it).flowsDrainingMode
     }
     private val transactionStates = mutableMapOf<StateRef, TransactionState<*>>()
     private val stateLoader = rigorousMock<StateLoader>().also {
@@ -58,6 +66,8 @@ class NodeSchedulerServiceTest {
             stateLoader,
             serverThread = MoreExecutors.directExecutor(),
             flowLogicRefFactory = flowLogicRefFactory,
+            nodeProperties = nodeProperties,
+            drainingModePollPeriod = Duration.ofSeconds(5),
             log = log,
             scheduledStates = mutableMapOf()).apply { start() }
     @Rule

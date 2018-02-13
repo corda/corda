@@ -38,7 +38,7 @@ public class CashTestsJava {
         IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
         doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPublicKey());
         doReturn(MINI_CORP.getParty()).when(identityService).partyFromKey(MINI_CORP.getPublicKey());
-        transaction(new MockServices(asList("net.corda.finance.contracts.asset"), identityService, MEGA_CORP.getName()), DUMMY_NOTARY, tx -> {
+        transaction(new MockServices(asList("net.corda.finance.contracts.asset"), MEGA_CORP.getName(), identityService), DUMMY_NOTARY, tx -> {
             tx.attachment(Cash.PROGRAM_ID);
 
             tx.input(Cash.PROGRAM_ID, inState);

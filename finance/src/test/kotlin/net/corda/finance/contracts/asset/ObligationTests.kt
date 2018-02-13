@@ -78,8 +78,8 @@ class ObligationTests {
             beneficiary = CHARLIE
     )
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
-    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), miniCorp)
-    private val notaryServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
+    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), miniCorp, rigorousMock())
+    private val notaryServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock(), dummyNotary.keyPair)
     private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
@@ -87,8 +87,8 @@ class ObligationTests {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
     }
-    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), identityService, MEGA_CORP.name)
-    private val ledgerServices get() = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.testing.contracts"), identityService, MEGA_CORP.name)
+    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP.name, identityService)
+    private val ledgerServices get() = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.testing.contracts"), MEGA_CORP.name, identityService)
     private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {
@@ -163,11 +163,11 @@ class ObligationTests {
         transaction {
             attachments(Obligation.PROGRAM_ID)
             output(Obligation.PROGRAM_ID,
-                    Obligation.State(
-                            obligor = MINI_CORP,
-                            quantity = 1000.DOLLARS.quantity,
-                            beneficiary = CHARLIE,
-                            template = megaCorpDollarSettlement))
+                Obligation.State(
+                        obligor = MINI_CORP,
+                        quantity = 1000.DOLLARS.quantity,
+                        beneficiary = CHARLIE,
+                        template = megaCorpDollarSettlement))
             command(MINI_CORP_PUBKEY, Obligation.Commands.Issue())
             this.verifies()
         }
@@ -698,10 +698,10 @@ class ObligationTests {
             attachments(Obligation.PROGRAM_ID)
             input(Obligation.PROGRAM_ID, inState)
             input(Obligation.PROGRAM_ID,
-                    inState.copy(
-                            quantity = 15000,
-                            template = megaCorpPoundSettlement,
-                            beneficiary = AnonymousParty(BOB_PUBKEY)))
+                inState.copy(
+                        quantity = 15000,
+                        template = megaCorpPoundSettlement,
+                        beneficiary = AnonymousParty(BOB_PUBKEY)))
             output(Obligation.PROGRAM_ID, outState.copy(quantity = 115000))
             command(MINI_CORP_PUBKEY, Obligation.Commands.Move())
             this `fails with` "the amounts balance"

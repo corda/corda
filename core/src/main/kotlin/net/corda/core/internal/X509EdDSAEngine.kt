@@ -27,12 +27,11 @@ class X509EdDSAEngine : Signature {
     override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom) = engine.initSign(privateKey, random)
 
     override fun engineInitVerify(publicKey: PublicKey) {
-        val parsedKey = if (publicKey is sun.security.x509.X509Key) {
-            EdDSAPublicKey(X509EncodedKeySpec(publicKey.encoded))
-        } else {
-            publicKey
+        val parsedKey = try {
+            publicKey as? EdDSAPublicKey ?: EdDSAPublicKey(X509EncodedKeySpec(publicKey.encoded))
+        } catch(e: Exception) {
+            throw (InvalidKeyException(e.message))
         }
-
         engine.initVerify(parsedKey)
     }
 
