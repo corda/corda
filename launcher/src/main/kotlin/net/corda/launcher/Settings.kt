@@ -10,10 +10,11 @@ import kotlin.collections.HashSet
 
 object Settings {
 
+    val CORDA_RUNTIME_SETTINGS = "../runtime.properties"
     val WORKING_DIR: Path
     val CLASSPATH: List<URL>
     val PLUGINS: List<Path>
-    val CORDA_RUNTIME_SETTINGS = "../runtime.properties"
+    val LIBPATH: Path
 
     init {
         WORKING_DIR = Paths.get(System.getenv("CORDA_LAUNCHER_CWD") ?: "..")
@@ -24,15 +25,16 @@ object Settings {
 
         CLASSPATH = parseClasspath(settings)
         PLUGINS = parsePlugins(settings)
+        LIBPATH = Paths.get(settings.getProperty("libpath") ?: ".")
     }
 
     private fun parseClasspath(config: Properties): List<URL> {
-        val launcherDir = Paths.get("..").toAbsolutePath()
+        val libDir = Paths.get("..").resolve(LIBPATH).toAbsolutePath()
         val cp = config.getProperty("classpath") ?:
                 throw Error("Missing 'classpath' property from config")
 
         return cp.split(':').map {
-            launcherDir.resolve(it).toUri().toURL()
+            libDir.resolve(it).toUri().toURL()
         }
     }
 

@@ -9,65 +9,11 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }
 
+ext {
+    loaderClassName = "net.corda.launcher.Loader"
+    launcherClassName = "net.corda.launcher.Launcher"
+}
+
 jar {
     baseName 'corda-launcher'
 }
-
-//task gatherDependencies(type: Copy, dependsOn: jar) {
-//    from configurations.runtime
-//    from jar
-//    into "$buildDir/bin/lib"
-//}
-//
-//def launcherOutputDir = null
-//
-//task makeExecutable(type: Exec, dependsOn: [gatherDependencies]) {
-//    def isLinux = System.properties['os.name'].toLowerCase().contains('linux')
-//    def isMac = System.properties['os.name'].toLowerCase().contains('mac')
-//
-//    if (!isLinux && !isMac)
-//        throw new GradleException("Preparing distribution package is currently only supported on Linux/Mac")
-//
-//    def distributionDir = "${buildDir}/tmp/"
-//    if (isLinux) launcherOutputDir = "${distributionDir}/bundles/launcher/"
-//    else launcherOutputDir = "${distributionDir}/bundles/launcher.app/Contents"
-//
-//    def classPath = []
-//
-//    workingDir project.projectDir
-//
-//    def extraArgs = [
-//            "-BjvmOptions=-javaagent:quasar-core-${quasar_version}-jdk8.jar=${project(':node:capsule').quasarExcludeExpression}",
-//            '-BuserJvmOptions=-Xmx=4g',
-//            '-BuserJvmOptions=-XX\\:=+UseG1GC',
-//            '-BjvmProperties=java.system.class.loader=net.corda.launcher.Loader'
-//    ]
-//
-//    doFirst {
-//        def dependencies = []
-//
-//        fileTree(gatherDependencies.destinationDir).forEach({ file ->
-//            classPath.add("../../lib/" + file.getName())
-//        })
-//
-//        commandLine = [
-//                'javapackager',
-//                '-deploy',
-//                '-nosign',
-//                '-native', 'image',
-//                '-outdir', "$distributionDir",
-//                '-outfile', 'launcher',
-//                '-name', 'launcher',
-//                "-BmainJar=${jar.archiveName}",
-//                "-Bclasspath=${classPath.join(":")}",
-//                '-appclass', 'net.corda.launcher.Launcher',
-//                '-srcdir', "${gatherDependencies.destinationDir}",
-//                '-srcfiles', "${jar.archiveName}"
-//        ] + extraArgs
-//    }
-//}
-//
-//task exportLauncher(type: Copy, dependsOn: makeExecutable ) {
-//    from launcherOutputDir into "${buildDir}/bin"
-//}
-

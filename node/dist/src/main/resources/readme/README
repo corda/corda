@@ -6,6 +6,4 @@ To start a node, please edit supplied node.conf file so it contains appropriate 
 
 Your CordApps should be placed in cordapps directory, from which they will be loaded automatically.
 
-Linux:
-Main executable file is corda - run by simply ./corda
-MacOS: Main executable file is MacOS/corda - run simply by typing ./MacOS/corda
+Linux/Mac: main executable file is ./bin/corda

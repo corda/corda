@@ -11,7 +11,7 @@ fun main(args: Array<String>) {
     val sysClassLoader = ClassLoader.getSystemClassLoader()
 
     val appClassLoader = (sysClassLoader as? Loader) ?: {
-        println("WARNING: failed to overried system classloader")
+        println("WARNING: failed to override system classloader")
         Loader(sysClassLoader)
     } ()
 
@@ -36,8 +36,7 @@ fun main(args: Array<String>) {
 
     appClassLoader.augmentClasspath(pluginURLs)
 
-    // Propagate current working directory, as workaround for javapackager
-    // corrupting it
+    // Propagate current working directory via system property, to patch it after javapackager
     System.setProperty("corda.launcher.cwd", nodeBaseDir.toString())
     System.setProperty("user.dir", nodeBaseDir.toString())
 
