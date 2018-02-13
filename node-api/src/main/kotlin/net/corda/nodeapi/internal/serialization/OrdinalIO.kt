@@ -5,12 +5,12 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
 
-class Septet(private val ordinal: Int) {
+class OrdinalBits(private val ordinal: Int) {
     interface OrdinalWriter {
-        val septet: Septet
+        val bits: OrdinalBits
         val encodedSize get() = 1
-        fun writeTo(stream: OutputStream) = stream.write(septet.ordinal)
-        fun putTo(buffer: ByteBuffer) = buffer.put(septet.ordinal.toByte())!!
+        fun writeTo(stream: OutputStream) = stream.write(bits.ordinal)
+        fun putTo(buffer: ByteBuffer) = buffer.put(bits.ordinal.toByte())!!
     }
 
     init {

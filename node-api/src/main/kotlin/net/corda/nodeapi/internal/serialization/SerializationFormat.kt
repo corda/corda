@@ -3,7 +3,7 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.nodeapi.internal.serialization.Septet.OrdinalWriter
+import net.corda.nodeapi.internal.serialization.OrdinalBits.OrdinalWriter
 import org.iq80.snappy.SnappyFramedInputStream
 import org.iq80.snappy.SnappyFramedOutputStream
 import java.io.OutputStream
@@ -31,7 +31,7 @@ enum class SectionId : OrdinalWriter {
         val reader = OrdinalReader(values())
     }
 
-    override val septet = Septet(ordinal)
+    override val bits = OrdinalBits(ordinal)
 }
 
 enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
@@ -48,7 +48,7 @@ enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
         val reader = OrdinalReader(values())
     }
 
-    override val septet = Septet(ordinal)
+    override val bits = OrdinalBits(ordinal)
     abstract fun wrap(stream: OutputStream): OutputStream
     abstract fun wrap(stream: InputStream): InputStream
 }
