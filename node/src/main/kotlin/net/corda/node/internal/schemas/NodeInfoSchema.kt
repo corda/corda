@@ -1,4 +1,4 @@
-package net.corda.core.internal.schemas
+package net.corda.node.internal.schemas
 
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
@@ -9,7 +9,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
-import java.io.Serializable
+import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import javax.persistence.*
 
 object NodeInfoSchema
@@ -17,7 +17,7 @@ object NodeInfoSchema
 object NodeInfoSchemaV1 : MappedSchema(
         schemaFamily = NodeInfoSchema.javaClass,
         version = 1,
-        mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java, DBHostAndPort::class.java)
+        mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java, DBHostAndPort::class.java, NodePropertiesPersistentStore.DBNodeProperty::class.java)
 ) {
     @Entity
     @Table(name = "node_infos")
@@ -33,7 +33,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "addresses")
             @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
             @JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__info_hosts__infos"))
-            val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
+            val addresses: List<DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))

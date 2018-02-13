@@ -357,6 +357,21 @@ interface CordaRPCOps : RPCOps {
 
     /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
+
+    /** Sets the value of the node's flows draining mode.
+     * If this mode is [enabled], the node will reject new flows through RPC, ignore scheduled flows, and do not process
+     * initial session messages, meaning that P2P counter-parties will not be able to initiate new flows involving the node.
+     *
+     * @param enabled whether the flows draining mode will be enabled.
+     * */
+    fun setFlowsDrainingModeEnabled(enabled: Boolean)
+
+    /**
+     * Returns whether the flows draining mode is enabled.
+     *
+     * @see setFlowsDrainingModeEnabled
+     */
+    fun isFlowsDrainingModeEnabled(): Boolean
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
