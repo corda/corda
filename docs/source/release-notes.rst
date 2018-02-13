@@ -22,6 +22,7 @@ As such we'd like to extend special thanks to
   * Ben Wyeth for providing a mechanism for registering a callback on app shutdown
   * Tomas Tauber for adding support for running the vault service using PostgresSQL in place of the in-memory H2 service
     .. warning:: This is an experimental feature that has not been tested as part of our standard release testing. 
+  * Rose Molina Atienza for correcting our carelss spelling slip
 
 Significant Changes in 3.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
