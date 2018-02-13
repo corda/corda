@@ -14,8 +14,10 @@ import java.util.*
 class MockCordappProvider(
         cordappLoader: CordappLoader,
         attachmentStorage: AttachmentStorage,
-        val cordappConfigProvder: MockCordappConfigProvider = MockCordappConfigProvider()
-) : CordappProviderImpl(cordappLoader, cordappConfigProvder, attachmentStorage) {
+        val cordappConfigProvider: MockCordappConfigProvider = MockCordappConfigProvider()
+) : CordappProviderImpl(cordappLoader, cordappConfigProvider, attachmentStorage) {
+    constructor(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : this(cordappLoader, attachmentStorage, MockCordappConfigProvider())
+
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
