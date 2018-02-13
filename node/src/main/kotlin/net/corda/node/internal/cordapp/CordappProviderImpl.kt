@@ -83,7 +83,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> =
             cordapps.filter { !it.contractClassNames.isEmpty() }.map {
                 it.jarPath.openStream().use { stream ->
-                    attachmentStorage.importContractAttachment(it.contractClassNames, stream)
+                    attachmentStorage.importOrGetAttachment(stream)
                 } to it.jarPath
             }.toMap()
 

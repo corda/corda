@@ -26,8 +26,8 @@ import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.withContractsInJar
 import java.io.*
-import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
@@ -300,20 +300,13 @@ class NodeAttachmentService(
         }
     }
 
-    override fun importOrGetAttachment(jar: InputStream): AttachmentId {
+    override fun importOrGetAttachment(jar: InputStream): AttachmentId = withContractsInJar(jar) { contracts, inputStream ->
         try {
-            return importAttachment(jar)
+            import(inputStream, null, null, contracts)
         } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            return AttachmentId.parse(faee.message!!)
+            AttachmentId.parse(faee.message!!)
         }
     }
-
-    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId =
-            try {
-                import(jar, null, null, contractClassNames)
-            } catch (faee: java.nio.file.FileAlreadyExistsException) {
-                AttachmentId.parse(faee.message!!)
-            }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")

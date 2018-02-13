@@ -11,6 +11,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.nodeapi.internal.withContractsInJar
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.*
@@ -28,9 +29,9 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
-    override fun importAttachment(jar: InputStream): AttachmentId = importAttachmentInternal(jar)
+    override fun importAttachment(jar: InputStream): AttachmentId = withContractsInJar(jar) { contracts, inputStream -> importAttachmentInternal(inputStream, contracts) }
 
-    override fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId = importAttachmentInternal(jar, contractClassNames)
+    fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId = importAttachmentInternal(jar, contractClassNames)
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
         return importAttachment(jar)

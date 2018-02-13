@@ -54,14 +54,6 @@ interface AttachmentStorage {
     fun importOrGetAttachment(jar: InputStream): AttachmentId
 
     /**
-     * Inserts or returns Attachment Id of the contract attachment. Does not throw an exception if already uploaded.
-     * @param jar [InputStream] of Jar file
-     * @param contractClassNames the list of contracts found in this attachment
-     * @return [AttachmentId] of uploaded attachment
-     */
-    fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId
-
-    /**
      * Searches attachment using given criteria and optional sort rules
      * @param criteria Query criteria to use as a filter
      * @param sorting Sorting definition, if not given, order is undefined

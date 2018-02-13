@@ -3,10 +3,7 @@ package net.corda.nodeapi.internal.network
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.cordform.CordformNode
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.parse
@@ -19,19 +16,18 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.PrintStream
 import java.nio.file.Files
@@ -195,9 +191,7 @@ class NetworkBootstrapper {
         PrintStream(tempFile.toFile().outputStream()).use { out ->
             cordapps.forEach { cordappJarPath ->
                 val jarHash = getJarHash(cordappJarPath)
-                val scanResult = FastClasspathScanner().addClassLoader(NetworkBootstrapper::class.java.classLoader).overrideClasspath(cordappJarPath).scan()
-                val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class.qualifiedName)).distinct()
-                contracts.forEach { contract ->
+                scanJarForContracts(cordappJarPath)?.forEach { contract ->
                     out.println("${contract}:${jarHash}")
                 }
             }
