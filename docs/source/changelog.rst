@@ -188,6 +188,12 @@ UNRELEASED
 * Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
   that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
 
+* The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved
+  from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the
+  ``net.corda.testing.services`` package. Moving items out of the ``net.corda.testing.*`` package will help make it clearer which
+  parts of the api are stable. The bash script ``tools\scripts\update-test-packages.sh`` can be used to smooth the upgrade
+  process for existing projects.
+
 .. _changelog_v1:
 
 Release 1.0
