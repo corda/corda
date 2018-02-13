@@ -24,11 +24,8 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.driver.*
 import net.corda.testing.node.User
-import net.corda.testing.driver.JmxPolicy
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
 import java.time.Instant
 import java.util.*
 
@@ -66,7 +63,7 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true)) {
+        driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
