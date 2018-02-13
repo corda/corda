@@ -6,8 +6,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.SSLConfiguration
 
 /** Utility which exposes the internal Corda RPC constructor to other internal Corda components */
-fun getCordaRPCClientWithSsl(
+fun createCordaRPCClientWithSsl(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         sslConfiguration: SSLConfiguration? = null
-) = CordaRPCClient.getClientWithSsl(hostAndPort, configuration, sslConfiguration)
+) = CordaRPCClient.createWithSsl(hostAndPort, configuration, sslConfiguration)

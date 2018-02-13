@@ -70,19 +70,21 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  * @param configuration An optional configuration used to tweak client behaviour.
  * @param sslConfiguration An optional [SSLConfiguration] used to enable secure communication with the server.
  */
-class CordaRPCClient @JvmOverloads constructor(
+class CordaRPCClient private constructor(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+        private var sslConfiguration: SSLConfiguration? = null
 ) {
+    @JvmOverloads
+    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(hostAndPort, configuration, null)
+
     companion object {
-        internal fun getClientWithSsl(
+        internal fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
                 sslConfiguration: SSLConfiguration? = null
-        ) : CordaRPCClient{
-            return CordaRPCClient(hostAndPort, configuration).apply {
-                this.sslConfiguration = sslConfiguration
-            }
+        ): CordaRPCClient {
+            return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
     }
 
@@ -97,8 +99,6 @@ class CordaRPCClient @JvmOverloads constructor(
             }
         }
     }
-
-    internal var sslConfiguration: SSLConfiguration? = null
 
     private val rpcClient = RPCClient<CordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),

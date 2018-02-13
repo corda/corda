@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.internal.getCordaRPCClientWithSsl
+import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
@@ -151,7 +151,7 @@ class DriverDSLImpl(
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address!!
         val client = if (config.corda.rpcOptions.useSsl) {
-            getCordaRPCClientWithSsl(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
+            createCordaRPCClientWithSsl(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
         } else {
             CordaRPCClient(rpcAddress)
         }
