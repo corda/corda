@@ -71,7 +71,7 @@ import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.sign
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.shell.ShellConfiguration
-import net.corda.shell.StandaloneShell
+import net.corda.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
@@ -295,8 +295,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         if (configuration.shouldInitCrashShell()) {
             val shellConfiguration = ShellConfiguration(configuration.baseDirectory,
                     configuration.rpcOptions.address ?: NetworkHostAndPort("localhost", 2222),
-                    configuration.rpcOptions.sslConfig, configuration.sshd, false)
-            StandaloneShell.startShell(shellConfiguration, rpcOps, localUserName = "demo", localUserPassword = "demo")
+                    configuration.rpcOptions.sslConfig, configuration.sshd?.port, false)
+            InteractiveShell.startShell(shellConfiguration, rpcOps, localUserName = "demo", localUserPassword = "demo")
+            if (configuration.shouldStartSSHDaemon()) {
+                Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+            }
         }
     }
 
