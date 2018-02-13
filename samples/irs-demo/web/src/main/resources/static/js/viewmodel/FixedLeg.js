@@ -1,6 +1,6 @@
 'use strict';
 
-define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
+define(['utils/dayCountBasisLookup'], function (dayCountBasisLookup) {
     return {
         fixedRatePayer: "O=Bank A,L=London,C=GB",
         notional: 2500000000,

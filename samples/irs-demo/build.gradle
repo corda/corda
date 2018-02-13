@@ -15,6 +15,7 @@ buildscript {
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
+ext['selenium.version'] = "$selenium_version"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -33,12 +34,29 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
+    systemTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/system-test/kotlin')
+        }
+    }
 }
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
     demoArtifacts.extendsFrom testRuntime
+    systemTestCompile.extendsFrom testCompile
+}
+
+repositories {
+    maven {
+        url 'https://dl.bintray.com/palantir/releases' // docker-compose-rule is published on bintray
+    }
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
 }
 
 dependencies {
@@ -55,6 +73,9 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     integrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
+    testCompile "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_version"
+    testCompile "org.seleniumhq.selenium:selenium-java:$selenium_version"
+    testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
 }
 
 bootRepackage {
@@ -64,6 +85,22 @@ bootRepackage {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+evaluationDependsOn("cordapp")
+evaluationDependsOn("web")
+
+task systemTest(type: Test, dependsOn: ["cordapp:prepareDockerNodes", "web:generateDockerCompose"]) {
+    testClassesDirs = sourceSets.systemTest.output.classesDirs
+    classpath = sourceSets.systemTest.runtimeClasspath
+
+    systemProperty "CORDAPP_DOCKER_COMPOSE", tasks.getByPath("cordapp:prepareDockerNodes").dockerComposePath.toString()
+    systemProperty "WEB_DOCKER_COMPOSE", tasks.getByPath("web:generateDockerCompose").dockerComposePath.toString()
+
+    def phantomJsPath = System.getProperty("phantomjs.binary.path") ?: System.getenv("PHANTOMJS_BINARY_PATH")
+    if (phantomJsPath != null) {
+        systemProperty "phantomjs.binary.path", phantomJsPath
+    }
 }
 
 idea {
