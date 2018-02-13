@@ -23,9 +23,9 @@ object Settings {
             load(FileInputStream(CORDA_RUNTIME_SETTINGS))
         }
 
+        LIBPATH = Paths.get(settings.getProperty("libpath") ?: ".")
         CLASSPATH = parseClasspath(settings)
         PLUGINS = parsePlugins(settings)
-        LIBPATH = Paths.get(settings.getProperty("libpath") ?: ".")
     }
 
     private fun parseClasspath(config: Properties): List<URL> {

@@ -66,7 +66,7 @@ task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
             "-BjvmOptions=-javaagent:../../lib/quasar-core-${quasar_version}-jdk8.jar=${project(':node:capsule').quasarExcludeExpression}",
             '-BuserJvmOptions=-Xmx=4g',
             '-BuserJvmOptions=-XX\\:=+UseG1GC',
-            "-BjvmProperties=java.system.class.loader=${project(':launcher').loaderClassName}'}"
+            "-BjvmProperties=java.system.class.loader=${project(':launcher').loaderClassName}"
     ]
 
     ext {
@@ -96,7 +96,7 @@ task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
                 '-name', 'launcher',
                 "-BmainJar=${project(':launcher').jar.archiveName}",
                 "-Bclasspath=${launcherClasspath.join(":")}",
-                '-appclass', '${project(\':launcher\').launcherClassName}',
+                '-appclass', "${project(':launcher').launcherClassName}",
                 '-srcdir', "$launcherLib"
         ] + srcfiles + extraArgs
     }
@@ -110,7 +110,7 @@ task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
             nodeClasspath.add(file.getName())
         })
 
-        nodeClasspath.add(project(':node').jar.getName())
+        nodeClasspath.add(project(':node').jar.archivePath.getName())
 
         new File("${launcherBinDir}/runtime.properties").text = [
                 "libpath=${libRelPath}",
@@ -132,7 +132,7 @@ task buildNode(type: Copy, dependsOn: [buildLauncher, project(':docs').tasks['ma
         into("lib")
     }
 
-    from(project(':node').jar) {
+    from(project(':node').jar.archivePath) {
         into("lib")
     }
 
