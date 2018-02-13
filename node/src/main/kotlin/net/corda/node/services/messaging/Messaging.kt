@@ -66,7 +66,8 @@ interface MessagingService {
             message: Message,
             target: MessageRecipients,
             retryId: Long? = null,
-            sequenceKey: Any = target
+            sequenceKey: Any = target,
+            additionalHeaders: Map<String, String> = emptyMap()
     )
 
     /** A message with a target and sequenceKey specified. */
@@ -142,4 +143,12 @@ object TopicStringValidator {
     private val regex = "[a-zA-Z0-9.]+".toPattern()
     /** @throws IllegalArgumentException if the given topic contains invalid characters */
     fun check(tag: String) = require(regex.matcher(tag).matches())
+}
+
+object P2PMessagingHeaders {
+
+    object Type {
+        const val KEY = "corda_p2p_message_type"
+        const val SESSION_INIT_VALUE = "session_init"
+    }
 }

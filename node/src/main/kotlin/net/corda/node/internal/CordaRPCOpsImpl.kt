@@ -28,6 +28,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import rx.Observable
 import java.io.InputStream
@@ -165,6 +166,9 @@ internal class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
+        if (isFlowsDrainingModeEnabled()) {
+            throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
+        }
         return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
     }
 
@@ -284,6 +288,14 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
+        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
+    }
+
+    override fun isFlowsDrainingModeEnabled(): Boolean {
+        return services.nodeProperties.flowsDrainingMode.isEnabled()
+    }
+
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
         return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
     }
@@ -302,7 +314,7 @@ internal class CordaRPCOpsImpl(
             is Origin.RPC -> FlowInitiator.RPC(principal)
             is Origin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as Origin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as Origin.Peer).party}.")
             is Origin.Service -> FlowInitiator.Service(principal)
-            is Origin.Shell -> FlowInitiator.Shell
+            Origin.Shell -> FlowInitiator.Shell
             is Origin.Scheduled -> FlowInitiator.Scheduled((origin as Origin.Scheduled).scheduledState)
         }
     }
