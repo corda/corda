@@ -1,6 +1,9 @@
 package net.corda.demobench.model
 
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
@@ -19,6 +22,7 @@ data class NodeConfig(
         val myLegalName: CordaX500Name,
         val p2pAddress: NetworkHostAndPort,
         val rpcAddress: NetworkHostAndPort,
+        val rpcAdminAddress: NetworkHostAndPort,
         /** This is not used by the node but by the webserver which looks at node.conf. */
         val webAddress: NetworkHostAndPort,
         val notary: NotaryService?,
@@ -38,7 +42,17 @@ data class NodeConfig(
     @Suppress("unused")
     private val useTestClock = true
 
-    fun toText(): String = toConfig().root().render(renderOptions)
+    private fun asConfig(): Config {
+
+        val config = toConfig()
+        val rpcSettings = empty()
+                .withValue("address", ConfigValueFactory.fromAnyRef(rpcAddress.toString()))
+                .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcAdminAddress.toString()))
+                .root()
+        return config.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
+    }
+
+    fun toText(): String = asConfig().root().render(renderOptions)
 }
 
 /**
