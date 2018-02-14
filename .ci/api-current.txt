@@ -635,7 +635,7 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
   @org.jetbrains.annotations.NotNull public abstract List getServices()
 ##
 public final class net.corda.core.cordapp.CordappContext extends java.lang.Object
-  public <init>(net.corda.core.cordapp.Cordapp, net.corda.core.crypto.SecureHash, ClassLoader)
+  public <init>(net.corda.core.cordapp.Cordapp, net.corda.core.crypto.SecureHash, ClassLoader, net.corda.core.cordapp.CordappConfig)
   @org.jetbrains.annotations.Nullable public final net.corda.core.crypto.SecureHash getAttachmentId()
   @org.jetbrains.annotations.NotNull public final ClassLoader getClassLoader()
   @org.jetbrains.annotations.NotNull public final net.corda.core.cordapp.Cordapp getCordapp()
