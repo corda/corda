@@ -2,8 +2,6 @@ package net.corda.plugins
 
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
-import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.GradleException
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
@@ -21,71 +19,6 @@ open class Cordform : Baseform() {
         val nodeJarName = "corda.jar"
         private val defaultDirectory: Path = Paths.get("build", "nodes")
     }
-
-    /**
-     * Optionally the name of a CordformDefinition subclass to which all configuration will be delegated.
-     */
-    @Suppress("MemberVisibilityCanPrivate")
-    var definitionClass: String? = null
-    private var directory = defaultDirectory
-    private val nodes = mutableListOf<Node>()
-
-    /**
-     * Set the directory to install nodes into.
-     *
-     * @param directory The directory the nodes will be installed into.
-     */
-    fun directory(directory: String) {
-        this.directory = Paths.get(directory)
-    }
-
-    /**
-     * Add a node configuration.
-     *
-     * @param configureClosure A node configuration that will be deployed.
-     */
-    @Suppress("MemberVisibilityCanPrivate")
-    fun node(configureClosure: Closure<in Node>) {
-        nodes += project.configure(Node(project), configureClosure) as Node
-    }
-
-    /**
-     * Permits to create a list of users as:
-     *
-     * myUsers = users {
-     *     userName1 {
-     *        password = "<password>"
-     *        permissions = ["<permission1>", ...]
-     *    }
-     *    ...
-     * }
-     */
-    fun users(usersConfig: Closure<*>): List<Map<String, Any?>> {
-        return (project.container(NodeUser::class.java) as NamedDomainObjectContainer<NodeUser>)
-                .configure(usersConfig)
-                .map { it.toPropertyMap() }
-                .toList()
-    }
-
-    /**
-     * Add a node configuration
-     *
-     * @param configureFunc A node configuration that will be deployed
-     */
-    @Suppress("MemberVisibilityCanPrivate")
-    fun node(configureFunc: Node.() -> Any?): Node {
-        val node = Node(project).apply { configureFunc() }
-        nodes += node
-        return node
-    }
-
-    /**
-     * Returns a node by name.
-     *
-     * @param name The name of the node as specified in the node configuration DSL.
-     * @return A node instance.
-     */
-    private fun getNodeByName(name: String): Node? = nodes.firstOrNull { it.name == name }
 
     /**
      * Installs the run script into the nodes directory.
@@ -129,92 +62,5 @@ open class Cordform : Baseform() {
         installRunScript()
         bootstrapNetwork()
         nodes.forEach(Node::build)
-    }
-
-    /**
-     * Installs the corda fat JAR to the root directory, for the network bootstrapper to use.
-     */
-    private fun installCordaJar() {
-        val cordaJar = Cordformation.verifyAndGetRuntimeJar(project, "corda")
-        project.copy {
-            it.apply {
-                from(cordaJar)
-                into(directory)
-                rename(cordaJar.name, nodeJarName)
-                fileMode = Cordformation.executableFileMode
-            }
-        }
-    }
-
-    private fun initializeConfiguration() {
-        if (definitionClass != null) {
-            val cd = loadCordformDefinition()
-            // If the user has specified their own directory (even if it's the same default path) then let them know
-            // it's not used and should just rely on the one in CordformDefinition
-            require(directory === defaultDirectory) {
-                "'directory' cannot be used when 'definitionClass' is specified. Use CordformDefinition.nodesDirectory instead."
-            }
-            directory = cd.nodesDirectory
-            val cordapps = cd.getMatchingCordapps()
-            cd.nodeConfigurers.forEach {
-                val node = node { }
-                it.accept(node)
-                node.additionalCordapps.addAll(cordapps)
-                node.rootDir(directory)
-            }
-            cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
-        } else {
-            nodes.forEach {
-                it.rootDir(directory)
-            }
-        }
-    }
-
-    private fun bootstrapNetwork() {
-        val networkBootstrapperClass = loadNetworkBootstrapperClass()
-        val networkBootstrapper = networkBootstrapperClass.newInstance()
-        val bootstrapMethod = networkBootstrapperClass.getMethod("bootstrap", Path::class.java).apply { isAccessible = true }
-        // Call NetworkBootstrapper.bootstrap
-        try {
-            val rootDir = project.projectDir.toPath().resolve(directory).toAbsolutePath().normalize()
-            bootstrapMethod.invoke(networkBootstrapper, rootDir)
-        } catch (e: InvocationTargetException) {
-            throw e.cause!!
-        }
-    }
-
-    private fun CordformDefinition.getMatchingCordapps(): List<File> {
-        val cordappJars = project.configuration("cordapp").files
-        return cordappPackages.map { `package` ->
-            val cordappsWithPackage = cordappJars.filter { it.containsPackage(`package`) }
-            when (cordappsWithPackage.size) {
-                0 -> throw IllegalArgumentException("There are no cordapp dependencies containing the package $`package`")
-                1 -> cordappsWithPackage[0]
-                else -> throw IllegalArgumentException("More than one cordapp dependency contains the package $`package`: $cordappsWithPackage")
-            }
-        }
-    }
-
-    private fun File.containsPackage(`package`: String): Boolean {
-        JarInputStream(inputStream()).use {
-            while (true) {
-                val name = it.nextJarEntry?.name ?: break
-                if (name.endsWith(".class") && name.replace('/', '.').startsWith(`package`)) {
-                    return true
-                }
-            }
-            return false
-        }
-    }
-
-    // An element of node DSL describing a user.
-    // @see users
-    internal class NodeUser(var name: String? = null) {
-        var password: String? = null
-        var permissions: List<String> = mutableListOf<String>()
-        fun toPropertyMap(): Map<String, Any?> = mapOf(
-                "username" to name,
-                "password" to password,
-                "permissions" to permissions)
     }
 }

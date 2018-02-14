@@ -12,8 +12,6 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import org.gradle.api.NamedDomainObjectContainer
-import groovy.lang.Closure
 
 /**
  * Represents a node that will be installed.
