@@ -4,6 +4,7 @@ import joptsimple.OptionSet
 import net.corda.client.mock.ErrorFlowsEventGenerator
 import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
@@ -23,11 +24,8 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.driver.*
 import net.corda.testing.node.User
-import net.corda.testing.driver.JmxPolicy
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
 import java.time.Instant
 import java.util.*
 
@@ -65,7 +63,7 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true)) {
+        driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
@@ -83,7 +81,7 @@ class ExplorerSimulation(private val options: OptionSet) {
             issuerNodeUSD = issuerUSD.get()
 
             arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
-                println("${it.nodeInfo.legalIdentities.first()} started on ${it.configuration.rpcOptions.address}")
+                println("${it.nodeInfo.legalIdentities.first()} started on ${it.rpcAddress}")
             }
 
             when {
@@ -95,19 +93,19 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun setUpRPC() {
         // Register with alice to use alice's RPC proxy to create random events.
-        val aliceClient = aliceNode.rpcClientToNode()
+        val aliceClient = CordaRPCClient(aliceNode.rpcAddress)
         val aliceConnection = aliceClient.start(user.username, user.password)
         val aliceRPC = aliceConnection.proxy
 
-        val bobClient = bobNode.rpcClientToNode()
+        val bobClient = CordaRPCClient(bobNode.rpcAddress)
         val bobConnection = bobClient.start(user.username, user.password)
         val bobRPC = bobConnection.proxy
 
-        val issuerClientGBP = issuerNodeGBP.rpcClientToNode()
+        val issuerClientGBP = CordaRPCClient(issuerNodeGBP.rpcAddress)
         val issuerGBPConnection = issuerClientGBP.start(manager.username, manager.password)
         val issuerRPCGBP = issuerGBPConnection.proxy
 
-        val issuerClientUSD = issuerNodeUSD.rpcClientToNode()
+        val issuerClientUSD = CordaRPCClient(issuerNodeUSD.rpcAddress)
         val issuerUSDConnection = issuerClientUSD.start(manager.username, manager.password)
         val issuerRPCUSD = issuerUSDConnection.proxy
 

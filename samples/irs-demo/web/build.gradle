@@ -7,8 +7,9 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-		classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlin_version}")
+		classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
+		classpath "io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE"
+		classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
 		classpath 'com.bmuschko:gradle-docker-plugin:3.2.1'
 		classpath "org.yaml:snakeyaml:1.19"
 	}
@@ -47,6 +48,7 @@ clientDependencies {
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
+ext['jackson.version'] = "$jackson_version"
 
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-spring'
@@ -64,7 +66,7 @@ dependencies {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.9")
+    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     compile project(":client:rpc")
     compile project(":client:jackson")
     compile project(":test-utils")

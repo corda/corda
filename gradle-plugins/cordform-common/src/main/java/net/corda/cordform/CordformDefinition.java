@@ -10,7 +10,12 @@ import java.util.function.Consumer;
 public abstract class CordformDefinition {
     private Path nodesDirectory = Paths.get("build", "nodes");
     private final List<Consumer<CordformNode>> nodeConfigurers = new ArrayList<>();
-    private final List<String> cordappPackages = new ArrayList<>();
+    /**
+     * A list of Cordapp maven coordinates and project name
+     *
+     * If maven coordinates are set project name is ignored
+     */
+    private final List<CordappDependency> cordappDeps = new ArrayList<>();
 
     public Path getNodesDirectory() {
         return nodesDirectory;
@@ -28,8 +33,11 @@ public abstract class CordformDefinition {
         nodeConfigurers.add(configurer);
     }
 
-    public List<String> getCordappPackages() {
-        return cordappPackages;
+    /**
+     * Cordapp maven coordinates or project names (ie; net.corda:finance:0.1 or ":finance") to scan for when resolving cordapp JARs
+     */
+    public List<CordappDependency> getCordappDependencies() {
+        return cordappDeps;
     }
 
     /**

@@ -473,7 +473,6 @@ explicit in the ``initiateFlow`` function call. To port existing code:
 
 Subflows
 --------
-
 Subflows are pieces of reusable flows that may be run by calling ``FlowLogic.subFlow``. There are two broad categories
 of subflows, inlined and initiating ones. The main difference lies in the counter-flow's starting method, initiating
 ones initiate counter-flows automatically, while inlined ones expect some parent counter-flow to run the inlined
@@ -481,7 +480,6 @@ counter-part.
 
 Inlined subflows
 ^^^^^^^^^^^^^^^^
-
 Inlined subflows inherit their calling flow's type when initiating a new session with a counterparty. For example, say
 we have flow A calling an inlined subflow B, which in turn initiates a session with a party. The FlowLogic type used to
 determine which counter-flow should be kicked off will be A, not B. Note that this means that the other side of this
@@ -499,7 +497,6 @@ In the code inlined subflows appear as regular ``FlowLogic`` instances, `without
 
 Initiating subflows
 ^^^^^^^^^^^^^^^^^^^
-
 Initiating subflows are ones annotated with the ``@InitiatingFlow`` annotation. When such a flow initiates a session its
 type will be used to determine which ``@InitiatedBy`` flow to kick off on the counterparty.
 
@@ -508,32 +505,38 @@ An example is the ``@InitiatingFlow InitiatorFlow``/``@InitiatedBy ResponderFlow
 .. note:: Initiating flows are versioned separately from their parents.
 
 Core initiating subflows
-^^^^^^^^^^^^^^^^^^^^^^^^
-
+~~~~~~~~~~~~~~~~~~~~~~~~
 Corda-provided initiating subflows are a little different to standard ones as they are versioned together with the
 platform, and their initiated counter-flows are registered explicitly, so there is no need for the ``InitiatedBy``
 annotation.
 
-An example is the ``FinalityFlow``/``FinalityHandler`` flow pair.
+Library flows
+^^^^^^^^^^^^^
+Corda installs four initiating subflow pairs on each node by default:
 
-Built-in subflows
-^^^^^^^^^^^^^^^^^
+* ``FinalityFlow``/``FinalityHandler``, which should be used to notarise and record a transaction and broadcast it to
+  all relevant parties
+* ``NotaryChangeFlow``/``NotaryChangeHandler``, which should be used to change a state's notary
+* ``ContractUpgradeFlow.Initiate``/``ContractUpgradeHandler``, which should be used to change a state's contract
+* ``SwapIdentitiesFlow``/``SwapIdentitiesHandler``, which is used to exchange confidential identities with a
+  counterparty
 
-Corda provides a number of built-in flows that should be used for handling common tasks. The most important are:
+.. warning:: ``SwapIdentitiesFlow``/``SwapIdentitiesHandler`` are only installed if the ``confidential-identities`` module 
+   is included. The ``confidential-identities`` module  is still not stabilised, so the
+   ``SwapIdentitiesFlow``/``SwapIdentitiesHandler`` API may change in future releases. See :doc:`corda-api`.
+
+Corda also provides a number of built-in inlined subflows that should be used for handling common tasks. The most
+important are:
 
 * ``CollectSignaturesFlow`` (inlined), which should be used to collect a transaction's required signatures
-* ``FinalityFlow`` (initiating), which should be used to notarise and record a transaction as well as to broadcast it to
-  all relevant parties
 * ``SendTransactionFlow`` (inlined), which should be used to send a signed transaction if it needed to be resolved on
   the other side.
 * ``ReceiveTransactionFlow`` (inlined), which should be used receive a signed transaction
-* ``ContractUpgradeFlow`` (initiating), which should be used to change a state's contract
-* ``NotaryChangeFlow`` (initiating), which should be used to change a state's notary
 
-Let's look at three very common examples.
+Let's look at some of these flows in more detail.
 
 FinalityFlow
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 ``FinalityFlow`` allows us to notarise the transaction and get it recorded in the vault of the participants of all
 the transaction's states:
 
@@ -571,7 +574,7 @@ Only one party has to call ``FinalityFlow`` for a given transaction to be record
 **not** need to be called by each participant individually.
 
 CollectSignaturesFlow/SignTransactionFlow
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The list of parties who need to sign a transaction is dictated by the transaction's commands. Once we've signed a
 transaction ourselves, we can automatically gather the signatures of the other required signers using
 ``CollectSignaturesFlow``:
@@ -608,7 +611,7 @@ transaction and provide their signature if they are satisfied:
         :dedent: 12
 
 SendTransactionFlow/ReceiveTransactionFlow
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Verifying a transaction received from a counterparty also requires verification of every transaction in its
 dependency chain. This means the receiving party needs to be able to ask the sender all the details of the chain.
 The sender will use ``SendTransactionFlow`` for sending the transaction and then for processing all subsequent
@@ -663,7 +666,6 @@ We can also send and receive a ``StateAndRef`` dependency chain and automaticall
 
 Why inlined subflows?
 ^^^^^^^^^^^^^^^^^^^^^
-
 Inlined subflows provide a way to share commonly used flow code `while forcing users to create a parent flow`. Take for
 example ``CollectSignaturesFlow``. Say we made it an initiating flow that automatically kicks off
 ``SignTransactionFlow`` that signs the transaction. This would mean malicious nodes can just send any old transaction to

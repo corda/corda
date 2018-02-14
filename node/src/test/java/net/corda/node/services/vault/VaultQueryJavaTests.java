@@ -9,6 +9,7 @@ import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultQueryException;
 import net.corda.core.node.services.VaultService;
@@ -70,13 +71,13 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityServiceInternal identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
+        IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
                 identitySvc,
                 MEGA_CORP,
                 DUMMY_NOTARY.getKeyPair());
-        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, BOC.getKeyPair());
+        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, rigorousMock(IdentityServiceInternal.class), BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);

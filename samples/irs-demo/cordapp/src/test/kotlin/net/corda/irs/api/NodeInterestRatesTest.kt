@@ -56,7 +56,7 @@ class NodeInterestRatesTest {
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
     private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
-    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
     // This is safe because MockServices only ever have a single identity
     private val identity = services.myInfo.singleIdentity()
 

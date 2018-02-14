@@ -6,9 +6,9 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.InternalMockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -18,7 +18,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class NetworkMapCacheTest {
-    private val mockNet = MockNetwork(emptyList())
+    private val mockNet = InternalMockNetwork(emptyList())
 
     @After
     fun teardown() {

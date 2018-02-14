@@ -44,7 +44,6 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import sun.security.ec.ECPublicKeyImpl
 import sun.security.provider.certpath.X509CertPath
-import sun.security.x509.X509CertImpl
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
@@ -200,7 +199,7 @@ object DefaultKryoCustomizer {
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
             if (kryo.serializationContext() != null) {
-                output.writeBytes(obj.attachment.id.bytes)
+                obj.attachment.id.writeTo(output)
             } else {
                 val buffer = ByteArrayOutputStream()
                 obj.attachment.open().use { it.copyTo(buffer) }

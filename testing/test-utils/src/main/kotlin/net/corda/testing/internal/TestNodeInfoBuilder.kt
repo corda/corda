@@ -12,8 +12,6 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.core.DEV_INTERMEDIATE_CA
-import net.corda.testing.core.DEV_ROOT_CA
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509Certificate

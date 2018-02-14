@@ -1,14 +1,17 @@
 package net.corda.attachmentdemo
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.NodeHandleInternal
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
@@ -17,7 +20,7 @@ class AttachmentDemoTest {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(isDebug = true, portAllocation = PortAllocation.Incremental(20000)) {
+        driver(DriverParameters(isDebug = true, portAllocation = PortAllocation.Incremental(20000))) {
             val demoUser = listOf(User("demo", "demo", setOf(
                     startFlow<AttachmentDemoFlow>(),
                     invokeRpc(CordaRPCOps::attachmentExists),
@@ -30,17 +33,17 @@ class AttachmentDemoTest {
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = demoUser, maximumHeapSize = "1g"),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = demoUser, maximumHeapSize = "1g")
             ).map { it.getOrThrow() }
-            startWebserver(nodeB).getOrThrow()
+            val webserverHandle = startWebserver(nodeB).getOrThrow()
 
             val senderThread = supplyAsync {
-                nodeA.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {
+                CordaRPCClient(nodeA.rpcAddress).start(demoUser[0].username, demoUser[0].password).use {
                     sender(it.proxy, numOfExpectedBytes)
                 }
             }
 
             val recipientThread = supplyAsync {
-                nodeB.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {
-                    recipient(it.proxy, nodeB.webAddress.port)
+                CordaRPCClient(nodeB.rpcAddress).start(demoUser[0].username, demoUser[0].password).use {
+                    recipient(it.proxy, webserverHandle.listenAddress.port)
                 }
             }
 

@@ -13,7 +13,6 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.lang.reflect.WildcardType
-import java.nio.ByteBuffer
 
 data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 
@@ -58,19 +57,12 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             deserializeAndReturnEnvelope(bytes, T::class.java)
 
     @Throws(NotSerializableException::class)
-    internal fun getEnvelope(bytes: ByteSequence): Envelope {
+    internal fun getEnvelope(byteSequence: ByteSequence): Envelope {
         // Check that the lead bytes match expected header
-        val headerSize = AmqpHeaderV1_0.size
-        if (bytes.take(headerSize) != AmqpHeaderV1_0) {
-            throw NotSerializableException("Serialization header does not match.")
-        }
-
+        val dataBytes = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
         val data = Data.Factory.create()
-        val size = data.decode(ByteBuffer.wrap(bytes.bytes, bytes.offset + headerSize, bytes.size - headerSize))
-        if (size.toInt() != bytes.size - headerSize) {
-            throw NotSerializableException("Unexpected size of data")
-        }
-
+        val expectedSize = dataBytes.remaining()
+        if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")
         return Envelope.get(data)
     }
 

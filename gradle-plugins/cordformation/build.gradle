@@ -9,6 +9,7 @@ buildscript {
 }
 
 apply plugin: 'kotlin'
+apply plugin: 'java-gradle-plugin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
@@ -33,18 +34,22 @@ sourceSets {
 }
 
 dependencies {
-    compile gradleApi()
+    gradleApi()
+
     compile project(":cordapp")
+    compile project(':cordform-common')
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "commons-io:commons-io:2.6"
 
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
-    compile project(':cordform-common')
+    testCompile "junit:junit:4.12" // TODO: Unify with core
+    testCompile "org.assertj:assertj-core:3.8.0"
     // Docker-compose file generation
     compile "org.yaml:snakeyaml:$snake_yaml_version"
 }
 
-task createNodeRunner(type: Jar, dependsOn: [classes]) {
+task createNodeRunner(type: Jar) {
     manifest {
         attributes('Main-Class': 'net.corda.plugins.NodeRunnerKt')
     }
@@ -53,12 +58,12 @@ task createNodeRunner(type: Jar, dependsOn: [classes]) {
     from sourceSets.runnodes.output
 }
 
-jar {
+publish {
+    name project.name
+}
+
+processResources {
     from(createNodeRunner) {
         rename { 'net/corda/plugins/runnodes.jar' }
     }
-}
-
-publish {
-    name project.name
 }
