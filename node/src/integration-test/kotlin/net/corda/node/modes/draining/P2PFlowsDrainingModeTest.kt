@@ -10,6 +10,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.chooseIdentity
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
@@ -46,7 +47,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `flows draining mode suspends consumption of initial session messages`() {
 
-        driver(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
             val initiatedNode = startNode().getOrThrow()
             val initiating = startNode(rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.chooseIdentity()
