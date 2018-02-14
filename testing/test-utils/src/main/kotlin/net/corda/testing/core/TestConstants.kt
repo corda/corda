@@ -30,10 +30,6 @@ val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
 @JvmField
 val CHARLIE_NAME = CordaX500Name("Charlie Ltd", "Athens", "GR")
 
-val DEV_INTERMEDIATE_CA: CertificateAndKeyPair by lazy { net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA }
-
-val DEV_ROOT_CA: CertificateAndKeyPair by lazy { net.corda.nodeapi.internal.DEV_ROOT_CA }
-
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
 
 object DummyCommandData : TypeOnlyCommandData()

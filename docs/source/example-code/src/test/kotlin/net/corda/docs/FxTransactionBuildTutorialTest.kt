@@ -68,13 +68,14 @@ class FxTransactionBuildTutorialTest {
         doIt.getOrThrow()
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
-        val balancesA = nodeA.database.transaction {
+        val balancesA = nodeA.transaction {
             nodeA.services.getCashBalances()
         }
         nodeBVaultUpdate.get()
-        val balancesB = nodeB.database.transaction {
+        val balancesB = nodeB.transaction {
             nodeB.services.getCashBalances()
         }
+
         println("BalanceA\n" + balancesA)
         println("BalanceB\n" + balancesB)
         // Verify the transfers occurred as expected
@@ -86,10 +87,10 @@ class FxTransactionBuildTutorialTest {
 
     private fun printBalances() {
         // Print out the balances
-        nodeA.database.transaction {
+        nodeA.transaction {
             println("BalanceA\n" + nodeA.services.getCashBalances())
         }
-        nodeB.database.transaction {
+        nodeB.transaction {
             println("BalanceB\n" + nodeB.services.getCashBalances())
         }
     }

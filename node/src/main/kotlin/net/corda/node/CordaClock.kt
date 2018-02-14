@@ -1,4 +1,4 @@
-package net.corda.node.internal
+package net.corda.node
 
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext

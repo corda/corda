@@ -5,6 +5,7 @@ apply plugin: 'com.jfrog.artifactory'
 description "Generates a summary of the artifact's public API"
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -17,3 +18,4 @@ dependencies {
 publish {
     name project.name
 }
+

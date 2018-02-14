@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.testing.node.MockCordappConfigProvider
+import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert

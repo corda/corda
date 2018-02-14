@@ -1,4 +1,4 @@
-package net.corda.testing.node
+package net.corda.testing.internal
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
