@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -31,11 +32,10 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.services.MockCordappProvider
+import net.corda.testing.internal.MockCordappProvider
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -209,7 +209,7 @@ open class MockServices private constructor(
             return NodeInfo(emptyList(), listOf(initialIdentity.identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
-    val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
+    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments)
     override val cordappProvider: CordappProvider get() = mockCordappProvider
 
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
@@ -221,12 +221,17 @@ open class MockServices private constructor(
     val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
         require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
-        return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+        return cordappServices.getInstance(type)
+                ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
     }
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) = throw UnsupportedOperationException()
+
+    fun addMockCordapp(contractClassName: ContractClassName) {
+        mockCordappProvider.addMockCordapp(contractClassName, attachments)
+    }
 }
 
 class MockKeyManagementService(val identityService: IdentityService,
@@ -252,7 +257,8 @@ class MockKeyManagementService(val identityService: IdentityService,
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        val pk = publicKey.keys.firstOrNull { keyStore.containsKey(it) } ?: throw IllegalArgumentException("Public key not found: ${publicKey.toStringShort()}")
+        val pk = publicKey.keys.firstOrNull { keyStore.containsKey(it) }
+                ?: throw IllegalArgumentException("Public key not found: ${publicKey.toStringShort()}")
         return KeyPair(pk, keyStore[pk]!!)
     }
 
