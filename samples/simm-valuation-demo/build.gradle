@@ -97,6 +97,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         }
         cordapp project(':finance')
         rpcUsers = ext.rpcUsers
+
         extraConfig = [
                 jvmArgs : [ "-Xmx1g"]
         ]

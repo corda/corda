@@ -48,21 +48,21 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         notary = [validating : true]
         p2pPort 10002
         cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10004"
         }
+        rpcUsers = defaultUsers
     }
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
         }
+        rpcUsers = defaultUsers
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -73,7 +73,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         }
         webPort 10010
         cordapps = []
-        rpcUsers = ext.rpcUsers
+        rpcUsers = defaultUsers
     }
 }
 
