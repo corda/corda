@@ -218,7 +218,15 @@ open class Node @Inject constructor(private val project: Project) : CordformNode
     }
 
     private fun configureProperties() {
-        config = config.withValue("rpcUsers", ConfigValueFactory.fromIterable(rpcUsers))
+        if (rpcUsers != null) {
+            config = config.withValue("security", ConfigValueFactory.fromMap(mapOf(
+                    "authService" to mapOf(
+                            "dataSource" to mapOf(
+                                    "type" to "INMEMORY",
+                                    "users" to rpcUsers)))))
+
+        }
+
         if (notary != null) {
             config = config.withValue("notary", ConfigValueFactory.fromMap(notary))
         }
@@ -369,7 +377,6 @@ open class Node @Inject constructor(private val project: Project) : CordformNode
 
         installCordappConfigs(cordapps)
     }
-
 
     /**
      * Gets a list of cordapps based on what dependent cordapps were specified.
