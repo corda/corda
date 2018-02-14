@@ -11,7 +11,13 @@ import net.corda.testing.services.MockAttachmentStorage
 import java.nio.file.Paths
 import java.util.*
 
-class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : CordappProviderImpl(cordappLoader, attachmentStorage) {
+class MockCordappProvider(
+        cordappLoader: CordappLoader,
+        attachmentStorage: AttachmentStorage,
+        val cordappConfigProvider: MockCordappConfigProvider = MockCordappConfigProvider()
+) : CordappProviderImpl(cordappLoader, cordappConfigProvider, attachmentStorage) {
+    constructor(cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : this(cordappLoader, attachmentStorage, MockCordappConfigProvider())
+
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
