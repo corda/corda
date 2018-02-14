@@ -207,6 +207,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val metrics = MetricRegistry()
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
+            attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
             val stateLoader = StateLoaderImpl(transactionStorage, attachments)
             val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
             val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, metrics, database, info, identityService, networkMapCache, nodeProperties)
@@ -544,7 +545,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              nodeProperties: NodePropertiesStore
     ): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
         val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
