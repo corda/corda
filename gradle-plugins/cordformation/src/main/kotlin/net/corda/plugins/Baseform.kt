@@ -3,7 +3,6 @@ package net.corda.plugins
 import groovy.lang.Closure
 import net.corda.cordform.CordformDefinition
 import org.gradle.api.DefaultTask
-import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import java.io.File
@@ -62,24 +61,6 @@ open class Baseform : DefaultTask() {
         val node = Node(project).apply { configureFunc() }
         nodes += node
         return node
-    }
-
-    /**
-     * Permits to create a list of users as:
-     *
-     * myUsers = users {
-     *     userName1 {
-     *        password = "<password>"
-     *        permissions = ["<permission1>", ...]
-     *    }
-     *    ...
-     * }
-     */
-    fun users(usersConfig: Closure<*>): List<Map<String, Any?>> {
-        return (project.container(NodeUser::class.java) as NamedDomainObjectContainer<NodeUser>)
-                .configure(usersConfig)
-                .map { it.toPropertyMap() }
-                .toList()
     }
 
     /**
@@ -181,16 +162,5 @@ open class Baseform : DefaultTask() {
             }
             return false
         }
-    }
-
-    // An element of node DSL describing a user.
-    // @see users
-    internal class NodeUser(var name: String? = null) {
-        var password: String? = null
-        var permissions: List<String> = mutableListOf<String>()
-        fun toPropertyMap(): Map<String, Any?> = mapOf(
-                "username" to name,
-                "password" to password,
-                "permissions" to permissions)
     }
 }

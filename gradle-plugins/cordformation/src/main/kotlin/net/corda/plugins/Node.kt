@@ -378,7 +378,6 @@ open class Node @Inject constructor(private val project: Project) : CordformNode
         installCordappConfigs(cordapps)
     }
 
-
     /**
      * Gets a list of cordapps based on what dependent cordapps were specified.
      *

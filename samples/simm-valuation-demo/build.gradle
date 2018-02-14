@@ -61,12 +61,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    def defaultUsers = users {
-        "default" {
-            password = "default"
-            permissions = [ "ALL" ]
-        }
-    }
+    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
 
     directory "./build/nodes"
     node {
@@ -86,8 +81,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10016")
             adminAddress("localhost:10017")
         }
-        rpcUsers = defaultUsers
         cordapp project(':finance')
+        rpcUsers = ext.rpcUsers
         extraConfig = [
                 jvmArgs : [ "-Xmx1g"]
         ]
@@ -100,8 +95,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10026")
             adminAddress("localhost:10027")
         }
-        rpcUsers = defaultUsers
         cordapp project(':finance')
+        rpcUsers = ext.rpcUsers
         extraConfig = [
                 jvmArgs : [ "-Xmx1g"]
         ]
@@ -114,8 +109,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10036")
             adminAddress("localhost:10037")
         }
-        rpcUsers = defaultUsers
         cordapp project(':finance')
+        rpcUsers = ext.rpcUsers
         extraConfig = [
                 jvmArgs : [ "-Xmx1g"]
         ]
