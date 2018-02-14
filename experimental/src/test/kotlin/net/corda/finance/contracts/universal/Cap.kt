@@ -25,11 +25,12 @@ import java.time.LocalDate
 
 internal val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    MockServices(listOf("net.corda.finance.contracts.universal"), rigorousMock<IdentityServiceInternal>().also {
-        listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
-            doReturn(null).whenever(it).partyFromKey(party.owningKey)
-        }
-    }, CordaX500Name("MegaCorp", "London", "GB")).transaction(DUMMY_NOTARY, script)
+    MockServices(listOf("net.corda.finance.contracts.universal"), CordaX500Name("MegaCorp", "London", "GB"),
+            rigorousMock<IdentityServiceInternal>().also {
+                listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
+                    doReturn(null).whenever(it).partyFromKey(party.owningKey)
+                }
+            }).transaction(DUMMY_NOTARY, script)
 }
 
 class Cap {
@@ -312,14 +313,15 @@ class Cap {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Ignore
     fun `pretty print`() {
-        println ( prettyPrint(contractInitial) )
+        println(prettyPrint(contractInitial))
 
-        println ( prettyPrint(contractAfterFixingFirst) )
+        println(prettyPrint(contractAfterFixingFirst))
 
-        println ( prettyPrint(contractAfterExecutionFirst) )
+        println(prettyPrint(contractAfterExecutionFirst))
 
-        println ( prettyPrint(contractAfterFixingFinal) )
+        println(prettyPrint(contractAfterFixingFinal))
     }
 }

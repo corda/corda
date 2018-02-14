@@ -51,7 +51,8 @@ class TransactionEncumbranceTests {
     class DummyTimeLock : Contract {
         override fun verify(tx: LedgerTransaction) {
             val timeLockInput = tx.inputsOfType<State>().singleOrNull() ?: return
-            val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
+            val time = tx.timeWindow?.untilTime
+                    ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
             requireThat {
                 "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)
             }
@@ -64,9 +65,10 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
-        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }, MEGA_CORP.name)
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name,
+            rigorousMock<IdentityServiceInternal>().also {
+                doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            })
 
     @Test
     fun `state can be encumbered`() {

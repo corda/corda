@@ -8,6 +8,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -17,7 +18,7 @@ import javax.security.auth.x500.X500Principal
 class NodeKeystoreCheckTest {
     @Test
     fun `starting node in non-dev mode with no key store`() {
-        driver(startNodesInProcess = true, notarySpecs = emptyList()) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
             }.hasMessageContaining("Identity certificate not found")
@@ -26,7 +27,7 @@ class NodeKeystoreCheckTest {
 
     @Test
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
-        driver(startNodesInProcess = true, notarySpecs = emptyList()) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             // Create keystores
             val keystorePassword = "password"
             val config = object : SSLConfiguration {

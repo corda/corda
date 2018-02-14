@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'kotlin'
 apply plugin: 'maven-publish'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
@@ -7,11 +8,9 @@ repositories {
     mavenCentral()
 }
 
-// This tracks the gradle plugins version and not Corda
-version gradle_plugins_version
-group 'net.corda.plugins'
-
 dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+
     // JSR 305: Nullability annotations
     compile "com.google.code.findbugs:jsr305:$jsr305_version"
 
