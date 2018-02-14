@@ -209,7 +209,7 @@ public static final class net.corda.core.context.Trace$InvocationId$Companion ex
 public static final class net.corda.core.context.Trace$SessionId$Companion extends java.lang.Object
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AlwaysAcceptAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.AlwaysAcceptAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AlwaysAcceptAttachmentConstraint INSTANCE
 ##
@@ -284,14 +284,14 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public abstract jar.JarInputStream openAsJAR()
 ##
-@net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public interface net.corda.core.contracts.AttachmentConstraint
   public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getHash()
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AutomaticHashConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.AutomaticHashConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AutomaticHashConstraint INSTANCE
 ##
@@ -366,7 +366,7 @@ public final class net.corda.core.contracts.ContractsDSL extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract Collection getExitKeys()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.FungibleAsset withNewOwnerAndAmount(net.corda.core.contracts.Amount, net.corda.core.identity.AbstractParty)
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.HashAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.HashAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public <init>(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component1()
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.HashAttachmentConstraint copy(net.corda.core.crypto.SecureHash)
@@ -619,6 +619,11 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.UpgradedContract extends net.corda.core.contracts.Contract
   @org.jetbrains.annotations.NotNull public abstract String getLegacyContract()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.ContractState upgrade(net.corda.core.contracts.ContractState)
+##
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+  @org.jetbrains.annotations.NotNull public final Map getWhitelistAllContractsForTest()
+  public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
+  public static final net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint INSTANCE
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.cordapp.Cordapp
   @org.jetbrains.annotations.NotNull public abstract List getContractClassNames()
@@ -1747,14 +1752,15 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowProgressHandle startTrackedFlow(net.corda.core.flows.FlowLogic)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NetworkParameters extends java.lang.Object
-  public <init>(int, List, int, int, java.time.Instant, int)
+  public <init>(int, List, int, int, java.time.Instant, int, Map)
   public final int component1()
   @org.jetbrains.annotations.NotNull public final List component2()
   public final int component3()
   public final int component4()
   @org.jetbrains.annotations.NotNull public final java.time.Instant component5()
   public final int component6()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters copy(int, List, int, int, java.time.Instant, int)
+  @org.jetbrains.annotations.Nullable public final Map component7()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters copy(int, List, int, int, java.time.Instant, int, Map)
   public boolean equals(Object)
   public final int getEpoch()
   public final int getMaxMessageSize()
@@ -1762,6 +1768,7 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   public final int getMinimumPlatformVersion()
   @org.jetbrains.annotations.NotNull public final java.time.Instant getModifiedTime()
   @org.jetbrains.annotations.NotNull public final List getNotaries()
+  @org.jetbrains.annotations.Nullable public final Map getWhitelistedContractImplementations()
   public int hashCode()
   public String toString()
 ##
@@ -3185,7 +3192,7 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.PrivacySalt getPrivacySalt()
   @org.jetbrains.annotations.NotNull public final Set getRequiredSigningKeys()
   public int hashCode()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServicesForResolution)
   @org.jetbrains.annotations.NotNull public String toString()
   public static final net.corda.core.transactions.WireTransaction$Companion Companion
@@ -4677,9 +4684,6 @@ public final class net.corda.testing.services.MockAttachmentStorage extends net.
 ##
 public static final class net.corda.testing.services.MockAttachmentStorage$Companion extends java.lang.Object
   public final byte[] getBytes(java.io.InputStream)
-##
-public static final class net.corda.testing.services.MockAttachmentStorage$openAttachment$1 extends net.corda.core.internal.AbstractAttachment
-  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
 ##
 public final class net.corda.testing.services.MockCordappProvider extends net.corda.node.internal.cordapp.CordappProviderImpl
   public <init>(net.corda.node.internal.cordapp.CordappLoader, net.corda.core.node.services.AttachmentStorage)

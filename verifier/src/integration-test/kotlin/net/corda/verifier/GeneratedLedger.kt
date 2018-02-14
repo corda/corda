@@ -33,7 +33,7 @@ data class GeneratedLedger(
     val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
     val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
     val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
-        attachments.mapNotNull { it as? ContractAttachment }.associateBy { it.contract }
+        attachments.mapNotNull { it as? ContractAttachment }.flatMap { attch-> attch.allContracts.map { it to attch } }.toMap()
     }
 
     companion object {
@@ -45,9 +45,7 @@ data class GeneratedLedger(
         return transaction.toLedgerTransaction(
                 resolveIdentity = { identityMap[it] },
                 resolveAttachment = { attachmentMap[it] },
-                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) },
-                resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
-        )
+                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) })
     }
 
     val attachmentsGenerator: Generator<List<Attachment>> by lazy {

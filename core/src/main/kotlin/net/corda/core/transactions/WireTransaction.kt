@@ -85,13 +85,26 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransaction(
-                resolveIdentity = { services.identityService.partyFromKey(it) },
+        return toLedgerTransaction(resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
-                resolveStateRef = { services.loadState(it) },
-                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
-        )
+                resolveStateRef = { services.loadState(it) })
     }
+
+    /**
+     * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
+     * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
+     *
+     * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
+     * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
+     */
+    @Deprecated("resolveContractAttachment no longer used", replaceWith = ReplaceWith("toLedgerTransaction(resolveIdentity, resolveAttachment, resolveStateRef)"))
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(
+            resolveIdentity: (PublicKey) -> Party?,
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+    ): LedgerTransaction = toLedgerTransaction(resolveIdentity, resolveAttachment, resolveStateRef)
 
     /**
      * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
@@ -104,8 +117,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            resolveStateRef: (StateRef) -> TransactionState<*>?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
@@ -115,10 +127,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
-        val contractAttachments = findAttachmentContracts(resolvedInputs, resolveContractAttachment, resolveAttachment)
-        // Order of attachments is important since contracts may refer to indexes so only append automatic attachments
-        val attachments = (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) } + contractAttachments).distinct()
+        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
         val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
         checkTransactionSize(ltx)
         return ltx
@@ -252,19 +261,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
-    }
-
-    private fun findAttachmentContracts(resolvedInputs: List<StateAndRef<ContractState>>,
-                                        resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
-                                        resolveAttachment: (SecureHash) -> Attachment?
-    ): List<Attachment> {
-        val contractAttachments = (outputs + resolvedInputs.map { it.state }).map { Pair(it, resolveContractAttachment(it)) }
-        val missingAttachments = contractAttachments.filter { it.second == null }
-        return if (missingAttachments.isEmpty()) {
-            contractAttachments.map { ContractAttachment(resolveAttachment(it.second!!) ?: throw AttachmentResolutionException(it.second!!), it.first.contract) }
-        } else {
-            throw MissingContractAttachments(missingAttachments.map { it.first })
-        }
     }
 
     override fun equals(other: Any?): Boolean {

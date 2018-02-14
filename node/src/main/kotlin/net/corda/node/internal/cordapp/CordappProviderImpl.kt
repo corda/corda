@@ -1,12 +1,15 @@
 package net.corda.node.internal.cordapp
 
 import com.google.common.collect.HashBiMap
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.internal.createCordappContext
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -25,6 +28,38 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
 
     private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
 
+    /**
+     * Current known CorDapps loaded on this node
+     */
+    override val cordapps get() = cordappLoader.cordapps
+    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
+
+    init {
+        verifyInstalledCordapps(attachmentStorage)
+    }
+
+    private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
+        val whitelist = GlobalProperties.networkParameters.whitelistedContractImplementations
+
+        if (whitelist.isEmpty()) {
+            log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
+            return
+        }
+
+        if (whitelist == whitelistAllContractsForTest) {
+            log.warn("The network parameters are configured for development or demo mode. See https://docs.corda.net/network-map.html")
+            return
+        }
+
+        // Verify that the installed contract classes correspond with the whitelist hash
+        cordappAttachments.keys.map(attachmentStorage::openAttachment).filter { it is ContractAttachment }.forEach { attch ->
+            ((attch as ContractAttachment).allContracts intersect whitelist.keys).forEach { contractClassName ->
+                if (attch.id !in whitelist[contractClassName]!!) {
+                    log.error("Contract ${contractClassName} found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
+                }
+            }
+        }
+    }
 
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
@@ -43,11 +78,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
     }
 
     /**
-     * Current known CorDapps loaded on this node
-     */
-    override val cordapps get() = cordappLoader.cordapps
-    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
-    /**
      * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID
      *
      * @param cordapp The cordapp to get the attachment ID
@@ -55,11 +85,12 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
      */
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(cordapp.jarPath)
 
-    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
-        val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it.jarPath }
-        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importOrGetAttachment(it) } }
-        return attachmentIds.zip(cordappsWithAttachments).toMap()
-    }
+    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> =
+            cordapps.filter { !it.contractClassNames.isEmpty() }.map {
+                it.jarPath.openStream().use { stream ->
+                    attachmentStorage.importOrGetAttachment(stream)
+                } to it.jarPath
+            }.toMap()
 
     /**
      * Get the current cordapp context for the given CorDapp

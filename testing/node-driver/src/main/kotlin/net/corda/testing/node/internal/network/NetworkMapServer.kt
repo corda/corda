@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal.network
 
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.signWithCert
@@ -39,7 +40,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
-        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, Int.MAX_VALUE, Instant.now(), 10)
+        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, Int.MAX_VALUE, Instant.now(), 10, whitelistAllContractsForTest)
     }
 
     private val server: Server

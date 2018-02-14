@@ -376,7 +376,7 @@ open class Node @Inject constructor(private val project: Project) : CordformNode
      *
      * @return List of this node's cordapps.
      */
-    private fun getCordappList(): Collection<ResolvedCordapp> =
+    fun getCordappList(): Collection<ResolvedCordapp> =
             internalCordapps.map { cordapp -> resolveCordapp(cordapp) } + resolveBuiltCordapp()
 
     private fun resolveCordapp(cordapp: Cordapp): ResolvedCordapp {

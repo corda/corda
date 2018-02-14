@@ -26,7 +26,7 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.core.node.NotaryInfo
 import net.corda.testing.core.chooseIdentity
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.MockNetwork
@@ -47,7 +47,7 @@ class BFTNotaryServiceTests {
 
     @Before
     fun before() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = MockNetwork(listOf("net.corda.testing.contracts"))
     }
 
     @After
