@@ -20,33 +20,11 @@ import java.util.concurrent.TimeUnit
 
 fun <A> springDriver(
         defaultParameters: DriverParameters = DriverParameters(),
-        isDebug: Boolean = defaultParameters.isDebug,
-        driverDirectory: Path = defaultParameters.driverDirectory,
-        portAllocation: PortAllocation = defaultParameters.portAllocation,
-        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
-        systemProperties: Map<String, String> = defaultParameters.systemProperties,
-        useTestClock: Boolean = defaultParameters.useTestClock,
-        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
-        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        maxTransactionSize: Int = defaultParameters.maxTransactionSize,
         dsl: SpringBootDriverDSL.() -> A
 ): A {
     return genericDriver(
             defaultParameters = defaultParameters,
-            isDebug = isDebug,
-            driverDirectory = driverDirectory,
-            portAllocation = portAllocation,
-            debugPortAllocation = debugPortAllocation,
-            systemProperties = systemProperties,
-            useTestClock = useTestClock,
-            initialiseSerialization = initialiseSerialization,
-            startNodesInProcess = startNodesInProcess,
-            extraCordappPackagesToScan = extraCordappPackagesToScan,
-            notarySpecs = notarySpecs,
             driverDslWrapper = { driverDSL: DriverDSLImpl -> SpringBootDriverDSL(driverDSL) },
-            maxTransactionSize = maxTransactionSize,
             coerce = { it }, dsl = dsl
     )
 }

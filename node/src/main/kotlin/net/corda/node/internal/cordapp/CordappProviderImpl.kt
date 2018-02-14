@@ -7,21 +7,26 @@ import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistA
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.cordapp.CordappConfigProvider
+import net.corda.core.internal.createCordappContext
 import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader, private val cordappConfigProvider: CordappConfigProvider, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
     }
+
+    private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
 
     /**
      * Current known CorDapps loaded on this node
@@ -94,7 +99,14 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
      * @return A cordapp context for the given CorDapp
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
-        return CordappContext(cordapp, getCordappAttachmentId(cordapp), cordappLoader.appClassLoader)
+        return contextCache.computeIfAbsent(cordapp, {
+            createCordappContext(
+                    cordapp,
+                    getCordappAttachmentId(cordapp),
+                    cordappLoader.appClassLoader,
+                    TypesafeCordappConfig(cordappConfigProvider.getConfigByName(cordapp.name))
+            )
+        })
     }
 
     /**

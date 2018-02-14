@@ -15,6 +15,7 @@ import net.corda.testing.core.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.driver
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -29,11 +30,11 @@ class RaftNotaryServiceTests {
 
     @Test
     fun `detect double spend`() {
-        driver(
+        driver(DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
-        ) {
+        )) {
             val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcess) }.getOrThrow()
             val inputState = issueState(bankA, defaultNotaryIdentity)
 

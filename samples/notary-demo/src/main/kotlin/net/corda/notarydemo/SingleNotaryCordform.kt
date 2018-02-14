@@ -11,7 +11,7 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
-fun main(args: Array<String>) = SingleNotaryCordform().deployNodes()
+fun main(args: Array<String>) = SingleNotaryCordform().nodeRunner().deployAndRunNodes()
 
 val notaryDemoUser = User("demou", "demop", setOf(all()))
 

@@ -76,7 +76,7 @@ fun <A> verifierDriver(
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
-                        waitForNodesToFinish = waitForNodesToFinish,
+                        waitForAllNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
                         jmxPolicy = jmxPolicy,
