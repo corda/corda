@@ -24,12 +24,10 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import java.io.File
 import java.io.PrintStream
 import java.nio.file.Files
