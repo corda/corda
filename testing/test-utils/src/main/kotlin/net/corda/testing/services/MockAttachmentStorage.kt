@@ -43,11 +43,11 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     val files = HashMap<SecureHash, ByteArray>()
 
+    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash): AbstractAttachment(dataLoader)
+
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null
-        return object : AbstractAttachment({ f }) {
-            override val id = id
-        }
+        return MockAttachment({f}, id)
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
