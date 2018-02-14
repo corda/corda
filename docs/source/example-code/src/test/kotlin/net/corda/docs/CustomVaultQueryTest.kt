@@ -74,10 +74,14 @@ class CustomVaultQueryTest {
 
     private fun getBalances(): Pair<Map<Currency, Amount<Currency>>, Map<Currency, Amount<Currency>>> {
         // Print out the balances
-        val balancesNodesA = nodeA.services.getCashBalances()
+        val balancesNodesA = nodeA.transaction {
+            nodeA.services.getCashBalances()
+        }
         println("BalanceA\n" + balancesNodesA)
 
-        val balancesNodesB = nodeB.services.getCashBalances()
+        val balancesNodesB = nodeB.transaction {
+            nodeB.services.getCashBalances()
+        }
         println("BalanceB\n" + balancesNodesB)
 
         return Pair(balancesNodesA, balancesNodesB)

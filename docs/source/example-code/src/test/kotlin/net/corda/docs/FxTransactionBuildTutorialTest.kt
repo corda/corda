@@ -72,7 +72,7 @@ class FxTransactionBuildTutorialTest {
             nodeA.services.getCashBalances()
         }
         nodeBVaultUpdate.get()
-        val balancesB = nodeB.transaction{
+        val balancesB = nodeB.transaction {
             nodeB.services.getCashBalances()
         }
 
@@ -90,7 +90,6 @@ class FxTransactionBuildTutorialTest {
         nodeA.transaction {
             println("BalanceA\n" + nodeA.services.getCashBalances())
         }
-
         nodeB.transaction {
             println("BalanceB\n" + nodeB.services.getCashBalances())
         }
