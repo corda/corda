@@ -61,7 +61,12 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+    ext.rpcUsers = listOfUsers {
+        "default" {
+            password = "default"
+            permissions = [ 'ALL' ]
+        }
+    }
 
     directory "./build/nodes"
     node {
