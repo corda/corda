@@ -13,6 +13,8 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.setMessagingServiceSpy
@@ -109,6 +111,12 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
 
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */
     fun <F : FlowLogic<*>> findStateMachines(flowClass: Class<F>): List<Pair<F, CordaFuture<*>>> = node.smm.findStateMachines(flowClass)
+
+    fun <T> transaction(statement: () -> T): T {
+        return node.database.transaction {
+            statement()
+        }
+    }
 }
 
 /**
