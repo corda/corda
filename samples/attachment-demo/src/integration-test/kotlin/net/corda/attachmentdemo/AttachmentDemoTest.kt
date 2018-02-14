@@ -7,6 +7,7 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -19,7 +20,7 @@ class AttachmentDemoTest {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(isDebug = true, portAllocation = PortAllocation.Incremental(20000)) {
+        driver(DriverParameters(isDebug = true, portAllocation = PortAllocation.Incremental(20000))) {
             val demoUser = listOf(User("demo", "demo", setOf(
                     startFlow<AttachmentDemoFlow>(),
                     invokeRpc(CordaRPCOps::attachmentExists),
