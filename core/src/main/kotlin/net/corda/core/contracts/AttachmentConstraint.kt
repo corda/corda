@@ -34,14 +34,16 @@ object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
      */
     val whitelistAllContractsForTest get() = mapOf("*" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
-    override fun isSatisfiedBy(attachment: Attachment) =
-            (GlobalProperties.networkParameters.whitelistedContractImplementations ?: emptyMap()).let { whitelist ->
-                when {
-                    whitelist == whitelistAllContractsForTest -> true
-                    attachment is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
-                    else -> false
-                }
+    override fun isSatisfiedBy(attachment: Attachment): Boolean {
+        return GlobalProperties.networkParameters.whitelistedContractImplementations.let { whitelist ->
+            when {
+                whitelist == whitelistAllContractsForTest -> true
+                attachment is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract]
+                        ?: emptyList())
+                else -> false
             }
+        }
+    }
 }
 
 /**

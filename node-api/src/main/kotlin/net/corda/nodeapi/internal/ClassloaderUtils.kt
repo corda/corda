@@ -12,7 +12,7 @@ import java.nio.file.StandardCopyOption
 
 /**
  * Scans the jar for contracts.
- * @return: found contract class names or null if none found
+ * @returns: found contract class names or null if none found
  */
 fun scanJarForContracts(cordappJarPath: String): List<ContractClassName>? {
     val scanResult = FastClasspathScanner().addClassLoader(Thread.currentThread().contextClassLoader).overrideClasspath(cordappJarPath).scan()

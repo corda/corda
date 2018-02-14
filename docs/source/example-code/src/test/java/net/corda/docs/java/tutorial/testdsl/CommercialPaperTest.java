@@ -4,16 +4,20 @@ import kotlin.Unit;
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.contracts.TransactionVerificationException;
 import net.corda.core.identity.CordaX500Name;
+import net.corda.core.internal.GlobalProperties;
 import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
+import net.corda.testing.common.internal.ParametersUtilities;
 import net.corda.testing.core.TestIdentity;
 import net.corda.testing.node.MockServices;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.security.PublicKey;
 import java.time.temporal.ChronoUnit;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
 import static net.corda.finance.Currencies.DOLLARS;
@@ -29,7 +33,13 @@ public class CommercialPaperTest {
     private static final TestIdentity BOB = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity MEGA_CORP = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};
-    private final MockServices ledgerServices = new MockServices(singletonList("net.corda.finance.contracts"), MEGA_CORP);
+    private MockServices ledgerServices;
+
+    @Before
+    public void setUp() throws Exception {
+        GlobalProperties.setNetworkParameters(ParametersUtilities.testNetworkParameters(emptyList()));
+        ledgerServices = new MockServices(singletonList("net.corda.finance.contracts"), MEGA_CORP);
+    }
 
     // DOCSTART 1
     private ICommercialPaperState getPaper() {

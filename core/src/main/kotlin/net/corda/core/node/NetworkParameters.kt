@@ -28,7 +28,7 @@ data class NetworkParameters(
         val maxTransactionSize: Int,
         val modifiedTime: Instant,
         val epoch: Int,
-        val whitelistedContractImplementations: Map<String, List<AttachmentId>>?
+        val whitelistedContractImplementations: Map<String, List<AttachmentId>>
 ) {
     init {
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }

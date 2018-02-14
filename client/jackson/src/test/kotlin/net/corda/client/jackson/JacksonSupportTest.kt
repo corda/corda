@@ -11,7 +11,7 @@ import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.USD
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME

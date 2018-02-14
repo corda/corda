@@ -100,7 +100,7 @@ data class LedgerTransaction(
             val stateAttachments = contractAttachments.filter { state.contract in it.allContracts }
             if (stateAttachments.isEmpty()) throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
-            //in case multiple attachments have been added for the same contract, verify all
+            // In case multiple attachments have been added for the same contract, verify all
             stateAttachments.distinctBy { it.id }.forEach { contractAttachment ->
                 if (!state.constraint.isSatisfiedBy(ConstraintAttachment(contractAttachment, state.contract))) {
                     throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)

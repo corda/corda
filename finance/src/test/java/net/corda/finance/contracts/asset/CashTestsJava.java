@@ -4,7 +4,9 @@ import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
+import net.corda.core.internal.GlobalProperties;
 import net.corda.node.services.api.IdentityServiceInternal;
+import net.corda.testing.common.internal.ParametersUtilities;
 import net.corda.testing.core.DummyCommandData;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
@@ -35,6 +37,7 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
+        GlobalProperties.setNetworkParameters(ParametersUtilities.testNetworkParameters(emptyList()));
         IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
         doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPublicKey());
         doReturn(MINI_CORP.getParty()).when(identityService).partyFromKey(MINI_CORP.getPublicKey());

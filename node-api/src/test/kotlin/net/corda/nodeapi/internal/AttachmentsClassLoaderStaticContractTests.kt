@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -13,6 +14,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.testing.common.internal.ParametersUtilities
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -57,8 +59,11 @@ class AttachmentsClassLoaderStaticContractTests {
         }
     }
 
-    private val serviceHub = rigorousMock<ServicesForResolution>().also {
-        doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.nodeapi.internal")), MockAttachmentStorage())).whenever(it).cordappProvider
+    private val serviceHub by lazy {
+        GlobalProperties.networkParameters = ParametersUtilities.testNetworkParameters(emptyList())
+        rigorousMock<ServicesForResolution>().also {
+            doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.nodeapi.internal")), MockAttachmentStorage())).whenever(it).cordappProvider
+        }
     }
 
     @Test

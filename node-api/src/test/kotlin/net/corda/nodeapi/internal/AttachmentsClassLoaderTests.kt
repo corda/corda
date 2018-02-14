@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.ServiceHub
@@ -18,7 +19,7 @@ import net.corda.nodeapi.DummyContractBackdoor
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.attachmentsClassLoaderEnabledPropertyName
 import net.corda.nodeapi.internal.serialization.withTokenContext
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -58,7 +59,10 @@ class AttachmentsClassLoaderTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
+    private val cordappProvider by lazy {
+        GlobalProperties.networkParameters = testNetworkParameters(emptyList())
+        CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
+    }
     private val cordapp get() = cordappProvider.cordapps.first()
     private val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = cordappProvider.getAppContext(cordapp)

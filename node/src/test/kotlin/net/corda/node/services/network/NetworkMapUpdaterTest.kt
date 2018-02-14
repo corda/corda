@@ -26,7 +26,7 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned

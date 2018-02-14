@@ -8,6 +8,7 @@ import net.corda.core.crypto.CryptoUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
+import net.corda.core.internal.GlobalProperties;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
@@ -23,6 +24,7 @@ import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
+import net.corda.testing.common.internal.ParametersUtilities;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
 import net.corda.testing.internal.vault.DummyLinearContract;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static java.util.Collections.emptyList;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
@@ -70,6 +73,7 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
+        GlobalProperties.setNetworkParameters(ParametersUtilities.testNetworkParameters(emptyList()));
         List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(

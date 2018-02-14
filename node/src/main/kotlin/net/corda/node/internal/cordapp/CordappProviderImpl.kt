@@ -36,8 +36,8 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
         val whitelist = GlobalProperties.networkParameters.whitelistedContractImplementations
 
-        if (whitelist == null) {
-            log.warn("The network parameters don't specify the contract implementation whitelist. Contact your zone operator. See https://docs.corda.net/network-map.html")
+        if (whitelist.isEmpty()) {
+            log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
             return
         }
 

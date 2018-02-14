@@ -3,9 +3,11 @@ package net.corda.traderdemo
 import net.corda.core.contracts.CommandData
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.testing.common.internal.ParametersUtilities
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -46,6 +48,7 @@ class TransactionGraphSearchTests {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData): GraphTransactionStorage {
+        GlobalProperties.networkParameters = ParametersUtilities.testNetworkParameters(emptyList())
         val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), megaCorp, rigorousMock())
         val notaryServices = MockServices(listOf("net.corda.testing.contracts"), dummyNotary, rigorousMock())
         val originBuilder = TransactionBuilder(dummyNotary.party)
