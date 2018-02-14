@@ -166,7 +166,7 @@ Other Functional Improvements
     * testNodeConfiguration has been retired, please use a mock object framework of your choice instead
     * MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
 
-  .. tip:: We have provided a bash script to smooth the upgrade process for existing projects. This an be
+  .. tip:: We have provided a bash script to smooth the upgrade process for existing projects. This can be
     found at ``tools\scripts\update-test-packages.sh`` in the source tree
     
 
