@@ -47,7 +47,7 @@ Significant Changes in 3.0
   * **AMQP Serialization**
 
     AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This
-    change brings a serialisation format that will allow us to deliver enhanced security and wire stability. It is a key
+    change brings a serialisation format that will allow us to deliver enhanced security and wire stability. This was a key
     prerequisite to enabling different Corda node versions to coexist on the same network and to enable easier upgrades.
 
     Details on the AMQP serialization framework can be found :ref:`here <amqp_ref>`. This provides an introduction and
