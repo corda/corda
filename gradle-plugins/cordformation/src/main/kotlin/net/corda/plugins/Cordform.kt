@@ -1,9 +1,6 @@
 package net.corda.plugins
 
 import org.apache.tools.ant.filters.FixCrLfFilter
-import org.gradle.api.DefaultTask
-import org.gradle.api.plugins.JavaPluginConvention
-import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -15,10 +12,17 @@ import java.nio.file.Paths
  */
 @Suppress("unused")
 open class Cordform : Baseform() {
-    private companion object {
+    internal companion object {
         val nodeJarName = "corda.jar"
-        private val defaultDirectory: Path = Paths.get("build", "nodes")
     }
+
+    /**
+     * Returns a node by name.
+     *
+     * @param name The name of the node as specified in the node configuration DSL.
+     * @return A node instance.
+     */
+    private fun getNodeByName(name: String): Node? = nodes.firstOrNull { it.name == name }
 
     /**
      * Installs the run script into the nodes directory.
@@ -26,7 +30,7 @@ open class Cordform : Baseform() {
     private fun installRunScript() {
         project.copy {
             it.apply {
-                from(Cordformation.getPluginFile(project, "net/corda/plugins/runnodes.jar"))
+                from(Cordformation.getPluginFile(project, "runnodes.jar"))
                 fileMode = Cordformation.executableFileMode
                 into("$directory/")
             }
@@ -34,7 +38,7 @@ open class Cordform : Baseform() {
 
         project.copy {
             it.apply {
-                from(Cordformation.getPluginFile(project, "net/corda/plugins/runnodes"))
+                from(Cordformation.getPluginFile(project, "runnodes"))
                 // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
                 filter(mapOf("eol" to FixCrLfFilter.CrLf.newInstance("lf")), FixCrLfFilter::class.java)
                 fileMode = Cordformation.executableFileMode
@@ -44,7 +48,7 @@ open class Cordform : Baseform() {
 
         project.copy {
             it.apply {
-                from(Cordformation.getPluginFile(project, "net/corda/plugins/runnodes.bat"))
+                from(Cordformation.getPluginFile(project, "runnodes.bat"))
                 into("$directory/")
             }
         }
@@ -63,4 +67,5 @@ open class Cordform : Baseform() {
         bootstrapNetwork()
         nodes.forEach(Node::build)
     }
+
 }

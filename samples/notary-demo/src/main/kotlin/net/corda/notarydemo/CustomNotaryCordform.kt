@@ -9,7 +9,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import java.nio.file.Paths
 
-fun main(args: Array<String>) = CustomNotaryCordform().deployNodes()
+fun main(args: Array<String>) = CustomNotaryCordform().nodeRunner().deployAndRunNodes()
 
 class CustomNotaryCordform : CordformDefinition() {
     init {
