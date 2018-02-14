@@ -1,10 +1,8 @@
 package net.corda.core.internal
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.PrivacySalt
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.UpgradedContract
+import net.corda.core.contracts.*
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 
 object ContractUpgradeUtils {
@@ -16,8 +14,9 @@ object ContractUpgradeUtils {
     ): ContractUpgradeWireTransaction {
         require(stateAndRef.state.encumbrance == null) { "Cannot upgrade an encumbered state" }
 
-        val legacyContractAttachmentId = services.cordappProvider.getContractAttachmentID(stateAndRef.state.contract)!!
-        val upgradedContractAttachmentId = services.cordappProvider.getContractAttachmentID(upgradedContractClass.name)!!
+        val legacyContractAttachmentId = getContractAttachmentId(stateAndRef.state.contract, services)
+        val upgradedContractAttachmentId = getContractAttachmentId(upgradedContractClass.name, services)
+
         val inputs = listOf(stateAndRef.ref)
         return ContractUpgradeWireTransaction(
                 inputs,
@@ -27,5 +26,10 @@ object ContractUpgradeUtils {
                 upgradedContractAttachmentId,
                 privacySalt
         )
+    }
+
+    private fun getContractAttachmentId(name: ContractClassName, services: ServicesForResolution): AttachmentId {
+        return services.cordappProvider.getContractAttachmentID(name)
+                ?: throw IllegalStateException("Attachment not found for contract: $name")
     }
 }
