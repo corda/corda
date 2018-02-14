@@ -13,6 +13,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
@@ -92,7 +93,7 @@ class SSHServerTest {
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(DriverParameters(isDebug = true)) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -122,7 +123,7 @@ class SSHServerTest {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(DriverParameters(isDebug = true)) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()

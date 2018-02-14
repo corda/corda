@@ -11,9 +11,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -152,55 +150,28 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  */
 fun <A> driver(
         defaultParameters: DriverParameters = DriverParameters(),
-        isDebug: Boolean = defaultParameters.isDebug,
-        driverDirectory: Path = defaultParameters.driverDirectory,
-        portAllocation: PortAllocation = defaultParameters.portAllocation,
-        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
-        systemProperties: Map<String, String> = defaultParameters.systemProperties,
-        useTestClock: Boolean = defaultParameters.useTestClock,
-        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
-        notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
-        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        jmxPolicy: JmxPolicy = defaultParameters.jmxPolicy,
-        maxTransactionSize: Int = defaultParameters.maxTransactionSize,
         dsl: DriverDSL.() -> A
 ): A {
     return genericDriver(
             driverDsl = DriverDSLImpl(
-                    portAllocation = portAllocation,
-                    debugPortAllocation = debugPortAllocation,
-                    systemProperties = systemProperties,
-                    driverDirectory = driverDirectory.toAbsolutePath(),
-                    useTestClock = useTestClock,
-                    isDebug = isDebug,
-                    startNodesInProcess = startNodesInProcess,
-                    waitForNodesToFinish = waitForAllNodesToFinish,
-                    notarySpecs = notarySpecs,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    jmxPolicy = jmxPolicy,
+                    portAllocation = defaultParameters.portAllocation,
+                    debugPortAllocation = defaultParameters.debugPortAllocation,
+                    systemProperties = defaultParameters.systemProperties,
+                    driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
+                    useTestClock = defaultParameters.useTestClock,
+                    isDebug = defaultParameters.isDebug,
+                    startNodesInProcess = defaultParameters.startNodesInProcess,
+                    waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                    notarySpecs = defaultParameters.notarySpecs,
+                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
+                    jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
-                    maxTransactionSize = maxTransactionSize
+                    maxTransactionSize = defaultParameters.maxTransactionSize
             ),
             coerce = { it },
             dsl = dsl,
-            initialiseSerialization = initialiseSerialization
+            initialiseSerialization = defaultParameters.initialiseSerialization
     )
-}
-
-/**
- * Helper function for starting a [driver] with custom parameters from Java.
- *
- * @param parameters The default parameters for the driver.
- * @param dsl The dsl itself.
- * @return The value returned in the [dsl] closure.
- */
-fun <A> driver(
-        parameters: DriverParameters,
-        dsl: DriverDSL.() -> A
-): A {
-    return driver(defaultParameters = parameters, dsl = dsl)
 }
 
 /** Helper builder for configuring a [driver] from Java. */

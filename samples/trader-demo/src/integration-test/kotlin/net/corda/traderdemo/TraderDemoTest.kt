@@ -12,6 +12,7 @@ import net.corda.testing.core.BOC_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.chooseIdentity
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
@@ -32,7 +33,7 @@ class TraderDemoTest {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),

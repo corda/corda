@@ -3639,7 +3639,6 @@ public static final class net.corda.client.jackson.StringToMethodCallParser$Unpa
 ##
 public final class net.corda.testing.driver.Driver extends java.lang.Object
   public static final Object driver(net.corda.testing.driver.DriverParameters, kotlin.jvm.functions.Function1)
-  public static final Object driver(net.corda.testing.driver.DriverParameters, boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, Map, boolean, boolean, boolean, boolean, List, List, net.corda.testing.driver.JmxPolicy, int, kotlin.jvm.functions.Function1)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.testing.driver.DriverDSL
   @org.jetbrains.annotations.NotNull public abstract java.nio.file.Path baseDirectory(net.corda.core.identity.CordaX500Name)
@@ -4172,10 +4171,12 @@ public final class net.corda.testing.node.User extends java.lang.Object
 public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public <init>(net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration)
-  public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.nodeapi.internal.config.SSLConfiguration)
   @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCConnection start(String, String)
   @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCConnection start(String, String, net.corda.core.context.Trace, net.corda.core.context.Actor)
   public final Object use(String, String, kotlin.jvm.functions.Function1)
+  public static final net.corda.client.rpc.CordaRPCClient$Companion Companion
+##
+public static final class net.corda.client.rpc.CordaRPCClient$Companion extends java.lang.Object
 ##
 public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.Object
   public <init>(java.time.Duration)

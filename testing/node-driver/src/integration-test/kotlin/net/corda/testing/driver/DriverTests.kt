@@ -69,7 +69,7 @@ class DriverTests {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
+        val nodeHandle = driver(DriverParameters(portAllocation = PortAllocation.RandomFree)) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -81,7 +81,7 @@ class DriverTests {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
+        driver(DriverParameters(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
@@ -91,7 +91,7 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(jmxPolicy = JmxPolicy(true)) {
+        driver(DriverParameters(jmxPolicy = JmxPolicy(true))) {
             // start another node so we gain access to node JMX metrics
             startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             val webAddress = NetworkHostAndPort("localhost", 7006)

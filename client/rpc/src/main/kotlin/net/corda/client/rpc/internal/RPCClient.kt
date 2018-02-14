@@ -1,5 +1,7 @@
 package net.corda.client.rpc.internal
 
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
 import net.corda.core.context.Actor
