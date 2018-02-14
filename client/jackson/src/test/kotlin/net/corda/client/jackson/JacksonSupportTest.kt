@@ -7,9 +7,11 @@ import net.corda.core.contracts.Amount
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.USD
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -44,6 +46,7 @@ class JacksonSupportTest {
         services = rigorousMock()
         cordappProvider = rigorousMock()
         doReturn(cordappProvider).whenever(services).cordappProvider
+        GlobalProperties.networkParameters = testNetworkParameters(emptyList())
     }
 
     @Test

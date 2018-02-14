@@ -16,7 +16,7 @@ import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.node.User
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO

@@ -2,7 +2,9 @@ package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.serialization.*
+import net.corda.testing.common.internal.ParametersUtilities
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
@@ -24,7 +26,10 @@ class ContractAttachmentSerializerTest {
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
     private lateinit var contextWithToken: SerializationContext
-    private val mockServices = MockServices(emptyList(), CordaX500Name("MegaCorp", "London", "GB"), rigorousMock())
+    private val mockServices by lazy {
+        GlobalProperties.networkParameters = ParametersUtilities.testNetworkParameters(emptyList())
+        MockServices(emptyList(), CordaX500Name("MegaCorp", "London", "GB"), rigorousMock())
+    }
 
     @Before
     fun setup() {
@@ -42,6 +47,7 @@ class ContractAttachmentSerializerTest {
 
         assertEquals(contractAttachment.id, deserialized.attachment.id)
         assertEquals(contractAttachment.contract, deserialized.contract)
+        assertEquals(contractAttachment.additionalContracts, deserialized.additionalContracts)
         assertArrayEquals(contractAttachment.open().readBytes(), deserialized.open().readBytes())
     }
 
@@ -57,6 +63,7 @@ class ContractAttachmentSerializerTest {
 
         assertEquals(contractAttachment.id, deserialized.attachment.id)
         assertEquals(contractAttachment.contract, deserialized.contract)
+        assertEquals(contractAttachment.additionalContracts, deserialized.additionalContracts)
         assertArrayEquals(contractAttachment.open().readBytes(), deserialized.open().readBytes())
     }
 

@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -14,6 +15,7 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.STATE
+import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
@@ -108,8 +110,11 @@ class CommercialPaperTestsGeneric {
     val testSerialization = SerializationEnvironmentRule()
 
     private val megaCorpRef = megaCorp.ref(123)
-    private val ledgerServices = MockServices(megaCorp, miniCorp)
-
+    private val ledgerServices: MockServices by lazy {
+        GlobalProperties.networkParameters = testNetworkParameters(emptyList())
+        MockServices(megaCorp, miniCorp)
+    }
+    
     @Test
     fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` megaCorpRef

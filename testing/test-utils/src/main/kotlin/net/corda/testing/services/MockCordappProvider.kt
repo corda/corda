@@ -26,20 +26,20 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
                 customSchemas = emptySet(),
                 jarPath = Paths.get(".").toUri().toURL())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
-            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(contractClassName.toByteArray(), attachments)))
+            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName) , contractClassName.toByteArray(), attachments)))
         }
     }
 
     override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
 
-    private fun findOrImportAttachment(data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
+    private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {
-            Arrays.equals(it.value, data)
+            Arrays.equals(it.value.second, data)
         }
         return if (!existingAttachment.isEmpty()) {
             existingAttachment.keys.first()
         } else {
-            attachments.importAttachment(data.inputStream())
+            attachments.importContractAttachment(contractClassNames, data.inputStream())
         }
     }
 }
