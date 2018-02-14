@@ -268,6 +268,8 @@ class MultiThreadedStateMachineManager(
         }
     }
 
+    private val stateMachineConfiguration = serviceHub.configuration.enterpriseConfiguration.tuning.stateMachine
+
     private fun checkQuasarJavaAgentPresence() {
         check(SuspendableHelper.isJavaAgentActive(), {
             """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
@@ -488,12 +490,12 @@ class MultiThreadedStateMachineManager(
 
     private fun createTransientValues(id: StateMachineRunId, resultFuture: CordaFuture<Any?>): FlowStateMachineImpl.TransientValues {
         return FlowStateMachineImpl.TransientValues(
-                eventQueue = Channels.newChannel(16, Channels.OverflowPolicy.BLOCK),
+                eventQueue = Channels.newChannel(stateMachineConfiguration.eventQueueSize, Channels.OverflowPolicy.BLOCK),
                 resultFuture = resultFuture,
                 database = database,
                 transitionExecutor = transitionExecutor,
                 actionExecutor = actionExecutor!!,
-                stateMachine = StateMachine(id, StateMachineConfiguration.default, secureRandom),
+                stateMachine = StateMachine(id, stateMachineConfiguration, secureRandom),
                 serviceHub = serviceHub,
                 checkpointSerializationContext = checkpointSerializationContext!!
         )
