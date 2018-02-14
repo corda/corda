@@ -157,7 +157,7 @@ open class Node(configuration: NodeConfiguration,
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
-        val advertisedAddress = info.addresses.single()
+        val advertisedAddress = info.addresses[0]
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
