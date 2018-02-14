@@ -43,10 +43,10 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
 
-def rpcUsersList = def defaultUsers = users {
-     user {
-          password = "password"
-          permissions = [
+def rpcUsersList = [
+        ['username' : "user",
+         'password' : "password",
+         'permissions' : [
                  "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
                  "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
                  "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
@@ -54,9 +54,8 @@ def rpcUsersList = def defaultUsers = users {
                  "InvokeRpc.networkMapSnapshot",
                  "InvokeRpc.currentNodeTime",
                  "InvokeRpc.wellKnownPartyFromX500Name"
-          ]
-      }
-}
+         ]]
+]
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 
@@ -68,7 +67,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10003
             adminPort 10023
         }
-        cordapps = ["${project.group}:finance:$corda_release_version"]
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
     }
@@ -79,7 +78,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10006
             adminPort 10026
         }
-        cordapps = ["${project.group}:finance:$corda_release_version"]
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
     }
@@ -102,6 +101,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminPort 10029
         }
         cordapps = ["${project.group}:finance:$corda_release_version"]
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
     }
