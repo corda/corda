@@ -97,12 +97,7 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
             h2Port   10008
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Grants user1 all RPC permissions.
-            rpcUsers = users {
-                "user1" {
-                    password = "test"
-                    permissions = ["ALL"]
-                }
-            }
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
         node {
             name "O=PartyB,L=New York,C=US"
@@ -112,12 +107,7 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
             h2Port   10012
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Grants user1 the ability to start the MyFlow flow.
-            rpcUsers = users {
-               "user1" {
-                   password = "test"
-                   permissions = ["StartFlow.net.corda.flows.MyFlow"]
-               }
-            }
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
         }
     }
 
