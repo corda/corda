@@ -28,22 +28,12 @@ object ConfigHelper {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
-
-        // Inject overrides from system properties
-        val overridesFromProperties = System.getProperties().mapNotNull {
-            val (key, value) = it
-            if (key is String && key.startsWith("corda.config.")) {
-                Pair(key.drop("corda.config.".length), value)
-            } else null
-        }.toMap()
-
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to baseDirectory.toString())
                 .withFallback(configOverrides)
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
-                .withFallback(ConfigFactory.parseMap(overridesFromProperties))
                 .resolve()
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
         return finalConfig
