@@ -16,6 +16,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
@@ -206,7 +207,7 @@ open class MockServices private constructor(
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo
         get() {
-            return NodeInfo(emptyList(), listOf(initialIdentity.identity), 1, serial = 1L)
+            return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments)

@@ -157,7 +157,7 @@ open class Node(configuration: NodeConfiguration,
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
-        val advertisedAddress = info.addresses.single()
+        val advertisedAddress = info.addresses[0]
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
@@ -192,9 +192,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
                 return rpcBroker!!.addresses

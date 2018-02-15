@@ -39,6 +39,7 @@
       <module name="cordformation_main" target="1.8" />
       <module name="cordformation_runnodes" target="1.8" />
       <module name="cordformation_test" target="1.8" />
+      <module name="core_extraResource" target="1.8" />
       <module name="core_integrationTest" target="1.8" />
       <module name="core_main" target="1.8" />
       <module name="core_smokeTest" target="1.8" />
