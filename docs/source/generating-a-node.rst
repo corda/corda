@@ -71,6 +71,9 @@ The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
 nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined in the
+
+!! Check/change the link when the branch will be there!
+
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V2/build.gradle#L97>`_:
 
 .. sourcecode:: groovy
@@ -83,7 +86,10 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
             // The notary will offer a validating notary service.
             notary = [validating : true]
             p2pPort  10002
-            rpcPort  10003
+            rpcSettings {
+                port 10003
+                adminPort 10023
+            }
             // No webport property, so no webserver will be created.
             h2Port   10004
             // Includes the corda-finance CorDapp on our node.
@@ -92,7 +98,10 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         node {
             name "O=PartyA,L=London,C=GB"
             p2pPort  10005
-            rpcPort  10006
+            rpcSettings {
+                port 10006
+                adminPort 10026
+            }
             webPort  10007
             h2Port   10008
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
@@ -102,7 +111,10 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         node {
             name "O=PartyB,L=New York,C=US"
             p2pPort  10009
-            rpcPort  10010
+            rpcSettings {
+                port 10010
+                adminPort 10030
+            }
             webPort  10011
             h2Port   10012
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
@@ -136,6 +148,73 @@ You can extend ``deployNodes`` to generate additional nodes. The only requiremen
 a single node to run the network map service, by putting its name in the ``networkMap`` field.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
+
+The Dockerform task
+-------------------
+
+The ```Dockerform``` is a sister task of ```Cordform```. It operates on nearly the same syntax and produces very
+similar results - enhanced by extra file to enable easy spin up of nodes using ```docker-compose```.
+Below you can find the example task from ```IRS Demo<https://github.com/corda/corda/blob/master/samples/irs-demo/cordapp/build.gradle#L111>```
+included in samples directory of main Corda GitHub repository:
+
+!! Check above link too!!
+
+.. sourcecode:: groovy
+
+    def rpcUsersList = [
+        ['username' : "user",
+         'password' : "password",
+         'permissions' : [
+                 "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
+                 "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
+                 "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
+                 "InvokeRpc.vaultQueryBy",
+                 "InvokeRpc.networkMapSnapshot",
+                 "InvokeRpc.currentNodeTime",
+                 "InvokeRpc.wellKnownPartyFromX500Name"
+         ]]
+    ]
+
+    // (...)
+
+    task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
+
+        node {
+            name "O=Notary Service,L=Zurich,C=CH"
+            notary = [validating : true]
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Bank A,L=London,C=GB"
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Bank B,L=New York,C=US"
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Regulator,L=Moscow,C=RU"
+            cordapps = ["${project.group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+    }
+
+There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur.
+Running the task will create the same folders structure as described in :ref:`The Cordform task` with additional
+```Dockerfile`` in each node directory, and ```docker-compose.yml``` in ```build/nodes``` directory. Every node
+by default exposes port 10003 which is the default one for RPC connection.
+
+.. warning:: Webserver is not supported by this task!
+
+.. warning:: Nodes are run without the local shell enabled!
+
 
 Running deployNodes
 -------------------
