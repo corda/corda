@@ -31,8 +31,10 @@ class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: Se
         private val stateRefComparator = compareBy<StateRef>({ it.txhash }, { it.index })
     }
 
+    private val states = statesToConsume.sortedWith(stateRefComparator)
+
     /** States this request specifies to be consumed. Sorted to ensure the serialized form does not get affected by the state order. */
-    val states = statesToConsume.sortedWith(stateRefComparator)
+    fun getStatesToConsume() = states // Getter required for AMQP serialization
 
     /** Verifies the signature against this notarisation request. Checks that the signature is issued by the right party. */
     fun verifySignature(requestSignature: NotarisationRequestSignature, intendedSigner: Party) {
