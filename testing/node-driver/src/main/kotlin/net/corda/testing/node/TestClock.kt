@@ -1,7 +1,7 @@
 package net.corda.testing.node
 
 import net.corda.core.internal.until
-import net.corda.node.internal.MutableClock
+import net.corda.node.MutableClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

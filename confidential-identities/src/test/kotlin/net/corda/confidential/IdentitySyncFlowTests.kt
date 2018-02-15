@@ -19,6 +19,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -28,12 +29,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class IdentitySyncFlowTests {
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
 
     @Before
     fun before() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(
+        mockNet = InternalMockNetwork(
                 networkSendManuallyPumped = false,
                 threadPerNode = true,
                 cordappPackages = listOf("net.corda.finance.contracts.asset")
@@ -58,12 +59,12 @@ class IdentitySyncFlowTests {
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary))
-        val issueTx = issueFlow.resultFuture.getOrThrow().stx
+        val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 
         // Run the flow to sync up the identities
-        aliceNode.services.startFlow(Initiator(bob, issueTx.tx)).resultFuture.getOrThrow()
+        aliceNode.services.startFlow(Initiator(bob, issueTx.tx)).getOrThrow()
         val expected = aliceNode.database.transaction {
             aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity)
         }
@@ -88,7 +89,7 @@ class IdentitySyncFlowTests {
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = charlieNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, charlie, anonymous, notary))
-        val issueTx = issueFlow.resultFuture.getOrThrow().stx
+        val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         val confidentialIdentCert = charlieNode.services.identityService.certificateFromKey(confidentialIdentity.owningKey)!!
 
@@ -97,11 +98,11 @@ class IdentitySyncFlowTests {
         assertNotNull(aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 
         // Generate a payment from Charlie to Alice, including the confidential state
-        val payTx = charlieNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).resultFuture.getOrThrow().stx
+        val payTx = charlieNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).getOrThrow().stx
 
         // Run the flow to sync up the identities, and confirm Charlie's confidential identity doesn't leak
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
-        aliceNode.services.startFlow(Initiator(bob, payTx.tx)).resultFuture.getOrThrow()
+        aliceNode.services.startFlow(Initiator(bob, payTx.tx)).getOrThrow()
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
     }
 

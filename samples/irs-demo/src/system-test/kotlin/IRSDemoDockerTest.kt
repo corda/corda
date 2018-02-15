@@ -72,9 +72,15 @@ class IRSDemoDockerTest {
 
         //Wait for deals to appear in a rows table
         val dealsList = driverWait.until<WebElement>({
+            makeScreenshot(driver, "second")
             it?.findElement(By.cssSelector("table#deal-list tbody tr"))
         })
 
         assertNotNull(dealsList)
+    }
+
+    private fun makeScreenshot(driver: PhantomJSDriver, name: String) {
+        val screenshotAs = driver.getScreenshotAs(OutputType.FILE)
+        Files.copy(screenshotAs.toPath(), Paths.get("/Users", "maksymilianpawlak", "phantomjs", name + System.currentTimeMillis() + ".png"), StandardCopyOption.REPLACE_EXISTING)
     }
 }

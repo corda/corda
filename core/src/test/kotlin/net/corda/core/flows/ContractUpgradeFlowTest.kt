@@ -19,17 +19,14 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.node.User
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
-import net.corda.testing.node.internal.RPCDriverDSL
-import net.corda.testing.node.internal.rpcDriver
-import net.corda.testing.node.internal.rpcTestUser
-import net.corda.testing.node.internal.startRpcClient
-import net.corda.testing.node.MockNetwork
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.User
+import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -40,16 +37,16 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ContractUpgradeFlowTest {
-    private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var bobNode: StartedNode<MockNode>
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         notary = mockNet.defaultNotaryIdentity
@@ -81,29 +78,29 @@ class ContractUpgradeFlowTest {
         requireNotNull(btx)
 
         // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
-        val rejectedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx!!.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val rejectedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx!!.tx.outRef(0), DummyContractV2::class.java))
         mockNet.runNetwork()
         assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade, and immediately deauthorise the same.
-        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)).resultFuture.getOrThrow()
-        bobNode.services.startFlow(ContractUpgradeFlow.Deauthorise(btx.tx.outRef<ContractState>(0).ref)).resultFuture.getOrThrow()
+        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)).getOrThrow()
+        bobNode.services.startFlow(ContractUpgradeFlow.Deauthorise(btx.tx.outRef<ContractState>(0).ref)).getOrThrow()
 
         // The request is expected to be rejected because party B has subsequently deauthorised and a previously authorised upgrade.
-        val deauthorisedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val deauthorisedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java))
         mockNet.runNetwork()
         assertFailsWith(UnexpectedFlowEndException::class) { deauthorisedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade
-        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx.tx.outRef<ContractState>(0), DummyContractV2::class.java)).resultFuture.getOrThrow()
+        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx.tx.outRef<ContractState>(0), DummyContractV2::class.java)).getOrThrow()
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
-        val resultFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val resultFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java))
         mockNet.runNetwork()
 
         val result = resultFuture.getOrThrow()
 
-        fun check(node: StartedNode<*>) {
+        fun check(node: StartedNode<MockNode>) {
             val nodeStx = node.database.transaction {
                 node.services.validatedTransactions.getTransaction(result.ref.txhash)
             }
@@ -123,7 +120,7 @@ class ContractUpgradeFlowTest {
         check(bobNode)
     }
 
-    private fun RPCDriverDSL.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: StartedNode<MockNode>, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
@@ -213,7 +210,7 @@ class ContractUpgradeFlowTest {
     fun `upgrade Cash to v2`() {
         // Create some cash.
         val chosenIdentity = alice
-        val result = aliceNode.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
+        val result = aliceNode.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary))
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
         val anonymisedRecipient = result.get().recipient!!
@@ -221,7 +218,7 @@ class ContractUpgradeFlowTest {
         val baseState = aliceNode.database.transaction { aliceNode.services.vaultService.queryBy<ContractState>().states.single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
         // Starts contract upgrade flow.
-        val upgradeResult = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(stateAndRef, CashV2::class.java)).resultFuture
+        val upgradeResult = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(stateAndRef, CashV2::class.java))
         mockNet.runNetwork()
         upgradeResult.getOrThrow()
         // Get contract state from the vault.

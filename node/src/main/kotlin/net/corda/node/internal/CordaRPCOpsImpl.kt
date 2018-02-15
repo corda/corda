@@ -13,12 +13,14 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -26,6 +28,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import rx.Observable
 import java.io.InputStream
@@ -46,6 +49,18 @@ internal class CordaRPCOpsImpl(
         val (snapshot, updates) = networkMapFeed()
         updates.notUsed()
         return snapshot
+    }
+
+    override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
+        return services.networkMapUpdater.track()
+    }
+
+    override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
+        services.networkMapUpdater.acceptNewNetworkParameters(
+                parametersHash,
+                // TODO When multiple identities design will be better specified this should be signature from node operator.
+                { hash -> hash.serialize().sign { services.keyManagementService.sign(it.bytes, services.myInfo.legalIdentities[0].owningKey) } }
+        )
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
@@ -151,6 +166,9 @@ internal class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
+        if (isFlowsDrainingModeEnabled()) {
+            throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
+        }
         return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
     }
 
@@ -270,6 +288,14 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
+        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
+    }
+
+    override fun isFlowsDrainingModeEnabled(): Boolean {
+        return services.nodeProperties.flowsDrainingMode.isEnabled()
+    }
+
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
         return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
     }
@@ -288,7 +314,7 @@ internal class CordaRPCOpsImpl(
             is InvocationOrigin.RPC -> FlowInitiator.RPC(principal)
             is InvocationOrigin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as InvocationOrigin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as InvocationOrigin.Peer).party}.")
             is InvocationOrigin.Service -> FlowInitiator.Service(principal)
-            is InvocationOrigin.Shell -> FlowInitiator.Shell
+            InvocationOrigin.Shell -> FlowInitiator.Shell
             is InvocationOrigin.Scheduled -> FlowInitiator.Scheduled((origin as InvocationOrigin.Scheduled).scheduledState)
         }
     }

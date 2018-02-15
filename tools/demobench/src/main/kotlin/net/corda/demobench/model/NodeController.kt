@@ -10,9 +10,9 @@ import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
-import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.nodeapi.internal.network.NotaryInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import tornadofx.*
 import java.io.IOException
@@ -143,7 +143,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
-                maxTransactionSize = 40000,
+                maxTransactionSize = Int.MAX_VALUE,
                 epoch = 1
         ))
         notaryIdentity = identity

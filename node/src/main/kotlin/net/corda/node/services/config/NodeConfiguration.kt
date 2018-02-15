@@ -16,6 +16,7 @@ import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
+import java.time.Duration
 import java.util.*
 
 
@@ -49,6 +50,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
+    // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
+    val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
 
     fun validate(): List<String>
 

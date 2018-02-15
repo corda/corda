@@ -2,19 +2,20 @@
 
 package net.corda.testing.node
 
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.chooseIdentity
@@ -35,6 +36,7 @@ fun ServiceHub.ledger(
         false
     }
     return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply {
+        GlobalProperties.networkParameters = testNetworkParameters(emptyList())
         if (serializationExists) {
             script()
         } else {
@@ -61,12 +63,12 @@ fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company I
 fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext.rpc(testActor(owningLegalIdentity))
 
 /**
- * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]
- * has origin [InvocationOrigin.RPC] and actor with id "Only For Testing".
- */
-fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
-
-/**
  * Creates a new [InvocationContext] for testing purposes.
  */
 fun StartedNodeServices.newContext() = testContext(myInfo.chooseIdentity().name)
+
+/**
+ * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]
+ * has origin [Origin.RPC] and actor with id "Only For Testing".
+ */
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): CordaFuture<T> = startFlow(logic, newContext()).getOrThrow().resultFuture

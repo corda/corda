@@ -7,9 +7,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Assert
@@ -19,8 +19,8 @@ import java.util.*
 
 class CustomVaultQueryTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeA: StartedMockNode
+    private lateinit var nodeB: StartedMockNode
     private lateinit var notary: Party
 
     @Before
@@ -60,7 +60,7 @@ class CustomVaultQueryTest {
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for the flow to stop and print
-        flowHandle1.resultFuture.getOrThrow()
+        flowHandle1.getOrThrow()
     }
 
     private fun topUpCurrencies() {
@@ -69,21 +69,19 @@ class CustomVaultQueryTest {
                 OpaqueBytes.of(0x01),
                 nodeA.info.chooseIdentity(),
                 notary))
-        flowHandle1.resultFuture.getOrThrow()
+        flowHandle1.getOrThrow()
     }
 
     private fun getBalances(): Pair<Map<Currency, Amount<Currency>>, Map<Currency, Amount<Currency>>> {
         // Print out the balances
-        val balancesNodesA =
-            nodeA.database.transaction {
-                nodeA.services.getCashBalances()
-            }
+        val balancesNodesA = nodeA.transaction {
+            nodeA.services.getCashBalances()
+        }
         println("BalanceA\n" + balancesNodesA)
 
-        val balancesNodesB =
-            nodeB.database.transaction {
-                nodeB.services.getCashBalances()
-            }
+        val balancesNodesB = nodeB.transaction {
+            nodeB.services.getCashBalances()
+        }
         println("BalanceB\n" + balancesNodesB)
 
         return Pair(balancesNodesA, balancesNodesB)

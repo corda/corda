@@ -46,8 +46,8 @@ class TransactionGraphSearchTests {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData): GraphTransactionStorage {
-        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), megaCorp)
-        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), dummyNotary)
+        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), megaCorp, rigorousMock())
+        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), dummyNotary, rigorousMock())
         val originBuilder = TransactionBuilder(dummyNotary.party)
                 .addOutputState(DummyState(random31BitValue()), DummyContract.PROGRAM_ID)
                 .addCommand(command, megaCorp.publicKey)

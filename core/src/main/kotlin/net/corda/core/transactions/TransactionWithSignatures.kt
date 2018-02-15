@@ -11,7 +11,7 @@ import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 
-/** An interface for transactions containing signatures, with logic for signature verification */
+/** An interface for transactions containing signatures, with logic for signature verification. */
 @DoNotImplement
 interface TransactionWithSignatures : NamedByHash {
     /**
@@ -21,7 +21,7 @@ interface TransactionWithSignatures : NamedByHash {
      */
     val sigs: List<TransactionSignature>
 
-    /** Specifies all the public keys that require signatures for the transaction to be valid */
+    /** Specifies all the public keys that require signatures for the transaction to be valid. */
     val requiredSigningKeys: Set<PublicKey>
 
     /**
@@ -65,11 +65,10 @@ interface TransactionWithSignatures : NamedByHash {
      */
     @Throws(SignatureException::class)
     fun verifySignaturesExcept(allowedToBeMissing: Collection<PublicKey>) {
-        checkSignaturesAreValid()
-
         val needed = getMissingSigners() - allowedToBeMissing
         if (needed.isNotEmpty())
             throw SignaturesMissingException(needed.toNonEmptySet(), getKeyDescriptions(needed), id)
+        checkSignaturesAreValid()
     }
 
     /**

@@ -14,7 +14,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import java.nio.file.Paths
 
-fun main(args: Array<String>) = BFTNotaryCordform().deployNodes()
+fun main(args: Array<String>) = BFTNotaryCordform().nodeRunner().deployAndRunNodes()
 
 private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)

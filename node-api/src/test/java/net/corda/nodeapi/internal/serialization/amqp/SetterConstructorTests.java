@@ -110,10 +110,12 @@ public class SetterConstructorTests {
     @Test
     public void serialiseC() throws NotSerializableException {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
 
         SerializationOutput ser = new SerializationOutput(factory1);
 
@@ -184,10 +186,12 @@ public class SetterConstructorTests {
     @Test
     public void deserialiseC() throws NotSerializableException {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
 
         C cPre1 = new C();
 
@@ -251,10 +255,12 @@ public class SetterConstructorTests {
     @Test
     public void serialiseOuterAndInner() throws NotSerializableException {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
 
         Inner1 i1 = new Inner1("Hello");
         Inner2 i2 = new Inner2();
@@ -277,10 +283,12 @@ public class SetterConstructorTests {
     @Test
     public void typeMistmatch() throws NotSerializableException {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
 
         TypeMismatch tm = new TypeMismatch();
         tm.setA(10);
@@ -293,10 +301,12 @@ public class SetterConstructorTests {
     @Test
     public void typeMistmatch2() throws NotSerializableException {
         EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                evolutionSerialiserGetter,
+                fingerPrinter);
 
         TypeMismatch2 tm = new TypeMismatch2();
         tm.setA("10");

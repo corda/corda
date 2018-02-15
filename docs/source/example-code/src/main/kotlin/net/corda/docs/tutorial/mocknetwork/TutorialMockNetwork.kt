@@ -10,16 +10,13 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.Message
-import net.corda.node.services.statemachine.SessionData
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MessagingServiceSpy
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.setMessagingServiceSpy
-import net.corda.testing.node.startFlow
+import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.testing.node.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -56,8 +53,8 @@ class TutorialMockNetwork {
     }
 
     lateinit private var mockNet: MockNetwork
-    lateinit private var nodeA: StartedNode<MockNetwork.MockNode>
-    lateinit private var nodeB: StartedNode<MockNetwork.MockNode>
+    lateinit private var nodeA: StartedMockNode
+    lateinit private var nodeB: StartedMockNode
 
     @Rule
     @JvmField
@@ -82,13 +79,13 @@ class TutorialMockNetwork {
         // DOCSTART 1
         // modify message if it's 1
         nodeB.setMessagingServiceSpy(object : MessagingServiceSpy(nodeB.network) {
+            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+                val messageData = message.data.deserialize<Any>() as? ExistingSessionMessage
+                val payload = messageData?.payload
 
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
-                val messageData = message.data.deserialize<Any>()
-
-                if (messageData is SessionData && messageData.payload.deserialize() == 1) {
-                    val alteredMessageData = SessionData(messageData.recipientSessionId, 99.serialize()).serialize().bytes
-                    messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topicSession, alteredMessageData, message.uniqueMessageId), target, retryId)
+                if (payload is DataSessionMessage && payload.payload.deserialize() == 1) {
+                    val alteredMessageData = messageData.copy(payload = payload.copy(99.serialize())).serialize().bytes
+                    messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData), message.uniqueMessageId), target, retryId)
                 } else {
                     messagingService.send(message, target, retryId)
                 }
@@ -102,6 +99,6 @@ class TutorialMockNetwork {
 
         expectedEx.expect(IllegalArgumentException::class.java)
         expectedEx.expectMessage("Expected to receive 1")
-        initiatingReceiveFlow.resultFuture.getOrThrow()
+        initiatingReceiveFlow.getOrThrow()
     }
 }

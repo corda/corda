@@ -7,9 +7,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -18,8 +18,8 @@ import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeA: StartedMockNode
+    private lateinit var nodeB: StartedMockNode
     private lateinit var notary: Party
 
     @Before
@@ -43,7 +43,7 @@ class FxTransactionBuildTutorialTest {
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for the flow to stop and print
-        flowHandle1.resultFuture.getOrThrow()
+        flowHandle1.getOrThrow()
         printBalances()
 
         // Using NodeB as Issuer create some pounds.
@@ -51,7 +51,7 @@ class FxTransactionBuildTutorialTest {
                 OpaqueBytes.of(0x01),
                 notary))
         // Wait for flow to come to an end and print
-        flowHandle2.resultFuture.getOrThrow()
+        flowHandle2.getOrThrow()
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
@@ -65,16 +65,17 @@ class FxTransactionBuildTutorialTest {
                 nodeB.info.chooseIdentity(),
                 weAreBaseCurrencySeller = false))
         // wait for the flow to finish and the vault updates to be done
-        doIt.resultFuture.getOrThrow()
+        doIt.getOrThrow()
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
-        val balancesA = nodeA.database.transaction {
+        val balancesA = nodeA.transaction {
             nodeA.services.getCashBalances()
         }
         nodeBVaultUpdate.get()
-        val balancesB = nodeB.database.transaction {
+        val balancesB = nodeB.transaction {
             nodeB.services.getCashBalances()
         }
+
         println("BalanceA\n" + balancesA)
         println("BalanceB\n" + balancesB)
         // Verify the transfers occurred as expected
@@ -86,10 +87,10 @@ class FxTransactionBuildTutorialTest {
 
     private fun printBalances() {
         // Print out the balances
-        nodeA.database.transaction {
+        nodeA.transaction {
             println("BalanceA\n" + nodeA.services.getCashBalances())
         }
-        nodeB.database.transaction {
+        nodeB.transaction {
             println("BalanceB\n" + nodeB.services.getCashBalances())
         }
     }

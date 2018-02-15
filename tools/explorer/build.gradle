@@ -50,7 +50,6 @@ dependencies {
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile 'org.controlsfx:controlsfx:8.40.12'
-    compile 'commons-lang:commons-lang:2.6'
     // This provide com.apple.eawt stub for non-mac system.
     compile 'com.yuvimasory:orange-extensions:1.3.0'
 }

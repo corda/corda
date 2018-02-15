@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
+import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
@@ -29,14 +30,15 @@ class LedgerTransactionQueryTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val keyPair = generateKeyPair()
-    private val services = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
-        doReturn(null).whenever(it).partyFromKey(keyPair.public)
-    }, CordaX500Name("MegaCorp", "London", "GB"), keyPair)
+    private val services = MockServices(emptyList(), CordaX500Name("MegaCorp", "London", "GB"),
+            rigorousMock<IdentityServiceInternal>().also {
+                doReturn(null).whenever(it).partyFromKey(keyPair.public)
+            }, keyPair)
     private val identity: Party = services.myInfo.singleIdentity()
 
     @Before
     fun setup() {
-        services.mockCordappProvider.addMockCordapp(DummyContract.PROGRAM_ID, services.attachments)
+        services.addMockCordapp(DummyContract.PROGRAM_ID)
     }
 
     interface Commands {

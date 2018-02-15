@@ -1,5 +1,6 @@
 package net.corda.bank
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
@@ -15,6 +16,7 @@ import net.corda.testing.core.BOC_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Test
@@ -27,7 +29,7 @@ class BankOfCordaRPCClientTest {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities)
         )
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true)) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)
@@ -37,11 +39,11 @@ class BankOfCordaRPCClientTest {
             ).map { it.getOrThrow() }
 
             // Bank of Corda RPC Client
-            val bocClient = nodeBankOfCorda.rpcClientToNode()
+            val bocClient = CordaRPCClient(nodeBankOfCorda.rpcAddress)
             val bocProxy = bocClient.start("bocManager", "password1").proxy
 
             // Big Corporation RPC Client
-            val bigCorpClient = nodeBigCorporation.rpcClientToNode()
+            val bigCorpClient = CordaRPCClient(nodeBigCorporation.rpcAddress)
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
 
             // Register for Bank of Corda Vault updates
