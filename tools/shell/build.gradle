@@ -1,6 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: 'java'
-
+apply plugin: 'application'
 
 description 'Corda Shell'
 
@@ -74,6 +74,8 @@ dependencies {
     integrationTestCompile project(':node-driver')
 }
 
+mainClassName = 'net.corda.shell.RemoteShellKt'
+
 jar {
     baseName 'corda-shell'
 }
@@ -85,23 +87,4 @@ processResources {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task customFatJar(type: Jar) {
-    manifest {
-        attributes 'Main-Class': 'net.corda.shell.TestAppKt'
-        attributes('Corda-Release-Version': corda_release_version)
-        attributes('Corda-Platform-Version': corda_platform_version)
-        attributes('Corda-Revision': corda_revision)
-        attributes('Corda-Vendor': 'Corda Open Source')
-        //attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
-    }
-    baseName = 'all-in-one-jar'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-            {
-                exclude "META-INF/*.SF"
-                exclude "META-INF/*.DSA"
-                exclude "META-INF/*.RSA"
-            }
-    with jar
 }

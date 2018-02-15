@@ -139,9 +139,6 @@ object InteractiveShell {
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
-            // Give whoever has local shell access administrator access to the node.
-            //val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"))
-            //CURRENT_RPC_CONTEXT.set(context) //TODO
             Emoji.renderIfSupported {
                 jlineProcessor.run()
             }
@@ -153,10 +150,6 @@ object InteractiveShell {
             terminal.restore()
             onExit.invoke()
         }
-    }
-
-    fun connect() {
-        println("Connected to " + connection.nodeInfo().addresses)
     }
 
     class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
@@ -232,7 +225,12 @@ object InteractiveShell {
      */
     @JvmStatic
     fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, om: ObjectMapper) {
-        val matches = rpcOps.registeredFlows().filter { nameFragment in it }
+        val matches = try {
+            rpcOps.registeredFlows().filter { nameFragment in it }
+        } catch (e: PermissionException) {
+            output.println(e.message ?: "Access denied", Color.red)
+            return
+        }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return

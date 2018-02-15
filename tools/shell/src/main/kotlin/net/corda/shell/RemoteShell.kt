@@ -28,7 +28,7 @@ private fun getCordappsInDirectory(cordappsDir: Path): List<URL> {
 
 fun main(args: Array<String>) {
 
-    val argsParser = ArgsParser()
+    val argsParser = RemoteShellArgsParser()
     val cmdlineOptions = try {
         argsParser.parse(*args)
     } catch (ex: OptionException) {
@@ -42,10 +42,10 @@ fun main(args: Array<String>) {
         return
     }
 
-    Tests(cmdlineOptions).run()
+    RemoteShell(cmdlineOptions).run()
 }
 
-class Tests(private val cmdlineOptions: CmdLineOptions) {
+class RemoteShell(private val cmdlineOptions: CmdLineOptions) {
 
     @Throws(IOException::class)
     private fun readLine(format: String, vararg args: Any): String {
@@ -71,21 +71,10 @@ class Tests(private val cmdlineOptions: CmdLineOptions) {
 
     fun run() {
         val configuration = cmdlineOptions.toConfig()
-        AnsiConsole.systemInstall()
-        println(Ansi.ansi().fgBrightRed().a(
-                """   ______               __""").newline().a(
-                """  / ____/     _________/ /___ _""").newline().a(
-                """ / /     __  / ___/ __  / __ `/         """).newline().fgBrightRed().a(
-                """/ /___  /_/ / /  / /_/ / /_/ /          """).newline().fgBrightRed().a(
-                """\____/     /_/   \__,_/\__,_/""").reset().newline().fgBrightDefault().bold().
-                a("--- ${getManifestEntry("Corda-Vendor")} ${getManifestEntry("Corda-Release-Version")} (${getManifestEntry("Corda-Revision").take(7)}) ---").
-                newline().
-                reset())
         val runLocalShell = !configuration.noLocalShell
         val password: String? = if (runLocalShell) {
                     login()
                 } else {
-                    println("Running in non local access - connect via SSH")
                     null
                 }
 
@@ -100,21 +89,26 @@ class Tests(private val cmdlineOptions: CmdLineOptions) {
                     client.start(username ?: "", credentials?: "").proxy
                 }, classLoader, cmdlineOptions.user, password)
 
-        if (configuration.sshd != null) {
-            println("SSH server listening on port " + configuration.sshd!!.toString())
-        }
 
         if (runLocalShell) {
-            try {
-                InteractiveShell.connect()
-            } catch(e: Exception) {
-                println("Cannot login, reason ${e.cause?.message ?: e.message}")
-                return
-            }
+            AnsiConsole.systemInstall()
+            println(Ansi.ansi().fgBrightRed().a(
+                    """   ______               __""").newline().a(
+                    """  / ____/     _________/ /___ _""").newline().a(
+                    """ / /     __  / ___/ __  / __ `/ """).newline().fgBrightRed().a(
+                    """/ /___  /_/ / /  / /_/ / /_/ /""").newline().fgBrightRed().a(
+                    """\____/     /_/   \__,_/\__,_/""").reset().fgBrightDefault().bold()
+                    .newline().a("--- ${getManifestEntry("Corda-Vendor")} ${getManifestEntry("Corda-Release-Version")} (${getManifestEntry("Corda-Revision").take(7)}) ---")
+                    .newline()
+                    .newline().a("Remote Shell to ${configuration.hostAndPort}")
+                    .reset().newline().a("Shell connects to a node upon the first remote command."))
             InteractiveShell.runLocalShell {
                 exit.countDown()
             }
         }
+
+        configuration.sshd?.apply{ println("SSH server listening on port $this.") }
+
         exit.await()
         exitProcess(0)
     }
