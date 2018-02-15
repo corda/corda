@@ -46,7 +46,7 @@ class AbstractNodeTests {
         val runs = if (relaxedThoroughness) 1 else 100
         (0 until runs).map {
             // Two "nodes" seems to be the magic number to reproduce the problem:
-            val urls = (0 until 2).map { freshURL() }
+            val urls = (0 until 4).map { freshURL() }
             // Haven't been able to reproduce in a warm JVM:
             pool.fork {
                 assertEquals(0, startJavaProcess<ColdJVM>(urls).waitFor())
