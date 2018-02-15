@@ -9,6 +9,8 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.internal.NodeBasedTest
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -32,6 +34,45 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             infos.add(it.info)
             addressesMap[it.info.chooseIdentity().name] = it.info.addresses[0]
             it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
+        }
+    }
+
+    @Test
+    fun `unknown legal name`() {
+        val alice = startNodesWithPort(listOf(ALICE))[0]
+        val netMapCache = alice.services.networkMapCache
+        alice.database.transaction {
+            assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).isEmpty()
+            assertThat(netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME)).isNull()
+            assertThat(netMapCache.getPeerByLegalName(DUMMY_NOTARY_NAME)).isNull()
+            assertThat(netMapCache.getPeerCertificateByLegalName(DUMMY_NOTARY_NAME)).isNull()
+        }
+    }
+
+    @Test
+    fun `nodes in distributed service`() {
+        val alice = startNodesWithPort(listOf(ALICE))[0]
+        val netMapCache = alice.services.networkMapCache
+
+        val distServiceNodeInfos = alice.database.transaction {
+            val distributedIdentity = TestIdentity(DUMMY_NOTARY_NAME).identity
+            (1..2).map {
+                val nodeInfo = NodeInfo(
+                        addresses = listOf(NetworkHostAndPort("localhost", 1000 + it)),
+                        legalIdentitiesAndCerts = listOf(TestIdentity.fresh("Org-$it").identity, distributedIdentity),
+                        platformVersion = 3,
+                        serial = 1
+                )
+                netMapCache.addNode(nodeInfo)
+                nodeInfo
+            }
+        }
+
+        alice.database.transaction {
+            assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsOnlyElementsOf(distServiceNodeInfos)
+            assertThatExceptionOfType(IllegalArgumentException::class.java)
+                    .isThrownBy { netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME) }
+                    .withMessageContaining(DUMMY_NOTARY_NAME.toString())
         }
     }
 
