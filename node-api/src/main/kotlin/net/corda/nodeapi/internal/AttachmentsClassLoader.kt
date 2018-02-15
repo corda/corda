@@ -33,7 +33,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     }
 
     init {
-        require(attachments.filter { it is ContractAttachment }.filter { (it as ContractAttachment).uploader != DEPLOYED_CORDAPP_UPLOADER }.isEmpty()) {
+        require(attachments.mapNotNull { it as? ContractAttachment }.filter { it.uploader != DEPLOYED_CORDAPP_UPLOADER }.isEmpty()) {
             "Attempting to load Contract Attachments downloaded from the network"
         }
 

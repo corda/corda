@@ -142,7 +142,7 @@ open class Baseform : DefaultTask() {
         // Call NetworkBootstrapper.bootstrap
         try {
             // Create a list of all cordapps used in this network and pass it to the bootstrapper.
-            val allCordapps = nodes.map { it.additionalCordapps + it.getCordappList() }.flatten().distinct().map { it.absolutePath }
+            val allCordapps = nodes.flatMap { it.additionalCordapps + it.getCordappList() }.distinct().map { it.absolutePath }
             val rootDir = project.projectDir.toPath().resolve(directory).toAbsolutePath().normalize()
             bootstrapMethod.invoke(networkBootstrapper, rootDir, allCordapps)
         } catch (e: InvocationTargetException) {

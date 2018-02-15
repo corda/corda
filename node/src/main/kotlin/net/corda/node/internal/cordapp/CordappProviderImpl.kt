@@ -48,8 +48,8 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
         }
 
         // Verify that the installed contract classes correspond with the whitelist hash
-        cordappAttachments.keys.map(attachmentStorage::openAttachment).filter { it is ContractAttachment }.forEach { attch ->
-            ((attch as ContractAttachment).allContracts intersect whitelist.keys).forEach { contractClassName ->
+        cordappAttachments.keys.map(attachmentStorage::openAttachment).mapNotNull { it as? ContractAttachment }.forEach { attch ->
+            (attch.allContracts intersect whitelist.keys).forEach { contractClassName ->
                 if (attch.id !in whitelist[contractClassName]!!) {
                     log.error("Contract ${contractClassName} found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
                 }
