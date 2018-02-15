@@ -5,6 +5,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.TEST_UPLOADER
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import java.nio.file.Paths
@@ -26,11 +27,12 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
                 customSchemas = emptySet(),
                 jarPath = Paths.get(".").toUri().toURL())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
-            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName) , contractClassName.toByteArray(), attachments)))
+            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName), contractClassName.toByteArray(), attachments)))
         }
     }
 
-    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
+    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second
+            ?: super.getContractAttachmentID(contractClassName)
 
     private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {
@@ -39,7 +41,7 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
         return if (!existingAttachment.isEmpty()) {
             existingAttachment.keys.first()
         } else {
-            attachments.importContractAttachment(contractClassNames, data.inputStream())
+            attachments.importContractAttachment(contractClassNames, TEST_UPLOADER, data.inputStream())
         }
     }
 }

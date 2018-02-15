@@ -209,6 +209,7 @@ object DefaultKryoCustomizer {
             }
             output.writeString(obj.contract)
             kryo.writeClassAndObject(output, obj.additionalContracts)
+            output.writeString(obj.uploader)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
@@ -216,7 +217,7 @@ object DefaultKryoCustomizer {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
-
+                val uploader = input.readString()
                 val context = kryo.serializationContext()!!
                 val attachmentStorage = context.serviceHub.attachments
 
@@ -228,12 +229,13 @@ object DefaultKryoCustomizer {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contract, additionalContracts)
+                return ContractAttachment(lazyAttachment, contract, additionalContracts, uploader)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
-                return ContractAttachment(attachment, contract, additionalContracts)
+                val uploader = input.readString()
+                return ContractAttachment(attachment, contract, additionalContracts, uploader)
             }
         }
     }

@@ -223,14 +223,13 @@ class NodeAttachmentService(
         val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
             val contracts = attachment.contractClassNames
             if (contracts != null && contracts.isNotEmpty()) {
-                ContractAttachment(it, contracts.first(), contracts.drop(1).toSet())
+                ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader)
             } else {
                 it
             }
         }
         return Pair(attachmentImpl, attachment.content)
     }
-
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
             attachmentCacheBound,
@@ -258,11 +257,11 @@ class NodeAttachmentService(
     }
 
     override fun importAttachment(jar: InputStream): AttachmentId {
-        return import(jar, null, null, null)
+        return import(jar, null, null)
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
-        return import(jar, uploader, filename, null)
+        return import(jar, uploader, filename)
     }
 
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
@@ -277,35 +276,35 @@ class NodeAttachmentService(
             currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
-    private fun import(jar: InputStream, uploader: String?, filename: String?, contractClassNames: List<ContractClassName>?): AttachmentId {
-        require(jar !is JarInputStream)
+    private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
+        return withContractsInJar(jar) { contractClassNames, inputStream ->
+            require(inputStream !is JarInputStream)
 
-        // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
-        // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
-        // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
-        // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
-        // set the hash field of the new attachment record.
+            // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
+            // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
+            // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+            // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
+            // set the hash field of the new attachment record.
 
-        val (id, bytes) = getAttachmentIdAndBytes(jar)
-        if (!hasAttachment(id)) {
-            checkIsAValidJAR(ByteArrayInputStream(bytes))
-            val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
-            session.save(attachment)
-            attachmentCount.inc()
-            log.info("Stored new attachment $id")
-            return id
-        } else {
-            throw java.nio.file.FileAlreadyExistsException(id.toString())
+            val (id, bytes) = getAttachmentIdAndBytes(inputStream)
+            if (!hasAttachment(id)) {
+                checkIsAValidJAR(ByteArrayInputStream(bytes))
+                val session = currentDBSession()
+                val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
+                session.save(attachment)
+                attachmentCount.inc()
+                log.info("Stored new attachment $id")
+                id
+            } else {
+                throw java.nio.file.FileAlreadyExistsException(id.toString())
+            }
         }
     }
 
-    override fun importOrGetAttachment(jar: InputStream): AttachmentId = withContractsInJar(jar) { contracts, inputStream ->
-        try {
-            import(inputStream, null, null, contracts)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            AttachmentId.parse(faee.message!!)
-        }
+    override fun importOrGetAttachment(jar: InputStream): AttachmentId = try {
+        importAttachment(jar)
+    } catch (faee: java.nio.file.FileAlreadyExistsException) {
+        AttachmentId.parse(faee.message!!)
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {

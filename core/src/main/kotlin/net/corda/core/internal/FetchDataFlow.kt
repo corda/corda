@@ -147,7 +147,8 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
-            serviceHub.attachments.importAttachment(attachment.open())
+            //todo - Mike - ok to use "otherSideSession.counterparty.name.toString()" as the uploader ?
+            serviceHub.attachments.importAttachment(attachment.open(), otherSideSession.counterparty.name.toString(), "")
         }
     }
 

@@ -21,12 +21,12 @@ class ContractAttachmentSerializer(factory: SerializerFactory) : CustomSerialize
         } catch (e: Exception) {
             throw MissingAttachmentsException(listOf(obj.id))
         }
-        return ContractAttachmentProxy(GeneratedAttachment(bytes), obj.contract, obj.additionalContracts)
+        return ContractAttachmentProxy(GeneratedAttachment(bytes), obj.contract, obj.additionalContracts, obj.uploader)
     }
 
     override fun fromProxy(proxy: ContractAttachmentProxy): ContractAttachment {
-        return ContractAttachment(proxy.attachment, proxy.contract, proxy.contracts)
+        return ContractAttachment(proxy.attachment, proxy.contract, proxy.contracts, proxy.uploader)
     }
 
-    data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>)
+    data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>, val uploader: String?)
 }

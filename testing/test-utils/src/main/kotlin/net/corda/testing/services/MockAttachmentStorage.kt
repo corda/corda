@@ -29,12 +29,12 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
 
-    override fun importAttachment(jar: InputStream): AttachmentId = withContractsInJar(jar) { contracts, inputStream -> importAttachmentInternal(inputStream, contracts) }
-
-    fun importContractAttachment(contractClassNames: List<ContractClassName>, jar: InputStream): AttachmentId = importAttachmentInternal(jar, contractClassNames)
+    override fun importAttachment(jar: InputStream): AttachmentId = importAttachment(jar, "", "")
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
-        return importAttachment(jar)
+        return withContractsInJar(jar) { contractClassNames, inputStream ->
+            importAttachmentInternal(inputStream, uploader, filename, contractClassNames)
+        }
     }
 
     override fun openAttachment(id: SecureHash): Attachment? = files[id]?.first
@@ -53,9 +53,11 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         }
     }
 
+    fun importContractAttachment(contractClassNames: List<ContractClassName>, uploader: String, jar: InputStream): AttachmentId = importAttachmentInternal(jar, uploader, "", contractClassNames)
+
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = getBytes(jar).let { bytes -> Pair(bytes.sha256(), bytes) }
 
-    private fun importAttachmentInternal(jar: InputStream, contractClassNames: List<ContractClassName>? = null): AttachmentId {
+    private fun importAttachmentInternal(jar: InputStream, uploader: String, filename: String, contractClassNames: List<ContractClassName>? = null): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
 
@@ -66,7 +68,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             val baseAttachment = object : AbstractAttachment({ bytes }) {
                 override val id = sha256
             }
-            val attachment = if (contractClassNames == null) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet())
+            val attachment = if (contractClassNames == null) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader)
             files[sha256] = Pair(attachment, bytes)
         }
         return sha256

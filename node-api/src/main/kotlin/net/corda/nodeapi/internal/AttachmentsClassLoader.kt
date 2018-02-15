@@ -1,7 +1,9 @@
 package net.corda.nodeapi.internal
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.services.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -31,6 +33,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     }
 
     init {
+        require(attachments.filter { it is ContractAttachment }.filter { (it as ContractAttachment).uploader != DEPLOYED_CORDAPP_UPLOADER }.isEmpty()) {
+            "Attempting to load Contract Attachments downloaded from the network"
+        }
+
         for (attachment in attachments) {
             attachment.openAsJAR().use { jar ->
                 while (true) {
