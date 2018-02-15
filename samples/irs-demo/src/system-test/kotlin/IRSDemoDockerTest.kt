@@ -19,16 +19,16 @@ import kotlin.test.assertTrue
 class IRSDemoDockerTest {
     companion object {
 
-        private fun ensureSystemVariable(variable: String) {
-            if (System.getProperty(variable) == null) {
-                throw IllegalStateException("System variable $variable not set. Please refer to README file for proper setup instructions.")
+        private fun ensureProperty(property: String) {
+            if (System.getProperty(property) == null) {
+                throw IllegalStateException("System property $property not set. Please refer to README file for proper setup instructions.")
             }
         }
 
         init {
-            ensureSystemVariable("CORDAPP_DOCKER_COMPOSE")
-            ensureSystemVariable("WEB_DOCKER_COMPOSE")
-            ensureSystemVariable("phantomjs.binary.path")
+            ensureProperty("CORDAPP_DOCKER_COMPOSE")
+            ensureProperty("WEB_DOCKER_COMPOSE")
+            ensureProperty("phantomjs.binary.path")
         }
 
         @ClassRule
