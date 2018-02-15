@@ -1369,6 +1369,10 @@ public final class net.corda.core.flows.NotaryFlow extends java.lang.Object
   public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public List call()
   @org.jetbrains.annotations.NotNull public net.corda.core.utilities.ProgressTracker getProgressTracker()
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected final net.corda.core.utilities.UntrustworthyData notarise(net.corda.core.identity.Party)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected net.corda.core.utilities.UntrustworthyData sendAndReceiveNonValidating(net.corda.core.identity.Party, net.corda.core.flows.FlowSession)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected net.corda.core.utilities.UntrustworthyData sendAndReceiveValidating(net.corda.core.flows.FlowSession)
+  @org.jetbrains.annotations.NotNull protected final List validateResponse(net.corda.core.utilities.UntrustworthyData, net.corda.core.identity.Party)
   public static final net.corda.core.flows.NotaryFlow$Client$Companion Companion
 ##
 public static final class net.corda.core.flows.NotaryFlow$Client$Companion extends java.lang.Object
@@ -4651,7 +4655,4 @@ public final class net.corda.testing.services.MockAttachmentStorage extends net.
 ##
 public static final class net.corda.testing.services.MockAttachmentStorage$Companion extends java.lang.Object
   public final byte[] getBytes(java.io.InputStream)
-##
-public static final class net.corda.testing.services.MockAttachmentStorage$openAttachment$1 extends net.corda.core.internal.AbstractAttachment
-  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
 ##
