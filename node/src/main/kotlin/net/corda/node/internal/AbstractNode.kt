@@ -423,8 +423,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         myNotaryIdentity = getNotaryIdentity()
         val allIdentitiesList = mutableListOf(legalIdentity)
         myNotaryIdentity?.let { allIdentitiesList.add(it) }
-        val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, allIdentitiesList, platformVersion, platformClock.instant().toEpochMilli())
+        return NodeInfo(listOf(configuration.advertisedP2pAddress), allIdentitiesList, platformVersion, platformClock.instant().toEpochMilli())
     }
 
     /**

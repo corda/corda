@@ -37,6 +37,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val bftSMaRt: BFTSMaRtConfiguration
     val notaryNodeAddress: NetworkHostAndPort?
     val notaryClusterAddresses: List<NetworkHostAndPort>
+    val advertisedP2pAddress: NetworkHostAndPort
 }
 
 data class FullNodeConfiguration(
@@ -58,6 +59,7 @@ data class FullNodeConfiguration(
         @OldConfig("artemisAddress")
         val p2pAddress: NetworkHostAndPort,
         val rpcAddress: NetworkHostAndPort?,
+        override val advertisedP2pAddress: NetworkHostAndPort,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         val messagingServerAddress: NetworkHostAndPort?,
