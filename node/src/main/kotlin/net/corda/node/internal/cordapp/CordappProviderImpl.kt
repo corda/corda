@@ -7,10 +7,10 @@ import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistA
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import java.net.URL
@@ -85,7 +85,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
             cordapps.filter { !it.contractClassNames.isEmpty() }.map {
                 it.jarPath.openStream().use { stream ->
                     try {
-                        attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, "")
+                        attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
                     } catch (faee: java.nio.file.FileAlreadyExistsException) {
                         AttachmentId.parse(faee.message!!)
                     }

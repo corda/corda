@@ -97,7 +97,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
-    @Deprecated("resolveContractAttachment no longer used", replaceWith = ReplaceWith("toLedgerTransaction(resolveIdentity, resolveAttachment, resolveStateRef)"))
+    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead", replaceWith = ReplaceWith("toLedgerTransaction(ServicesForTransaction)"))
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,

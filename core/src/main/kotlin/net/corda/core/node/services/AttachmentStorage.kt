@@ -11,11 +11,6 @@ import java.nio.file.FileAlreadyExistsException
 
 typealias AttachmentId = SecureHash
 
-//possible attachment uploaders
-const val DEPLOYED_CORDAPP_UPLOADER = "DEPLOYED_CORDAPP_UPLOADER"
-const val RPC_UPLOADER = "RPC_UPLOADER"
-const val TEST_UPLOADER = "TEST_UPLOADER"
-
 /**
  * An attachment store records potentially large binary objects, identified by their hash.
  */
@@ -43,14 +38,13 @@ interface AttachmentStorage {
     fun importAttachment(jar: InputStream): AttachmentId
 
     /**
-     * todo - Mike would making the filename nullable be an API break?
      * Inserts the given attachment with additional metadata, see [importAttachment] for input stream handling
      * Extra parameters:
      * @param uploader Uploader name
      * @param filename Name of the file
      */
     @Throws(FileAlreadyExistsException::class, IOException::class)
-    fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId
+    fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId
 
     /**
      * Inserts or returns Attachment Id of attachment. Does not throw an exception if already uploaded.

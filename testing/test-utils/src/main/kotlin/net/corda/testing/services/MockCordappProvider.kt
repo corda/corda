@@ -2,10 +2,10 @@ package net.corda.testing.services
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.internal.TEST_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.TEST_UPLOADER
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import java.nio.file.Paths

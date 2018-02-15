@@ -12,6 +12,7 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
@@ -257,10 +258,10 @@ class NodeAttachmentService(
     }
 
     override fun importAttachment(jar: InputStream): AttachmentId {
-        return import(jar, null, null)
+        return import(jar, UNKNOWN_UPLOADER, null)
     }
 
-    override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
+    override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return import(jar, uploader, filename)
     }
 

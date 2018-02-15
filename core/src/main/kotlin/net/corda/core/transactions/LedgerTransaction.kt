@@ -100,11 +100,17 @@ data class LedgerTransaction(
             val stateAttachments = contractAttachments.filter { state.contract in it.allContracts }
             if (stateAttachments.isEmpty()) throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
-            // In case multiple attachments have been added for the same contract, verify all
-            stateAttachments.distinctBy { it.id }.forEach { contractAttachment ->
-                if (!state.constraint.isSatisfiedBy(ConstraintAttachment(contractAttachment, state.contract))) {
-                    throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
-                }
+            val uniqueAttachmentsForStateContract = stateAttachments.distinctBy { it.id }
+
+            // In case multiple attachments have been added for the same contract, fail because this transaction will not be able to be verified
+            // because it will break the no-overlap rule that we have implemented in our Classloaders
+            if (uniqueAttachmentsForStateContract.size > 1) {
+                throw TransactionVerificationException.ConflictingAttachmentsRejection(id, state.contract)
+            }
+
+            val contractAttachment = uniqueAttachmentsForStateContract.first()
+            if (!state.constraint.isSatisfiedBy(ConstraintAttachment(contractAttachment, state.contract))) {
+                throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
     }

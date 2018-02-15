@@ -147,8 +147,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
-            //todo - Mike - ok to use "otherSideSession.counterparty.name.toString()" as the uploader ?
-            serviceHub.attachments.importAttachment(attachment.open(), otherSideSession.counterparty.name.toString(), "")
+            serviceHub.attachments.importAttachment(attachment.open(), "${P2P_UPLOADER}:${otherSideSession.counterparty.name}", null)
         }
     }
 
