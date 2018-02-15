@@ -177,8 +177,8 @@ class NotaryServiceTests {
         runNotarisationAndInterceptClientPayload { originalPayload ->
             val transaction = originalPayload.signedTransaction
             val randomKeyPair = Crypto.generateKeyPair()
-            val bytesToSign = NotarisationRequest(transaction.inputs, transaction.id).serializedBytes
-            val modifiedSignature = NotarisationRequestSignature(randomKeyPair.sign(bytesToSign))
+            val bytesToSign = NotarisationRequest(transaction.inputs, transaction.id).serialize().bytes
+            val modifiedSignature = NotarisationRequestSignature(randomKeyPair.sign(bytesToSign), aliceServices.myInfo.platformVersion)
             originalPayload.copy(requestSignature = modifiedSignature)
         }
     }
@@ -189,7 +189,7 @@ class NotaryServiceTests {
             val transaction = originalPayload.signedTransaction
             val wrongInputs = listOf(StateRef(SecureHash.randomSHA256(), 0))
             val request = NotarisationRequest(wrongInputs, transaction.id)
-            val modifiedSignature = request.generateSignature(aliceNode.services)
+            val modifiedSignature = request.generateSignature(aliceServices)
             originalPayload.copy(requestSignature = modifiedSignature)
         }
     }
@@ -200,7 +200,7 @@ class NotaryServiceTests {
             val transaction = originalPayload.signedTransaction
             val wrongTransactionId = SecureHash.randomSHA256()
             val request = NotarisationRequest(transaction.inputs, wrongTransactionId)
-            val modifiedSignature = request.generateSignature(aliceNode.services)
+            val modifiedSignature = request.generateSignature(aliceServices)
             originalPayload.copy(requestSignature = modifiedSignature)
         }
     }
