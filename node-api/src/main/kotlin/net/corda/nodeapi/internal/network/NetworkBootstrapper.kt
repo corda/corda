@@ -188,7 +188,7 @@ class NetworkBootstrapper {
         PrintStream(tempFile.toFile().outputStream()).use { out ->
             cordapps.forEach { cordappJarPath ->
                 val jarHash = getJarHash(cordappJarPath)
-                scanJarForContracts(cordappJarPath)?.forEach { contract ->
+                scanJarForContracts(cordappJarPath).forEach { contract ->
                     out.println("${contract}:${jarHash}")
                 }
             }

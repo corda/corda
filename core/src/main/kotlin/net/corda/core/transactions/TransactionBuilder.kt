@@ -115,19 +115,21 @@ open class TransactionBuilder(
         }
     }
 
-    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName): Boolean =
-            contractClassName in GlobalProperties.networkParameters.whitelistedContractImplementations.keys
+    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName): Boolean {
+        return contractClassName in GlobalProperties.networkParameters.whitelistedContractImplementations.keys
+    }
 
     /**
      * The attachments added to the current transaction contain only the hashes of the current cordapps.
      * NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
      * TODO - review this logic
      */
-    private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> =
-            (inputsWithTransactionState + outputs).map { state ->
-                cordappProvider.getContractAttachmentID(state.contract)
-                        ?: throw MissingContractAttachments(listOf(state))
-            }.distinct()
+    private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> {
+        return (inputsWithTransactionState + outputs).map { state ->
+            cordappProvider.getContractAttachmentID(state.contract)
+                    ?: throw MissingContractAttachments(listOf(state))
+        }.distinct()
+    }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
