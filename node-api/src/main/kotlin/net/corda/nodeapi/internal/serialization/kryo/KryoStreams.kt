@@ -20,11 +20,15 @@ class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {
         count = buffer.position()
         return result
     }
+
+    fun copyTo(stream: OutputStream) {
+        stream.write(buf, 0, count)
+    }
 }
 
 private val serializationBufferPool = LazyPool(
         newInstance = { ByteArray(64 * 1024) })
-private val serializeOutputStreamPool = LazyPool(
+internal val serializeOutputStreamPool = LazyPool(
         clear = ByteBufferOutputStream::reset,
         shouldReturnToPool = { it.size() < 256 * 1024 }, // Discard if it grew too large
         newInstance = { ByteBufferOutputStream(64 * 1024) })
