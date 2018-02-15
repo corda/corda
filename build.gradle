@@ -2,6 +2,7 @@ buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
+    file("${project(':node').projectDir}/src/main/resources/build.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
     ext.corda_release_version = "3.0-SNAPSHOT"
@@ -40,7 +41,7 @@ buildscript {
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.jolokia_version = '1.3.7'
+    ext.jolokia_version = constants.getProperty("jolokiaAgentVersion")
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
@@ -71,6 +72,7 @@ buildscript {
     ext.docker_compose_rule_version = '0.33.0'
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
+    ext.eaagentloader_version = '1.0.3'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
