@@ -25,15 +25,14 @@ import net.corda.core.transactions.SignedTransaction
  *    to ensure the serialization does not get affected by the order.
  */
 @CordaSerializable
-class NotarisationRequest(statesToConsume: List<StateRef>, private val transactionId: SecureHash) {
+class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: SecureHash) {
     companion object {
         /** Sorts in ascending order first by transaction hash, then by output index. */
         private val stateRefComparator = compareBy<StateRef>({ it.txhash }, { it.index })
     }
 
     /** States this request specifies to be consumed. Sorted to ensure the serialized form does not get affected by the state order. */
-    @Suppress("unused")
-    private val states = statesToConsume.sortedWith(stateRefComparator)
+    val states = statesToConsume.sortedWith(stateRefComparator)
 
     /** Verifies the signature against this notarisation request. Checks that the signature is issued by the right party. */
     fun verifySignature(requestSignature: NotarisationRequestSignature, intendedSigner: Party) {
