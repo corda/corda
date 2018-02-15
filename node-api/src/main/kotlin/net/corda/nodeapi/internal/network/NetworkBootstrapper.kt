@@ -53,6 +53,7 @@ class NetworkBootstrapper {
         )
 
         private const val LOGS_DIR_NAME = "logs"
+        private const val WHITELIST_FILE_NAME = "whitelist.txt"
 
         @JvmStatic
         fun main(args: Array<String>) {
@@ -80,7 +81,10 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            installNetworkParameters(notaryInfos, nodeDirs, cordapps?.let { generateWhitelist(it) })
+            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, cordapps)
+            println("Updating whitelist.")
+            overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
+            installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
             println("Bootstrapping complete!")
         } finally {
             _contextSerializationEnv.set(null)
@@ -168,7 +172,7 @@ class NetworkBootstrapper {
         }.distinct() // We need distinct as nodes part of a distributed notary share the same notary identity
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>, whitelistPath: Path?) {
+    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>, whitelist: Map<String, List<AttachmentId>>) {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val copier = NetworkParametersCopier(NetworkParameters(
                 minimumPlatformVersion = 1,
@@ -177,23 +181,43 @@ class NetworkBootstrapper {
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
                 epoch = 1,
-                whitelistedContractImplementations = if (whitelistPath != null) readContractWhitelist(whitelistPath) else whitelistAllContractsForTest
+                whitelistedContractImplementations = if (whitelist.isNotEmpty()) whitelist else whitelistAllContractsForTest
         ), overwriteFile = true)
 
         nodeDirs.forEach { copier.install(it) }
     }
 
-    private fun generateWhitelist(cordapps: List<String>): Path {
-        val tempFile = Files.createTempFile("whitelist", ".txt")
-        PrintStream(tempFile.toFile().outputStream()).use { out ->
-            cordapps.forEach { cordappJarPath ->
-                val jarHash = getJarHash(cordappJarPath)
-                scanJarForContracts(cordappJarPath).forEach { contract ->
-                    out.println("${contract}:${jarHash}")
-                }
+    private fun generateWhitelist(whitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
+        val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
+
+        println("Found existing whitelist: $existingWhitelist")
+
+        val newWhiteList = cordapps?.flatMap { cordappJarPath ->
+            val jarHash = getJarHash(cordappJarPath)
+            scanJarForContracts(cordappJarPath).map { contract ->
+                contract to jarHash
+            }
+        }?.toMap() ?: emptyMap()
+
+        println("Calculating whitelist for current cordapps: $newWhiteList")
+
+        val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
+            val existing = existingWhitelist[contractClassName] ?: emptyList()
+            val newHash = newWhiteList[contractClassName]
+            contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
+        }.toMap()
+
+        println("Final whitelist: $merged")
+
+        return merged
+    }
+
+    private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
+        PrintStream(whitelistFile.toFile().outputStream()).use { out ->
+            mergedWhiteList.forEach { (contract, attachments )->
+                out.println("${contract}:${attachments.joinToString(",")}")
             }
         }
-        return tempFile
     }
 
     private fun getJarHash(cordappPath: String): AttachmentId = File(cordappPath).inputStream().use { jar ->
