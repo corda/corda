@@ -111,6 +111,7 @@ data class ContractUpgradeLedgerTransaction(
         val upgradedState = upgradedContract.upgrade(input.state.data)
         input.state.copy(
                 data = upgradedState,
+                contract = upgradedContractAttachment.contract,
                 constraint = HashAttachmentConstraint(upgradedContractAttachment.id)
         )
     }
