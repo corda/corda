@@ -7,12 +7,12 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
-* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
-at CorDapp context creation time from a file source during runtime.
+* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+  one node with the legal name is found.
 
-* Provided experimental support for specifying your own webserver to be used instead of the default development webserver in ``Cordform`` using the ``webserverJar`` argument
-  
-* The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the ``net.corda.testing.services`` package. Moving items out of the ``net.corda.testing.*`` package will help make it clearer which parts of the api are stable. The bash script ``tools\scripts\update-test-packages.sh`` can be used to smooth the upgrade process for existing projects.
+* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
+  at CorDapp context creation time from a file source during runtime.
 
 * Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
   In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
@@ -195,8 +195,17 @@ at CorDapp context creation time from a file source during runtime.
 * Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
   only for internal use
 
+* Provided experimental support for specifying your own webserver to be used instead of the default development
+  webserver in ``Cordform`` using the ``webserverJar`` argument
+
 * Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
   that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
+
+* The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved
+  from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the
+  ``net.corda.testing.services`` package. Moving items out of the ``net.corda.testing.*`` package will help make it clearer which
+  parts of the api are stable. The bash script ``tools\scripts\update-test-packages.sh`` can be used to smooth the upgrade
+  process for existing projects.
 
 .. _changelog_v1:
 
