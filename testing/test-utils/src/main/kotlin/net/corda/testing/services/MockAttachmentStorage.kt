@@ -68,7 +68,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             val baseAttachment = object : AbstractAttachment({ bytes }) {
                 override val id = sha256
             }
-            val attachment = if (contractClassNames == null) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader)
+            val attachment = if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader)
             files[sha256] = Pair(attachment, bytes)
         }
         return sha256
