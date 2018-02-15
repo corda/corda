@@ -4,18 +4,19 @@ import net.corda.core.identity.*
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.*
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import org.junit.Before
 import net.corda.testing.node.startFlow
 import org.junit.Test
 import kotlin.test.*
 
 class SwapIdentitiesFlowTests {
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
 
     @Before
     fun setup() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(emptyList(), networkSendManuallyPumped = false, threadPerNode = true)
+        mockNet = InternalMockNetwork(emptyList(), networkSendManuallyPumped = false, threadPerNode = true)
     }
 
     @Test

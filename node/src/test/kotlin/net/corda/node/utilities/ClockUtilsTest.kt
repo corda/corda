@@ -8,8 +8,8 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.minutes
-import net.corda.node.internal.CordaClock
-import net.corda.node.internal.SimpleClock
+import net.corda.node.CordaClock
+import net.corda.node.SimpleClock
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.testing.node.TestClock
 import org.junit.After

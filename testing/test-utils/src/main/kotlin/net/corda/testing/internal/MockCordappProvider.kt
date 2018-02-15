@@ -1,4 +1,4 @@
-package net.corda.testing.services
+package net.corda.testing.internal
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
@@ -7,7 +7,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.testing.node.MockCordappConfigProvider
+import net.corda.testing.services.MockAttachmentStorage
 import java.nio.file.Paths
 import java.util.*
 
@@ -31,7 +31,7 @@ class MockCordappProvider(
                 serializationWhitelists = emptyList(),
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
-                jarPath = Paths.get(".").toUri().toURL())
+                jarPath = Paths.get("").toUri().toURL())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
             cordappRegistry.add(Pair(cordapp, findOrImportAttachment(contractClassName.toByteArray(), attachments)))
         }
