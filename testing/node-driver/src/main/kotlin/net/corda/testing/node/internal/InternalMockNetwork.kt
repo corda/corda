@@ -311,7 +311,9 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
-        override fun myAddresses(): List<NetworkHostAndPort> = emptyList()
+        // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
+        // The non-empty addresses check is important to have and so we tolerate the ugliness here.
+        override fun myAddresses(): List<NetworkHostAndPort> = listOf(NetworkHostAndPort("mock.node", 1000))
 
         // Allow unit tests to modify the serialization whitelist list before the node start,
         // so they don't have to ServiceLoad test whitelists into all unit tests.
