@@ -42,12 +42,22 @@ class AbstractNodeTests {
 
     @Test
     fun `H2 fix is applied`() {
-        repeat(if (relaxedThoroughness) 1 else 100) {
-            // Two "nodes" seems to be the magic number to reproduce the problem:
-            val urls = (0 until 2).map { freshURL() }
+        val pool = Executors.newFixedThreadPool(5)
+        val runs = if (relaxedThoroughness) 1 else 100
+        (0 until runs).map {
+            // Four "nodes" seems to be the magic number to reproduce the problem on CI:
+            val urls = (0 until 4).map { freshURL() }
             // Haven't been able to reproduce in a warm JVM:
-            assertEquals(0, startJavaProcess<ColdJVM>(urls).waitFor())
-        }
+            pool.fork {
+                assertEquals(0, startJavaProcess<ColdJVM>(urls).waitFor())
+            }
+        }.transpose().getOrThrow()
+        pool.shutdown()
+        // The above will always run all processes, even if the very first fails
+        // In theory this can be handled better, but
+        // a) we expect to run all the runs, that's how the test passes
+        // b) it would require relatively complex handling (futures+threads), which is not worth it
+        //    because of a)
     }
 }
 
