@@ -75,6 +75,7 @@ class NotaryFlow {
             return notaryParty
         }
 
+        /** Notarises the transaction with the [notaryParty], obtains the notary's signature(s). */
         @Throws(NotaryException::class)
         @Suspendable
         protected fun notarise(notaryParty: Party): UntrustworthyData<List<TransactionSignature>> {
@@ -111,6 +112,7 @@ class NotaryFlow {
             return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))
         }
 
+        /** Checks that the notary's signature(s) is/are valid. */
         protected fun validateResponse(response: UntrustworthyData<List<TransactionSignature>>, notaryParty: Party): List<TransactionSignature> {
             return response.unwrap { signatures ->
                 signatures.forEach { validateSignature(it, stx.id, notaryParty) }

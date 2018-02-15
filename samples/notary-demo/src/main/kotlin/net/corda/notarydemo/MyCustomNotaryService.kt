@@ -21,7 +21,8 @@ import java.security.SignatureException
 /**
  * A custom notary service should provide a constructor that accepts two parameters of types [AppServiceHub] and [PublicKey].
  *
- * Note that at present only a single-node notary service can be customised.
+ * Note that the support for custom notaries is still experimental – at present only a single-node notary service can be customised.
+ * The notary-related APIs might change in the future.
  */
 // START 1
 @CordaService
