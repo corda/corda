@@ -45,7 +45,7 @@ class AbstractNodeTests {
         val pool = Executors.newFixedThreadPool(5)
         val runs = if (relaxedThoroughness) 1 else 100
         (0 until runs).map {
-            // Two "nodes" seems to be the magic number to reproduce the problem:
+            // Four "nodes" seems to be the magic number to reproduce the problem on CI:
             val urls = (0 until 4).map { freshURL() }
             // Haven't been able to reproduce in a warm JVM:
             pool.fork {
