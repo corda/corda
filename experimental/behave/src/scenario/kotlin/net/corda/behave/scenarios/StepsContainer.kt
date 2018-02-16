@@ -1,60 +1,48 @@
 package net.corda.behave.scenarios
 
 import cucumber.api.java8.En
-import net.corda.behave.scenarios.helpers.Cash
-import net.corda.behave.scenarios.helpers.Database
-import net.corda.behave.scenarios.helpers.Ssh
-import net.corda.behave.scenarios.helpers.Startup
+import net.corda.behave.scenarios.api.StepsBlock
+import net.corda.behave.scenarios.api.StepsProvider
 import net.corda.behave.scenarios.steps.*
-import net.corda.core.messaging.CordaRPCOps
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import net.corda.core.utilities.loggerFor
+import org.reflections.Reflections
 
 @Suppress("KDocMissingDocumentation")
 class StepsContainer(val state: ScenarioState) : En {
 
-    private val log: Logger = LoggerFactory.getLogger(StepsContainer::class.java)
+    private val log = loggerFor<StepsContainer>()
 
-    private val stepDefinitions: List<(StepsBlock) -> Unit> = listOf(
-            ::cashSteps,
-            ::configurationSteps,
-            ::databaseSteps,
-            ::networkSteps,
-            ::rpcSteps,
-            ::sshSteps,
-            ::startupSteps
+    private val stepDefinitions: List<StepsBlock> = listOf(
+            CashSteps(),
+            ConfigurationSteps(),
+            DatabaseSteps(),
+            NetworkSteps(),
+            RpcSteps(),
+            SshSteps(),
+            StartupSteps(),
+            VaultSteps()
     )
 
     init {
-        stepDefinitions.forEach { it({ this.steps(it) }) }
+        log.info("Initialising common Steps Provider ...")
+        stepDefinitions.forEach { it.initialize(state) }
+
+        log.info("Searching and registering custom Steps Providers ...")
+        // TODO: revisit with regex package specification (eg. **/scenario/**) using http://software.clapper.org/javautil/api/org/clapper/util/classutil/ClassFinder.html
+        val reflections = Reflections("net.corda")
+        val foundProviders = mutableListOf<String>()
+        reflections.getSubTypesOf(StepsProvider::class.java).forEach {
+            foundProviders.add(it.simpleName)
+            val instance = it.newInstance()
+            val name = instance.name
+            val stepsDefinition = instance.stepsDefinition
+            assert(it.simpleName.contains(name))
+            println("Registering: $stepsDefinition")
+            stepsDefinition.initialize(state)
+        }
     }
 
-    fun succeed() = log.info("Step succeeded")
-
-    fun fail(message: String) = state.fail(message)
-
-    fun<T> error(message: String) = state.error<T>(message)
-
-    fun node(name: String) = state.nodeBuilder(name)
-
-    fun withNetwork(action: ScenarioState.() -> Unit) {
-        state.withNetwork(action)
-    }
-
-    fun <T> withClient(nodeName: String, action: (CordaRPCOps) -> T): T {
-        return state.withClient(nodeName, action)
-    }
-
-    val startup = Startup(state)
-
-    val database = Database(state)
-
-    val ssh = Ssh(state)
-
-    val cash = Cash(state)
-
-    private fun steps(action: (StepsContainer.() -> Unit)) {
+    fun steps(action: (StepsContainer.() -> Unit)) {
         action(this)
     }
-
 }

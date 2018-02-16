@@ -5,6 +5,7 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.div
+import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
@@ -20,6 +21,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.commons.io.FileUtils
 import java.io.File
+import java.net.InetAddress
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
@@ -39,14 +41,14 @@ class Node(
     private val logDirectory = runtimeDirectory / "logs"
 
     private val command = JarCommand(
-            config.distribution.jarFile,
+            config.distribution.cordaJar,
             arrayOf("--config", "node.conf"),
             runtimeDirectory,
             settings.timeout,
             enableRemoteDebugging = false
     )
 
-    private val isAliveLatch = PatternWatch("Node for \".*\" started up and registered")
+    private val isAliveLatch = PatternWatch(command.output, "Node for \".*\" started up and registered")
 
     private var isConfigured = false
 
@@ -76,7 +78,7 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        config.writeToFile(rootDirectory / "${config.name}.conf")
+        config.writeToFile(rootDirectory / "${config.name}" / "node.conf")
         installApps()
     }
 
@@ -97,7 +99,7 @@ class Node(
     }
 
     fun waitUntilRunning(waitDuration: Duration? = null): Boolean {
-        val ok = isAliveLatch.await(command.output, waitDuration ?: settings.timeout)
+        val ok = isAliveLatch.await(waitDuration ?: settings.timeout)
         if (!ok) {
             log.warn("{} did not start up as expected within the given time frame", this)
         } else {
@@ -126,7 +128,8 @@ class Node(
     }
 
     val logOutput: LogSource by lazy {
-        LogSource(logDirectory, "node-info-gen.log", filePatternUsedForExclusion = true)
+        val hostname = InetAddress.getLocalHost().hostName
+        LogSource(logDirectory, "node-$hostname.*.log", filePatternUsedForExclusion = true)
     }
 
     val database: DatabaseConnection by lazy {
@@ -216,7 +219,7 @@ class Node(
 
     private fun installApps() {
         val version = config.distribution.version
-        val appDirectory = rootDirectory / "../../../deps/corda/$version/apps"
+        val appDirectory = stagingRoot / "deps/corda/$version/apps"
         if (appDirectory.exists()) {
             val targetAppDirectory = runtimeDirectory / "cordapps"
             FileUtils.copyDirectory(appDirectory, targetAppDirectory)
@@ -314,13 +317,14 @@ class Node(
                             databaseType,
                             location = location,
                             country = country,
+                            notary = NotaryConfiguration(notaryType),
+                            cordapps = CordappConfiguration(
+                                    apps = apps,
+                                    includeFinance = includeFinance
+                            ),
                             configElements = *arrayOf(
                                     NotaryConfiguration(notaryType),
-                                    CurrencyConfiguration(issuableCurrencies),
-                                    CordappConfiguration(
-                                            apps = *apps.toTypedArray(),
-                                            includeFinance = includeFinance
-                                    )
+                                    CurrencyConfiguration(issuableCurrencies)
                             )
                     ),
                     directory,
@@ -331,7 +335,6 @@ class Node(
         private fun <T> error(message: String): T {
             throw IllegalArgumentException(message)
         }
-
     }
 
     companion object {

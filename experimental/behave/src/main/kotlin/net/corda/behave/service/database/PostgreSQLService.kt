@@ -7,21 +7,16 @@ import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.ContainerService
 import net.corda.behave.service.ServiceSettings
 
-class SqlServerService(
+class PostgreSQLService(
         name: String,
         port: Int,
         private val password: String,
         settings: ServiceSettings = ServiceSettings()
-) : ContainerService(name, port, "SQL Server is now ready for client connections", settings) {
+) : ContainerService(name, port, "database system is ready to accept connections", settings) {
 
-    override val baseImage = "microsoft/mssql-server-linux"
+    override val baseImage = "postgres"
 
-    override val internalPort = 1433
-
-    init {
-        addEnvironmentVariable("ACCEPT_EULA", "Y")
-        addEnvironmentVariable("SA_PASSWORD", password)
-    }
+    override val internalPort = 5432
 
     override fun verify(): Boolean {
         val config = DatabaseConfiguration(
@@ -46,13 +41,11 @@ class SqlServerService(
     }
 
     companion object {
-
         val host = "localhost"
-        val database = "master"
-        val schema = "dbo"
-        val username = "sa"
-        val driver = "mssql-jdbc-6.2.2.jre8.jar"
-
+        val database = "postgres"
+        val schema = "public"
+        val username = "postgres"
+        val driver = "postgresql-42.1.4.jar"
     }
 
 }

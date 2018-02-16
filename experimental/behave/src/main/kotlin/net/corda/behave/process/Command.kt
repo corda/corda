@@ -27,12 +27,12 @@ open class Command(
 
     private var process: Process? = null
 
-    private lateinit var outputListener: OutputListener
+    private var outputListener: OutputListener? = null
 
     var exitCode = -1
         private set
 
-    val output: Observable<String> = Observable.create<String> { emitter ->
+    val output: Observable<String> = Observable.create<String>({ emitter ->
         outputListener = object : OutputListener {
             override fun onNewLine(line: String) {
                 emitter.onNext(line)
@@ -42,10 +42,11 @@ open class Command(
                 emitter.onCompleted()
             }
         }
-    }
+    }).share()
 
     private val thread = Thread(Runnable {
         try {
+            log.info("Command: $command")
             val processBuilder = ProcessBuilder(command)
                     .directory(directory)
                     .redirectErrorStream(true)
@@ -57,13 +58,17 @@ open class Command(
                 while (true) {
                     try {
                         val line = input.readLine()?.trimEnd() ?: break
-                        outputListener.onNewLine(line)
+                        log.trace(line)
+                        outputListener?.onNewLine(line)
                     } catch (_: IOException) {
+                        break
+                    } catch (ex: Exception) {
+                        log.error("Unexpected exception during reading input", ex)
                         break
                     }
                 }
                 input.close()
-                outputListener.onEndOfStream()
+                outputListener?.onEndOfStream()
                 outputCapturedLatch.countDown()
             }).start()
             val streamIsClosed = outputCapturedLatch.await(timeout)
@@ -88,13 +93,13 @@ open class Command(
             }
         } catch (e: Exception) {
             log.warn("Error occurred when trying to run process", e)
+            throw e
         }
         process = null
         terminationLatch.countDown()
     })
 
     fun start() {
-        output.subscribe()
         thread.start()
     }
 
