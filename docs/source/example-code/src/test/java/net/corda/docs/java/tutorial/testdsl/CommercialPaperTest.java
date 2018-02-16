@@ -38,6 +38,9 @@ public class CommercialPaperTest {
     @Before
     public void setUp() throws Exception {
         GlobalProperties.setNetworkParameters(ParametersUtilities.testNetworkParameters(emptyList()));
+        // When creating the MockServices, you need to specify the packages that will contain the contracts you will use in this test
+        // For this test its' Cash and CommercialPaper, bot in the 'net.corda.finance.contracts' package
+        // In case you don't specify the 'cordappPackages' argument, the MockServices will be initialised with the Contracts found in the package of the current test
         ledgerServices = new MockServices(singletonList("net.corda.finance.contracts"), MEGA_CORP);
     }
 
