@@ -20,9 +20,21 @@ can add functionality useful to themselves and the wider community.
 As such we'd like to extend special thanks to
 
   * Ben Wyeth for providing a mechanism for registering a callback on app shutdown
+
+    Ben's contribution can be found on GitHub
+    `here <https://github.com/corda/corda/commit/d17670c747d16b7f6e06e19bbbd25eb06e45cb93>`_
+
   * Tomas Tauber for adding support for running the vault service using PostgresSQL in place of the in-memory H2 service
+
+    Tomas's contribution can be found on GitHub
+    `here <https://github.com/corda/corda/commit/342090db62ae40cef2be30b2ec4aa451b099d0b7>`_
+
     .. warning:: This is an experimental feature that has not been tested as part of our standard release testing. 
-  * Rose Molina Atienza for correcting our carelss spelling slip
+
+  * Rose Molina Atienza for correcting our careless spelling slip
+    
+    Rose's change can be found on GitHub
+    `here <https://github.com/corda/corda/commit/128d5cad0af7fc5595cac3287650663c9c9ac0a3>`_
 
 Significant Changes in 3.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
