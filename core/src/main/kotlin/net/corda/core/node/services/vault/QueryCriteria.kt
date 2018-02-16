@@ -107,11 +107,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     }
 
     /**
-     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
-     *
-     * Valid TokenType implementations defined by Amount<T> are
-     *   [Currency] as used in [Cash] contract state
-     *   [Commodity] as used in [CommodityContract] state
+     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
                                                                     val owner: List<AbstractParty>? = null,
