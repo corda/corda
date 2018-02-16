@@ -84,10 +84,18 @@ data class NotarisationRequestSignature(val digitalSignature: DigitalSignature.W
 data class NotarisationPayload(val transaction: Any, val requestSignature: NotarisationRequestSignature) {
     init {
         require(transaction is SignedTransaction || transaction is CoreTransaction) {
-            "Unsupported transaction type in the notarisation paylaod: ${transaction.javaClass.simpleName}"
+            "Unsupported transaction type in the notarisation payload: ${transaction.javaClass.simpleName}"
         }
     }
 
+    /**
+     * A helper for automatically casting the underlying [transaction] payload to a [SignedTransaction].
+     * Should only be used by validating notaries.
+     */
     val signedTransaction get() = transaction as SignedTransaction
+    /**
+     * A helper for automatically casting the underlying [transaction] payload to a [CoreTransaction].
+     * Should only be used by non-validating notaries.
+     */
     val coreTransaction get() = transaction as CoreTransaction
 }
