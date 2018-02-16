@@ -1128,7 +1128,8 @@ public final class net.corda.core.flows.ContractUpgradeFlow extends java.lang.Ob
   public <init>(net.corda.core.contracts.StateAndRef, Class)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected net.corda.core.flows.AbstractStateReplacementFlow$UpgradeTx assembleTx()
 ##
-public abstract class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.FlowLogic
+public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.FlowLogic
+  public <init>(net.corda.core.flows.FlowSession, Object)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.Nullable public Void call()
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowSession getOtherSideSession()
   @org.jetbrains.annotations.NotNull public final Object getPayload()
@@ -1322,11 +1323,11 @@ public @interface net.corda.core.flows.InitiatingFlow
   @org.jetbrains.annotations.NotNull public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.NotaryError$General extends net.corda.core.flows.NotaryError
-  public <init>(String)
-  @org.jetbrains.annotations.NotNull public final String component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError$General copy(String)
+  public <init>(Throwable)
+  @org.jetbrains.annotations.NotNull public final Throwable component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError$General copy(Throwable)
   public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final String getCause()
+  @org.jetbrains.annotations.NotNull public final Throwable getCause()
   public int hashCode()
   @org.jetbrains.annotations.NotNull public String toString()
 ##
@@ -1369,6 +1370,8 @@ public final class net.corda.core.flows.NotaryFlow extends java.lang.Object
   public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public List call()
   @org.jetbrains.annotations.NotNull public net.corda.core.utilities.ProgressTracker getProgressTracker()
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected final net.corda.core.utilities.UntrustworthyData notarise(net.corda.core.identity.Party)
+  @org.jetbrains.annotations.NotNull protected final List validateResponse(net.corda.core.utilities.UntrustworthyData, net.corda.core.identity.Party)
   public static final net.corda.core.flows.NotaryFlow$Client$Companion Companion
 ##
 public static final class net.corda.core.flows.NotaryFlow$Client$Companion extends java.lang.Object
@@ -2920,7 +2923,7 @@ public static final class net.corda.core.serialization.SingletonSerializationTok
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public final String getReason()
 ##
-@net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.CoreTransaction extends net.corda.core.transactions.BaseTransaction
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.CoreTransaction extends net.corda.core.transactions.BaseTransaction
   public <init>()
   @org.jetbrains.annotations.NotNull public abstract List getInputs()
 ##
@@ -3162,7 +3165,7 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   public abstract void verifyRequiredSignatures()
   public abstract void verifySignaturesExcept(Collection)
 ##
-@net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.TraversableTransaction extends net.corda.core.transactions.CoreTransaction
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.TraversableTransaction extends net.corda.core.transactions.CoreTransaction
   public <init>(List)
   @org.jetbrains.annotations.NotNull public final List getAttachments()
   @org.jetbrains.annotations.NotNull public final List getAvailableComponentGroups()
