@@ -75,6 +75,10 @@ Significant Changes in 3.0
     features and tools planned for future releases, but feel it is more important to deliver the guarantees discussed above
     as early as possible to allow the community to develop with greater confidence.
 
+   .. important:: Whilst Corda has stabilised it's wire protocol and infrastructure for peer to peer communication and persistent storage
+      of states; the RPC framework will, for this release, not be covered by this guarantee. The moving of the client and
+      server contexts away from Kryo to our stable AMQP implementation is planned for the next release of Corda
+
   * **Artemis and Bridges**
 
     Corda has now achieved the long stated goal of using the AMQP 1.0 open protocol standard as its communication protocol
