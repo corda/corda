@@ -105,30 +105,19 @@ Significant Changes in 3.0
   of seamless inter-operation. Additional security controls ensure that all network map data is now signed, thus reducing
   the power of the network operator to tamper with the map.
 
-  There is also support for a group of nodes to operate locally in a private network, which is achieved by copying the
-  node's signed info file to other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
+  There is also support for a group of nodes to operate locally in a private network, which is achieved by copying each
+  node's signed info file to the other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
 
   Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
 
 Other Functional Improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **Security Auditing**
-
-  This version of Corda is the first to have had select components subjected to the newly established security review process
-  by R3's internal security team. Security review will be an on-going process that seeks to provide assurance that the security model of Corda
-  has been implemented to the highest standard, and is in-line with industry best practice.
-
-  As part of this security review process, an independent external security audit of the HTTP based components of the code
-  was undertaken and whose recommendations were acted upon. The security assurance process will develop in parallel to the
-  Corda platform and will combine code review, automated security testing and secure development practices to ensure Corda
-  fulfils its security guarantees.
-
 * **Contract Upgrade**
 
   Support for upgrading smart contracts has been significantly extended in this release, with more flexibility still to come.
 
-  In prior versions of Corda states included the hash of their defining application JAR. However the code that was used actually
+  In prior versions of Corda, states included the hash of their defining application JAR. However the code that was used actually
   came from the class path. In this release, transactions have the JAR containing the contract and states attached to them.
   The code will be copied over the network to the recipient if that peer lacks a copy of the app. However, for security reasons,
   in 3.0 the application must still be whitelisted on the node for the transaction to be successfully checked, so all nodes that
@@ -154,6 +143,10 @@ Other Functional Improvements
     can be attached to the transaction. This final constraint type provides a balance of all requirements: smooth rolling upgrades
     can be performed without any additional steps or transactions being signed, at the cost of trusting the app developer more and
     some additional complexity around managing app signing.
+
+  .. info:: A good example of this is the << app >> found << here >>
+
+  <<Andrius to provide link to doc and fill in above>>
 
 * **Test API Stability**
 
@@ -255,6 +248,19 @@ Other Functional Improvements
   ``samples/simm-valuation-demo/src/main/kotlin/net/corda/vega/plugin/customserializers``
 
   Whilst documentation can be found in :doc:`cordapp-custom-serializers`
+
+
+Security Auditing
+~~~~~~~~~~~~~~~~~
+
+  This version of Corda is the first to have had select components subjected to the newly established security review process
+  by R3's internal security team. Security review will be an on-going process that seeks to provide assurance that the
+  security model of Corda has been implemented to the highest standard, and is inline with industry best practice.
+
+  As part of this security review process, an independent external security audit of the HTTP based components of the code
+  was undertaken and it's recommendations were acted upon. The security assurance process will develop in parallel to the
+  Corda platform and will combine code review, automated security testing and secure development practices to ensure Corda
+  fulfils its security guarantees.
 
 Minor Changes
 ~~~~~~~~~~~~~
