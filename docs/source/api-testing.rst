@@ -60,56 +60,62 @@ object, or by using named paramters in Kotlin:
 
         val network = MockNetwork(
                 cordappPackages = listOf("my.cordapp.package", "my.other.cordapp.package"),
-                // Whether to run all nodes on a single thread. Allows a debugger to be attached
-                // to the nodes, and removes multi-threading as a source of test failures.
+                // If true then each node will be run in its own thread. This can result in race conditions in your
+                // code if not carefully written, but is more realistic and may help if you have flows in your app that
+                // do long blocking operations.
                 threadPerNode = false,
-                // Which notaries to create on the network.
+                // The notaries to use on the mock network. By default you get one mock notary and that is usually
+                // sufficient.
                 notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
-                // In bytes.
-                maxTransactionSize = Int.MAX_VALUE,
-                // Whether to manually control the sending of messages between nodes. Allows
-                // debugging at the level of individual messages.
+                // If true then messages will not be routed from sender to receiver until you use the
+                // [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can
+                // examine the state of the mock network before and after a message is sent, without races and without
+                // the receiving node immediately sending a response.
                 networkSendManuallyPumped = false,
-                // How to decide which peer to send a message to when contacting a distributed service.
-                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                // Should be left as ``true`` to use the default serialisation environment.
-                initialiseSerialization = true)
+                // How traffic is allocated in the case where multiple nodes share a single identity, which happens for
+                // notaries in a cluster. You don't normally ever need to change this: it is mostly useful for testing
+                // notary implementations.
+                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
 
         val network2 = MockNetwork(listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
-                // Whether to run all nodes on a single thread. Allows a debugger to be attached
-                // to the nodes, and removes multi-threading as a source of test failures.
+                // If true then each node will be run in its own thread. This can result in race conditions in your
+                // code if not carefully written, but is more realistic and may help if you have flows in your app that
+                // do long blocking operations.
                 threadPerNode = false,
-                // Which notaries to create on the network.
+                // The notaries to use on the mock network. By default you get one mock notary and that is usually
+                // sufficient.
                 notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
-                // In bytes.
-                maxTransactionSize = Int.MAX_VALUE,
-                // Whether to manually control the sending of messages between nodes. Allows
-                // debugging at the level of individual messages.
+                // If true then messages will not be routed from sender to receiver until you use the
+                // [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can
+                // examine the state of the mock network before and after a message is sent, without races and without
+                // the receiving node immediately sending a response.
                 networkSendManuallyPumped = false,
-                // How to decide which peer to send a message to when contacting a distributed service.
-                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                // Should be left as ``true`` to use the default serialisation environment.
-                initialiseSerialization = true)
+                // How traffic is allocated in the case where multiple nodes share a single identity, which happens for
+                // notaries in a cluster. You don't normally ever need to change this: it is mostly useful for testing
+                // notary implementations.
+                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
         )
 
    .. sourcecode:: java
 
         MockNetwork network = MockNetwork(ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
                 new MockNetworkParameters()
-                        // Whether to run all nodes on a single thread. Allows a debugger to be attached
-                        // to the nodes, and removes multi-threading as a source of test failures.
+                        // If true then each node will be run in its own thread. This can result in race conditions in
+                        // your code if not carefully written, but is more realistic and may help if you have flows in
+                        // your app that do long blocking operations.
                         .setThreadPerNode(false)
-                        // Which notaries to create on the network.
+                        // The notaries to use on the mock network. By default you get one mock notary and that is
+                        // usually sufficient.
                         .setNotarySpecs(ImmutableList.of(new MockNetworkNotarySpec(DUMMY_NOTARY_NAME)))
-                        // In bytes.
-                        .setMaxTransactionSize(Integer.MAX_VALUE)
-                        // Whether to manually control the sending of messages between nodes. Allows
-                        // debugging at the level of individual messages.
+                        // If true then messages will not be routed from sender to receiver until you use the
+                        // [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code
+                        // that can examine the state of the mock network before and after a message is sent, without
+                        // races and without the receiving node immediately sending a response.
                         .setNetworkSendManuallyPumped(false)
-                        // How to decide which peer to send a message to when contacting a distributed service.
-                        .setServicePeerAllocationStrategy(new InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
-                        // Should be left as ``true`` to use the default serialisation environment.
-                        .setInitialiseSerialization(true));
+                        // How traffic is allocated in the case where multiple nodes share a single identity, which
+                        // happens for notaries in a cluster. You don't normally ever need to change this: it is mostly
+                        // useful for testing notary implementations.
+                        .setServicePeerAllocationStrategy(new InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random()));
 
 Adding nodes to the network
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -172,17 +178,18 @@ Responder flows are registered as follows:
 Running the network
 ^^^^^^^^^^^^^^^^^^^
 
-Regular Corda nodes automatically send and receive messages. When using a ``MockNetwork``, you must manually initiate
-the sending and receiving of messages (e.g. after starting a flow).
+Regular Corda nodes automatically process received messages. When using a ``MockNetwork`` with
+``networkSendManuallyPumped`` set to ``false``, you must manually initiate the processing of received messages.
 
-How the exchange of messages is initiated depends on how the ``MockNetwork`` is configured:
+You manually process received messages as follows:
 
-* Using ``MockNetwork.runNetwork`` if ``MockNetwork.networkSendManuallyPumped`` is set to false
+* ``StartedMockNode.pumpReceive`` to process a single message from the node's queue
+
+* ``MockNetwork.runNetwork`` to process all the messages in every node's queue. This may generate additional messages
+  that must in turn be processed
 
     * ``network.runNetwork(-1)`` (the default in Kotlin) will exchange messages until there are no further messages to
       process
-
-* Using ``MockNetwork.pumpReceive`` if ``MockNetwork.networkSendManuallyPumped`` is set to true
 
 Running flows
 ^^^^^^^^^^^^^
@@ -224,7 +231,22 @@ Accessing ``StartedMockNode`` internals
 Creating a node database transaction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-AWAITING INFORMATION ON WHEN THIS IS NEEDED.
+Whenever you query a node's database (e.g. to extract information from the node's vault), you must wrap the query in
+a database transaction, as follows:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        nodeA.database.transaction {
+            // Perform query here.
+        }
+
+   .. sourcecode:: java
+
+        node.getDatabase().transaction(tx -> {
+            // Perform query here.
+        }
 
 Querying a node's vault
 ~~~~~~~~~~~~~~~~~~~~~~~
