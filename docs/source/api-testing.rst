@@ -15,8 +15,8 @@ Flow testing
 MockNetwork
 ^^^^^^^^^^^
 
-Flow testing can be fully automated using a ``MockNetwork`` composed of ``MockNode`` nodes. Each ``MockNode`` behaves
-like a regular Corda node, but its services are either in-memory or mocked out.
+Flow testing can be fully automated using a ``MockNetwork`` composed of ``StartedMockNode`` nodes. Each
+``StartedMockNode`` behaves like a regular Corda node, but its services are either in-memory or mocked out.
 
 A ``MockNetwork`` is created as follows:
 
@@ -46,7 +46,7 @@ A ``MockNetwork`` is created as follows:
         }
 
 The ``MockNetwork`` requires at a minimum a list of packages. Each package is packaged into a CorDapp JAR and installed
-as a CorDapp on each ``MockNode``.
+as a CorDapp on each ``StartedMockNode``.
 
 Configuring the ``MockNetwork``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -155,7 +155,7 @@ Registering a node's initiated flows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Regular Corda nodes automatically register any response flows defined in their installed CorDapps. When using a
-``MockNetwork``, each ``MockNode`` must manually register any responder flows it wishes to use.
+``MockNetwork``, each ``StartedMockNode`` must manually register any responder flows it wishes to use.
 
 Responder flows are registered as follows:
 
@@ -178,14 +178,16 @@ the sending and receiving of messages (e.g. after starting a flow).
 How the exchange of messages is initiated depends on how the ``MockNetwork`` is configured:
 
 * Using ``MockNetwork.runNetwork`` if ``MockNetwork.networkSendManuallyPumped`` is set to false
+
     * ``network.runNetwork(-1)`` (the default in Kotlin) will exchange messages until there are no further messages to
       process
+
 * Using ``MockNetwork.pumpReceive`` if ``MockNetwork.networkSendManuallyPumped`` is set to true
 
 Running flows
 ^^^^^^^^^^^^^
 
-A ``MockNode`` starts a flow using the ``StartedNodeServices.startFlow`` method. This method returns a future
+A ``StartedMockNode`` starts a flow using the ``StartedNodeServices.startFlow`` method. This method returns a future
 representing the output of running the flow.
 
 .. container:: codeset
@@ -216,13 +218,39 @@ The network must then be manually run before retrieving the future's value:
         network.runNetwork();
         SignedTransaction signedTransaction = future.get();
 
-Accessing ``MockNode`` internals
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Accessing ``StartedMockNode`` internals
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Creating a node database transaction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+AWAITING INFORMATION ON WHEN THIS IS NEEDED.
+
+Querying a node's vault
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Recorded states can be retrieved from the vault of a ``StartedMockNode`` using:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        nodeA.database.transaction {
+            val myStates = nodeA.services.vaultService.queryBy<MyStateType>().states
+        }
+
+   .. sourcecode:: java
+
+        node.getDatabase().transaction(tx -> {
+            List<MyStateType> myStates = node.getServices().getVaultService().queryBy(MyStateType.class).getStates();
+        }
+
+This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
 
 Examining a node's transaction storage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Recorded transactions can be retrieved from the transaction storage of a ``MockNode`` using:
+Recorded transactions can be retrieved from the transaction storage of a ``StartedMockNode`` using:
 
 .. container:: codeset
 
@@ -236,20 +264,3 @@ Recorded transactions can be retrieved from the transaction storage of a ``MockN
 
 This allows you to check whether a given transaction has (or has not) been stored, and whether it has the correct
 attributes.
-
-Querying a node's vault
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Recorded states can be retrieved from the vault of a ``MockNode`` using:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        val myStates = nodeA.services.vaultService.queryBy<MyStateType>().states
-
-   .. sourcecode:: java
-
-        List<MyStateType> myStates = node.getServices().getVaultService().queryBy(MyStateType.class).getStates();
-
-This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
