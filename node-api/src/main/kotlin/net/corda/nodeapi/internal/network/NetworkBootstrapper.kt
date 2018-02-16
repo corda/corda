@@ -78,16 +78,18 @@ class NetworkBootstrapper {
     }
 
     private fun generateDirectoriesIfNeeded(directory: Path) {
-        val confFiles = directory.list { it.filter { it.toString().endsWith(".conf") }.toList() }
+        val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
+        val webServerConfFiles = directory.list { it.filter { it.toString().endsWith("_web-server.conf") }.toList() }
         if (confFiles.isEmpty()) return
         println("Node config files found in the root directory - generating node directories")
         val cordaJar = extractCordaJarTo(directory)
         for (confFile in confFiles) {
-            val nodeName = confFile.fileName.toString().removeSuffix(".conf")
+            val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
             println("Generating directory for $nodeName")
             val nodeDir = (directory / nodeName)
             if (!nodeDir.exists()) { nodeDir.createDirectory() }
             confFile.moveTo(nodeDir / "node.conf", StandardCopyOption.REPLACE_EXISTING)
+            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.moveTo(nodeDir / "web-server.conf", StandardCopyOption.REPLACE_EXISTING)
             Files.copy(cordaJar, (nodeDir / "corda.jar"), StandardCopyOption.REPLACE_EXISTING)
         }
         Files.delete(cordaJar)

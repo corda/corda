@@ -195,6 +195,21 @@ class ConfigParsingTest {
         assertThat(DataWithCompanion(3).toConfig()).isEqualTo(config("value" to 3))
     }
 
+    @Test
+    fun `unknown configuration keys raise exception`() {
+
+        // intentional typo here, parsing should throw rather than sneakily return default value
+        val knownKey = "mandatory"
+        val unknownKey = "optioal"
+        val configuration = config(knownKey to "hello", unknownKey to "world")
+
+        assertThatThrownBy { configuration.parseAs<TypedConfiguration>() }.isInstanceOfSatisfying(UnknownConfigurationKeysException::class.java) { exception ->
+
+            assertThat(exception.unknownKeys).contains(unknownKey)
+            assertThat(exception.unknownKeys).doesNotContain(knownKey)
+        }
+    }
+
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
             value1: V,
             value2: V,
@@ -238,6 +253,7 @@ class ConfigParsingTest {
         val values: List<T>
     }
 
+    data class TypedConfiguration(private val mandatory: String, private val optional: String = "optional")
     data class StringData(override val value: String) : SingleData<String>
     data class StringListData(override val values: List<String>) : ListData<String>
     data class StringSetData(val values: Set<String>)

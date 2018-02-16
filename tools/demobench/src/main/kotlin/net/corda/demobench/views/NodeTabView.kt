@@ -188,6 +188,7 @@ class NodeTabView : Fragment() {
 
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
+        model.rpcAdminPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
 

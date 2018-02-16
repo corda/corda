@@ -150,7 +150,9 @@ data class NodeConfigurationImpl(
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
-        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
+        // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
+        private val h2port: Int  = 0
     ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

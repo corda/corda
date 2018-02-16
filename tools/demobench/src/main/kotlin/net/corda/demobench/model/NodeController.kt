@@ -75,6 +75,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 ),
                 p2pAddress = nodeData.p2pPort.toLocalAddress(),
                 rpcAddress = nodeData.rpcPort.toLocalAddress(),
+                rpcAdminAddress = nodeData.rpcAdminPort.toLocalAddress(),
                 webAddress = nodeData.webPort.toLocalAddress(),
                 notary = notary,
                 h2port = nodeData.h2Port.value,
@@ -120,7 +121,11 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
             // Write this node's configuration file into its working directory.
             val confFile = config.nodeDir / "node.conf"
-            Files.write(confFile, config.nodeConfig.toText().toByteArray())
+            Files.write(confFile, config.nodeConfig.toNodeConfText().toByteArray())
+
+            // Write this node's configuration file into its working directory.
+            val webConfFile = config.nodeDir / "webserver.conf"
+            Files.write(webConfFile, config.nodeConfig.toWebServerConfText().toByteArray())
 
             // Execute the Corda node
             val cordaEnv = System.getenv().toMutableMap().apply {
