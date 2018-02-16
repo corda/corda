@@ -399,10 +399,9 @@ Providing a public getter, as per the following example, is acceptable:
 Mismatched Class Properties / Constructor Parameters
 ````````````````````````````````````````````````````
 
-Consider an example where you wish to ensure a container property of a class is always sorted yet you wish
-to maintain immutability of the class.
+Consider an example where you wish to ensure that a property of class whose type is some form of container is always sorted using some specific criteria yet you wish to maintain the immutability of the class.
 
-Consider this example:
+This could be codified as follows:
 
 .. container:: codeset
 
