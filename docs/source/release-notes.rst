@@ -191,14 +191,14 @@ Other Functional Improvements
 
   We, alongside user feedback, concluded there was a strong need for the ability to have a clean inflection point where a node
   could be shutdown without any in-flight transactions pending to allow for a clean system for upgrade purposes. As such, a flow
-  draining mode has been added. When activated, this creates an inflection point that guarantees no new work will be started and
+  draining mode has been added. When activated, this places the node into a state of quiescence that guarantees no new work will be started and
   all outstanding work completed prior to shutdown.
 
   A clean shutdown can thus be achieved by:
 
     1. Subscribing to state machine updates
     2. Trigger flows draining mode by ``rpc.setDrainingModeEnabled(true)``
-    3. Wait until 1 lets you know no more checkpoints are around
+    3. Wait until the subscription setup as phase 1 lets you know that no more checkpoints are around
     4. Shut the node down however you want
 
 * **X.509 certificates**
@@ -244,8 +244,7 @@ Other Functional Improvements
 
   With the introduction of AMQP we have introduced the criteria that to be seamlessly serializable classes, specifically
   Java classes (as opposed to Kotlin), must be compiled with the ``-parameter`` flag. However, we recognise that this
-  isn't always possible, especially dealing with third part libraries in controlled business environments where that is
-  out of your control.
+  isn't always possible, especially dealing with third party libraries in tightly controlled business environments.
 
   To work around this problem as simply as possible CorDapps now support the creation of pluggable proxy serializers for
   such classes. These should be written such that they create an intermediary representation that Corda can serialise that
@@ -255,7 +254,7 @@ Other Functional Improvements
 
   ``samples/simm-valuation-demo/src/main/kotlin/net/corda/vega/plugin/customserializers``
 
-  Whilst documentation can be found in :doc:`cordapp-custom-serializers`
+  Documentation can be found in :doc:`cordapp-custom-serializers`
 
 
 Security Auditing
@@ -274,7 +273,9 @@ Minor Changes
 ~~~~~~~~~~~~~
 
   * Upgraded gradle to 4.4.1.
-  * Multiple Identity support for cash spending, documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
+  * Cash Spending now allows for sending multiple amounts to multiple parties with a single API call
+
+    - documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
   * Overall improvements to error handling (RPC, Flows, Network Client).
   * TLS authentication now supports mixed RSA and ECDSA keys.
   * Numerous bug fixes and documentation tweaks.
