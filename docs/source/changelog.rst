@@ -203,9 +203,9 @@ UNRELEASED
 
 * The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved
   from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the
-  ``net.corda.testing.services`` package. Moving items out of the ``net.corda.testing.*`` package will help make it clearer which
-  parts of the api are stable. The bash script ``tools\scripts\update-test-packages.sh`` can be used to smooth the upgrade
-  process for existing projects.
+  ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
+  will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
+  process for existing projects in the ``tools\scripts`` directory of the Corda repo.
 
 .. _changelog_v1:
 
