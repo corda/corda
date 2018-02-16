@@ -615,8 +615,8 @@ which the signatures are allowed to be missing:
        :end-before: DOCEND 36
        :dedent: 16
 
-There is also an overload of ``SignedTransaction.verifySignaturesExcept``, which takes a ``Collection`` of the public keys for
-which the signatures are allowed to be missing:
+There is also an overload of ``SignedTransaction.verifySignaturesExcept``, which takes a ``Collection`` of the
+public keys for which the signatures are allowed to be missing:
 
 .. container:: codeset
 
