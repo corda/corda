@@ -24,7 +24,7 @@ As such we'd like to extend special thanks to
     Ben's contribution can be found on GitHub
     `here <https://github.com/corda/corda/commit/d17670c747d16b7f6e06e19bbbd25eb06e45cb93>`_
 
-  * Tomas Tauber for adding support for running the vault service using PostgresSQL in place of the in-memory H2 service
+  * Tomas Tauber for adding support for running Corda atop PostgresSQL in place of the in-memory H2 service
 
     Tomas's contribution can be found on GitHub
     `here <https://github.com/corda/corda/commit/342090db62ae40cef2be30b2ec4aa451b099d0b7>`_
@@ -49,9 +49,9 @@ Significant Changes in 3.0
   upgrade and change. Practically speaking this means from this point forward upgrading all, or part, of a Corda network
   will not require the replaying of data; "it will just work".
 
-  This has been facilitated by the switch over from Kryo to Corda's own AMQP based serialization framework, one designed to
-  interoperate with stateful information and allow the evolution of such contract states over time as developers refine
-  and improve their systems written atop the core Corda platform.
+  This has been facilitated by the switch over from Kryo to Corda's own AMQP based serialization framework, a framework
+  designed to interoperate with stateful information and allow the evolution of such contract states over time as developers
+  refine and improve their systems written atop the core Corda platform.
 
   * **AMQP Serialization**
 
@@ -72,15 +72,15 @@ Significant Changes in 3.0
       the restrictions documented at the link above are the canonical source.
 
     Whilst this is an important step for Corda, in no way is this the end of the serialisation story. We have many new
-    features and tools planned for future releases, but feel it is more important to deliver the garuntees discussed above
-    as early as possible to allow the community to develop with greater confidence. 
+    features and tools planned for future releases, but feel it is more important to deliver the guarantees discussed above
+    as early as possible to allow the community to develop with greater confidence.
 
   * **Artemis and Bridges**
 
     Corda has now achieved the long stated goal of using the AMQP 1.0 open protocol standard as its communication protocol
     between peers. This forms a strong and flexible framework upon which we can deliver future enhancements that will allow
-    much for smoother integrations between Corda and third party brokers, languages, and messaging systems. In addition, this
-    is also an important step towards formally defining the official peer to peer messaging protocol of Corda, something
+    for much for smoother integrations between Corda and third party brokers, languages, and messaging systems. In addition,
+    this is also an important step towards formally defining the official peer to peer messaging protocol of Corda, something
     required for more in-depth security audits of the Corda protocol.
 
     .. warning:: The Artemis topics used for peer-to-peer communication have been changed to be more consistent with future
@@ -94,28 +94,29 @@ Significant Changes in 3.0
 
   This release introduces the new network map architecture. The network map service has been completely redesigned and
   implemented to enable future increased network scalability and redundancy, reduced runtime operational overhead,
-  support for multiple notaries, and administration of network compatibility zones (CZ) and business networks.
+  support for multiple notaries, and administration of network compatibility zones (CZ).
 
   A Corda Compatibility Zone is defined as a grouping of participants and services (notaries, oracles,
   doorman, network map server) configured within an operational Corda network to be interoperable and compatible with
   each other.
 
-  We introduce the concept of network parameters, which will be used in a future version of Corda to specify precisely
-  the set of constants (or ranges of constants) upon which the nodes within a network need to agree in order to be assured
-  of seamless inter-operation. Additional security controls ensure that all network map data is now signed, thus reducing
-  the power of the network operator to tamper with the map.
+  We introduce the concept of network parameters to specify precisely the set of constants (or ranges of constants) upon
+  which the nodes within a network need to agree in order to be assured of seamless inter-operation. Additional security
+  controls ensure that all network map data is now signed, thus reducing the power of the network operator to tamper with
+  the map.
 
   There is also support for a group of nodes to operate locally in a private network, which is achieved by copying each
   node's signed info file to the other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
 
   Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
 
-Other Functional Improvements
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 * **Contract Upgrade**
 
-  Support for upgrading smart contracts has been significantly extended in this release, with more flexibility still to come.
+  Support for the upgrading of Smart Contracts has been significantly extended in this release.
+
+  .. note:: Many more powerful extensions to this functionality, giving even greater control and flexibility in the way
+    your contracts are upgradable is coming in future versions of Corda. The functionality available here is an important
+    part of that and gives a great foundation to build upon in the future.
 
   In prior versions of Corda, states included the hash of their defining application JAR. However the code that was used actually
   came from the class path. In this release, transactions have the JAR containing the contract and states attached to them.
@@ -157,7 +158,7 @@ Other Functional Improvements
 
   .. note:: * Many classes have been moved between packages, so you will need to update your imports
     * setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
-      and are now set via a constructor parameter or automatically when when constructing the MockServices or MockNetwork object
+      and are now set via a constructor parameter or automatically when constructing the MockServices or MockNetwork object
     * Key constants e.g. ``ALICE_KEY`` have been removed; you can now use TestIdentity to make your own
     * The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
         * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
@@ -178,6 +179,9 @@ Other Functional Improvements
     ``tools/scripts/upgrade-test-packages.ps1`` for Windows Poer Shell users in the source tree
 
   Please see the :doc:`upgrade-notes` for more information on transitionining older tests to the new framework
+
+Other Functional Improvements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * **Clean Node Shutdown**
 
