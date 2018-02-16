@@ -210,7 +210,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> {
-        return listOf(configuration.messagingServerAddress ?: getAdvertisedAddress())
+        return listOf(getAdvertisedAddress())
     }
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
