@@ -58,6 +58,8 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = getBytes(jar).let { bytes -> Pair(bytes.sha256(), bytes) }
 
+    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash): AbstractAttachment(dataLoader)
+
     private fun importAttachmentInternal(jar: InputStream, uploader: String, filename: String?, contractClassNames: List<ContractClassName>? = null): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
@@ -66,9 +68,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
         val sha256 = bytes.sha256()
         if (sha256 !in files.keys) {
-            val baseAttachment = object : AbstractAttachment({ bytes }) {
-                override val id = sha256
-            }
+            val baseAttachment = MockAttachment({ bytes }, sha256)
             val attachment = if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader)
             files[sha256] = Pair(attachment, bytes)
         }
