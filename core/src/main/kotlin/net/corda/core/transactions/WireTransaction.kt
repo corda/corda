@@ -94,9 +94,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
      * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
      *
-     * This is a VERY DEPRECATED method and should NOT be used.
-     * It will eventually be removed!
-     *
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
@@ -115,7 +112,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?
     ): LedgerTransaction {
-        // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
+        // Look up public keys to authenticated identities.
         val authenticatedArgs = commands.map {
             val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
             CommandWithParties(it.signers, parties, it.value)
