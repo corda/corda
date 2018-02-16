@@ -4,7 +4,6 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
-import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.parse
 import net.corda.core.identity.Party
@@ -181,7 +180,7 @@ class NetworkBootstrapper {
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
                 epoch = 1,
-                whitelistedContractImplementations = if (whitelist.isNotEmpty()) whitelist else whitelistAllContractsForTest
+                whitelistedContractImplementations = whitelist
         ), overwriteFile = true)
 
         nodeDirs.forEach { copier.install(it) }

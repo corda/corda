@@ -3,7 +3,6 @@ package net.corda.node.internal.cordapp
 import com.google.common.collect.HashBiMap
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
@@ -39,11 +38,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
 
         if (whitelist.isEmpty()) {
             log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
-            return
-        }
-
-        if (whitelist == whitelistAllContractsForTest) {
-            log.warn("The network parameters are configured for development or demo mode. See https://docs.corda.net/network-map.html")
             return
         }
 

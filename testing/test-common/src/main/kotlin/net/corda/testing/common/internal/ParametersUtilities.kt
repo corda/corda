@@ -1,6 +1,5 @@
 package net.corda.testing.common.internal
 
-import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint.whitelistAllContractsForTest
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import java.time.Instant
@@ -25,7 +24,7 @@ object ParametersUtilities {
                 maxMessageSize = maxMessageSize,
                 maxTransactionSize = maxTransactionSize,
                 epoch = epoch,
-                whitelistedContractImplementations = whitelistAllContractsForTest
+                whitelistedContractImplementations = emptyMap()
         )
     }
 }

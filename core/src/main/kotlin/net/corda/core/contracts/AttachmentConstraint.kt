@@ -29,15 +29,10 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * It allows for centralized control over the cordapps that can be used.
  */
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
-    /**
-     * This sequence can be used for test/demos
-     */
-    val whitelistAllContractsForTest get() = mapOf("*" to listOf(SecureHash.zeroHash, SecureHash.allOnesHash))
 
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return GlobalProperties.networkParameters.whitelistedContractImplementations.let { whitelist ->
             when {
-                whitelist == whitelistAllContractsForTest -> true
                 attachment is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract]
                         ?: emptyList())
                 else -> false
