@@ -8,6 +8,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
+import java.security.InvalidKeyException
+import java.security.SignatureException
 
 /**
  * A notarisation request specifies a list of states to consume and the id of the consuming transaction. Its primary
@@ -38,17 +40,29 @@ class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: Se
 
     /** Verifies the signature against this notarisation request. Checks that the signature is issued by the right party. */
     fun verifySignature(requestSignature: NotarisationRequestSignature, intendedSigner: Party) {
+        val signature = requestSignature.digitalSignature
+        if (intendedSigner.owningKey != signature.by) {
+            val errorMessage = "Expected a signature by ${intendedSigner.owningKey}, but received by ${signature.by}}"
+            throw NotaryException(NotaryError.RequestSignatureInvalid(IllegalArgumentException(errorMessage)))
+        }
+        // TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to
+        // reserialize it in that version to get the exact same bytes. Modify the serialization logic once that's
+        // available.
+        val expectedSignedBytes = this.serialize().bytes
+        verifyCorrectBytesSigned(signature, expectedSignedBytes)
+    }
+
+    private fun verifyCorrectBytesSigned(signature: DigitalSignature.WithKey, bytes: ByteArray) {
         try {
-            val signature = requestSignature.digitalSignature
-            require(intendedSigner.owningKey == signature.by) { "Notarisation request for $transactionId not signed by the requesting party" }
-            // TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to
-            // reserialize it in that version to get the exact same bytes. Modify the serialization logic once that's
-            // available.
-            val expectedSignedBytes = this.serialize().bytes
-            signature.verify(expectedSignedBytes)
+            signature.verify(bytes)
         } catch (e: Exception) {
-            val error = NotaryError.RequestSignatureInvalid(e)
-            throw NotaryException(error)
+            when (e) {
+                is InvalidKeyException, is SignatureException -> {
+                    val error = NotaryError.RequestSignatureInvalid(e)
+                    throw NotaryException(error)
+                }
+                else -> throw e
+            }
         }
     }
 }
