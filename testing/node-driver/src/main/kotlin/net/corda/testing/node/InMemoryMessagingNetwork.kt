@@ -192,7 +192,8 @@ class InMemoryMessagingNetwork private constructor(
     }
 
     /**
-     * Mock service loadbalancing
+     * How traffic is allocated in the case where multiple nodes share a single identity, which happens for notaries
+     * in a cluster. You don't normally ever need to change this: it is mostly useful for testing notary implementations.
      */
     @DoNotImplement
     sealed class ServicePeerAllocationStrategy {
