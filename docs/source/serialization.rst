@@ -396,6 +396,51 @@ Providing a public getter, as per the following example, is acceptable:
           }
       }
 
+Mismatched Class Properties / Constructor Parameters
+````````````````````````````````````````````````````
+
+Consider an example where you wish to ensure that a property of class whose type is some form of container is always sorted using some specific criteria yet you wish to maintain the immutability of the class.
+
+This could be codified as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @CordaSerializable
+        class ConfirmRequest(statesToConsume: List<StateRef>, val transactionId: SecureHash) {
+            companion object {
+                private val stateRefComparator = compareBy<StateRef>({ it.txhash }, { it.index })
+            }
+
+            private val states = statesToConsume.sortedWith(stateRefComparator)
+        }
+
+The intention in the example is to always ensure that the states are stored in a specific order regardless of the ordering
+of the list used to initialise instances of the class. This is achieved by using the first constructor parameter as the
+basis for a private member. However, because that member is not mentioned in the constructor (whose parameters determine
+what is serializable as discussed above) it would not be serialized. In addition, as there is no provided mechanism to retrieve
+a value for ``statesToConsume`` we would fail to build a serializer for this Class.
+
+In this case a secondary constructor annotated with ``@ConstructorForDeserialization`` would not be a valid solution as the
+two signatures would be the same. Best practice is thus to provide a getter for the constructor parameter which explicitly
+associates it with the actual member variable.
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @CordaSerializable
+        class ConfirmRequest(statesToConsume: List<StateRef>, val transactionId: SecureHash) {
+            companion object {
+                private val stateRefComparator = compareBy<StateRef>({ it.txhash }, { it.index })
+            }
+
+            private val states = statesToConsume.sortedWith(stateRefComparator)
+
+            //Explicit "getter" for a property identified from the constructor parameters
+            fun getStatesToConsume() = states
+        }
 
 Enums
 `````
@@ -450,6 +495,4 @@ all versions of the class. This ensures an object serialized with an older idea 
 and a version of the current state of the class instantiated.
 
 More detail can be found in :doc:`serialization-default-evolution`.
-
-
 
