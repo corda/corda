@@ -36,6 +36,10 @@ class Network private constructor(
 
     private var hasError = false
 
+    init {
+        FileUtils.forceMkdir(targetDirectory)
+    }
+
     class Builder internal constructor(
             private val timeout: Duration
     ) {
@@ -74,9 +78,10 @@ class Network private constructor(
             return this
         }
 
-        fun generate(): Network {
+        fun generate(runNetworkBootstrapper : Boolean = true): Network {
             val network = Network(nodes, directory, timeout)
-            network.bootstrapNetwork()
+            if (runNetworkBootstrapper)
+                network.bootstrapNetwork()
             return network
         }
 

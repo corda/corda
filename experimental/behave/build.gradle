@@ -4,6 +4,7 @@ buildscript {
     ext.cucumber_version = '1.2.5'
     ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
     ext.docker_client_version = '8.11.0'
+    ext.kubernetes_client_version = '0.2'
 
     repositories {
         maven {
@@ -69,6 +70,7 @@ dependencies {
     compile "commons-io:commons-io:$commonsio_version"
     compile "commons-logging:commons-logging:$commonslogging_version"
     compile "com.spotify:docker-client:$docker_client_version"
+    compile "io.kubernetes:client-java:$kubernetes_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
 
     compile project(':finance')

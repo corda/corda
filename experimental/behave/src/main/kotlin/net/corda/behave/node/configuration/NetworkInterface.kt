@@ -10,7 +10,8 @@ data class NetworkInterface(
         val rpcPort: Int = getPort(12002 + (nodeIndex * 5)),
         val rpcAdminPort: Int = getPort(12003 + (nodeIndex * 5)),
         val webPort: Int = getPort(12004 + (nodeIndex * 5)),
-        val dbPort: Int = getPort(12005 + (nodeIndex * 5))
+        val dbPort: Int = getPort(12005 + (nodeIndex * 5)),
+        val dockerPort: Int = getPort(5000 + (nodeIndex * 5))
 ) : ConfigurationTemplate() {
 
     init {

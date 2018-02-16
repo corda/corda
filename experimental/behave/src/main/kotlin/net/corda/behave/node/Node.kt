@@ -46,6 +46,12 @@ class Node(
             enableRemoteDebugging = false
     )
 
+//    private val service = DockerContainerService(
+//            name = config.name,
+//            internalPort = config.nodeInterface.dockerPort,
+//            baseImage = config.distribution.baseImage!!,
+//            imageTag = config.distribution.version)
+
     private val isAliveLatch = PatternWatch("Node for \".*\" started up and registered")
 
     private var isConfigured = false
@@ -86,6 +92,8 @@ class Node(
         }
         log.info("Starting {} ...", this)
         return try {
+//            service.start()
+//            service.execute(command)
             command.start()
             isStarted = true
             true
@@ -111,6 +119,7 @@ class Node(
             if (isStarted) {
                 log.info("Shutting down {} ...", this)
                 command.kill()
+//                service.stop()
             }
             stopDependencies()
             true
