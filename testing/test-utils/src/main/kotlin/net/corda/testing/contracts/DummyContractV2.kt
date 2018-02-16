@@ -17,9 +17,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
     }
 
     override val legacyContract: String = DummyContract::class.java.name
-    override val legacyContractConstraint: AttachmentConstraint = object : AttachmentConstraint {
-        override fun isSatisfiedBy(attachment: Attachment) = true
-    }
+    override val legacyContractConstraint: AttachmentConstraint = AlwaysAcceptAttachmentConstraint
 
     data class State(val magicNumber: Int = 0, val owners: List<AbstractParty>) : ContractState {
         override val participants: List<AbstractParty> = owners

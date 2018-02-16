@@ -48,6 +48,7 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
     init {
         require(issuer.reference.size <= MAX_ISSUER_REF_SIZE) { "Maximum issuer reference size is $MAX_ISSUER_REF_SIZE." }
     }
+
     override fun toString() = "$product issued by $issuer"
 }
 
@@ -262,6 +263,9 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
      * A validator for the legacy (pre-upgrade) contract attachments on the transaction.
      */
     val legacyContractConstraint: AttachmentConstraint
+        // TODO: set default to WhitelistedByZoneAttachmentConstraint
+        get() = AlwaysAcceptAttachmentConstraint
+
     /**
      * Upgrade contract's state object to a new state object.
      *

@@ -91,6 +91,7 @@ data class ContractUpgradeLedgerTransaction(
     private val upgradedContract: UpgradedContract<ContractState, *> = loadUpgradedContract()
 
     init {
+        // TODO: relax this constraint once upgrading encumbered states is supported
         check(inputs.all { it.state.contract == legacyContractAttachment.contract }) {
             "All input states must point to the legacy contract"
         }
@@ -108,11 +109,19 @@ data class ContractUpgradeLedgerTransaction(
      * transaction is verified during construction.
      */
     override val outputs: List<TransactionState<ContractState>> = inputs.map { input ->
+        // TODO: if there are encumbrance states in the inputs, just copy them across without modifying
         val upgradedState = upgradedContract.upgrade(input.state.data)
+        val inputConstraint = input.state.constraint
+        val outputConstraint = when (inputConstraint) {
+            is HashAttachmentConstraint -> HashAttachmentConstraint(upgradedContractAttachment.id)
+            // TODO: handle other types of constraints: signature & network map whitelist
+            else -> throw IllegalArgumentException("Unsupported input contract constraint $inputConstraint")
+        }
+        // TODO: re-map encumbrance pointers
         input.state.copy(
                 data = upgradedState,
                 contract = upgradedContractAttachment.contract,
-                constraint = HashAttachmentConstraint(upgradedContractAttachment.id)
+                constraint = outputConstraint
         )
     }
 

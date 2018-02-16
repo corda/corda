@@ -234,13 +234,6 @@ class ContractUpgradeFlowTest {
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
-        companion object {
-            const val PROGRAM_ID: ContractClassName = "net.corda.core.flows.ContractUpgradeFlowTest\$CashV2"
-        }
-
-        override val legacyContractConstraint = object : AttachmentConstraint {
-            override fun isSatisfiedBy(attachment: Attachment) = true
-        }
         override val legacyContract = Cash.PROGRAM_ID
 
         class Move : TypeOnlyCommandData()
