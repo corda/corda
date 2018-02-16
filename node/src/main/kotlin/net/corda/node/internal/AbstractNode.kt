@@ -589,6 +589,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             log.warn("Certificate key store found but key store password does not match configuration.")
             false
         } catch (e: IOException) {
+            log.error("IO exception while trying to validate keystore", e)
             false
         }
         require(containCorrectKeys) {
