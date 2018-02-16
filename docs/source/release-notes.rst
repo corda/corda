@@ -260,10 +260,8 @@ Minor Changes
 ~~~~~~~~~~~~~
 
   * Upgraded gradle to 4.4.1.
-  * Multiple Identity support for cash spending, documentation can be found a part of the JavaDocs on ``TwoPartyTradeFlow``.
+  * Multiple Identity support for cash spending, documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
   * Overall improvements to error handling (RPC, Flows, Network Client).
-  * The Vault Query API has been unified with the Vault Service API to create a single Vault Service API.
-    See :doc:`vault-query` for details.
   * TLS authentication now supports mixed RSA and ECDSA keys.
   * Numerous bug fixes and documentation tweaks.
   * Removed dependency on Jolokia WAR file.
