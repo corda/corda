@@ -76,28 +76,11 @@ data class MockNodeArgs(
         val version: VersionInfo = MOCK_VERSION_INFO
 )
 
-/**
- * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
- * Components that do IO are either swapped out for mocks, or pointed to a [Jimfs] in memory filesystem or an in
- * memory H2 database instance.
- *
- * Mock network nodes require manual pumping by default: they will not run asynchronous. This means that
- * for message exchanges to take place (and associated handlers to run), you must call the [runNetwork]
- * method.
- *
- * You can get a printout of every message sent by using code like:
- *
- *    LogHelper.setLevel("+messages")
- *
- * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
- * This node is available by calling [defaultNotaryNode].
- */
 open class InternalMockNetwork(private val cordappPackages: List<String>,
                                defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                                val threadPerNode: Boolean = defaultParameters.threadPerNode,
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-                               initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                networkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = InternalMockNetwork::MockNode) {
@@ -119,7 +102,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     private val networkParametersCopier: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
     private val serializationEnv = try {
-        setGlobalSerialization(initialiseSerialization)
+        setGlobalSerialization(true)
     } catch (e: IllegalStateException) {
         throw IllegalStateException("Using more than one InternalMockNetwork simultaneously is not supported.", e)
     }
