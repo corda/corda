@@ -157,12 +157,12 @@ Other Functional Improvements
 
   .. note:: * Many classes have been moved between packages, so you will need to update your imports
     * setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
-      and are now via a constructor parameter or automatically when when constructing the MockServices or MockNetwork object
-    * Key constants e.g. ``ALICE_KEY`` have been removed, you can now use TestIdentity to make your own
+      and are now set via a constructor parameter or automatically when when constructing the MockServices or MockNetwork object
+    * Key constants e.g. ``ALICE_KEY`` have been removed; you can now use TestIdentity to make your own
     * The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
         * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
         * Also in transaction blocks, command takes its arguments as CommandDatas rather than lambdas
-    * The MockServices API has changed, please refer to its API documentation
+    * The MockServices API has changed; please refer to its API documentation
     * TestDependencyInjectionBase has been retired in favour of a JUnit Rule called SerializationEnvironmentRule
         * This replaces the initialiseSerialization parameter of ledger/transaction and verifierDriver
         * The withTestSerialization method is obsoleted by SerializationEnvironmentRule and has been retired
