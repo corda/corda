@@ -27,7 +27,7 @@ open class Command(
 
     private var process: Process? = null
 
-    private lateinit var outputListener: OutputListener
+    lateinit var outputListener: OutputListener
 
     var exitCode = -1
         private set
