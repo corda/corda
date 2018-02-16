@@ -16,6 +16,7 @@ buildscript {
     ext.docker_client_version = '8.11.0'
 
     repositories {
+        mavenLocal()
         maven {
             jcenter()
             url 'https://jitpack.io'
@@ -31,10 +32,12 @@ group 'net.corda.behave'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
 
 sourceCompatibility = 1.8
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -43,15 +46,42 @@ sourceSets {
         java {
             compileClasspath += main.output
             runtimeClasspath += main.output
-            srcDirs = ["src/main/kotlin", "src/scenario/kotlin"]
+            srcDirs = ['src/main/kotlin', 'src/scenario/kotlin']
         }
-        resources.srcDir file('src/scenario/resources')
+    }
+    scenario {
+        java {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/scenario/kotlin')
+        }
+        resources {
+            srcDirs = ['src/scenario/resources']
+        }
+    }
+    smokeTest {
+        kotlin {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+        resources {
+            srcDirs = ['src/scenario/resources']
+        }
     }
 }
 
 configurations {
-    behaveCompile.extendsFrom testCompile
-    behaveRuntime.extendsFrom testRuntime
+    scenarioCompile.extendsFrom testCompile
+    scenarioRuntime.extendsFrom testRuntime
+
+    behaveCompile.extendsFrom scenarioCompile
+    behaveRuntime.extendsFrom scenarioRuntime
+
+    smokeTestCompile.extendsFrom compile
+    smokeTestRuntime.extendsFrom runtime
+
+    testArtifacts.extendsFrom behaveRuntime
 }
 
 dependencies {
@@ -91,16 +121,24 @@ dependencies {
     compile project(':node-api')
     compile project(':client:rpc')
 
-    // Unit Tests
+    // dependency on CordaHttpToRPC proxy
+    compile project(':testing:qa:behave:tools:rpc-proxy')
 
+    testCompile project(':test-utils')
+
+    // Unit Tests
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
 
     // Scenarios / End-to-End Tests
+    scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
+    scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
+    scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 
-    behaveCompile "info.cukes:cucumber-java8:$cucumber_version"
-    behaveCompile "info.cukes:cucumber-junit:$cucumber_version"
-    behaveCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
+    // Smoke tests
+    smokeTestCompile project(':smoke-test-utils')
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile "junit:junit:$junit_version"
 }
 
 compileKotlin {
@@ -113,6 +151,11 @@ compileTestKotlin {
 
 test {
     testLogging.showStandardStreams = true
+}
+
+task smokeTest(type: Test) {
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
+    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 task behaveJar(type: Jar) {
@@ -132,4 +175,25 @@ task behaveJar(type: Jar) {
     manifest {
         attributes 'Main-Class': 'net.corda.behave.scenarios.ScenarioRunner'
     }
+}
+
+task apiJar(type: Jar, dependsOn: classes) {
+    baseName "corda-behave-api"
+    from sourceSets.behave.output
+    from {
+        configurations.behaveCompile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    from project(':client:rpc').configurations.compile.collect { zipTree it }
+    with jar
+    include 'net/corda/behave/scenarios/**'
+    include 'cucumber/api/**'
+    include 'io/github/lukehutch/**'
+    exclude '**/features/**'
+    exclude '**/scripts/**'
+}
+
+artifacts {
+    testArtifacts apiJar
 }

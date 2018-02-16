@@ -14,7 +14,7 @@ cd ${BUILD_DIR}
 ../../gradlew behaveJar
 
 BEHAVE_JAR=$(ls build/libs/corda-behave-*.jar | tail -n1)
-STAGING_ROOT=~/staging 
+STAGING_ROOT=~/staging
 
 # startup
 java -DSTAGING_ROOT=${STAGING_ROOT} -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ./src/scenario/resources/features/startup/logging.feature
@@ -23,4 +23,4 @@ java -DSTAGING_ROOT=${STAGING_ROOT} -jar ${BEHAVE_JAR} --glue net.corda.behave.s
 java -DSTAGING_ROOT=${STAGING_ROOT} -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ./src/scenario/resources/features/cash/currencies.feature
 
 # database
-java -DSTAGING_ROOT=${STAGING_ROOT} -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ./src/scenario/resources/features/cash/currencies.feature
+java -DSTAGING_ROOT=${STAGING_ROOT} -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ./src/scenario/resources/features/database/connection.feature

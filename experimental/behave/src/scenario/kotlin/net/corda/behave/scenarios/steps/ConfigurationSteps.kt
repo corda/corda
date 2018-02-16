@@ -39,6 +39,18 @@ class ConfigurationSteps : StepsBlock {
                             ?: error("Unknown notary type '$notaryType'"))
         }
 
+        Given<String, String>("^a node (\\w+) of version ([^ ]+) with proxy$") { name, version ->
+            node(name).withRPCProxy(true)
+                    .withDistribution(Distribution.fromVersionString(version))
+        }
+
+        Given<String, String, String>("^a (\\w+) notary node (\\w+) of version ([^ ]+) with proxy$") { notaryType, name, version ->
+            node(name).withRPCProxy(true)
+                    .withDistribution(Distribution.fromVersionString(version))
+                    .withNotaryType(notaryType.toNotaryType()
+                            ?: error("Unknown notary type '$notaryType'"))
+        }
+
         Given<String, String, String>("^a (\\w+) notary (\\w+) of version ([^ ]+)$") { type, name, version ->
             node(name)
                     .withDistribution(Distribution.fromVersionString(version))
@@ -70,7 +82,5 @@ class ConfigurationSteps : StepsBlock {
         Given<String, String>("^node (\\w+) has app installed: (.+)$") { name, app ->
             node(name).withApp(app)
         }
-
     }
 }
-

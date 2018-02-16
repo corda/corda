@@ -13,6 +13,7 @@ package net.corda.behave.scenarios
 import cucumber.api.java.After
 import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
+import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat
@@ -53,9 +54,15 @@ class ScenarioState {
             // Network is already running
             return
         }
-        val networkBuilder = Network.new()
+
+        // Corda Network will be configured as R3 Corda (with Doorman/NMS) if any Node uses an R3.Corda distribution
+        val r3CordaNode = nodes.find { it.networkType == Distribution.Type.R3_CORDA }
+        val networkType = if (r3CordaNode != null) Distribution.Type.R3_CORDA else Distribution.Type.CORDA
+        log.info("Corda network type: $networkType")
+
+        val networkBuilder = Network.new(networkType)
         for (node in nodes) {
-            networkBuilder.addNode(node)
+            networkBuilder.addNode(node.withNetworkType(networkType))
         }
         network = networkBuilder.generate()
         network?.start()
@@ -70,6 +77,14 @@ class ScenarioState {
     inline fun <T> withClient(nodeName: String, crossinline action: (CordaRPCOps) -> T): T {
         withNetwork {
             return node(nodeName).rpc {
+                action(it)
+            }
+        }
+    }
+
+    inline fun <T> withClientProxy(nodeName: String, crossinline action: (CordaRPCOps) -> T): T {
+        withNetwork {
+            return node(nodeName).http {
                 action(it)
             }
         }

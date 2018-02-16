@@ -10,7 +10,7 @@ Feature: Cash - Issuable Currencies
 
     Examples:
       | Node-Version    |
-      | master          |
+      | r3-master          |
 
   Scenario Outline: Node has an issuable currency
     Given a node PartyA of version <Node-Version>
@@ -21,7 +21,7 @@ Feature: Cash - Issuable Currencies
 
     Examples:
       | Node-Version    |
-      | master          |
+      | r3-master          |
 
   Scenario Outline: Node can issue a currency
     Given a node PartyA of version <Node-Version>
@@ -32,4 +32,4 @@ Feature: Cash - Issuable Currencies
 
     Examples:
       | Node-Version    |
-      | master          |
+      | r3-master       |

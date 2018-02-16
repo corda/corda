@@ -10,6 +10,8 @@
 
 buildscript {
     ext.strata_version = '1.1.2'
+    ext.corda_release_group = 'net.corda'
+    ext.cucumber_version = '1.2.5'
 }
 
 apply plugin: 'java'
@@ -32,11 +34,24 @@ sourceSets {
             srcDir file('../testing/test-utils/src/main/resources')
         }
     }
+    scenarioTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/system-test/scenario/kotlin')
+        }
+        resources {
+            srcDir 'src/system-test/scenario/resources'
+        }
+    }
 }
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+
+    scenarioTestCompile.extendsFrom testCompile
+    scenarioTestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -69,6 +84,7 @@ dependencies {
 
     // Test dependencies
     testCompile project(':node-driver')
+    scenarioTestCompile project(path: ":experimental:behave", configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
@@ -147,6 +163,16 @@ task integrationTest(type: Test, dependsOn: []) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
+task scenarioTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.scenarioTest.output.classesDirs
+    classpath = sourceSets.scenarioTest.runtimeClasspath
+}
+
+task scenarioJar(type: Jar, dependsOn: classes) {
+    classifier "behave-test"
+    from sourceSets.scenarioTest.output
+}
+
 publishing {
     publications {
         simmvaluationdemo(MavenPublication) {
@@ -155,6 +181,7 @@ publishing {
 
             artifact sourceJar
             artifact javadocJar
+            artifact scenarioJar
         }
     }
 }

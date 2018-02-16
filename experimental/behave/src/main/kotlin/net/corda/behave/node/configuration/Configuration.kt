@@ -36,7 +36,7 @@ class Configuration(
         vararg configElements: ConfigurationTemplate
 ) {
 
-    private val developerMode = true
+    private val developerMode = (distribution.type == Distribution.Type.CORDA)
 
     val cordaX500Name: CordaX500Name by lazy({
         CordaX500Name(name, location, country)

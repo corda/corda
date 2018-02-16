@@ -10,9 +10,11 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="behave_api" target="1.8" />
       <module name="behave_behave" target="1.8" />
       <module name="behave_main" target="1.8" />
       <module name="behave_scenario" target="1.8" />
+      <module name="behave_smokeTest" target="1.8" />
       <module name="behave_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
@@ -64,6 +66,10 @@
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
+      <module name="experimental-behave_behave" target="1.8" />
+      <module name="experimental-behave_main" target="1.8" />
+      <module name="experimental-behave_scenario" target="1.8" />
+      <module name="experimental-behave_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
@@ -151,6 +157,8 @@
       <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
+      <module name="simm-valuation-demo_scenario" target="1.8" />
+      <module name="simm-valuation-demo_scenarioTest" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
       <module name="smoke-test-utils_main" target="1.8" />
       <module name="smoke-test-utils_test" target="1.8" />

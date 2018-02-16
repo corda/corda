@@ -59,13 +59,13 @@ class Cash(state: ScenarioState) : Substeps(state) {
     }
 
     fun transferCash(senderNode: String, sendToNode: String, amount: Long, currency: String):  SignedTransaction {
-        return withClient(senderNode) {
+        return withClientProxy(senderNode) {
             try {
                 val sendToX500Name =  node(sendToNode).config.cordaX500Name
                 val sendToParty = node(senderNode).rpc {
                     it.wellKnownPartyFromX500Name(sendToX500Name) ?: throw IllegalStateException("Unable to locate $sendToX500Name in Network Map Service")
                 }
-                return@withClient it.startFlow(::CashPaymentFlow, Amount(amount, Currency.getInstance(currency)), sendToParty).returnValue.getOrThrow().stx
+                return@withClientProxy it.startFlow(::CashPaymentFlow, Amount(amount, Currency.getInstance(currency)), sendToParty).returnValue.getOrThrow().stx
             } catch (ex: Exception) {
                 log.warn("Failed to transfer $amount cash from $senderNode to $sendToNode", ex)
                 throw ex
