@@ -1,5 +1,8 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
+import com.google.common.collect.ImmutableList;
+import net.corda.core.contracts.ContractState;
+import net.corda.core.identity.AbstractParty;
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
 import net.corda.core.serialization.SerializedBytes;
 import org.apache.qpid.proton.codec.DecoderImpl;
@@ -9,6 +12,7 @@ import org.junit.Test;
 import javax.annotation.Nonnull;
 import java.io.NotSerializableException;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.Assert.assertTrue;
@@ -233,5 +237,24 @@ public class JavaSerializationOutputTests {
     public void testBoxedTypesNotNull() throws NotSerializableException {
         BoxedFooNotNull obj = new BoxedFooNotNull("Hello World!", 123);
         serdes(obj);
+    }
+
+    protected class DummyState implements ContractState {
+        @Override
+        public List<AbstractParty> getParticipants() {
+            return ImmutableList.of();
+        }
+    }
+
+    @Test
+    public void dummyStateSerialize() throws NotSerializableException {
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                new EvolutionSerializerGetter());
+
+        SerializationOutput serializer = new SerializationOutput(factory1);
+
+        serializer.serialize(new DummyState());
     }
 }

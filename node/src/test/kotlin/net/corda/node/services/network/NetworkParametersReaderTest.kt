@@ -15,6 +15,7 @@ import net.corda.testing.common.internal.ParametersUtilities.testNetworkParamete
 import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.junit.After
 import org.junit.Before

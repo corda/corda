@@ -49,7 +49,7 @@ class CashPaymentFlowTests {
         val expectedPayment = 500.DOLLARS
         val expectedChange = 1500.DOLLARS
 
-        bankOfCordaNode.database.transaction {
+        bankOfCordaNode.transaction {
             // Register for vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)

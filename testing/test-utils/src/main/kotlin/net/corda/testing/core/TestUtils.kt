@@ -20,6 +20,8 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.testing.internal.DEV_INTERMEDIATE_CA
+import net.corda.testing.internal.DEV_ROOT_CA
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey

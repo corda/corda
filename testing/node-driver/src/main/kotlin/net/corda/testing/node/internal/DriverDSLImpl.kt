@@ -43,7 +43,7 @@ import net.corda.testing.common.internal.ParametersUtilities.testNetworkParamete
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.setGlobalSerialization
+import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal

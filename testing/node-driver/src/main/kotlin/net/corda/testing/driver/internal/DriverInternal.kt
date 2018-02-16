@@ -15,6 +15,7 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.node.User
 import rx.Observable
 import java.nio.file.Path
+import java.sql.Connection
 
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
@@ -57,7 +58,7 @@ data class InProcessImpl(
         private val onStopCallback: () -> Unit,
         private val node: StartedNode<Node>
 ) : InProcess, NodeHandleInternal {
-    override val database: CordaPersistence get() = node.database
+    val database: CordaPersistence = node.database
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {
