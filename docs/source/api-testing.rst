@@ -51,7 +51,8 @@ as a CorDapp on each ``MockNode``.
 Configuring the ``MockNetwork``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``MockNetwork`` is configured using a ``MockNetworkParameters`` object, or by using named paramters in Kotlin:
+The ``MockNetwork`` is configured automatically. You can tweak its configuration using a ``MockNetworkParameters``
+object, or by using named paramters in Kotlin:
 
 .. container:: codeset
 
@@ -67,7 +68,7 @@ The ``MockNetwork`` is configured using a ``MockNetworkParameters`` object, or b
                 maxTransactionSize = Int.MAX_VALUE,
                 // Whether to manually control the sending of messages between nodes.
                 networkSendManuallyPumped = false,
-                // How to decide whether peer to send a message to when contacting a distributed service.
+                // How to decide which peer to send a message to when contacting a distributed service.
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                 // Whether to create a serialisation environment.
                 initialiseSerialization = true)
@@ -81,7 +82,7 @@ The ``MockNetwork`` is configured using a ``MockNetworkParameters`` object, or b
                 maxTransactionSize = Int.MAX_VALUE,
                 // Whether to manually control the sending of messages between nodes.
                 networkSendManuallyPumped = false,
-                // How to decide whether peer to send a message to when contacting a distributed service.
+                // How to decide which peer to send a message to when contacting a distributed service.
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                 // Whether to create a serialisation environment.
                 initialiseSerialization = true)
@@ -99,7 +100,7 @@ The ``MockNetwork`` is configured using a ``MockNetworkParameters`` object, or b
                         .setMaxTransactionSize(Integer.MAX_VALUE)
                         // Whether to manually control the sending of messages between nodes.
                         .setNetworkSendManuallyPumped(false)
-                        // How to decide whether peer to send a message to when contacting a distributed service.
+                        // How to decide which peer to send a message to when contacting a distributed service.
                         .setServicePeerAllocationStrategy(new InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
                         // Whether to create a serialisation environment.
                         .setInitialiseSerialization(true));
@@ -107,7 +108,7 @@ The ``MockNetwork`` is configured using a ``MockNetworkParameters`` object, or b
 Adding nodes to the network
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You creates nodes on the ``MockNetwork`` using:
+Nodes are created on the ``MockNetwork`` using:
 
 .. container:: codeset
 
