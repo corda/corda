@@ -2,26 +2,17 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
-import net.corda.core.identity.*
+import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
-import java.io.InputStream
 import java.security.PublicKey
 import java.security.SignatureException
-import java.security.cert.CertStore
-import java.security.cert.TrustAnchor
-import java.security.cert.X509Certificate
 import java.util.function.Predicate
 
 /**
@@ -94,27 +85,16 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
-        val authenticatedArgs = commands.map {
-            val parties = it.signers.mapNotNull { pk -> services.identityService.partyFromKey(pk) }
-            CommandWithParties(it.signers, parties, it.value)
-        }
-        val resolvedInputs = inputs.map { ref ->
-            services.loadState(ref).let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
-        }
-        val attachments = attachments.map {
-            services.attachments.openAttachment(it) ?: throw AttachmentResolutionException(it)
-        }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
-        checkTransactionSize(ltx)
-        return ltx
+        return toLedgerTransactionInternal(resolveIdentity = { services.identityService.partyFromKey(it) },
+                resolveAttachment = { services.attachments.openAttachment(it) },
+                resolveStateRef = { services.loadState(it) })
     }
 
     /**
      * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
      * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
      *
-     * This is a very deprecated method and should NOT be used.
+     * This is a VERY DEPRECATED method and should NOT be used.
      * It will eventually be removed!
      *
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
@@ -126,46 +106,27 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?): LedgerTransaction {
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+    ): LedgerTransaction = toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef)
 
-        fun notImplemented(): Nothing = throw IllegalStateException("Illegal use of this method")
-        val identityServiceStub = object : IdentityService {
-            override fun partyFromKey(key: PublicKey): Party? = resolveIdentity(key)
-            override val trustRoot: X509Certificate
-                get() = notImplemented()
-            override val trustAnchor: TrustAnchor
-                get() = notImplemented()
-            override val caCertStore: CertStore
-                get() = notImplemented()
-            override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = notImplemented()
-            override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = notImplemented()
-            override fun getAllIdentities(): Iterable<PartyAndCertificate> = notImplemented()
-            override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = notImplemented()
-            override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = notImplemented()
-            override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? = notImplemented()
-            override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party = notImplemented()
-            override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = notImplemented()
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    private fun toLedgerTransactionInternal(
+            resolveIdentity: (PublicKey) -> Party?,
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?
+    ): LedgerTransaction {
+        // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
+        val authenticatedArgs = commands.map {
+            val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
+            CommandWithParties(it.signers, parties, it.value)
         }
-
-        val attachmentStorageStub = object : AttachmentStorage {
-            override fun openAttachment(id: AttachmentId): Attachment? = resolveAttachment(id)
-            override fun importAttachment(jar: InputStream): AttachmentId = notImplemented()
-            override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId = notImplemented()
-            override fun importOrGetAttachment(jar: InputStream): AttachmentId = notImplemented()
-            override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> = notImplemented()
-            override fun hasAttachment(attachmentId: AttachmentId): Boolean = notImplemented()
+        val resolvedInputs = inputs.map { ref ->
+            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-
-        val servicesForResolutionStub = object : ServicesForResolution {
-            override fun loadState(stateRef: StateRef): TransactionState<*> = resolveStateRef(stateRef)!!
-            override val identityService: IdentityService
-                get() = identityServiceStub
-            override val attachments: AttachmentStorage
-                get() = attachmentStorageStub
-            override val cordappProvider: CordappProvider
-                get() = notImplemented()
-        }
-        return toLedgerTransaction(servicesForResolutionStub)
+        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        checkTransactionSize(ltx)
+        return ltx
     }
 
     private fun checkTransactionSize(ltx: LedgerTransaction) {
