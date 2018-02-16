@@ -18,7 +18,7 @@ MockNetwork
 Flow testing can be fully automated using a ``MockNetwork`` composed of ``MockNode`` nodes. Each ``MockNode`` behaves
 like a regular Corda node, but its services are either in-memory or mocked out.
 
-You create a ``MockNetwork`` as follows:
+A ``MockNetwork`` is created as follows:
 
 .. container:: codeset
 
@@ -150,7 +150,7 @@ Registering a node's initiated flows
 Regular Corda nodes automatically register any response flows defined in their installed CorDapps. When using a
 ``MockNetwork``, each ``MockNode`` must manually register any responder flows it wishes to use.
 
-You register a responder flow as follows:
+Responder flows are registered as follows:
 
 .. container:: codeset
 
@@ -168,7 +168,7 @@ Running the network
 Regular Corda nodes automatically send and receive messages. When using a ``MockNetwork``, you must manually initiate
 the sending and receiving of messages (e.g. after starting a flow).
 
-How you initiate the exchange of messages depends on how the ``MockNetwork`` is configured:
+How the exchange of messages is initiated depends on how the ``MockNetwork`` is configured:
 
 * Using ``MockNetwork.runNetwork`` if ``MockNetwork.networkSendManuallyPumped`` is set to false
     * ``network.runNetwork(-1)`` (the default in Kotlin) will exchange messages until there are no further messages to
@@ -178,8 +178,8 @@ How you initiate the exchange of messages depends on how the ``MockNetwork`` is 
 Running flows
 ^^^^^^^^^^^^^
 
-You request a ``MockNode`` to start a flow using the ``StartedNodeServices.startFlow`` method. This method returns a
-future representing the output of running the flow.
+A ``MockNode`` starts a flow using the ``StartedNodeServices.startFlow`` method. This method returns a future
+representing the output of running the flow.
 
 .. container:: codeset
 
@@ -191,7 +191,7 @@ future representing the output of running the flow.
 
         CordaFuture<SignedTransaction> future = startFlow(a.getServices(), new ExampleFlow.Initiator(1, nodeBParty));
 
-You must then manually run the network before retrieving the future's value:
+The network must then be manually run before retrieving the future's value:
 
 .. container:: codeset
 
@@ -215,10 +215,34 @@ Accessing ``MockNode`` internals
 Examining a node's transaction storage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-node.services.validatedTransactions
+Recorded transactions can be retrieved from the transaction storage of a ``MockNode`` using:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val transaction = nodeA.services.validatedTransactions.getTransaction(transaction.id)
+
+   .. sourcecode:: java
+
+        SignedTransaction transaction = nodeA.getServices().getValidatedTransactions().getTransaction(transaction.getId())
+
+This allows you to check whether a given transaction has (or has not) been stored, and whether it has the correct
+attributes.
 
 Querying a node's vault
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-node.services.vaultService
-        node.services.vaultService.queryBy<IOUState>().states
+Recorded states can be retrieved from the vault of a ``MockNode`` using:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val myStates = nodeA.services.vaultService.queryBy<MyStateType>().states
+
+   .. sourcecode:: java
+
+        List<MyStateType> myStates = node.getServices().getVaultService().queryBy(MyStateType.class).getStates();
+
+This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
