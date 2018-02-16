@@ -43,6 +43,7 @@ include 'perftestcordapp'
 ['test-common', 'test-utils', 'smoke-test-utils', 'node-driver'].each {
     project(":$it").projectDir = new File("$settingsDir/testing/$it")
 }
+include 'testing:qa:behave:tools:rpc-proxy'
 include 'network-management'
 include 'network-management:capsule'
 include 'network-management:capsule-hsm'
