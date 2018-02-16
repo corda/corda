@@ -16,10 +16,10 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.DEV_ROOT_CA
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver

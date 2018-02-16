@@ -15,6 +15,8 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
+import net.corda.testing.internal.DEV_INTERMEDIATE_CA
+import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.After

@@ -11,12 +11,13 @@ import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -29,10 +30,10 @@ class CollectSignaturesFlowTests {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
     }
 
-    private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedMockNode
-    private lateinit var bobNode: StartedMockNode
-    private lateinit var charlieNode: StartedMockNode
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var bobNode: StartedNode<MockNode>
+    private lateinit var charlieNode: StartedNode<MockNode>
     private lateinit var alice: Party
     private lateinit var bob: Party
     private lateinit var charlie: Party
@@ -40,7 +41,7 @@ class CollectSignaturesFlowTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
