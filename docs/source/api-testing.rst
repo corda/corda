@@ -144,28 +144,81 @@ You creates nodes on the ``MockNetwork`` using:
             }
         }
 
+Registering a node's initiated flows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Regular Corda nodes automatically register any response flows defined in their installed CorDapps. When using a
+``MockNetwork``, each ``MockNode`` must manually register any responder flows it wishes to use.
+
+You register a responder flow as follows:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        nodeA.registerInitiatedFlow(ExampleFlow.Acceptor::class.java)
+
+   .. sourcecode:: java
+
+        nodeA.registerInitiatedFlow(ExampleFlow.Acceptor.class);
+
 Running the network
 ^^^^^^^^^^^^^^^^^^^
 
-* Use `MockNetwork.runNetwork` to simulate the sending of messages around the network
-* The default value of -1 sends messages around the network until there are no more messages to send
+Regular Corda nodes automatically send and receive messages. When using a ``MockNetwork``, you must manually initiate
+the sending and receiving of messages (e.g. after starting a flow).
+
+How you initiate the exchange of messages depends on how the ``MockNetwork`` is configured:
+
+* Using ``MockNetwork.runNetwork`` if ``MockNetwork.networkSendManuallyPumped`` is set to false
+    * ``network.runNetwork(-1)`` (the default in Kotlin) will exchange messages until there are no further messages to
+      process
+* Using ``MockNetwork.pumpReceive`` if ``MockNetwork.networkSendManuallyPumped`` is set to true
 
 Running flows
 ^^^^^^^^^^^^^
 
-* Use the `StartedNodeServices.startFlow` extension method to call a flow and get a future representing the flow's output
-* You can retrieve the result of the flow from the future for testing
-* Ensure you run `MockNetwork.runNetwork` before resolving the future, so that the messages sent as part of the flow are processed
+You request a ``MockNode`` to start a flow using the ``StartedNodeServices.startFlow`` method. This method returns a
+future representing the output of running the flow.
 
-Examples
-^^^^^^^^
+.. container:: codeset
 
-Checking the nodes' tx storages
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   .. sourcecode:: kotlin
 
-(see https://github.com/corda/cordapp-example/blob/release-V2/kotlin-source/src/test/kotlin/com/example/flow/IOUFlowTests.kt#L86)
+        val signedTransactionFuture = nodeA.services.startFlow(IOUFlow(iouValue = 99, otherParty = nodeBParty))
 
-Checking the nodes' vaults
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+   .. sourcecode:: java
 
-(see https://github.com/corda/cordapp-example/blob/release-V2/kotlin-source/src/test/kotlin/com/example/flow/IOUFlowTests.kt#L107)
+        CordaFuture<SignedTransaction> future = startFlow(a.getServices(), new ExampleFlow.Initiator(1, nodeBParty));
+
+You must then manually run the network before retrieving the future's value:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val signedTransactionFuture = nodeA.services.startFlow(IOUFlow(iouValue = 99, otherParty = nodeBParty))
+        // Assuming network.networkSendManuallyPumped == false.
+        network.runNetwork()
+        val signedTransaction = future.get();
+
+   .. sourcecode:: java
+
+        CordaFuture<SignedTransaction> future = startFlow(a.getServices(), new ExampleFlow.Initiator(1, nodeBParty));
+        // Assuming network.networkSendManuallyPumped == false.
+        network.runNetwork();
+        SignedTransaction signedTransaction = future.get();
+
+Accessing ``MockNode`` internals
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Examining a node's transaction storage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+node.services.validatedTransactions
+
+Querying a node's vault
+~~~~~~~~~~~~~~~~~~~~~~~
+
+node.services.vaultService
+        node.services.vaultService.queryBy<IOUState>().states
