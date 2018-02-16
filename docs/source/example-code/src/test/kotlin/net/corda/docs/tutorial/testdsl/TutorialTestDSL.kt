@@ -38,6 +38,8 @@ class CommercialPaperTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+    // When creating the MockServices, you need to specify the packages that will contain the contracts you will use in this test
+    // In case you don't specify the 'cordappPackages' argument, the MockServices will be initialised with the Contracts found in the package of the current test
     private val ledgerServices = MockServices(listOf("net.corda.finance.contracts"), MEGA_CORP.name, rigorousMock<IdentityService>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BIG_CORP_PUBKEY)

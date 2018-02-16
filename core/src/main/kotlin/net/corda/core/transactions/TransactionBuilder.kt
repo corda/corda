@@ -19,6 +19,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -45,7 +46,7 @@ open class TransactionBuilder(
     constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid
             ?: UUID.randomUUID())
 
-    private var inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
     /**
      * Creates a copy of the builder.
@@ -60,7 +61,7 @@ open class TransactionBuilder(
                 window = window,
                 privacySalt = privacySalt
         )
-        t.inputsWithTransactionState = this.inputsWithTransactionState
+        t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         return t
     }
 

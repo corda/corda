@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.UpgradedContract
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.read
@@ -12,6 +11,7 @@ import java.io.InputStream
 import java.lang.reflect.Modifier
 import java.net.URLClassLoader
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 
 /**
@@ -20,9 +20,10 @@ import java.nio.file.StandardCopyOption
  */
 fun scanJarForContracts(cordappJarPath: String): List<ContractClassName> {
     val currentClassLoader = Contract::class.java.classLoader
-    val scanResult = FastClasspathScanner().addClassLoader(currentClassLoader).overrideClasspath(cordappJarPath).scan()
-    val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class.qualifiedName)).distinct()
-    //only keep instantiable contracts
+    val scanResult = FastClasspathScanner().addClassLoader(currentClassLoader).overrideClasspath(cordappJarPath, Paths.get(Contract::class.java.protectionDomain.codeSource.location.toURI()).toString()).scan()
+    val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) ).distinct()
+
+    // Only keep instantiable contracts
     val classLoader = URLClassLoader(arrayOf(File(cordappJarPath).toURL()), currentClassLoader)
     val concreteContracts = contracts.map(classLoader::loadClass).filter { !it.isInterface && !Modifier.isAbstract(it.modifiers) }
     return concreteContracts.map { it.name }
