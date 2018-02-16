@@ -28,8 +28,8 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
-UNRELEASED
-----------
+V2.0 to V3.0
+------------
 
 * For existing contract ORM schemas that extend from ``CommonSchemaV1.LinearState`` or ``CommonSchemaV1.FungibleState``,
   you will need to explicitly map the ``participants`` collection to a database table. Previously this mapping was done
@@ -53,6 +53,15 @@ UNRELEASED
                         JoinColumn(name = "output_index", referencedColumnName = "output_index"),
                         JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
                 override var participants: MutableSet<AbstractParty>? = null,
+
+* With AMQP enabled Java classes must be compiled with the -parameter flag.
+
+  * If they aren't, then the error message will complain about ``arg<N>`` being an unknown parameter.
+  * If recompilation is not viable, a custom serializer can be written as per :doc:`cordapp-custom-serializers`
+  * It is important to bear in mind that with AMQP there must be an implicit mapping between constructor
+    parameters and properties you wish included in the serialized form of a class.
+
+    * See :doc:`serialization` for more information
 
 Testing
 ~~~~~~~
