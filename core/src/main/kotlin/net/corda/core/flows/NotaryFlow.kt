@@ -192,10 +192,16 @@ class NotaryFlow {
  */
 data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
 
+/**
+ * Exception thrown by the notary service if any issues are encountered while trying to commit a transaction. The
+ * underlying [error] specifies the cause of failure.
+ */
 class NotaryException(val error: NotaryError) : FlowException("Unable to notarise: $error")
 
+/** Specifies the cause for notarisation request failure. */
 @CordaSerializable
 sealed class NotaryError {
+    /** Occurs when one or more input states of transaction with [txId] have already been consumed by another transaction. */
     data class Conflict(val txId: SecureHash, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
         override fun toString() = "One or more input states for transaction $txId have been used in another transaction"
     }
@@ -211,17 +217,21 @@ sealed class NotaryError {
         }
     }
 
+    /** Occurs when the provided transaction fails to verify. */
     data class TransactionInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = cause.toString()
     }
 
+    /** Occurs when the transaction sent for notarisation is assigned to a different notary identity. */
     object WrongNotary : NotaryError()
 
-    data class General(val cause: Throwable) : NotaryError() {
-        override fun toString() = cause.toString()
-    }
-
+    /** Occurs when the notarisation request signature does not verify for the provided transaction. */
     data class RequestSignatureInvalid(val cause: Throwable) : NotaryError() {
         override fun toString() = "Request signature invalid: $cause"
+    }
+
+    /** Occurs when the notary service encounters an unexpected issue or becomes temporarily unavailable. */
+    data class General(val cause: Throwable) : NotaryError() {
+        override fun toString() = cause.toString()
     }
 }
