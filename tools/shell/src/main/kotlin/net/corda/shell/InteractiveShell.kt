@@ -189,6 +189,8 @@ object InteractiveShell {
         }
     }
 
+    fun checkConnection() = connection.nodeInfo()
+
     fun createOutputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
@@ -215,8 +217,23 @@ object InteractiveShell {
         }
     }
 
+    private fun createInputMapper(factory: JsonFactory): ObjectMapper {
+        return JacksonSupport.createNonRpcMapper(factory).apply {
+            // Register serializers for stateful objects from libraries that are special to the RPC system and don't
+            // make sense to print out to the screen. For classes we own, annotations can be used instead.
+            val rpcModule = SimpleModule()
+            //rpcModule.addDeserializer(Observable::class.java, ObservableSerializer)
+            rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
+            registerModule(rpcModule)
+
+            //disable(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECTFeature.FAIL_ON_EMPTY_BEANS)
+            //enable(SerializationFeature.INDENT_OUTPUT)
+        }
+    }
+
     // TODO: This should become the default renderer rather than something used specifically by commands.
-    private val yamlMapper by lazy { createOutputMapper(YAMLFactory()) }
+    //private val yamlMapper by lazy { createOutputMapper(YAMLFactory()) }
+    private val yamlMapper by lazy { createInputMapper(YAMLFactory()) }
 
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out
@@ -405,7 +422,7 @@ object InteractiveShell {
 
     private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit> {
         val printerFun = yamlMapper::writeValueAsString
-        toStream.println(printerFun(response))
+        toStream.println(response)
         toStream.flush()
         return maybeFollow(response, printerFun, toStream)
     }

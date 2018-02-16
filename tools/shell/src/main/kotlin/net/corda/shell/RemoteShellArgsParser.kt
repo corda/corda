@@ -15,52 +15,53 @@ class RemoteShellArgsParser {
     // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
     // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
     private val hostArg = optionParser
-            .acceptsAll(listOf("h","host"), "The node host and port to be connected to, format [host]:[port]")
+            .acceptsAll(listOf("h","host"), "The node host to be connected to.")
             .withRequiredArg()
     private val portArg = optionParser
-            .acceptsAll(listOf("p","port"), "The node host and port to be connected to, format [host]:[port]")
+            .acceptsAll(listOf("p","port"), "The node port to be connected to.")
             .withRequiredArg()
     private val userArg = optionParser
-            .accepts("user-login", "The RPC user name")
+            .accepts("user", "The RPC user name.")
             .withRequiredArg()
             .defaultsTo("")
+    private val passwordArg = optionParser
+            .accepts("password", "The RPC user password.")
+            .withOptionalArg()
     private val baseDirectoryArg = optionParser
-            .accepts("base-directory", "The shell working directory where all the files are kept")
+            .accepts("base-directory", "The shell working directory where all the files are kept.")
             .withRequiredArg()
             .defaultsTo(".")
     private val loggerLevel = optionParser
-            .accepts("logging-level", "Enable logging at this level and higher")
+            .accepts("logging-level", "Enable logging at this level and higher.")
             .withRequiredArg()
             .withValuesConvertedBy(object : EnumConverter<Level>(Level::class.java) {})
             .defaultsTo(Level.INFO)
     private val sshdServerArg = optionParser
-            .accepts("sshd", "Enables SSHD server for remote shell")
+            .accepts("sshd", "Enables SSHD server for remote shell.")
             .withOptionalArg()
-    private val noLocalShellArg = optionParser.accepts("no-local-shell", "Do not start the embedded shell locally")
-            .withOptionalArg()
-            .defaultsTo("false")
     private val helpArg = optionParser.accepts("help").forHelp()
 
     fun parse(vararg args: String): CmdLineOptions {
         val optionSet = optionParser.parse(*args)
-        require(optionSet.has(hostArg) && optionSet.has(portArg)) {
+        require((optionSet.has(hostArg) && optionSet.has(portArg)) || optionSet.has(helpArg)) {
             "Require 'host' and 'port' option"
         }
         val host = optionSet.valueOf(hostArg)
         val port = optionSet.valueOf(portArg)
         val user = optionSet.valueOf(userArg)
+        val password = optionSet.valueOf(passwordArg)
         val baseDirectory = Paths.get(optionSet.valueOf(baseDirectoryArg)).normalize().toAbsolutePath()
         val help = optionSet.has(helpArg)
         val loggingLevel = optionSet.valueOf(loggerLevel)
-        val noLocalShell = optionSet.valueOf(noLocalShellArg).toString().equals("true", ignoreCase = true)
         val sshdServer = optionSet.valueOf(sshdServerArg)
         return CmdLineOptions(host,
                 port,
                 user,
+                password,
                 baseDirectory,
                 help,
                 loggingLevel,
-                noLocalShell,
+                false,
                 sshdServer)
     }
 
@@ -70,6 +71,7 @@ class RemoteShellArgsParser {
 data class CmdLineOptions(val host: String?,
                           val port: String?,
                           val user: String?,
+                          val password: String?,
                           val baseDirectory: Path?,
                           val help: Boolean,
                           val loggingLevel: Level,
@@ -79,6 +81,7 @@ data class CmdLineOptions(val host: String?,
         val cmdOpts = mutableMapOf<String,Any?>()
         if (host != null && port != null) {cmdOpts["hostAndPort"] = "$host:$port" }
         user?.apply { cmdOpts["user"] = user }
+        password?.apply { cmdOpts["password"] = password }
         baseDirectory?.apply { cmdOpts["baseDirectory"] = baseDirectory.toString() }
         noLocalShell?.apply { cmdOpts["noLocalShell"] = noLocalShell }
         sshdServer?.apply { cmdOpts["sshd"] = sshdServer }

@@ -71,44 +71,37 @@ class RemoteShell(private val cmdlineOptions: CmdLineOptions) {
 
     fun run() {
         val configuration = cmdlineOptions.toConfig()
-        val runLocalShell = !configuration.noLocalShell
-        val password: String? = if (runLocalShell) {
-                    login()
-                } else {
-                    null
-                }
-
         val cordappJarPaths = getCordappsInDirectory(configuration.baseDirectory / "cordapps")
         val classLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
-
-        val exit = CountDownLatch(1)
-
+        val password = cmdlineOptions.password ?: login()
         InteractiveShell.startShell(configuration,
                 { username: String?, credentials: String? ->
                     val client = CordaRPCClient(configuration.hostAndPort, sslConfiguration = configuration.ssl, classLoader = classLoader)
                     client.start(username ?: "", credentials?: "").proxy
                 }, classLoader, cmdlineOptions.user, password)
-
-
-        if (runLocalShell) {
-            AnsiConsole.systemInstall()
-            println(Ansi.ansi().fgBrightRed().a(
-                    """   ______               __""").newline().a(
-                    """  / ____/     _________/ /___ _""").newline().a(
-                    """ / /     __  / ___/ __  / __ `/ """).newline().fgBrightRed().a(
-                    """/ /___  /_/ / /  / /_/ / /_/ /""").newline().fgBrightRed().a(
-                    """\____/     /_/   \__,_/\__,_/""").reset().fgBrightDefault().bold()
-                    .newline().a("--- ${getManifestEntry("Corda-Vendor")} ${getManifestEntry("Corda-Release-Version")} (${getManifestEntry("Corda-Revision").take(7)}) ---")
-                    .newline()
-                    .newline().a("Remote Shell to ${configuration.hostAndPort}")
-                    .reset().newline().a("Shell connects to a node upon the first remote command."))
-            InteractiveShell.runLocalShell {
-                exit.countDown()
-            }
+        try {
+              InteractiveShell.checkConnection()
+        } catch (e: Exception) {
+            println("Cannot login to ${configuration.hostAndPort}, reason: \"${(e.cause ?: e).message}\"")
+            exitProcess(1)
         }
 
+        val exit = CountDownLatch(1)
+        AnsiConsole.systemInstall()
+        println(Ansi.ansi().fgBrightRed().a(
+                """   ______               __""").newline().a(
+                """  / ____/     _________/ /___ _""").newline().a(
+                """ / /     __  / ___/ __  / __ `/ """).newline().fgBrightRed().a(
+                """/ /___  /_/ / /  / /_/ / /_/ /""").newline().fgBrightRed().a(
+                """\____/     /_/   \__,_/\__,_/""").reset().fgBrightDefault().bold()
+                .newline().a("--- ${getManifestEntry("Corda-Vendor")} ${getManifestEntry("Corda-Release-Version")} (${getManifestEntry("Corda-Revision").take(7)}) ---")
+                .newline()
+                .newline().a("Remote Shell connected to ${configuration.hostAndPort}")
+                .reset())
+        InteractiveShell.runLocalShell {
+            exit.countDown()
+        }
         configuration.sshd?.apply{ println("SSH server listening on port $this.") }
-
         exit.await()
         exitProcess(0)
     }
