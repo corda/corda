@@ -2,6 +2,7 @@ package net.corda.finance.contracts.universal
 
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
@@ -209,8 +210,7 @@ private class PrettyPrint(arr : Arrangement) {
     }
 
     // Convenience function to remove unchecked cast warnings
-    @Suppress("UNCHECKED_CAST")
-    private fun<T> Perceivable<*>.asType() = this as Perceivable<T>
+    private fun<T> Perceivable<*>.asType() = uncheckedCast(this)
 }
 
 fun prettyPrint(arr: Arrangement): String {
