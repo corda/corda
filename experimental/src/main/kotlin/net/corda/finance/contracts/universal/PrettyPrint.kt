@@ -69,7 +69,7 @@ private class PrettyPrint(arr : Arrangement) {
         }
     }
 
-    fun prettyPrint(per: Perceivable<Boolean>, @Suppress("UNUSED_PARAMETER") x: Boolean? = null) {
+    fun prettyPrint(per: Perceivable<Boolean>) {
         when (per) {
             is Const -> print("\"${per.value}\"")
             is PerceivableOr -> {
