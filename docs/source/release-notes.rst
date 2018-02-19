@@ -118,36 +118,37 @@ Significant Changes in 3.0
 
   Support for the upgrading of Smart Contracts has been significantly extended in this release.
 
-  .. note:: Many more powerful extensions to this functionality, giving even greater control and flexibility in the way
-    your contracts are upgradable is coming in future versions of Corda. The functionality available here is an important
-    part of that and gives a great foundation to build upon in the future.
-
-  In prior versions of Corda, states included the hash of their defining application JAR. However the code that was used actually
-  came from the class path. In this release, transactions have the JAR containing the contract and states attached to them.
-  The code will be copied over the network to the recipient if that peer lacks a copy of the app. However, for security reasons,
-  in 3.0 the application must still be whitelisted on the node for the transaction to be successfully checked, so all nodes that
-  may encounter a transaction that uses your states must have a copy of your app. Future integration of the deterministic JVM
-  sandbox will eliminate this requirement and allow for true smart contract code migration across the network.
-
-  .. note:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
-    unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
-    contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. Only
-    the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "shaded" into a fat JAR,
-    as JAR dependencies are not supported in Corda 3.0
-
   Contract states express which attached JARs can define and check them using _constraints_. In older versions the only supported
   constraint was a hash constraint. This provides similar behaviour as public blockchain systems like Bitcoin and Ethereum, in
   which code is entirely fixed once deployed and cannot be changed later. In Corda there is an upgrade path that involves the
   cooperation of all involved parties (as advertised by the states themselves), but this requires explicit transactions to be
-  applied to all states and be signed by all parties, this is a fairly heavyweight operation. Hash constraints provide for maximum
-  decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a new constraint, a _network parameters_
-  constraint, that allows the list of acceptable contract JARs to be maintained by the operator of the compatibility zone rather
-  than being hard-coded. This allows for simple upgrades at the cost of some centralisation.
+  applied to all states and be signed by all parties.
 
-  .. note:: Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
-    can be attached to the transaction. This final constraint type provides a balance of all requirements: smooth rolling upgrades
-    can be performed without any additional steps or transactions being signed, at the cost of trusting the app developer more and
-    some additional complexity around managing app signing.
+  .. tip:: This is a fairly heavyweight operation and should thus be given due consideration as to the impact of running it an
+    the most opertune time to do so.
+  
+  Hash constraints provide for maximum decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a
+  new constraint, a _network parameters_ constraint, that allows the list of acceptable contract JARs to be maintained by the
+  operator of the compatibility zone rather than being hard-coded. This allows for simple upgrades at the cost of the introduction
+  of an element of centralisation.
+  
+  .. note:: In prior versions of Corda, states included the hash of their defining application JAR. However, the code that was
+    used actually came from the class path. In this release, transactions have the JAR containing the contract and states attached
+    to them. The code will be copied over the network to the recipient if that peer lacks a copy of the app. However, for security
+    reasons, in 3.0 the application must still be whitelisted on the node for the transaction to be successfully checked, so all
+    nodes that may encounter a transaction that uses your states must have a copy of your app. Future integration of the deterministic
+    JVM sandbox will eliminate this requirement and allow for true smart contract code migration across the network.
+
+    .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
+      unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
+      contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. Only
+      the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "shaded" into a fat JAR,
+      as JAR dependencies are not supported in Corda 3.0
+
+  Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
+  can be attached to the transaction. This final constraint type provides a balance of all requirements: smooth rolling upgrades
+  can be performed without any additional steps or transactions being signed, at the cost of trusting the app developer more and
+  some additional complexity around managing app signing.
 
   .. info:: A good example of this is the << app >> found << here >>
 
@@ -160,28 +161,6 @@ Significant Changes in 3.0
   over time. This should greatly increase confidence when upgrading between versions, as your testing environments will work
   without alteration.
 
-  .. note:: * Many classes have been moved between packages, so you will need to update your imports
-    * setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
-      and are now set via a constructor parameter or automatically when constructing the MockServices or MockNetwork object
-    * Key constants e.g. ``ALICE_KEY`` have been removed; you can now use TestIdentity to make your own
-    * The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
-        * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
-        * Also in transaction blocks, command takes its arguments as CommandDatas rather than lambdas
-    * The MockServices API has changed; please refer to its API documentation
-    * TestDependencyInjectionBase has been retired in favour of a JUnit Rule called SerializationEnvironmentRule
-        * This replaces the initialiseSerialization parameter of ledger/transaction and verifierDriver
-        * The withTestSerialization method is obsoleted by SerializationEnvironmentRule and has been retired
-    * MockNetwork now takes a MockNetworkParameters builder to make it more Java-friendly, like driver's DriverParameters
-        * Similarly, the MockNetwork.createNode methods now take a MockNodeParameters builder
-    * MockNode constructor parameters are now aggregated in MockNodeArgs for easier subclassing
-    * MockNetwork.Factory has been retired as you can simply use a lambda
-    * testNodeConfiguration has been retired, please use a mock object framework of your choice instead
-    * MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
-
-  .. tip:: We have provided a several scripts (depending upon your operating system of choice) to smooth the upgrade
-    process for existing projects. This can be found at ``tools\scripts\update-test-packages.sh`` for the Bash shell and
-    ``tools/scripts/upgrade-test-packages.ps1`` for Windows Poer Shell users in the source tree
-
   Please see the :doc:`upgrade-notes` for more information on transitionining older tests to the new framework
 
 Other Functional Improvements
@@ -190,16 +169,19 @@ Other Functional Improvements
 * **Clean Node Shutdown**
 
   We, alongside user feedback, concluded there was a strong need for the ability to have a clean inflection point where a node
-  could be shutdown without any in-flight transactions pending to allow for a clean system for upgrade purposes. As such, a flow
-  draining mode has been added. When activated, this places the node into a state of quiescence that guarantees no new work will be started and
-  all outstanding work completed prior to shutdown.
+  could be shutdown without any in-flight transactions pending to allow for a clean system for upgrade purposes. As such, a flows
+  draining mode has been added. When activated, this places the node into a state of quiescence that guarantees no new work will
+  be started and all outstanding work completed prior to shutdown.
 
   A clean shutdown can thus be achieved by:
 
     1. Subscribing to state machine updates
-    2. Trigger flows draining mode by ``rpc.setDrainingModeEnabled(true)``
+    2. Trigger flows draining mode by ``rpc.setFlowsDrainingModeEnabled(true)``
     3. Wait until the subscription setup as phase 1 lets you know that no more checkpoints are around
     4. Shut the node down however you want
+
+  .. note:: Once set, this mode is a persistent property that will be preserved across node restarts. It must be explicitly disabled
+    before a node will accept new RPC flow connections.
 
 * **X.509 certificates**
 
