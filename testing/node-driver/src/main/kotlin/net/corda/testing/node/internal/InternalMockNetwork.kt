@@ -18,6 +18,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
@@ -32,11 +33,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -51,16 +48,11 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MessagingServiceSpy
-import net.corda.testing.node.MockNetworkNotarySpec
-import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.internal.setGlobalSerialization
-import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
@@ -107,13 +99,14 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                                initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
-                               maxTransactionSize: Int = Int.MAX_VALUE,
+                               networkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = InternalMockNetwork::MockNode) {
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
         SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
+        require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
     }
 
     var nextNodeId = 0
@@ -123,7 +116,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     val messagingNetwork = InMemoryMessagingNetwork.create(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
-    private val networkParameters: NetworkParametersCopier
+    private val networkParametersCopier: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
     private val serializationEnv = try {
         setGlobalSerialization(initialiseSerialization)
@@ -199,7 +192,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             filesystem.getPath("/nodes").createDirectory()
             val notaryInfos = generateNotaryIdentities()
             // The network parameters must be serialised before starting any of the nodes
-            networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos, maxTransactionSize = maxTransactionSize))
+            networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
             @Suppress("LeakingThis")
             notaryNodes = createNotaries()
         } catch (t: Throwable) {
@@ -251,7 +244,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
 
         override fun start(): StartedNode<MockNode> {
-            mockNet.networkParameters.install(configuration.baseDirectory)
+            mockNet.networkParametersCopier.install(configuration.baseDirectory)
             val started: StartedNode<MockNode> = uncheckedCast(super.start())
             advertiseNodeToNetwork(started)
             return started
@@ -269,7 +262,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore, networkParameters: NetworkParameters): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -317,9 +310,9 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
 
         // Allow unit tests to modify the serialization whitelist list before the node start,
         // so they don't have to ServiceLoad test whitelists into all unit tests.
-        val testSerializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
+        private val _serializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
         override val serializationWhitelists: List<SerializationWhitelist>
-            get() = testSerializationWhitelists
+            get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
         override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
             return super.initialiseDatabasePersistence(schemaService, identityService) { database ->
