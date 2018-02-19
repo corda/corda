@@ -6,7 +6,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
@@ -19,7 +18,6 @@ import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.ParametersUtilities
 import net.corda.testing.core.*
 import net.corda.testing.internal.withoutTestSerialization
 import net.corda.testing.internal.LogHelper
@@ -44,9 +42,6 @@ class NodeInterestRatesTest {
         val MEGA_CORP_KEY = generateKeyPair()
         val ALICE get() = alice.party
         val ALICE_PUBKEY get() = alice.publicKey
-        init {
-            GlobalProperties.networkParameters = ParametersUtilities.testNetworkParameters(emptyList())
-        }
     }
 
     @Rule

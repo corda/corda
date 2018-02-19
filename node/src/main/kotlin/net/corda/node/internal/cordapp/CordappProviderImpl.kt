@@ -7,7 +7,6 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -17,7 +16,9 @@ import java.net.URL
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader,
+                               attachmentStorage: AttachmentStorage,
+                               private val whitelistedContractImplementations: Map<String, List<AttachmentId>>) : SingletonSerializeAsToken(), CordappProviderInternal {
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
@@ -34,9 +35,8 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
     }
 
     private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
-        val whitelist = GlobalProperties.networkParameters.whitelistedContractImplementations
 
-        if (whitelist.isEmpty()) {
+        if (whitelistedContractImplementations.isEmpty()) {
             log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
             return
         }
@@ -44,10 +44,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
         // Verify that the installed contract classes correspond with the whitelist hash
         // And warn if node is not using latest CorDapp
         cordappAttachments.keys.map(attachmentStorage::openAttachment).mapNotNull { it as? ContractAttachment }.forEach { attch ->
-            (attch.allContracts intersect whitelist.keys).forEach { contractClassName ->
+            (attch.allContracts intersect whitelistedContractImplementations.keys).forEach { contractClassName ->
                 when {
-                    attch.id !in whitelist[contractClassName]!! -> log.error("Contract ${contractClassName} found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
-                    attch.id != whitelist[contractClassName]!!.last() -> log.warn("You are not using the latest CorDapp version for contract: ${contractClassName}. Please contact your zone operator.")
+                    attch.id !in whitelistedContractImplementations[contractClassName]!! -> log.error("Contract $contractClassName found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
+                    attch.id != whitelistedContractImplementations[contractClassName]!!.last() -> log.warn("You are not using the latest CorDapp version for contract: $contractClassName. Please contact your zone operator.")
                 }
             }
         }

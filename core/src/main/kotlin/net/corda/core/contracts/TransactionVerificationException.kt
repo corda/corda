@@ -22,7 +22,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class MissingAttachmentRejection(txId: SecureHash, val contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed, could not find attachment for: $contractClass", null)
 
-    class ConflictingAttachmentsRejection(txId: SecureHash, val contractClass: String)
+    class ConflictingAttachmentsRejection(txId: SecureHash, contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed for: $contractClass, because multiple attachments providing this contract were attached.", null)
 
     class ContractCreationError(txId: SecureHash, contractClass: String, cause: Throwable)

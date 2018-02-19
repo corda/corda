@@ -26,7 +26,7 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
-import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
@@ -201,7 +201,7 @@ class NetworkMapUpdaterTest {
         val snapshot = paramsFeed.snapshot
         val updates = paramsFeed.updates.bufferUntilSubscribed()
         assertEquals(null, snapshot)
-        val newParameters = testNetworkParameters(emptyList(), epoch = 2)
+        val newParameters = testNetworkParameters(epoch = 2)
         val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
         scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
         updater.subscribeToNetworkMap()
@@ -219,7 +219,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `ack network parameters update`() {
-        val newParameters = testNetworkParameters(emptyList(), epoch = 314)
+        val newParameters = testNetworkParameters(epoch = 314)
         scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         updater.subscribeToNetworkMap()
         // TODO: Remove sleep in unit test.

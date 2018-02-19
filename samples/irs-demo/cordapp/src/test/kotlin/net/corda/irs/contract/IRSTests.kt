@@ -7,7 +7,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
@@ -25,7 +24,6 @@ import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TEST_TX_TIME
@@ -236,12 +234,6 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 }
 
 class IRSTests {
-    companion object {
-        init {
-            GlobalProperties.networkParameters = testNetworkParameters(emptyList())
-        }
-    }
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()

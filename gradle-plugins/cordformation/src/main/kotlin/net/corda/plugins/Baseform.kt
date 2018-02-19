@@ -2,11 +2,9 @@ package net.corda.plugins
 
 import groovy.lang.Closure
 import net.corda.cordform.CordformDefinition
-import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
-import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.net.URLClassLoader

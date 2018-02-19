@@ -6,6 +6,14 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
+* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+  one node with the legal name is found.
+
+* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
+  at CorDapp context creation time from a file source during runtime.
+
 * Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
   In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
   This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
@@ -66,7 +74,10 @@ UNRELEASED
      :doc:`corda-configuration-file` for more details.
 
    * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
-     to correctly interop.
+     to correctly interop. These can be retrieved from ``ServiceHub.networkParameters``.
+
+   * One of these parameters, ``maxTransactionSize``, limits the size of a transaction, including its attachments, so that
+     all nodes have sufficient memory to validate transactions.
 
    * The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
      their X500 name.
@@ -78,9 +89,6 @@ UNRELEASED
 
    * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
      was needed to allow changes to the schema.
-
-   * Introduced max transaction size limit on transactions. The max transaction size parameter is set by the compatibility zone
-     operator. The parameter is distributed to Corda nodes by network map service as part of the ``NetworkParameters``.
 
 * Support for external user credentials data source and password encryption [CORDA-827].
 
@@ -184,6 +192,9 @@ UNRELEASED
 
 * Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
   only for internal use
+
+* Provided experimental support for specifying your own webserver to be used instead of the default development
+  webserver in ``Cordform`` using the ``webserverJar`` argument
 
 * Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
   that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.

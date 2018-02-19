@@ -2,7 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.GlobalProperties
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
@@ -27,14 +27,15 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * An [AttachmentConstraint] that verifies that the hash of the attachment is in the network parameters whitelist.
  * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
  * It allows for centralized control over the cordapps that can be used.
+ *
+ * @param whitelistedContractImplementations whitelisted attachment IDs by contract class name.
  */
-object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
+class WhitelistedByZoneAttachmentConstraint(private val whitelistedContractImplementations: Map<String, List<AttachmentId>>) : AttachmentConstraint {
 
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        return GlobalProperties.networkParameters.whitelistedContractImplementations.let { whitelist ->
-            when {
-                attachment is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract]
-                        ?: emptyList())
+        return whitelistedContractImplementations.let { whitelist ->
+            when (attachment) {
+                is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
                 else -> false
             }
         }

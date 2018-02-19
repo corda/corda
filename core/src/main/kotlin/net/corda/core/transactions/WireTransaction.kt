@@ -5,7 +5,6 @@ import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -85,9 +84,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity = { services.identityService.partyFromKey(it) },
+        return toLedgerTransactionInternal(
+                resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
-                resolveStateRef = { services.loadState(it) })
+                resolveStateRef = { services.loadState(it) },
+                maxTransactionSize = services.networkParameters.maxTransactionSize
+        )
     }
 
     /**
@@ -97,20 +99,22 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
-    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead", replaceWith = ReplaceWith("toLedgerTransaction(ServicesForTransaction)"))
+    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead.")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
-    ): LedgerTransaction = toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef)
+    ): LedgerTransaction {
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, 10485760)
+    }
 
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            maxTransactionSize: Int
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedArgs = commands.map {
@@ -122,15 +126,15 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
         val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
-        checkTransactionSize(ltx)
+        checkTransactionSize(ltx, maxTransactionSize)
         return ltx
     }
 
-    private fun checkTransactionSize(ltx: LedgerTransaction) {
-        var remainingTransactionSize = GlobalProperties.networkParameters.maxTransactionSize
+    private fun checkTransactionSize(ltx: LedgerTransaction, maxTransactionSize: Int) {
+        var remainingTransactionSize = maxTransactionSize
 
         fun minus(size: Int) {
-            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : ${GlobalProperties.networkParameters.maxTransactionSize} bytes." }
+            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : $maxTransactionSize bytes." }
             remainingTransactionSize -= size
         }
 

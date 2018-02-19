@@ -13,7 +13,7 @@ public class MockNodeFactoryInJavaTest {
     private static void factoryIsEasyToPassInUsingJava() {
         //noinspection Convert2MethodRef
         new MockNetwork(emptyList());
-        new MockNetwork(emptyList(), new MockNetworkParameters().setInitialiseSerialization(false));
+        new MockNetwork(emptyList(), new MockNetworkParameters().withThreadPerNode(true));
         //noinspection Convert2MethodRef
         new MockNetwork(emptyList()).createNode(new MockNodeParameters());
     }

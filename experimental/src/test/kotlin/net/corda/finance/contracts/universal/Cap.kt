@@ -3,13 +3,11 @@ package net.corda.finance.contracts.universal
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.GlobalProperties
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.common.internal.ParametersUtilities.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -27,7 +25,6 @@ import java.time.LocalDate
 
 internal val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    GlobalProperties.networkParameters = testNetworkParameters(emptyList())
     MockServices(listOf("net.corda.finance.contracts.universal"), CordaX500Name("MegaCorp", "London", "GB"),
             rigorousMock<IdentityServiceInternal>().also {
                 listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
