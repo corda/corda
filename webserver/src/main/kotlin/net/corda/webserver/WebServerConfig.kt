@@ -5,7 +5,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.getValue
-import net.corda.nodeapi.internal.config.parseAs
 import java.nio.file.Path
 
 /**
