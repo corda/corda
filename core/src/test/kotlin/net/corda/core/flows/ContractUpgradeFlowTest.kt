@@ -233,8 +233,10 @@ class ContractUpgradeFlowTest {
         assertEquals(movedState, movedStateFromVault.state.data)
     }
 
-    class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
+    class CashV2 : UpgradedContractWithLegacyConstraint<Cash.State, CashV2.State> {
         override val legacyContract = Cash.PROGRAM_ID
+        override val legacyContractConstraint: AttachmentConstraint
+            get() = AlwaysAcceptAttachmentConstraint
 
         class Move : TypeOnlyCommandData()
 

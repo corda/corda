@@ -11,7 +11,7 @@ import net.corda.core.transactions.LedgerTransaction
  * Dummy contract state for testing of the upgrade process.
  */
 // DOCSTART 1
-class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
+class DummyContractV2 : UpgradedContractWithLegacyConstraint<DummyContract.State, DummyContractV2.State> {
     companion object {
         const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContractV2"
     }

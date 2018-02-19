@@ -98,9 +98,16 @@ data class ContractUpgradeLedgerTransaction(
         check(inputs.all { it.state.constraint.isSatisfiedBy(legacyContractAttachment) }) {
             "Legacy contract constraint does not satisfy the constraint of the input states"
         }
-        check(upgradedContract.legacyContract == legacyContractAttachment.contract &&
-                upgradedContract.legacyContractConstraint.isSatisfiedBy(legacyContractAttachment)) {
+        check(upgradedContract.legacyContract == legacyContractAttachment.contract) {
             "Outputs' contract must be an upgraded version of the inputs' contract"
+        }
+        if (upgradedContract is UpgradedContractWithLegacyConstraint) {
+            check(upgradedContract.legacyContractConstraint.isSatisfiedBy(legacyContractAttachment)) {
+                "Legacy contract does not satisfy the upgraded contract's constraint"
+            }
+        }
+        else {
+            // TODO: default to zone WhitelistedByZoneAttachmentConstraint, add a check
         }
     }
 
@@ -114,7 +121,7 @@ data class ContractUpgradeLedgerTransaction(
         val inputConstraint = input.state.constraint
         val outputConstraint = when (inputConstraint) {
             is HashAttachmentConstraint -> HashAttachmentConstraint(upgradedContractAttachment.id)
-            // TODO: handle other types of constraints: signature & network map whitelist
+        // TODO: handle other types of constraints: signature & network map whitelist
             else -> throw IllegalArgumentException("Unsupported input contract constraint $inputConstraint")
         }
         // TODO: re-map encumbrance pointers
