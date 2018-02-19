@@ -167,7 +167,7 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(networkParameters)
         }
         val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, MAX_FILE_SIZE)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
         rpcServerAddresses?.let {
