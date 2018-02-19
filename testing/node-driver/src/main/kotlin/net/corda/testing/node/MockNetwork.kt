@@ -155,6 +155,9 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
  *
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
+ *
+ * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
+ * empty as notaries are defined by [notarySpecs].
  */
 @Suppress("MemberVisibilityCanBePrivate", "CanBeParameter")
 open class MockNetwork(
@@ -177,9 +180,13 @@ open class MockNetwork(
             servicePeerAllocationStrategy,
             notarySpecs,
             networkParameters)
+    /** Which node will be used as the primary notary during transaction builds. */
     val defaultNotaryNode get() : StartedMockNode = StartedMockNode.create(internalMockNetwork.defaultNotaryNode)
+    /** The [Party] of the [defaultNotaryNode] */
     val defaultNotaryIdentity get() : Party = internalMockNetwork.defaultNotaryIdentity
+    /** A list of all notary nodes in the network that have been started. */
     val notaryNodes get() : List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }
+    /** In a mock network, nodes have an incrementing integer ID. Real networks do not have this. Returns the next ID that will be used. */
     val nextNodeId get() : Int = internalMockNetwork.nextNodeId
 
     /** Create a started node with the given identity. **/
