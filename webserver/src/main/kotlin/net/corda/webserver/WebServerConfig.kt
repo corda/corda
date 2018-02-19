@@ -5,6 +5,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.getValue
+import net.corda.nodeapi.internal.config.parseAs
 import java.nio.file.Path
 
 /**
@@ -29,8 +30,12 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
     val runAs = // TODO: replace with credentials supplied by a user
         if (config.hasPath("rpcUsers")) {
             // TODO: remove this once config format is updated
-            config.getConfig("rpcUsers")
+            config.getConfigList("rpcUsers")
+                    .first()
+                    .parseAs<User>()
         } else {
             config.getConfig("security.authService.dataSource.users")
-        }.parseAs<List<User>>().first()
+                    .parseAs<List<User>>()
+                    .first()
+        }
 }
