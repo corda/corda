@@ -10,6 +10,7 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
@@ -17,7 +18,6 @@ import net.corda.node.services.config.MySQLConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.chooseIdentity
@@ -83,7 +83,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         val firstSpend = node.services.startFlow(NotaryFlow.Client(firstSpendTx))
         mockNet.runNetwork()
 
-        firstSpend.resultFuture.getOrThrow()
+        firstSpend.getOrThrow()
 
         val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
             val dummyState = DummyContract.SingleOwnerState(0, node.info.chooseIdentity())
@@ -96,7 +96,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
         mockNet.runNetwork()
 
-        val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
+        val ex = assertFailsWith(NotaryException::class) { secondSpend.getOrThrow() }
         val error = ex.error as NotaryError.Conflict
         assertEquals(error.txId, secondSpendTx.id)
     }
@@ -112,11 +112,11 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
         val notarise = node.services.startFlow(NotaryFlow.Client(spendTx))
         mockNet.runNetwork()
-        val signature = notarise.resultFuture.get().single()
+        val signature = notarise.get().single()
 
         val notariseRetry = node.services.startFlow(NotaryFlow.Client(spendTx))
         mockNet.runNetwork()
-        val signatureRetry = notariseRetry.resultFuture.get().single()
+        val signatureRetry = notariseRetry.get().single()
 
         fun checkSignature(signature: TransactionSignature) {
             signature.verify(spendTx.id)

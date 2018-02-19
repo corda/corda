@@ -56,7 +56,7 @@ class CashIssueAndPaymentFlowTests {
             val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
             val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
-            val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentFlow(expectedPayment, OpaqueBytes.of(1), payTo, false, notary)).resultFuture
+            val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentFlow(expectedPayment, OpaqueBytes.of(1), payTo, false, notary))
             mockNet.runNetwork()
             future.getOrThrow()
 

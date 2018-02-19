@@ -38,8 +38,8 @@ import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStra
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.pumpReceive
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.pumpReceive
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType

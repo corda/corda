@@ -47,7 +47,7 @@ class NetworkMapSignerTest : TestBase() {
         val signedNodeInfoHashes = listOf(SecureHash.randomSHA256(), SecureHash.randomSHA256())
         val currentParameters = testNetworkParameters(emptyList(), minimumPlatformVersion = 1)
         val latestNetworkParameters = testNetworkParameters(emptyList(), minimumPlatformVersion = 2)
-        val networkMap = NetworkMap(signedNodeInfoHashes, currentParameters.serialize().hash)
+        val networkMap = NetworkMap(signedNodeInfoHashes, currentParameters.serialize().hash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(signedNetworkMap)
         whenever(networkMapStorage.getNodeInfoHashes(any())).thenReturn(signedNodeInfoHashes)
@@ -83,7 +83,7 @@ class NetworkMapSignerTest : TestBase() {
         // given
         val networkParameters = testNetworkParameters(emptyList())
         val networkMapParametersHash = networkParameters.serialize().bytes.sha256()
-        val networkMap = NetworkMap(emptyList(), networkMapParametersHash)
+        val networkMap = NetworkMap(emptyList(), networkMapParametersHash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(signedNetworkMap)
         whenever(networkMapStorage.getNodeInfoHashes(any())).thenReturn(emptyList())

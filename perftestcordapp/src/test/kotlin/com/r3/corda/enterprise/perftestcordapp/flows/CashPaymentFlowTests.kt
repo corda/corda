@@ -38,7 +38,7 @@ class CashPaymentFlowTests {
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         mockNet.runNetwork()
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, mockNet.defaultNotaryIdentity)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, mockNet.defaultNotaryIdentity))
         future.getOrThrow()
     }
 
@@ -60,7 +60,7 @@ class CashPaymentFlowTests {
             val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
-                    payTo)).resultFuture
+                    payTo))
             mockNet.runNetwork()
             future.getOrThrow()
 
@@ -92,7 +92,7 @@ class CashPaymentFlowTests {
         val payTo = aliceNode.info.chooseIdentity()
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
-                payTo)).resultFuture
+                payTo))
         mockNet.runNetwork()
         assertFailsWith<CashException> {
             future.getOrThrow()
@@ -104,7 +104,7 @@ class CashPaymentFlowTests {
         val payTo = aliceNode.info.chooseIdentity()
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
-                payTo)).resultFuture
+                payTo))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()

@@ -32,7 +32,7 @@ class SetsSerializationTest {
     }
 
     @Test
-    fun `check set can be serialized as part of SessionData`() {
+    fun `check set can be serialized as part of DataSessionMessage`() {
         run {
             val sessionData = DataSessionMessage(setOf(1).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)

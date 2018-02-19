@@ -104,7 +104,7 @@ class NetworkMapWebServiceTest {
 
     @Test
     fun `get network map`() {
-        val networkMap = NetworkMap(listOf(randomSHA256(), randomSHA256()), randomSHA256())
+        val networkMap = NetworkMap(listOf(randomSHA256(), randomSHA256()), randomSHA256(), null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
 
         val networkMapStorage: NetworkMapStorage = mock {

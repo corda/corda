@@ -10,4 +10,5 @@ import java.io.ByteArrayInputStream
 @CordaSerializable
 class MockContractAttachment(override val id: SecureHash = SecureHash.zeroHash, val contract: ContractClassName, override val signers: List<Party> = ArrayList()) : Attachment {
     override fun open() = ByteArrayInputStream(id.bytes)
+    override val size = id.size
 }

@@ -67,7 +67,7 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
                     = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentNoSelection(
-                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary)).resultFuture
+                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary))
             mockNet.runNetwork()
             future.getOrThrow()
 
