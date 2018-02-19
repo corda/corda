@@ -75,7 +75,6 @@ object RPCApi {
 
     const val DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME = "deduplication-sequence-number"
 
-
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
@@ -181,12 +180,11 @@ object RPCApi {
 
         abstract fun writeToClientMessage(context: SerializationContext, message: ClientMessage)
 
+        /** The identity used to identify the deduplication ID sequence. This should be unique per server JVM run */
         abstract val deduplicationIdentity: String
 
         /**
          * Reply in response to an [ClientToServer.RpcRequest].
-         * @property deduplicationSequenceNumber a sequence number strictly incrementing with each message. Use this for
-         *     duplicate detection on the client.
          */
         data class RpcReply(
                 val id: InvocationId,

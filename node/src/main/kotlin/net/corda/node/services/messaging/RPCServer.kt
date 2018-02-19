@@ -299,40 +299,44 @@ class RPCServer(
         lifeCycle.requireState(State.STARTED)
         val clientToServer = RPCApi.ClientToServer.fromClientMessage(artemisMessage)
         log.debug { "-> RPC -> $clientToServer" }
-        when (clientToServer) {
-            is RPCApi.ClientToServer.RpcRequest -> {
-                val deduplicationSequenceNumber = artemisMessage.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
-                if (deduplicationChecker.checkDuplicateMessageId(
-                        identity = clientToServer.clientAddress,
-                        sequenceNumber = deduplicationSequenceNumber
-                )) {
-                    log.info("Message duplication detected, discarding message")
-                    return
-                }
-                val arguments = Try.on {
-                    clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
-                }
-                val context = artemisMessage.context(clientToServer.sessionId)
-                context.invocation.pushToLoggingContext()
-                when (arguments) {
-                    is Try.Success -> {
-                        rpcExecutor!!.submit {
-                            val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                            sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+        try {
+            when (clientToServer) {
+                is RPCApi.ClientToServer.RpcRequest -> {
+                    val deduplicationSequenceNumber = artemisMessage.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
+                    if (deduplicationChecker.checkDuplicateMessageId(
+                            identity = clientToServer.clientAddress,
+                            sequenceNumber = deduplicationSequenceNumber
+                    )) {
+                        log.info("Message duplication detected, discarding message")
+                        return
+                    }
+                    val arguments = Try.on {
+                        clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
+                    }
+                    val context = artemisMessage.context(clientToServer.sessionId)
+                    context.invocation.pushToLoggingContext()
+                    when (arguments) {
+                        is Try.Success -> {
+                            log.info("SUBMITTING")
+                            rpcExecutor!!.submit {
+                                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+                            }
+                        }
+                        is Try.Failure -> {
+                            // We failed to deserialise the arguments, route back the error
+                            log.warn("Inbound RPC failed", arguments.exception)
+                            sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
                         }
                     }
-                    is Try.Failure -> {
-                        // We failed to deserialise the arguments, route back the error
-                        log.warn("Inbound RPC failed", arguments.exception)
-                        sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
-                    }
+                }
+                is RPCApi.ClientToServer.ObservablesClosed -> {
+                    observableMap.invalidateAll(clientToServer.ids)
                 }
             }
-            is RPCApi.ClientToServer.ObservablesClosed -> {
-                observableMap.invalidateAll(clientToServer.ids)
-            }
+        } finally {
+            artemisMessage.acknowledge()
         }
-        artemisMessage.acknowledge()
     }
 
     private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
