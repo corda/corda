@@ -4,6 +4,7 @@ import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.UpgradedContract
+import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.internal.*
@@ -241,7 +242,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
-        return (scanResult.getNamesOfClassesImplementing(Contract::class) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class)).distinct()
+        return (scanResult.getNamesOfClassesImplementing(Contract::class) +
+                scanResult.getNamesOfClassesImplementing(UpgradedContract::class) +
+                scanResult.getNamesOfClassesImplementing(UpgradedContractWithLegacyConstraint::class))
+                .distinct()
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
