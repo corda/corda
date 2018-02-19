@@ -74,7 +74,10 @@ UNRELEASED
      :doc:`corda-configuration-file` for more details.
 
    * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
-     to correctly interop.
+     to correctly interop. These can be retrieved from ``ServiceHub.networkParameters``.
+
+   * One of these parameters, ``maxTransactionSize``, limits the size of a transaction, including its attachments, so that
+     all nodes have sufficient memory to validate transactions.
 
    * The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
      their X500 name.

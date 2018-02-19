@@ -8,12 +8,13 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.VerifierType
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -25,7 +26,6 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.sql.Connection
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -128,6 +128,33 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  *
  * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
  *   when called from Java code.
+ * @param dsl The dsl itself.
+ * @return The value returned in the [dsl] closure.
+ */
+fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {
+    return genericDriver(
+            driverDsl = DriverDSLImpl(
+                    portAllocation = defaultParameters.portAllocation,
+                    debugPortAllocation = defaultParameters.debugPortAllocation,
+                    systemProperties = defaultParameters.systemProperties,
+                    driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
+                    useTestClock = defaultParameters.useTestClock,
+                    isDebug = defaultParameters.isDebug,
+                    startNodesInProcess = defaultParameters.startNodesInProcess,
+                    waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                    notarySpecs = defaultParameters.notarySpecs,
+                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
+                    jmxPolicy = defaultParameters.jmxPolicy,
+                    compatibilityZone = null,
+                    networkParameters = defaultParameters.networkParameters
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = defaultParameters.initialiseSerialization
+    )
+}
+
+/** Builder for configuring a [driver] from Java.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
@@ -145,36 +172,7 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
  *      startJmxHttpServer: indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote JMX monitoring using HTTP/JSON.
  *      jmxHttpServerPortAllocation: the port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP. Defaults to incremental.
- * @param dsl The dsl itself.
- * @return The value returned in the [dsl] closure.
  */
-fun <A> driver(
-        defaultParameters: DriverParameters = DriverParameters(),
-        dsl: DriverDSL.() -> A
-): A {
-    return genericDriver(
-            driverDsl = DriverDSLImpl(
-                    portAllocation = defaultParameters.portAllocation,
-                    debugPortAllocation = defaultParameters.debugPortAllocation,
-                    systemProperties = defaultParameters.systemProperties,
-                    driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
-                    useTestClock = defaultParameters.useTestClock,
-                    isDebug = defaultParameters.isDebug,
-                    startNodesInProcess = defaultParameters.startNodesInProcess,
-                    waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
-                    notarySpecs = defaultParameters.notarySpecs,
-                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
-                    jmxPolicy = defaultParameters.jmxPolicy,
-                    compatibilityZone = null,
-                    maxTransactionSize = defaultParameters.maxTransactionSize
-            ),
-            coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = defaultParameters.initialiseSerialization
-    )
-}
-
-/** Helper builder for configuring a [driver] from Java. */
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
@@ -189,18 +187,19 @@ data class DriverParameters(
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy(),
-        val maxTransactionSize: Int = Int.MAX_VALUE
+        val networkParameters: NetworkParameters = testNetworkParameters()
 ) {
-    fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
-    fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
-    fun setPortAllocation(portAllocation: PortAllocation) = copy(portAllocation = portAllocation)
-    fun setDebugPortAllocation(debugPortAllocation: PortAllocation) = copy(debugPortAllocation = debugPortAllocation)
-    fun setSystemProperties(systemProperties: Map<String, String>) = copy(systemProperties = systemProperties)
-    fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
-    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
-    fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean) = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
-    fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
-    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
-    fun setJmxPolicy(jmxPolicy: JmxPolicy) = copy(jmxPolicy = jmxPolicy)
+    fun setIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
+    fun setDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
+    fun setPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
+    fun setDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
+    fun setSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
+    fun setUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
+    fun setInitialiseSerialization(initialiseSerialization: Boolean): DriverParameters = copy(initialiseSerialization = initialiseSerialization)
+    fun setStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
+    fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
+    fun setNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
+    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+    fun setJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
+    fun setNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
 }

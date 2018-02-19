@@ -9,8 +9,8 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.common.internal.asContextEnv
+import net.corda.testing.common.internal.testNetworkParameters
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -51,8 +51,8 @@ class NodeProcess(
     // TODO All use of this factory have duplicate code which is either bundling the calling module or a 3rd party module
     // as a CorDapp for the nodes.
     class Factory(
-            val buildDirectory: Path = Paths.get("build"),
-            val cordaJarUrl: URL? = this::class.java.getResource("/corda.jar")
+            private val buildDirectory: Path = Paths.get("build"),
+            private val cordaJarUrl: URL? = this::class.java.getResource("/corda.jar")
     ) {
         val cordaJar: Path by lazy {
             require(cordaJarUrl != null, { "corda.jar could not be found in classpath" })
@@ -66,7 +66,7 @@ class NodeProcess(
                 KryoClientSerializationScheme.createSerializationEnv().asContextEnv {
                     // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
                     // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
-                    NetworkParametersCopier(testNetworkParameters(emptyList()))
+                    NetworkParametersCopier(testNetworkParameters())
                 }
             }
 

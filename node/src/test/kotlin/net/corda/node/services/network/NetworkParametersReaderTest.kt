@@ -50,7 +50,7 @@ class NetworkParametersReaderTest {
     fun `read correct set of parameters from file`() {
         val fs = Jimfs.newFileSystem(Configuration.unix())
         val baseDirectory = fs.getPath("/node").createDirectories()
-        val oldParameters = testNetworkParameters(emptyList(), epoch = 1)
+        val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(baseDirectory)
         NetworkParametersCopier(server.networkParameters, update = true).install(baseDirectory) // Parameters update file.
         val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).networkParameters
