@@ -74,6 +74,38 @@ Testing
 
   * The ``unsetCordappPackages`` method is now redundant and has been removed
 
+* Many classes have been moved between packages, so you will need to update your imports
+
+  .. tip:: We have provided a several scripts (depending upon your operating system of choice) to smooth the upgrade
+     process for existing projects. This can be found at ``tools\scripts\update-test-packages.sh`` for the Bash shell and
+     ``tools/scripts/upgrade-test-packages.ps1`` for Windows Power Shell users in the source tree
+
+* setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
+  and are now set via a constructor parameter or automatically when constructing the MockServices or MockNetwork object
+
+* Key constants e.g. ``ALICE_KEY`` have been removed; you can now use TestIdentity to make your own
+
+* The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
+  * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
+  * Also in transaction blocks, command takes its arguments as CommandDatas rather than lambdas
+
+* The MockServices API has changed; please refer to its API documentation
+
+* TestDependencyInjectionBase has been retired in favour of a JUnit Rule called SerializationEnvironmentRule
+  * This replaces the initialiseSerialization parameter of ledger/transaction and verifierDriver
+  * The withTestSerialization method is obsoleted by SerializationEnvironmentRule and has been retired
+
+* MockNetwork now takes a MockNetworkParameters builder to make it more Java-friendly, like driver's DriverParameters
+    * Similarly, the MockNetwork.createNode methods now take a MockNodeParameters builder
+
+* MockNode constructor parameters are now aggregated in MockNodeArgs for easier subclassing
+
+* MockNetwork.Factory has been retired as you can simply use a lambda
+
+* testNodeConfiguration has been retired, please use a mock object framework of your choice instead
+
+* MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
+
 V1.0 to V2.0
 ------------
 
