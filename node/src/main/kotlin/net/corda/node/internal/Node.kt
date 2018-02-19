@@ -171,10 +171,10 @@ open class Node(configuration: NodeConfiguration,
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize)
+            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, MAX_FILE_SIZE)
         }
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
+            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, MAX_FILE_SIZE)
             VerifierType.InMemory -> null
         }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
@@ -189,7 +189,7 @@ open class Node(configuration: NodeConfiguration,
                 database,
                 services.networkMapCache,
                 advertisedAddress,
-                networkParameters.maxMessageSize,
+                MAX_FILE_SIZE,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
     }
@@ -228,7 +228,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(networkParameters: NetworkParameters): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, MAX_FILE_SIZE)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
