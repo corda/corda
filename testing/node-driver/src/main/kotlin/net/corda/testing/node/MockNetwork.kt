@@ -59,6 +59,8 @@ data class MockNodeParameters(
  * is used by multiple nodes. You rarely if ever need to change that, it's primarily of interest to people testing
  * notary code.
  * @property notarySpecs The notaries to use in the mock network. By default you get one mock notary and that is usually sufficient.
+ * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
+ * empty as notaries are defined by [notarySpecs].
  */
 @Suppress("unused")
 data class MockNetworkParameters(
@@ -66,7 +68,8 @@ data class MockNetworkParameters(
         val threadPerNode: Boolean = false,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         val notarySpecs: List<MockNetworkNotarySpec> = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
-        val networkParameters: NetworkParameters = testNetworkParameters()) {
+        val networkParameters: NetworkParameters = testNetworkParameters()
+) {
     fun withNetworkParameters(networkParameters: NetworkParameters): MockNetworkParameters = copy(networkParameters = networkParameters)
     fun withNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean): MockNetworkParameters = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun withThreadPerNode(threadPerNode: Boolean): MockNetworkParameters = copy(threadPerNode = threadPerNode)
