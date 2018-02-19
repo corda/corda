@@ -269,6 +269,7 @@ Recorded states can be retrieved from the vault of a ``StartedMockNode`` using:
 
 This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
 
+
 Examining a node's transaction storage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -286,3 +287,144 @@ Recorded transactions can be retrieved from the transaction storage of a ``Start
 
 This allows you to check whether a given transaction has (or has not) been stored, and whether it has the correct
 attributes.
+
+This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
+
+
+Contract testing
+----------------
+
+MockServices
+^^^^^^^^^^^^
+
+The Corda test framework includes the ability to create a test ledger by calling the ``ledger`` function
+on an implementation of the ``ServiceHub`` interface.
+
+A mock implementation of ``ServiceHub`` is provided in ``MockServices``. This is a minimal ServiceHub that
+suffices to test contract logic. It has the ability to insert states into the vault, query the vault, and
+construct and check transactions.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 11
+        :end-before: DOCEND 11
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 11
+        :end-before: DOCEND 11
+        :dedent: 4
+
+
+Alternatively, there is a helper constructor which just accepts a list of ``TestIdentity``. The first identity provided is
+the nodes identity, and any subsequent identities are identities that the node knows about. The calling package
+is provided as the location to scan for cordapps and a test ``IdentityService`` is created for you using all the
+given identities.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 12
+        :end-before: DOCEND 12
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 12
+        :end-before: DOCEND 12
+        :dedent: 4
+
+
+Writing tests using a test ledger
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``ServiceHub.ledger`` extension function allows you to create a test ledger. Within the ledger wrapper you can create
+transactions using the ``transaction`` function. Within a transaction you can define the ``input`` and
+``output`` states for the transaction, alongside the ``command`` that is being executed, and any
+``attachments``, as shown in this example test:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 13
+        :end-before: DOCEND 13
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 13
+        :end-before: DOCEND 13
+        :dedent: 4
+
+Once the input and output states have been specified, you can run ``verifies()`` to check that the given state is valid.
+
+Checking for failure states
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to test for failures, you can use the ``failsWith`` method, or in Kotlin the ``fails with`` helper method.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 4
+        :end-before: DOCEND 4
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 4
+        :end-before: DOCEND 4
+        :dedent: 4
+
+Note: The transaction DSL forces the last line of the test to be either a ``verifies`` or ``fails with`` statement.
+
+Testing multiple scenarios at once
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Within one transaction, you can check for multiple different states in order to reduce the amount of test code
+needed. For example, you could test that a contract fails to verify because it has no output states, and then
+add the relevant output state and check that the contract verifies successfully, as in the following example:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 5
+        :end-before: DOCEND 5
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 5
+        :end-before: DOCEND 5
+        :dedent: 4
+
+You can also use the ``tweak`` function to create a locally scoped transaction that you can make changes to
+and then return to the original, unmodified transaction. As in the following example:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 7
+        :end-before: DOCEND 7
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 7
+        :end-before: DOCEND 7
+        :dedent: 4
+
+
+Further examples
+^^^^^^^^^^^^^^^^
+
+* See the contract testing tutorial here: https://docs.corda.net/tutorial-test-dsl.html
+* Further examples are available in the example cordapp here: https://github.com/corda/cordapp-example/blob/release-V3/kotlin-source/src/test/kotlin/com/example/contract/IOUContractTests.kt
