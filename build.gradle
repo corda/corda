@@ -2,7 +2,6 @@ buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
-    file("${project(':node').projectDir}/src/main/resources/build.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
     ext.corda_release_version = "3.0-SNAPSHOT"
@@ -41,7 +40,6 @@ buildscript {
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.jolokia_version = constants.getProperty("jolokiaAgentVersion")
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'

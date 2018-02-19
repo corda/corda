@@ -38,8 +38,8 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
     private val log = LoggerFactory.getLogger(allowedRemoteLegalNames?.firstOrNull()?.toString() ?: "AMQPChannelHandler")
     private lateinit var remoteAddress: InetSocketAddress
-    private lateinit var localCert: X509Certificate
-    private lateinit var remoteCert: X509Certificate
+    private var localCert: X509Certificate? = null
+    private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
 
     override fun channelActive(ctx: ChannelHandlerContext) {
@@ -51,7 +51,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
     private fun createAMQPEngine(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
-        eventProcessor = EventProcessor(ch, serverMode, localCert.subjectX500Principal.toString(), remoteCert.subjectX500Principal.toString(), userName, password)
+        eventProcessor = EventProcessor(ch, serverMode, localCert!!.subjectX500Principal.toString(), remoteCert!!.subjectX500Principal.toString(), userName, password)
         val connection = eventProcessor!!.connection
         val transport = connection.transport as ProtonJTransport
         if (trace) {
@@ -72,7 +72,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
-        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, null, false)))
+        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false)))
         eventProcessor?.close()
         ctx.fireChannelInactive()
     }
@@ -84,7 +84,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 localCert = sslHandler.engine().session.localCertificates[0].x509
                 remoteCert = sslHandler.engine().session.peerCertificates[0].x509
                 try {
-                    val remoteX500Name = CordaX500Name.build(remoteCert.subjectX500Principal)
+                    val remoteX500Name = CordaX500Name.build(remoteCert!!.subjectX500Principal)
                     require(allowedRemoteLegalNames == null || remoteX500Name in allowedRemoteLegalNames)
                     log.info("handshake completed subject: $remoteX500Name")
                 } catch (ex: IllegalArgumentException) {
@@ -124,7 +124,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                         require(inetAddress == remoteAddress) {
                             "Message for incorrect endpoint"
                         }
-                        require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert.subjectX500Principal)) {
+                        require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert!!.subjectX500Principal)) {
                             "Message for incorrect legal identity"
                         }
                         log.debug { "channel write ${msg.applicationProperties["_AMQ_DUPL_ID"]}" }

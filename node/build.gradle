@@ -9,6 +9,14 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
 
+// Import private compile time constants
+buildscript {
+    def properties = new Properties()
+    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
+
+    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+}
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     compile {

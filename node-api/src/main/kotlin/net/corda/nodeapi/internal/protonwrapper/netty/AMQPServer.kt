@@ -38,7 +38,7 @@ class AMQPServer(val hostName: String,
                  private val userName: String?,
                  private val password: String?,
                  private val keyStore: KeyStore,
-                 private val keyStorePrivateKeyPassword: String,
+                 private val keyStorePrivateKeyPassword: CharArray,
                  private val trustStore: KeyStore,
                  private val trace: Boolean = false) : AutoCloseable {
 
@@ -59,15 +59,21 @@ class AMQPServer(val hostName: String,
     private var serverChannel: Channel? = null
     private val clientChannels = ConcurrentHashMap<InetSocketAddress, SocketChannel>()
 
-    init {
-    }
+    constructor(hostName: String,
+                port: Int,
+                userName: String?,
+                password: String?,
+                keyStore: KeyStore,
+                keyStorePrivateKeyPassword: String,
+                trustStore: KeyStore,
+                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, trace)
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
 
         init {
-            keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword.toCharArray())
+            keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword)
             trustManagerFactory.init(parent.trustStore)
         }
 
@@ -166,6 +172,13 @@ class AMQPServer(val hostName: String,
             throw IllegalStateException("Connection to ${msg.destinationLink} not active")
         } else {
             channel.writeAndFlush(msg)
+        }
+    }
+
+    fun dropConnection(connectionRemoteHost: InetSocketAddress) {
+        val channel = clientChannels[connectionRemoteHost]
+        if (channel != null) {
+            channel.close()
         }
     }
 

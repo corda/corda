@@ -79,7 +79,10 @@ internal class EventProcessor(channel: Channel,
                 if ((connection.localState != EndpointState.CLOSED) && !connection.transport.isClosed) {
                     val now = System.currentTimeMillis()
                     val tickDelay = Math.max(0L, connection.transport.tick(now) - now)
-                    executor.schedule({ tick(connection) }, tickDelay, TimeUnit.MILLISECONDS)
+                    executor.schedule({
+                        tick(connection)
+                        processEvents()
+                    }, tickDelay, TimeUnit.MILLISECONDS)
                 }
             } catch (ex: Exception) {
                 connection.transport.close()

@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CON
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -18,13 +19,16 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import java.util.*
 
 class BridgeControlListener(val config: NodeSSLConfiguration,
-                            val p2pAddress: NetworkHostAndPort,
-                            val maxMessageSize: Int) : AutoCloseable {
+                            val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, p2pAddress, maxMessageSize)
+    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, artemisMessageClientFactory)
     private val validInboundQueues = mutableSetOf<String>()
-    private var artemis: ArtemisMessagingClient? = null
+    private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
+
+    constructor(config: NodeSSLConfiguration,
+                p2pAddress: NetworkHostAndPort,
+                maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()
@@ -33,7 +37,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     fun start() {
         stop()
         bridgeManager.start()
-        val artemis = ArtemisMessagingClient(config, p2pAddress, maxMessageSize)
+        val artemis = artemisMessageClientFactory()
         this.artemis = artemis
         artemis.start()
         val artemisClient = artemis.started!!
@@ -56,6 +60,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     }
 
     fun stop() {
+        validInboundQueues.clear()
         controlConsumer?.close()
         controlConsumer = null
         artemis?.stop()
@@ -64,6 +69,10 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     }
 
     override fun close() = stop()
+
+    fun validateReceiveTopic(topic: String): Boolean {
+        return topic in validInboundQueues
+    }
 
     private fun validateInboxQueueName(queueName: String): Boolean {
         return queueName.startsWith(P2P_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString(queueName)).isExists
@@ -90,7 +99,6 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
                 for (outQueue in controlMessage.sendQueues) {
                     bridgeManager.deployBridge(outQueue.queueName, outQueue.targets.first(), outQueue.legalNames.toSet())
                 }
-                // TODO For now we just record the inboxes, but we don't use the information, but eventually out of process bridges will use this for validating inbound messages.
                 validInboundQueues.addAll(controlMessage.inboxQueues)
             }
             is BridgeControl.BridgeToNodeSnapshotRequest -> {

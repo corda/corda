@@ -75,6 +75,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 ),
                 p2pAddress = nodeData.p2pPort.toLocalAddress(),
                 rpcAddress = nodeData.rpcPort.toLocalAddress(),
+                rpcAdminAddress = nodeData.rpcAdminPort.toLocalAddress(),
                 webAddress = nodeData.webPort.toLocalAddress(),
                 notary = notary,
                 h2port = nodeData.h2Port.value,

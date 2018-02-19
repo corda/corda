@@ -1,6 +1,9 @@
 package net.corda.node.services.vault
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -74,7 +77,7 @@ class VaultWithCashTest {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
-                dummyNotary.keyPair)
+                moreKeys = dummyNotary.keyPair)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
