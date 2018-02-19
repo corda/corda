@@ -115,7 +115,7 @@ class CollectSignaturesFlowTests {
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = aliceNode.services.startFlow(TestFlow.Initiator(state, notary))
         mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
+        val result = flow.getOrThrow()
         result.verifyRequiredSignatures()
         println(result.tx)
         println(result.sigs)
@@ -127,7 +127,7 @@ class CollectSignaturesFlowTests {
         val ptx = aliceNode.services.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
+        val result = flow.getOrThrow()
         result.verifyRequiredSignatures()
         println(result.tx)
         println(result.sigs)
@@ -141,7 +141,7 @@ class CollectSignaturesFlowTests {
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {
-            flow.resultFuture.getOrThrow()
+            flow.getOrThrow()
         }
     }
 
@@ -155,7 +155,7 @@ class CollectSignaturesFlowTests {
         val signedByBoth = bobNode.services.addSignature(signedByA)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(signedByBoth, emptySet()))
         mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
+        val result = flow.getOrThrow()
         println(result.tx)
         println(result.sigs)
     }

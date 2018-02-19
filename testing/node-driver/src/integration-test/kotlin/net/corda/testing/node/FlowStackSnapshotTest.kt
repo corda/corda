@@ -290,7 +290,7 @@ class FlowStackSnapshotTest {
         val mockNet = MockNetwork(emptyList(), threadPerNode = true)
         val node = mockNet.createPartyNode()
         node.registerInitiatedFlow(DummyFlow::class.java)
-        node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).resultFuture.get()
+        node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).get()
         val thrown = try {
             // Due to the [MockNetwork] implementation, the easiest way to trigger object serialization process is at
             // the network stopping stage.

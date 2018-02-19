@@ -6,8 +6,8 @@ import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.DigitalSignatureWithCert
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 /**

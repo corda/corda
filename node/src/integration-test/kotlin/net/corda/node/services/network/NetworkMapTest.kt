@@ -4,12 +4,12 @@ import net.corda.cordform.CordformNode
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -51,7 +51,7 @@ class NetworkMapTest : IntegrationTest() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
         compatibilityZone = CompatibilityZoneParams(URL("http://$address"), publishNotaries = {
-            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
         })
     }
 

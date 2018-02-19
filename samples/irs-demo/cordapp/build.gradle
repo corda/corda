@@ -43,63 +43,96 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
 
+def rpcUsersList = [
+        ['username' : "user",
+         'password' : "password",
+         'permissions' : [
+                 "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
+                 "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
+                 "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
+                 "InvokeRpc.vaultQueryBy",
+                 "InvokeRpc.networkMapSnapshot",
+                 "InvokeRpc.currentNodeTime",
+                 "InvokeRpc.wellKnownPartyFromX500Name"
+         ]]
+]
+
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 
-    ext.rpcUsers = [
-            ['username' : "user",
-             'password' : "password",
-             'permissions' : [
-                     "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
-                     "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
-                     "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
-                     "InvokeRpc.vaultQueryBy",
-                     "InvokeRpc.networkMapSnapshot",
-                     "InvokeRpc.currentNodeTime",
-                     "InvokeRpc.wellKnownPartyFromX500Name"
-             ]]
-    ]
-
-    directory "./build/nodes"
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
         rpcSettings {
-            address "localhost:10003"
-            adminAddress "localhost:10023"
+            port 10003
+            adminPort 10023
         }
-        cordapps = ["${project.group}:finance:$corda_release_version"]
-        rpcUsers = ext.rpcUsers
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
         useTestClock true
     }
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         rpcSettings {
-            address "localhost:10006"
-            adminAddress "localhost:10026"
+            port 10006
+            adminPort 10026
         }
-        cordapps = ["${project.group}:finance:$corda_release_version"]
-        rpcUsers = ext.rpcUsers
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
         useTestClock true
     }
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
         rpcSettings {
-            address "localhost:10009"
-            adminAddress "localhost:10029"
+            port 10009
+            adminPort 10029
         }
         cordapps = ["${project.group}:finance:$corda_release_version"]
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         useTestClock true
     }
     node {
         name "O=Regulator,L=Moscow,C=RU"
         p2pPort 10010
-        rpcPort 10011
+        rpcSettings {
+            port 10009
+            adminPort 10029
+        }
         cordapps = ["${project.group}:finance:$corda_release_version"]
-        rpcUsers = ext.rpcUsers
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
+        useTestClock true
+    }
+
+}
+
+task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
+
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating : true]
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
+        useTestClock true
+    }
+    node {
+        name "O=Bank A,L=London,C=GB"
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
+        useTestClock true
+    }
+    node {
+        name "O=Bank B,L=New York,C=US"
+        cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
+        useTestClock true
+    }
+    node {
+        name "O=Regulator,L=Moscow,C=RU"
+        cordapps = ["${project.group}:finance:$corda_release_version"]
+        rpcUsers = rpcUsersList
         useTestClock true
     }
 }

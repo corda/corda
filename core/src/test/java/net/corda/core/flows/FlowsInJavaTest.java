@@ -40,7 +40,7 @@ public class FlowsInJavaTest {
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
         bobNode.registerInitiatedFlow(SendHelloAndThenReceive.class);
-        Future<String> result = startFlow(aliceNode.getServices(), new SendInUnwrapFlow(bob)).getResultFuture();
+        Future<String> result = startFlow(aliceNode.getServices(), new SendInUnwrapFlow(bob));
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
@@ -56,7 +56,7 @@ public class FlowsInJavaTest {
 
     private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
         PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(bob, receiveType);
-        Future<?> result = startFlow(aliceNode.getServices(), flow).getResultFuture();
+        Future<?> result = startFlow(aliceNode.getServices(), flow);
         mockNet.runNetwork();
         try {
             result.get();

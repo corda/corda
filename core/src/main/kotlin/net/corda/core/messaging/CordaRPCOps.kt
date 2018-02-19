@@ -4,7 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -13,6 +13,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -23,47 +24,44 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import rx.Observable
+import java.io.IOException
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
-private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
-
+/**
+ * Represents information about a flow (the name "state machine" is legacy, Kotlin users can use the [FlowInfo] type
+ * alias). You can access progress tracking, information about why the flow was started and so on.
+ */
 @CordaSerializable
 data class StateMachineInfo @JvmOverloads constructor(
+        /** A univerally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
         val id: StateMachineRunId,
+        /** The JVM class name of the flow code. */
         val flowLogicClassName: String,
-        val initiator: FlowInitiator,
+        /**
+         * An object representing information about the initiator of the flow. Note that this field is
+         * superceded by the [invocationContext] property, which has more detail.
+         */
+        @Deprecated("There is more info available using 'context'") val initiator: FlowInitiator,
+        /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
         val progressTrackerStepAndUpdates: DataFeed<String, String>?,
-        val context: InvocationContext? = null
+        /** An [InvocationContext] describing why and by whom the flow was started. */
+        val invocationContext: InvocationContext = initiator.invocationContext
 ) {
-    fun context(): InvocationContext = context ?: contextFrom(initiator)
-
-    private fun contextFrom(initiator: FlowInitiator): InvocationContext {
-        var actor: Actor? = null
-        val origin: Origin
-        when (initiator) {
-            is FlowInitiator.RPC -> {
-                actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
-                origin = Origin.RPC(actor)
-            }
-            is FlowInitiator.Peer -> origin = Origin.Peer(initiator.party.name)
-            is FlowInitiator.Service -> origin = Origin.Service(initiator.serviceClassName, unknownName)
-            is FlowInitiator.Shell -> origin = Origin.Shell
-            is FlowInitiator.Scheduled -> origin = Origin.Scheduled(initiator.scheduledState)
-        }
-        return InvocationContext.newInstance(origin = origin, actor = actor)
-    }
-
+    @Suppress("DEPRECATION")
     fun copy(id: StateMachineRunId = this.id,
              flowLogicClassName: String = this.flowLogicClassName,
              initiator: FlowInitiator = this.initiator,
              progressTrackerStepAndUpdates: DataFeed<String, String>? = this.progressTrackerStepAndUpdates): StateMachineInfo {
-        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, context = context)
+        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, invocationContext = invocationContext)
     }
 
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
+
+/** An alias for [StateMachineInfo] which uses more modern terminology. */
+typealias FlowInfo = StateMachineInfo
 
 @CordaSerializable
 sealed class StateMachineUpdate {
@@ -75,6 +73,24 @@ sealed class StateMachineUpdate {
 
     data class Removed(override val id: StateMachineRunId, val result: Try<*>) : StateMachineUpdate()
 }
+
+// DOCSTART 1
+/**
+ * Data class containing information about the scheduled network parameters update. The info is emitted every time node
+ * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
+ * @property hash new [NetworkParameters] hash
+ * @property parameters new [NetworkParameters] data structure
+ * @property description description of the update
+ * @property updateDeadline deadline for accepting this update using [CordaRPCOps.acceptNewNetworkParameters]
+ */
+@CordaSerializable
+data class ParametersUpdateInfo(
+        val hash: SecureHash,
+        val parameters: NetworkParameters,
+        val description: String,
+        val updateDeadline: Instant
+)
+// DOCEND 1
 
 @CordaSerializable
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
@@ -208,6 +224,29 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
+
+    /**
+     * Returns [DataFeed] object containing information on currently scheduled parameters update (null if none are currently scheduled)
+     * and observable with future update events. Any update that occurs before the deadline automatically cancels the current one.
+     * Only the latest update can be accepted.
+     * Note: This operation may be restricted only to node administrators.
+     */
+    // TODO This operation should be restricted to just node admins.
+    @RPCReturnsObservables
+    fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo>
+
+    /**
+     * Accept network parameters with given hash, hash is obtained through [networkParametersFeed] method.
+     * Information is sent back to the zone operator that the node accepted the parameters update - this process cannot be
+     * undone.
+     * Only parameters that are scheduled for update can be accepted, if different hash is provided this method will fail.
+     * Note: This operation may be restricted only to node administrators.
+     * @param parametersHash hash of network parameters to accept
+     * @throws IllegalArgumentException if network map advertises update with different parameters hash then the one accepted by node's operator.
+     * @throws IOException if failed to send the approval to network map
+     */
+    // TODO This operation should be restricted to just node admins.
+    fun acceptNewNetworkParameters(parametersHash: SecureHash)
 
     /**
      * Start the given flow with the given arguments. [logicType] must be annotated

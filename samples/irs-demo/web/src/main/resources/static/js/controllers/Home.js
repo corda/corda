@@ -1,23 +1,23 @@
 'use strict';
 
-define(['angular', 'utils/semantic', 'services/NodeApi', 'services/HttpErrorHandler'], (angular, semantic) => {
+define(['angular', 'utils/semantic', 'services/NodeApi', 'services/HttpErrorHandler'], function (angular, semantic) {
     angular.module('irsViewer').controller('HomeController', function HomeController($http, $scope, nodeService, httpErrorHandler) {
         semantic.addLoadingModal($scope, nodeService.isLoading);
 
-        let handleHttpFail = httpErrorHandler.createErrorHandler($scope);
+        var handleHttpFail = httpErrorHandler.createErrorHandler($scope);
 
         $scope.infoMsg = "";
         $scope.errorText = "";
         $scope.date = { "year": "...", "month": "...", "day": "..." };
-        $scope.updateDate = (type) => {
-            nodeService.updateDate(type).then((newDate) => {
-                $scope.date = newDate
+        $scope.updateDate = function (type) {
+            nodeService.updateDate(type).then(function (newDate) {
+                $scope.date = newDate;
             }, handleHttpFail);
         };
         /* Extract the common name from an X500 name */
-        $scope.renderX500Name = (x500Name) => {
-            var name = x500Name
-            x500Name.split(',').forEach(function(element) {
+        $scope.renderX500Name = function (x500Name) {
+            var name = x500Name;
+            x500Name.split(',').forEach(function (element) {
                 var keyValue = element.split('=');
                 if (keyValue[0].toUpperCase() == 'CN') {
                     name = keyValue[1];
@@ -26,7 +26,11 @@ define(['angular', 'utils/semantic', 'services/NodeApi', 'services/HttpErrorHand
             return name;
         };
 
-        nodeService.getDate().then((date) => $scope.date = date, handleHttpFail);
-        nodeService.getDeals().then((deals) => $scope.deals = deals, handleHttpFail);
+        nodeService.getDate().then(function (date) {
+            return $scope.date = date;
+        }, handleHttpFail);
+        nodeService.getDeals().then(function (deals) {
+            return $scope.deals = deals;
+        }, handleHttpFail);
     });
 });

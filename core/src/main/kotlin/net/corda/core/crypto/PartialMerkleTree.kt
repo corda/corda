@@ -140,23 +140,24 @@ class PartialMerkleTree(val root: PartialTree) {
                 is PartialTree.Node -> {
                     val leftHash = rootAndUsedHashes(node.left, usedHashes)
                     val rightHash = rootAndUsedHashes(node.right, usedHashes)
-                    return leftHash.hashConcat(rightHash)
+                    leftHash.hashConcat(rightHash)
                 }
             }
         }
     }
 
     /**
+     * Function to verify a [PartialMerkleTree] against an input Merkle root and a list of leaves.
+     * The tree should only contain the leaves defined in [hashesToCheck].
      * @param merkleRootHash Hash that should be checked for equality with root calculated from this partial tree.
      * @param hashesToCheck List of included leaves hashes that should be found in this partial tree.
      */
     fun verify(merkleRootHash: SecureHash, hashesToCheck: List<SecureHash>): Boolean {
         val usedHashes = ArrayList<SecureHash>()
         val verifyRoot = rootAndUsedHashes(root, usedHashes)
-        // It means that we obtained more/fewer hashes than needed or different sets of hashes.
-        if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
-            return false
-        return (verifyRoot == merkleRootHash)
+        return verifyRoot == merkleRootHash // Tree roots match.
+                && hashesToCheck.size == usedHashes.size // Obtained the same number of hashes (leaves).
+                && hashesToCheck.toSet().containsAll(usedHashes) // Lists contain the same elements.
     }
 
     /**

@@ -194,7 +194,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created
-        alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
+        alice.services.startFlow(SendFlow(bobParty, 0)).getOrThrow()
         return bobParty
     }
 

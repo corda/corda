@@ -64,7 +64,7 @@ class CorDappCustomSerializer(
 
     override fun writeClassInfo(output: SerializationOutput) {}
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         val proxy = uncheckedCast<SerializationCustomSerializer<*, *>,
                 SerializationCustomSerializer<Any?, Any?>>(serializer).toProxy(obj)
 

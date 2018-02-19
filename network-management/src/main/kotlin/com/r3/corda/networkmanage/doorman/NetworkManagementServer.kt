@@ -12,9 +12,9 @@ import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.MonitoringWebService
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.io.Closeable
 import java.net.URI

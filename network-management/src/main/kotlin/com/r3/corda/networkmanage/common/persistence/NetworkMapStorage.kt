@@ -4,7 +4,7 @@ import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DigitalSignatureWithCert
-import net.corda.nodeapi.internal.network.NetworkParameters
+import net.corda.core.node.NetworkParameters
 
 /**
  * Data access object interface for NetworkMap persistence layer

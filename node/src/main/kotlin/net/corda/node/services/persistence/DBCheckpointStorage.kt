@@ -7,6 +7,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
@@ -30,7 +31,7 @@ class DBCheckpointStorage : CheckpointStorage {
 
             @Lob
             @Column(name = "checkpoint_value")
-            var checkpoint: ByteArray = ByteArray(0)
+            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {

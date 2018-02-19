@@ -2,7 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -121,7 +121,7 @@ class ScheduledFlowTests {
         aliceNode.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
                 val context = it.logic.stateMachine.context
-                if (context.origin is Origin.Scheduled)
+                if (context.origin is InvocationOrigin.Scheduled)
                     countScheduledFlows++
             }
         }
@@ -143,8 +143,8 @@ class ScheduledFlowTests {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
-            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)
-            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)).resultFuture)
+            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)))
+            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)))
         }
         mockNet.waitQuiescent()
 

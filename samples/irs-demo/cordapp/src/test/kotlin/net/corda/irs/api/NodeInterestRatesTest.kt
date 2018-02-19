@@ -227,7 +227,7 @@ class NodeInterestRatesTest {
         val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
         LogHelper.setLevel("rates")
         mockNet.runNetwork()
-        val future = aliceNode.services.startFlow(flow).resultFuture
+        val future = aliceNode.services.startFlow(flow)
         mockNet.runNetwork()
         future.getOrThrow()
         // We should now have a valid fix of our tx from the oracle.

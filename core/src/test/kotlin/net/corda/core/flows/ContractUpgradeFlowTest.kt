@@ -81,24 +81,24 @@ class ContractUpgradeFlowTest {
         requireNotNull(btx)
 
         // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
-        val rejectedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx!!.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val rejectedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx!!.tx.outRef(0), DummyContractV2::class.java))
         mockNet.runNetwork()
         assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade, and immediately deauthorise the same.
-        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)).resultFuture.getOrThrow()
-        bobNode.services.startFlow(ContractUpgradeFlow.Deauthorise(btx.tx.outRef<ContractState>(0).ref)).resultFuture.getOrThrow()
+        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)).getOrThrow()
+        bobNode.services.startFlow(ContractUpgradeFlow.Deauthorise(btx.tx.outRef<ContractState>(0).ref)).getOrThrow()
 
         // The request is expected to be rejected because party B has subsequently deauthorised and a previously authorised upgrade.
-        val deauthorisedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val deauthorisedFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java))
         mockNet.runNetwork()
         assertFailsWith(UnexpectedFlowEndException::class) { deauthorisedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade
-        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx.tx.outRef<ContractState>(0), DummyContractV2::class.java)).resultFuture.getOrThrow()
+        bobNode.services.startFlow(ContractUpgradeFlow.Authorise(btx.tx.outRef<ContractState>(0), DummyContractV2::class.java)).getOrThrow()
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
-        val resultFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val resultFuture = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(atx.tx.outRef(0), DummyContractV2::class.java))
         mockNet.runNetwork()
 
         val result = resultFuture.getOrThrow()
@@ -213,7 +213,7 @@ class ContractUpgradeFlowTest {
     fun `upgrade Cash to v2`() {
         // Create some cash.
         val chosenIdentity = alice
-        val result = aliceNode.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
+        val result = aliceNode.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary))
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx
         val anonymisedRecipient = result.get().recipient!!
@@ -221,7 +221,7 @@ class ContractUpgradeFlowTest {
         val baseState = aliceNode.database.transaction { aliceNode.services.vaultService.queryBy<ContractState>().states.single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
         // Starts contract upgrade flow.
-        val upgradeResult = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(stateAndRef, CashV2::class.java)).resultFuture
+        val upgradeResult = aliceNode.services.startFlow(ContractUpgradeFlow.Initiate(stateAndRef, CashV2::class.java))
         mockNet.runNetwork()
         upgradeResult.getOrThrow()
         // Get contract state from the vault.

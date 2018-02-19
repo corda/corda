@@ -104,6 +104,6 @@ class TutorialMockNetwork {
 
         expectedEx.expect(IllegalArgumentException::class.java)
         expectedEx.expectMessage("Expected to receive 1")
-        initiatingReceiveFlow.resultFuture.getOrThrow()
+        initiatingReceiveFlow.getOrThrow()
     }
 }

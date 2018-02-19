@@ -56,7 +56,7 @@ class WorkflowTransactionBuildTutorialTest {
         // Kick of the proposal flow
         val flow1 = aliceServices.startFlow(SubmitTradeApprovalFlow("1234", bob))
         // Wait for the flow to finish
-        val proposalRef = flow1.resultFuture.getOrThrow()
+        val proposalRef = flow1.getOrThrow()
         val proposalLinearId = proposalRef.state.data.linearId
         // Wait for NodeB to include it's copy in the vault
         nodeBVaultUpdate.get()
@@ -80,7 +80,7 @@ class WorkflowTransactionBuildTutorialTest {
         // Run the manual completion flow from NodeB
         val flow2 = bobServices.startFlow(SubmitCompletionFlow(latestFromB.ref, WorkflowState.APPROVED))
         // wait for the flow to end
-        val completedRef = flow2.resultFuture.getOrThrow()
+        val completedRef = flow2.getOrThrow()
         // wait for the vault updates to stabilise
         nodeAVaultUpdate.get()
         secondNodeBVaultUpdate.get()

@@ -6,6 +6,8 @@ from previous releases. Please refer to :doc:`upgrade-notes` for detailed instru
 
 UNRELEASED
 ----------
+* Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
+
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
 
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
@@ -83,6 +85,9 @@ R3 Corda 3.0 Developer Preview
 
    * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This
      was needed to allow changes to the schema.
+
+   * Introduced max transaction size limit on transactions. The max transaction size parameter is set by the compatibility zone
+     operator. The parameter is distributed to Corda nodes by network map service as part of the ``NetworkParameters``.
 
 * Support for external user credentials data source and password encryption [CORDA-827].
 
@@ -195,6 +200,14 @@ R3 Corda 3.0 Developer Preview
 
 * Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
   This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
+
+* A ``CordaInternal`` attribute has been added to identify properties that are not intended to form part of the
+  public api and as such are not intended for public use. This is alongside the existing ``DoNotImplement`` attribute for classes which
+  provide Corda functionality to user applications, but should not be implemented by consumers, and any classes which
+  are defined in ``.internal`` packages, which are also not for public use.
+
+* Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
+  only for internal use
 
 .. _changelog_v2:
 

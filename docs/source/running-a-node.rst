@@ -19,7 +19,7 @@ Start the nodes with ``runnodes`` by running the following command from the root
 * Linux/macOS: ``build/nodes/runnodes``
 * Windows: ``call build\nodes\runnodes.bat``
 
-.. warn:: On macOS, do not click/change focus until all the node terminal windows have opened, or some processes may
+.. warning:: On macOS, do not click/change focus until all the node terminal windows have opened, or some processes may
    fail to start.
 
 If you receive an ``OutOfMemoryError`` exception when interacting with the nodes, you need to increase the amount of

@@ -53,7 +53,7 @@ class RaftNotaryServiceTests : IntegrationTest() {
             val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
             val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
-            firstSpend.resultFuture.getOrThrow()
+            firstSpend.getOrThrow()
 
             val secondSpendBuilder = TransactionBuilder(defaultNotaryIdentity).withItems(inputState).run {
                 val dummyState = DummyContract.SingleOwnerState(0, bankA.info.chooseIdentity())
@@ -64,7 +64,7 @@ class RaftNotaryServiceTests : IntegrationTest() {
             val secondSpendTx = bankA.services.signInitialTransaction(secondSpendBuilder)
             val secondSpend = bankA.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
-            val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
+            val ex = assertFailsWith(NotaryException::class) { secondSpend.getOrThrow() }
             val error = ex.error as NotaryError.Conflict
             assertEquals(error.txId, secondSpendTx.id)
         }
