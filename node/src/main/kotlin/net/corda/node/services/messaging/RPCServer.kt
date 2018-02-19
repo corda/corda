@@ -412,10 +412,11 @@ class RPCServer(
         return Pair(Actor(Id(validatedUser), securityManager.id, targetLegalIdentity), securityManager.buildSubject(validatedUser))
     }
 
-    // We construct an observable context on each RPC request. If subsequently a nested Observable is
-    // encountered this same context is propagated by the instrumented KryoPool. This way all
-    // observations rooted in a single RPC will be muxed correctly. Note that the context construction
-    // itself is quite cheap.
+    /*
+     * We construct an observable context on each RPC request. If subsequently a nested Observable is encountered this
+     * same context is propagated by the instrumented KryoPool. This way all observations rooted in a single RPC will be
+     * muxed correctly. Note that the context construction itself is quite cheap.
+     */
     inner class ObservableContext(
             val observableMap: ObservableSubscriptionMap,
             val clientAddressToObservables: SetMultimap<SimpleString, InvocationId>,

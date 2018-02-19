@@ -22,6 +22,7 @@ class DeduplicationChecker(cacheExpiry: Duration) {
     /**
      * @param identity the identity that generates the sequence numbers.
      * @param sequenceNumber the sequence number to check.
+     * @return true if the message is unique, false if it's a duplicate.
      */
     fun checkDuplicateMessageId(identity: Any, sequenceNumber: Long): Boolean {
         return watermarkCache[identity].getAndUpdate { maxOf(sequenceNumber, it) } >= sequenceNumber
