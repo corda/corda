@@ -68,7 +68,6 @@ Configuration
 
 * Nodes that do not require SSL to be enabled for RPC clients now need an additional port to be specified as part of their configuration.
   In order to do that, add block e.g.,
-
   ```
   rpcSettings {
               adminAddress "localhost:10007"
@@ -77,14 +76,12 @@ Configuration
   to `node.conf` files.
 
   Also, property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block e.g., 
-
   ```
   rpcSettings {
               address "localhost:10006"
               adminAddress "localhost:10007"
   }
   ```
-
   Equivalent changes should be performed on classes extending `CordformDefinition`.
 
 Testing
