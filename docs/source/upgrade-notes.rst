@@ -31,6 +31,19 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 V2.0 to V3.0
 ------------
 
+* Corda plugins have been modularised further so the following additional gradle entries are necessary:
+  For example:
+
+    .. sourcecode:: groovy
+        dependencies {
+            classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
+        }
+
+        apply plugin: 'net.corda.plugins.cordapp'
+
+The plugin needs to be applied in all gradle build files where there is a dependency on Corda using any of:
+cordaCompile, cordaRuntime, cordapp
+
 * For existing contract ORM schemas that extend from ``CommonSchemaV1.LinearState`` or ``CommonSchemaV1.FungibleState``,
   you will need to explicitly map the ``participants`` collection to a database table. Previously this mapping was done
   in the superclass, but that makes it impossible to properly configure the table name. The required changes are to:
