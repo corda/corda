@@ -109,6 +109,12 @@ data class NodeParameters(
     fun setMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
 }
 
+/**
+ * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
+ * JMX monitoring using HTTP/JSON
+ * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
+ * Defaults to incremental.
+ */
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
                      val jmxHttpServerPortAllocation: PortAllocation? =
                      if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
@@ -169,9 +175,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  *     It will wait for them to be shut down externally instead.
  * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
- * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
- *      startJmxHttpServer: indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote JMX monitoring using HTTP/JSON.
- *      jmxHttpServerPortAllocation: the port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP. Defaults to incremental.
+ * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON.
  * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
  * empty as notaries are defined by [notarySpecs].
  */
