@@ -5,13 +5,13 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -64,7 +64,7 @@ fun <A> verifierDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         jmxPolicy: JmxPolicy = JmxPolicy(),
-        maxTransactionSize: Int = Int.MAX_VALUE,
+        networkParameters: NetworkParameters = testNetworkParameters(),
         dsl: VerifierDriverDSL.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -81,7 +81,7 @@ fun <A> verifierDriver(
                         notarySpecs = notarySpecs,
                         jmxPolicy = jmxPolicy,
                         compatibilityZone = null,
-                        maxTransactionSize = maxTransactionSize
+                        networkParameters = networkParameters
                 )
         ),
         coerce = { it },
@@ -167,7 +167,6 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
     fun startVerificationRequestor(name: CordaX500Name): CordaFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
-        GlobalProperties.networkParameters = testNetworkParameters(emptyList(), maxTransactionSize = driverDSL.maxTransactionSize)
         return driverDSL.executorService.fork {
             startVerificationRequestorInternal(name, hostAndPort)
         }

@@ -15,6 +15,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.RPCServer
@@ -23,6 +24,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
@@ -106,7 +108,7 @@ fun <A> rpcDriver(
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
-        maxTransactionSize: Int = Int.MAX_VALUE,
+        networkParameters: NetworkParameters = testNetworkParameters(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -124,7 +126,7 @@ fun <A> rpcDriver(
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
                             compatibilityZone = null,
-                            maxTransactionSize = maxTransactionSize
+                            networkParameters = networkParameters
                     ), externalTrace
             ),
             coerce = { it },
@@ -157,7 +159,7 @@ data class RPCDriverDSL(
         private val driverDSL: DriverDSLImpl, private val externalTrace: Trace?
 ) : InternalDriverDSL by driverDSL {
     private companion object {
-        val notificationAddress = "notifications"
+        const val notificationAddress = "notifications"
 
         private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
             managementNotificationAddress = SimpleString(notificationAddress)

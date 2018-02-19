@@ -6,12 +6,14 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.node.VersionInfo
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.setMessagingServiceSpy
@@ -63,14 +65,16 @@ data class MockNetworkParameters(
         val networkSendManuallyPumped: Boolean = false,
         val threadPerNode: Boolean = false,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-        val notarySpecs: List<MockNetworkNotarySpec> = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME))) {
+        val notarySpecs: List<MockNetworkNotarySpec> = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
+        val networkParameters: NetworkParameters = testNetworkParameters()) {
     fun withNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean): MockNetworkParameters = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun withThreadPerNode(threadPerNode: Boolean): MockNetworkParameters = copy(threadPerNode = threadPerNode)
     fun withServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy): MockNetworkParameters = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
     fun withNotarySpecs(notarySpecs: List<MockNetworkNotarySpec>): MockNetworkParameters = copy(notarySpecs = notarySpecs)
+    fun withNetworkParameters(networkParameters: NetworkParameters): MockNetworkParameters = copy(networkParameters = networkParameters)
 }
 
-/** Represents a node configuration for injection via [MockNetworkParameters]. */
+/** Represents a node configuration for injection via [MockNetworkParameters] */
 data class MockNetworkNotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
     constructor(name: CordaX500Name) : this(name, validating = true)
 }
@@ -100,7 +104,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
     val id get() : Int = node.internals.id
     val info get() : NodeInfo = node.services.myInfo
     val network get() : MessagingService = node.network
-    /** Register a flow that is initiated by another flow **/
+    /** Register a flow that is initiated by another flow */
     fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>): Observable<F> = node.registerInitiatedFlow(initiatedFlowClass)
 
     /**
@@ -151,6 +155,9 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
  *
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
+ *
+ * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
+ * empty as notaries are defined by [notarySpecs].
  */
 @Suppress("MemberVisibilityCanBePrivate", "CanBeParameter")
 open class MockNetwork(
@@ -159,21 +166,28 @@ open class MockNetwork(
         val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
         val threadPerNode: Boolean = defaultParameters.threadPerNode,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-        val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs
+        val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
+        val networkParameters: NetworkParameters = defaultParameters.networkParameters
 ) {
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
-    private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(cordappPackages, defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs)
-
+    private val internalMockNetwork = InternalMockNetwork(
+            cordappPackages,
+            defaultParameters,
+            networkSendManuallyPumped,
+            threadPerNode,
+            servicePeerAllocationStrategy,
+            notarySpecs,
+            networkParameters)
     /** Which node will be used as the primary notary during transaction builds. */
-    val defaultNotaryNode get(): StartedMockNode = StartedMockNode.create(internalMockNetwork.defaultNotaryNode)
+    val defaultNotaryNode get() : StartedMockNode = StartedMockNode.create(internalMockNetwork.defaultNotaryNode)
     /** The [Party] of the [defaultNotaryNode] */
-    val defaultNotaryIdentity get(): Party = internalMockNetwork.defaultNotaryIdentity
+    val defaultNotaryIdentity get() : Party = internalMockNetwork.defaultNotaryIdentity
     /** A list of all notary nodes in the network that have been started. */
-    val notaryNodes get(): List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }
+    val notaryNodes get() : List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }
     /** In a mock network, nodes have an incrementing integer ID. Real networks do not have this. Returns the next ID that will be used. */
-    val nextNodeId get(): Int = internalMockNetwork.nextNodeId
+    val nextNodeId get() : Int = internalMockNetwork.nextNodeId
 
     /** Create a started node with the given identity. **/
     fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
@@ -181,9 +195,7 @@ open class MockNetwork(
     /** Create a started node with the given parameters. **/
     fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode = StartedMockNode.create(internalMockNetwork.createNode(parameters))
 
-    /**
-     * Create a started node with the given parameters.
-     *
+    /** Create a started node with the given parameters.
      * @param legalName the node's legal name.
      * @param forcedID a unique identifier for the node.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
@@ -204,9 +216,7 @@ open class MockNetwork(
     /** Create an unstarted node with the given parameters. **/
     fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
 
-    /**
-     * Create an unstarted node with the given parameters.
-     *
+    /** Create an unstarted node with the given parameters.
      * @param legalName the node's legal name.
      * @param forcedID a unique identifier for the node.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,

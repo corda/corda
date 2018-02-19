@@ -98,7 +98,7 @@ class NetworkMapClientTest {
 
     @Test
     fun `handle parameters update`() {
-        val nextParameters = testNetworkParameters(emptyList(), epoch = 2)
+        val nextParameters = testNetworkParameters(epoch = 2)
         val originalNetworkParameterHash = server.networkParameters.serialize().hash
         val nextNetworkParameterHash = nextParameters.serialize().hash
         val description = "Test parameters"
