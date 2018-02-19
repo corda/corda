@@ -92,12 +92,18 @@ data class SSHDConfiguration(val port: Int) {
     }
 }
 
+data class SslConfiguration(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration
+
 data class ShellConfiguration(
         val baseDirectory: Path,
+        val user: String,
+        var password: String?,
         val hostAndPort: NetworkHostAndPort,
-        val ssl: SSLConfiguration?,
-        val sshd: Int?,
-        val noLocalShell: Boolean)
+        val ssl: SslConfiguration?,
+        val sshdPort: Int?,
+        val noLocalShell: Boolean) {
+    val cordappsDirectory: Path = baseDirectory / "cordapps"
+}
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -109,11 +115,11 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration: ShellConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, classLoader: ClassLoader? = null, localUserName: String? = null, localUserPassword: String? = null) {
+    fun startShell(configuration: ShellConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, classLoader: ClassLoader? = null) {
         rpcOps = cordaRPCOps
         InteractiveShell.classLoader = classLoader
         val dir = configuration.baseDirectory
-        val runSshDaemon = configuration.sshd != null
+        val runSshDaemon = configuration.sshdPort != null
 
         val config = Properties()
         if (runSshDaemon) {
@@ -123,14 +129,14 @@ object InteractiveShell {
             // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
             config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
             config["crash.ssh.keygen"] = "true"
-            config["crash.ssh.port"] = configuration.sshd?.toString()
+            config["crash.ssh.port"] = configuration.sshdPort?.toString()
             config["crash.auth"] = "corda"
         }
 
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        shell = ShellLifecycle(dir).start(config, localUserName, localUserPassword)
+        shell = ShellLifecycle(dir).start(config, configuration.user, configuration.password)
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
@@ -203,7 +209,7 @@ object InteractiveShell {
         }
     }
 
-    private fun createOutputMapper(factory: JsonFactory): ObjectMapper {
+    private fun createInputMapper(factory: JsonFactory): ObjectMapper {
         return JacksonSupport.createNonRpcMapper(factory).apply {
             // Register serializers for stateful objects from libraries that are special to the RPC system and don't
             // make sense to print out to the screen. For classes we own, annotations can be used instead.
@@ -217,22 +223,7 @@ object InteractiveShell {
         }
     }
 
-    private fun createInputMapper(factory: JsonFactory): ObjectMapper {
-        return JacksonSupport.createNonRpcMapper(factory).apply {
-            // Register serializers for stateful objects from libraries that are special to the RPC system and don't
-            // make sense to print out to the screen. For classes we own, annotations can be used instead.
-            val rpcModule = SimpleModule()
-            //rpcModule.addDeserializer(Observable::class.java, ObservableSerializer)
-            rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
-            registerModule(rpcModule)
-
-            //disable(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECTFeature.FAIL_ON_EMPTY_BEANS)
-            //enable(SerializationFeature.INDENT_OUTPUT)
-        }
-    }
-
     // TODO: This should become the default renderer rather than something used specifically by commands.
-    //private val yamlMapper by lazy { createOutputMapper(YAMLFactory()) }
     private val yamlMapper by lazy { createInputMapper(YAMLFactory()) }
 
     /**
@@ -422,7 +413,7 @@ object InteractiveShell {
 
     private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit> {
         val printerFun = yamlMapper::writeValueAsString
-        toStream.println(response)
+        toStream.println(printerFun(response))
         toStream.flush()
         return maybeFollow(response, printerFun, toStream)
     }

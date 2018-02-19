@@ -69,7 +69,6 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.sign
 import net.corda.nodeapi.internal.storeLegalIdentity
-import net.corda.shell.ShellConfiguration
 import net.corda.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
@@ -283,19 +282,27 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun getRxIoScheduler(): Scheduler
 
     open fun startShell() {
-        if (configuration.shouldInitCrashShell()) {
+        //re-packs data to Shell specific classes
+        fun NodeConfiguration.toShellConfig(): net.corda.shell.ShellConfiguration {
             if (configuration.rpcOptions.address == null) {
                 throw ConfigurationException("Cannot init CrashShell because node RPC address is not set (via 'rpcSettings' option).")
             }
-            val shellConfiguration = ShellConfiguration(configuration.baseDirectory,
-                    configuration.rpcOptions.address ?: NetworkHostAndPort("localhost", 2222),
-                    configuration.rpcOptions.sslConfig, configuration.sshd?.port, false)
-            val demoUser: User? = this.configuration.rpcUsers.firstOrNull { u -> u.username == "demo" }
+            val sslConfiguration = net.corda.shell.SslConfiguration(this.rpcOptions.sslConfig.certificatesDirectory,
+                    this.rpcOptions.sslConfig.keyStorePassword, this.rpcOptions.sslConfig.trustStorePassword)
+            val localShellUser: User? = this.rpcUsers.firstOrNull { u -> u.username == "demo" }
+            return net.corda.shell.ShellConfiguration(this.baseDirectory,
+                    localShellUser?.username ?: "", localShellUser?.password,
+                    this.rpcOptions.address ?: NetworkHostAndPort("localhost", 2222),
+                    sslConfiguration, this.sshd?.port, this.noLocalShell)
+        }
+
+        if (configuration.shouldInitCrashShell()) {
+            val shellConfiguration = configuration.toShellConfig()
             val rpcOps = { username: String?, credentials: String? ->
-                val client = CordaRPCClient(configuration.rpcOptions.address!!)
+                val client = CordaRPCClient(shellConfiguration.hostAndPort)
                 client.start(username ?: "", credentials ?: "").proxy
             }
-            InteractiveShell.startShell(shellConfiguration, rpcOps, localUserName = demoUser?.username, localUserPassword = demoUser?.password)
+            InteractiveShell.startShell(shellConfiguration, rpcOps)
             if (configuration.shouldStartSSHDaemon()) {
                 Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
             }

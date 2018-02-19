@@ -2,7 +2,7 @@ package net.corda.shell
 
 import com.jcabi.manifests.Manifests
 import joptsimple.OptionException
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.internal.*
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -15,16 +15,6 @@ import java.io.IOException
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.system.exitProcess
-
-private fun getCordappsInDirectory(cordappsDir: Path): List<URL> {
-    return if (!cordappsDir.exists()) {
-        emptyList()
-    } else {
-        cordappsDir.list {
-            it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-        }
-    }
-}
 
 fun main(args: Array<String>) {
 
@@ -41,12 +31,22 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         return
     }
-
-    RemoteShell(cmdlineOptions).run()
+    val config = cmdlineOptions.toConfig()
+    StandaloneShell(config).run()
 }
 
-class RemoteShell(private val cmdlineOptions: CmdLineOptions) {
+class StandaloneShell(private val configuration: ShellConfiguration) {
 
+    private fun getCordappsInDirectory(cordappsDir: Path): List<URL> =
+            if (!cordappsDir.exists()) {
+                emptyList()
+            } else {
+                cordappsDir.list {
+                    it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
+                }
+            }
+
+    //Workaround in case console is not available
     @Throws(IOException::class)
     private fun readLine(format: String, vararg args: Any): String {
         if (System.console() != null) {
@@ -58,27 +58,22 @@ class RemoteShell(private val cmdlineOptions: CmdLineOptions) {
     }
 
     @Throws(IOException::class)
-    private fun readPassword(format: String, vararg args: Any): CharArray {
-        return if (System.console() != null) System.console().readPassword(format, *args) else this.readLine(format, *args).toCharArray()
-    }
-
-    fun login() : String {
-        val passwordArray = readPassword("Password: ")
-        return String(passwordArray)
-    }
+    private fun readPassword(format: String, vararg args: Any) =
+            if (System.console() != null) System.console().readPassword(format, *args) else this.readLine(format, *args).toCharArray()
 
     private fun getManifestEntry(key: String) = if (Manifests.exists(key)) Manifests.read(key) else "Unknown"
 
     fun run() {
-        val configuration = cmdlineOptions.toConfig()
-        val cordappJarPaths = getCordappsInDirectory(configuration.baseDirectory / "cordapps")
+        val cordappJarPaths = getCordappsInDirectory(configuration.cordappsDirectory)
         val classLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
-        val password = cmdlineOptions.password ?: login()
+        if (configuration.password == null) {
+            configuration.password = String(readPassword("Password: "))
+        }
         InteractiveShell.startShell(configuration,
                 { username: String?, credentials: String? ->
-                    val client = CordaRPCClient(configuration.hostAndPort, sslConfiguration = configuration.ssl, classLoader = classLoader)
+                    val client = createCordaRPCClientWithSslAndClassLoader(configuration.hostAndPort, sslConfiguration = configuration.ssl, classLoader = classLoader)
                     client.start(username ?: "", credentials?: "").proxy
-                }, classLoader, cmdlineOptions.user, password)
+                }, classLoader)
         try {
               InteractiveShell.checkConnection()
         } catch (e: Exception) {
@@ -96,12 +91,12 @@ class RemoteShell(private val cmdlineOptions: CmdLineOptions) {
                 """\____/     /_/   \__,_/\__,_/""").reset().fgBrightDefault().bold()
                 .newline().a("--- ${getManifestEntry("Corda-Vendor")} ${getManifestEntry("Corda-Release-Version")} (${getManifestEntry("Corda-Revision").take(7)}) ---")
                 .newline()
-                .newline().a("Remote Shell connected to ${configuration.hostAndPort}")
+                .newline().a("Standalone Shell connected to ${configuration.hostAndPort}")
                 .reset())
         InteractiveShell.runLocalShell {
             exit.countDown()
         }
-        configuration.sshd?.apply{ println("SSH server listening on port $this.") }
+        configuration.sshdPort?.apply{ println("SSH server listening on port $this.") }
         exit.await()
         exitProcess(0)
     }

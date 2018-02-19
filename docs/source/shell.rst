@@ -9,7 +9,7 @@ Shell
 
 .. contents::
 
-The Corda shell is an embedded command line that allows an administrator to control and monitor a node. It is based on
+The Corda shell is an embedded or standalone command line that allows an administrator to control and monitor a node. It is based on
 the `CRaSH`_ shell and supports many of the same features. These features include:
 
 * Invoking any of the node's RPC methods
@@ -22,8 +22,10 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window. It may be disabled by passing the
-``--no-local-shell`` flag when running the node.
+In development mode, the shell will display in the node's terminal window.
+The shell interacts with the node via RPC calls.
+The shell connects to the node as 'demo' user if this user is defined in the node configuration.
+It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 The shell via SSH
 -----------------
@@ -86,6 +88,54 @@ When accessing the shell via SSH, some additional RPC permissions are required:
 * Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
 * Starting flows requires ``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows``, as well as a
   permission for the flow being started
+
+The standalone shell
+------------------------------
+The standalone shell is a standalone app interacting with a Corda node via RPC calls.
+RPC node permissions are necessary for authentication and authorisation.
+Certain operations, such as starting flows, require access to CordApps jars. To achieve this, ``base-directory`` option needs to
+point at the directory containing cordapps root directory. This means
+``--base-directory parentDir`` expects ``parentDir``/``cordapps``.
+
+Starting the standalone shell
+*************************
+
+Linux and MacOS
+^^^^^^^^^^^^^^^
+
+Run the following command from the terminal:
+
+.. code:: bash
+
+    ./shell --host [host] --port [portNumber] --user [user] --password [password] --base-directory [basePath]
+     --sshd-port [sshdPortNumber] --keystore-password [keyStorePassword] --truststore-password [trustStorePassword]
+
+Where:
+
+* ``[host]`` is the Corda node's host
+* ``[port]`` is the Corda node's port, specified in the ``node.conf`` file
+* ``[user]`` is the RPC username
+* ``[password]`` is the RPC user password, if not provided it will be requested at startup
+* ``[basePath]``  root directory containing CordApps directory
+* ``[sshdPortNumber]`` instructs the standalone shell app to start SSH server on the given port, optional
+* ``[keyStorePassword]`` the password to unlock the KeyStore file (``<basePath>/<certificatesDirectory>/sslkeystore.jks``) containing the standalone shell certificate and private key, optional, unencrypted RPC connection without SSL will be used if the option is not provided
+* ``[trustStorePassword]`` the password to unlock the TrustStore file (``<basePath>/<certificatesDirectory>/truststore.jks``) containing the Corda node certificate, optional, unencrypted RPC connection without SSL will be used if the option is not provided
+
+Windows
+^^^^^^^
+
+.. code:: bash
+
+    shell.bat  --host [host] --port [portNumber] --user [user] --password [password] --base-directory [basePath]
+    --sshd-port [sshdPortNumber] --keystore-password [keyStorePassword] --truststore-password [trustStorePassword]
+
+Standalone Shell via SSH
+------------------------------------------
+The standalone shell can embed an SSH server which redirects interactions via RPC calls to the Corda node.
+To run SSH server use '--sshd-port' option when starting standalone shell.
+For connection to SSH refer to `Connecting to the shell`_.
+Certain operations (like starting Flows) will require Remote Shell's ``basePath`` to be configured correctly (see `Starting the standalone shell`_).
+
 
 Interacting with the node via the shell
 ---------------------------------------

@@ -12,7 +12,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.core.DEV_ROOT_CA
+import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.core.TestIdentity
 import org.junit.Test
 import rx.Observable
