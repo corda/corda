@@ -204,7 +204,7 @@ open class Node(configuration: NodeConfiguration,
                                 sslConfig,
                                 securityManager,
                                 certificateChainCheckPolicies,
-                                networkParameters.maxMessageSize,
+                                Integer.MAX_VALUE,
                                 exportJMXto.isNotEmpty(),
                                 rpcBrokerDirectory)
                     } else {
@@ -214,7 +214,7 @@ open class Node(configuration: NodeConfiguration,
                                 sslConfig,
                                 securityManager,
                                 certificateChainCheckPolicies,
-                                networkParameters.maxMessageSize,
+                                Integer.MAX_VALUE,
                                 exportJMXto.isNotEmpty(),
                                 rpcBrokerDirectory)
                     }
