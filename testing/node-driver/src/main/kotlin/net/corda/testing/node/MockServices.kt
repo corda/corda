@@ -60,7 +60,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryId
 open class MockServices private constructor(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
-        protected val stateLoader: StateLoaderImpl,
+        protected val stateLoader: StateLoader,
         override val identityService: IdentityService,
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>

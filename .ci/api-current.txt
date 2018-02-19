@@ -620,6 +620,9 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
   @org.jetbrains.annotations.NotNull public abstract String getLegacyContract()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.ContractState upgrade(net.corda.core.contracts.ContractState)
 ##
+@net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.UpgradedContractWithLegacyConstraint extends net.corda.core.contracts.UpgradedContract
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.AttachmentConstraint getLegacyContractConstraint()
+##
 @net.corda.core.DoNotImplement public interface net.corda.core.cordapp.Cordapp
   @org.jetbrains.annotations.NotNull public abstract List getContractClassNames()
   @org.jetbrains.annotations.NotNull public abstract List getCordappClasses()
@@ -1976,10 +1979,9 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
   @org.jetbrains.annotations.NotNull public final java.time.Clock getClock()
   public final boolean isValid(net.corda.core.contracts.TimeWindow)
 ##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage extends net.corda.core.node.StateLoader
+@net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.transactions.SignedTransaction getTransaction(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract rx.Observable getUpdates()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionVerifierService
@@ -4098,8 +4100,6 @@ public class net.corda.testing.node.MockTransactionStorage extends net.corda.cor
   public boolean addTransaction(net.corda.core.transactions.SignedTransaction)
   @org.jetbrains.annotations.Nullable public net.corda.core.transactions.SignedTransaction getTransaction(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public rx.Observable getUpdates()
-  @org.jetbrains.annotations.NotNull public net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
-  @org.jetbrains.annotations.NotNull public Set loadStates(Set)
   @org.jetbrains.annotations.NotNull public net.corda.core.messaging.DataFeed track()
 ##
 public final class net.corda.testing.node.NodeTestUtils extends java.lang.Object
@@ -4274,9 +4274,10 @@ public static final class net.corda.testing.contracts.DummyContract$SingleOwnerS
 @net.corda.core.DoNotImplement public static interface net.corda.testing.contracts.DummyContract$State extends net.corda.core.contracts.ContractState
   public abstract int getMagicNumber()
 ##
-public final class net.corda.testing.contracts.DummyContractV2 extends java.lang.Object implements net.corda.core.contracts.UpgradedContract
+public final class net.corda.testing.contracts.DummyContractV2 extends java.lang.Object implements net.corda.core.contracts.UpgradedContractWithLegacyConstraint
   public <init>()
   @org.jetbrains.annotations.NotNull public String getLegacyContract()
+  @org.jetbrains.annotations.NotNull public net.corda.core.contracts.AttachmentConstraint getLegacyContractConstraint()
   @org.jetbrains.annotations.NotNull public net.corda.testing.contracts.DummyContractV2$State upgrade(net.corda.testing.contracts.DummyContract$State)
   public void verify(net.corda.core.transactions.LedgerTransaction)
   public static final net.corda.testing.contracts.DummyContractV2$Companion Companion
