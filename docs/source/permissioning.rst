@@ -10,11 +10,7 @@ Corda networks are *permissioned*. To connect to a network, a node needs three k
 * ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
 * ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
 
-In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file` for more information),
-pre-configured keystores are used if the required keystores do not exist. This ensures that developers can get the
-nodes working as quickly as possible.
-
-However, these pre-configured keystores are not secure. Production deployments require a secure certificate authority.
+Production deployments require a secure certificate authority.
 Most production deployments will use an existing certificate authority or construct one using software that will be
 made available in the coming months. Until then, the documentation below can be used to create your own certificate
 authority.

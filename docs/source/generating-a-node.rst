@@ -21,6 +21,10 @@ Each Corda node has the following structure:
 The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
 into the ``cordapps`` folder.
 
+In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file` for more information), the ``certificates``
+direcotry is filled in with pre-configured keystores if the required keystores do not exist. This ensures that developers
+can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure, to learn more see :doc:`permissioning`.
+
 Node naming
 -----------
 A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations
@@ -32,7 +36,7 @@ supported set for X.509 certificates (specified in RFC 3280), plus the locality 
 * Locality (L)
 * Country (C)
 * Organizational-unit (OU)
-* Common name (CN) (only used for service identities)
+* Common name (CN)
 
 Note that serial number is intentionally excluded in order to minimise scope for uncertainty in distinguished name format.
 Distinguished name qualifier has been removed due to technical issues; consideration was given to "Corda" as qualifier,
@@ -73,7 +77,6 @@ The name must also obey the following constraints:
 * The organisation field of the name also obeys the following constraints:
 
     * No double-spacing
-    * Does not contain the words "node" or "server"
 
         * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
           character confusability attacks
@@ -95,9 +98,8 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "O=NetworkMapAndNotary,L=London,C=GB"
         node {
-            name "O=NetworkMapAndNotary,L=London,C=GB"
+            name "O=Notary,L=London,C=GB"
             // The notary will offer a validating notary service.
             notary = [validating : true]
             p2pPort  10002
@@ -131,16 +133,14 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
 
 Running this task will create three nodes in the ``build/nodes`` folder:
 
-* A ``NetworkMapAndNotary`` node that:
+* A ``Notary`` node that:
 
-  * Serves as the network map
   * Offers a validating notary service
   * Will not have a webserver (since ``webPort`` is not defined)
   * Is running the ``corda-finance`` CorDapp
 
 * ``PartyA`` and ``PartyB`` nodes that:
 
-  * Are pointing at the ``NetworkMapAndNotary`` as the network map service
   * Are not offering any services
   * Will have a webserver (since ``webPort`` is defined)
   * Are running the ``corda-finance`` CorDapp
@@ -150,8 +150,7 @@ Additionally, all three nodes will include any CorDapps defined in the project's
 CorDapps are not listed in each node's ``cordapps`` entry. This means that running the ``deployNodes`` task from the
 template CorDapp, for example, would automatically build and add the template CorDapp to each node.
 
-You can extend ``deployNodes`` to generate additional nodes. The only requirement is that you must specify
-a single node to run the network map service, by putting its name in the ``networkMap`` field.
+You can extend ``deployNodes`` to generate additional nodes.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
