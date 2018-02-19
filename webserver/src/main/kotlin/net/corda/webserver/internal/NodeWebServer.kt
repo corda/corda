@@ -189,10 +189,9 @@ class NodeWebServer(val config: WebServerConfig) {
     }
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
-        val rpcUser = config.rpcUsers.firstOrNull() ?: throw IllegalArgumentException("The node config has not specified any RPC users")
-        log.info("Connecting to node at ${config.rpcAddress} as $rpcUser")
+        log.info("Connecting to node at ${config.rpcAddress} as ${config.runAs}")
         val client = CordaRPCClient(config.rpcAddress)
-        val connection = client.start(rpcUser.username, rpcUser.password)
+        val connection = client.start(config.runAs.username, config.runAs.password)
         return connection.proxy
     }
 
