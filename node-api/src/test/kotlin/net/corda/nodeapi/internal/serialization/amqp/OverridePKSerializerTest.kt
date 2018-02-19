@@ -9,15 +9,20 @@ import org.junit.Test
 import java.lang.reflect.Type
 import java.security.PublicKey
 
+
 class OverridePKSerializerTest {
     class SerializerTestException(message: String) : Exception(message)
 
     class TestPublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::class.java) {
-        override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput) {
+        override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput,
+                                          context: SerializationContext
+        ) {
             throw SerializerTestException("Custom write call")
         }
 
-        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): PublicKey {
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                                context: SerializationContext
+        ) : PublicKey {
             throw SerializerTestException("Custom read call")
         }
 

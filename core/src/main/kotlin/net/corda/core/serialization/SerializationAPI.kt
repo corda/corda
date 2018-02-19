@@ -99,7 +99,9 @@ abstract class SerializationFactory {
         val currentFactory: SerializationFactory? get() = _currentFactory.get()
     }
 }
+
 typealias SerializationMagic = ByteSequence
+
 @DoNotImplement
 interface SerializationEncoding
 
@@ -183,6 +185,13 @@ interface SerializationContext {
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint, Testing }
+}
+
+/**
+ *
+ */
+enum class ContextPropertyKeys {
+    SERIALIZERS
 }
 
 /**

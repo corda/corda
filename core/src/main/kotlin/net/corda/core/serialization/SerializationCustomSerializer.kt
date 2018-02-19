@@ -6,7 +6,7 @@ package net.corda.core.serialization
  * a proxy serializer can be written that extends this type whose purpose is to move between those an
  * unserializable types and an intermediate representation.
  *
- * NOTE: The proxy object should be specified as a seperate class. However, this can be defined within the
+ * NOTE: The proxy object should be specified as a separate class. However, this can be defined within the
  * scope of the custom serializer.
  */
 interface SerializationCustomSerializer<OBJ, PROXY> {

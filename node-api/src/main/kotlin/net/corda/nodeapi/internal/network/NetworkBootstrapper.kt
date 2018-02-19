@@ -22,10 +22,12 @@ import net.corda.nodeapi.internal.ContractsJarFile
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import java.nio.file.Path
@@ -276,7 +278,7 @@ class NetworkBootstrapper {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoParametersSerializationScheme)
-                    registerScheme(AMQPServerSerializationScheme())
+                    registerScheme(AMQPParamatersSerializationScheme)
                 },
                 AMQP_P2P_CONTEXT)
         )
@@ -289,5 +291,14 @@ class NetworkBootstrapper {
 
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+    }
+
+    private object AMQPParamatersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
+        override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+        override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+
+        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+            return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        }
     }
 }

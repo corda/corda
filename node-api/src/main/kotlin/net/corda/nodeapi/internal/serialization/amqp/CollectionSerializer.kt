@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -73,12 +74,13 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
             data: Data,
             type: Type,
             output: SerializationOutput,
+            context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 for (entry in obj as Collection<*>) {
-                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0], debugIndent)
+                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0], context, debugIndent)
                 }
             }
         }
@@ -87,8 +89,11 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
     override fun readObject(
             obj: Any,
             schemas: SerializationSchemas,
-            input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
+            input: DeserializationInput,
+            context: SerializationContext): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: Can we verify the entries in the list?
-        concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schemas, declaredType.actualTypeArguments[0]) })
+        concreteBuilder((obj as List<*>).map {
+            input.readObjectOrNull(it, schemas, declaredType.actualTypeArguments[0], context)
+        })
     }
 }

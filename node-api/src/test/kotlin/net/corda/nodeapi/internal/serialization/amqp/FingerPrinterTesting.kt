@@ -4,6 +4,8 @@ import org.junit.Test
 import java.lang.reflect.Type
 import kotlin.test.assertEquals
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
 
 class FingerPrinterTesting  : FingerPrinter {
     private var index = 0

@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.nodeapi.internal.serialization.amqp.*
 import net.corda.nodeapi.internal.serialization.checkUseCase
@@ -15,13 +16,17 @@ object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey
 
     override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
-    override fun writeDescribedObject(obj: PrivateKey, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeDescribedObject(obj: PrivateKey, data: Data, type: Type, output: SerializationOutput,
+                                      context: SerializationContext
+    ) {
         checkUseCase(allowedUseCases)
-        output.writeObject(obj.encoded, data, clazz)
+        output.writeObject(obj.encoded, data, clazz, context)
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): PrivateKey {
-        val bits = input.readObject(obj, schemas, ByteArray::class.java) as ByteArray
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ) : PrivateKey {
+        val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
         return Crypto.decodePrivateKey(bits)
     }
 }

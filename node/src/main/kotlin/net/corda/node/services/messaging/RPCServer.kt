@@ -1,10 +1,6 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.common.util.SameThreadExecutor
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalListener
@@ -19,12 +15,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.logging.pushToLoggingContext
+import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.externalTrace
 import net.corda.nodeapi.impersonatedActor
@@ -39,11 +37,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
-import org.slf4j.LoggerFactory
 import org.slf4j.MDC
-import rx.Notification
-import rx.Observable
-import rx.Subscriber
 import rx.Subscription
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -81,7 +75,7 @@ class RPCServer(
         private val ops: RPCOps,
         private val rpcServerUsername: String,
         private val rpcServerPassword: String,
-        private val serverLocator: ServerLocator,
+        private val serverLocator: ServerLocator?,
         private val securityManager: RPCSecurityManager,
         private val nodeLegalName: CordaX500Name,
         private val rpcConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
@@ -169,7 +163,9 @@ class RPCServer(
                     TimeUnit.MILLISECONDS
             )
 
-            sessionFactory = serverLocator.createSessionFactory()
+            sessionFactory = serverLocator?.createSessionFactory() ?: throw IllegalStateException(
+                    "serverLocator cannot be null within an RPCServer intended for actual use")
+
             producerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
             createRpcProducer(producerSession!!)
             consumerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -422,10 +418,18 @@ class RPCServer(
             val deduplicationIdentity: String,
             val clientAddress: SimpleString
     ) {
-        private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(this)
+            override val observableMap: ObservableSubscriptionMap,
+            override val clientAddressToObservables: SetMultimap<SimpleString, InvocationId>,
+            override val deduplicationIdentity: String,
+            override val clientAddress: SimpleString
+    ) : ObservableContextInterface {
+        private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
+                observableContext = this,
+                serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
 
-        fun sendMessage(serverToClient: RPCApi.ServerToClient) {
-            sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress, serializationContextWithObservableContext, serverToClient))
+        override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
+            sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress,
+                    serializationContextWithObservableContext, serverToClient))
         }
     }
 
@@ -487,73 +491,3 @@ class ObservableSubscription(
 
 typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
 
-object RpcServerObservableSerializer : Serializer<Observable<*>>() {
-    private object RpcObservableContextKey
-
-    private val log = LoggerFactory.getLogger(javaClass)
-    fun createContext(observableContext: RPCServer.ObservableContext): SerializationContext {
-        return RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
-    }
-
-    override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<*>>?): Observable<Any> {
-        throw UnsupportedOperationException()
-    }
-
-    override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
-        val observableId = InvocationId.newInstance()
-        val observableContext = kryo.context[RpcObservableContextKey] as RPCServer.ObservableContext
-        output.writeInvocationId(observableId)
-        val observableWithSubscription = ObservableSubscription(
-                // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing
-                // must be done again within the subscriber
-                subscription = observable.materialize().subscribe(
-                        object : Subscriber<Notification<*>>() {
-                            override fun onNext(observation: Notification<*>) {
-                                if (!isUnsubscribed) {
-                                    val message = RPCApi.ServerToClient.Observation(
-                                            id = observableId,
-                                            content = observation,
-                                            deduplicationIdentity = observableContext.deduplicationIdentity
-                                    )
-                                    observableContext.sendMessage(message)
-                                }
-                            }
-
-                            override fun onError(exception: Throwable) {
-                                log.error("onError called in materialize()d RPC Observable", exception)
-                            }
-
-                            override fun onCompleted() {
-                                observableContext.clientAddressToObservables.compute(observableContext.clientAddress) { _, observables ->
-                                    if (observables != null) {
-                                        observables.remove(observableId)
-                                        if (observables.isEmpty()) {
-                                            null
-                                        } else {
-                                            observables
-                                        }
-                                    } else {
-                                        null
-                                    }
-                                }
-                            }
-                        }
-                )
-        )
-        observableContext.clientAddressToObservables.compute(observableContext.clientAddress) { _, observables ->
-            if (observables == null) {
-                hashSetOf(observableId)
-            } else {
-                observables.add(observableId)
-                observables
-            }
-        }
-        observableContext.observableMap.put(observableId, observableWithSubscription)
-    }
-
-    private fun Output.writeInvocationId(id: InvocationId) {
-
-        writeString(id.value)
-        writeLong(id.timestamp.toEpochMilli())
-    }
-}

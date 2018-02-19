@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
@@ -57,6 +58,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             data: Data,
             type: Type,
             output: SerializationOutput,
+            context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ clazz.typeName }
     ) {
         if (propertySerializers.size != javaConstructor?.parameterCount &&
@@ -72,7 +74,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             // Write list
             withList {
                 propertySerializers.serializationOrder.forEach { property ->
-                    property.getter.writeProperty(obj, this, output, debugIndent + 1)
+                    property.getter.writeProperty(obj, this, output, context,debugIndent + 1)
                 }
             }
         }
@@ -81,16 +83,17 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     override fun readObject(
             obj: Any,
             schemas: SerializationSchemas,
-            input: DeserializationInput): Any = ifThrowsAppend({ clazz.typeName }) {
+            input: DeserializationInput,
+            context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         if (obj is List<*>) {
             if (obj.size > propertySerializers.size) {
                 throw NotSerializableException("Too many properties in described type $typeName")
             }
 
             return if (propertySerializers.byConstructor) {
-                readObjectBuildViaConstructor(obj, schemas, input)
+                readObjectBuildViaConstructor(obj, schemas, input, context)
             } else {
-                readObjectBuildViaSetters(obj, schemas, input)
+                readObjectBuildViaSetters(obj, schemas, input, context)
             }
         } else {
             throw NotSerializableException("Body of described type is unexpected $obj")
@@ -100,12 +103,13 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     private fun readObjectBuildViaConstructor(
             obj: List<*>,
             schemas: SerializationSchemas,
-            input: DeserializationInput): Any = ifThrowsAppend({ clazz.typeName }) {
+            input: DeserializationInput,
+            context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         logger.trace { "Calling construction based construction for ${clazz.typeName}" }
 
         return construct(propertySerializers.serializationOrder
                 .zip(obj)
-                .map { Pair(it.first.initialPosition, it.first.getter.readProperty(it.second, schemas, input)) }
+                .map { Pair(it.first.initialPosition, it.first.getter.readProperty(it.second, schemas, input, context)) }
                 .sortedWith(compareBy({ it.first }))
                 .map { it.second })
     }
@@ -113,7 +117,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     private fun readObjectBuildViaSetters(
             obj: List<*>,
             schemas: SerializationSchemas,
-            input: DeserializationInput): Any = ifThrowsAppend({ clazz.typeName }) {
+            input: DeserializationInput,
+            context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         logger.trace { "Calling setter based construction for ${clazz.typeName}" }
 
         val instance: Any = javaConstructor?.newInstance() ?: throw NotSerializableException(
@@ -123,7 +128,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         // do it in doesn't matter
         val propertiesFromBlob = obj
                 .zip(propertySerializers.serializationOrder)
-                .map { it.second.getter.readProperty(it.first, schemas, input) }
+                .map { it.second.getter.readProperty(it.first, schemas, input, context) }
 
         // one by one take a property and invoke the setter on the class
         propertySerializers.serializationOrder.zip(propertiesFromBlob).forEach {

@@ -2,13 +2,13 @@ package net.corda.testing.internal
 
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.DoNotImplement
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.serialization.internal.*
-import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -39,8 +39,8 @@ internal fun createTestSerializationEnv(label: String): SerializationEnvironment
     return object : SerializationEnvironmentImpl(
             factory,
             AMQP_P2P_CONTEXT,
-            KRYO_RPC_SERVER_CONTEXT,
-            KRYO_RPC_CLIENT_CONTEXT,
+            AMQP_RPC_SERVER_CONTEXT,
+            AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
             KRYO_CHECKPOINT_CONTEXT
     ) {

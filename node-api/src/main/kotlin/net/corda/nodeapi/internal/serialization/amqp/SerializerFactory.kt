@@ -5,7 +5,6 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
@@ -42,8 +41,8 @@ open class SerializerFactory(
         val whitelist: ClassWhitelist,
         cl: ClassLoader,
         private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-        val fingerPrinter: FingerPrinter = SerializerFingerPrinter()) {
-
+        val fingerPrinter: FingerPrinter = SerializerFingerPrinter()
+) {
     init {
         fingerPrinter.setOwner(this)
     }
@@ -65,6 +64,7 @@ open class SerializerFactory(
     fun getSerializersByDescriptor() = serializersByDescriptor
 
     fun getTransformsCache() = transformsCache
+
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
