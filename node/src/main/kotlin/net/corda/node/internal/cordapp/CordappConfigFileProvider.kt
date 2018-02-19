@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.utilities.loggerFor
-import sun.plugin.dom.exception.InvalidStateException
 import java.io.File
 
 class CordappConfigFileProvider(val configDir: File = DEFAULT_CORDAPP_CONFIG_DIR) : CordappConfigProvider {
@@ -22,7 +21,7 @@ class CordappConfigFileProvider(val configDir: File = DEFAULT_CORDAPP_CONFIG_DIR
         val configFile = File(configDir, name + CONFIG_EXT)
         return if (configFile.exists()) {
             if (configFile.isDirectory) {
-                throw InvalidStateException("ile at ${configFile.absolutePath} is a directory, expected a config file")
+                throw IllegalStateException("File at ${configFile.absolutePath} is a directory, expected a config file")
             } else {
                 logger.info("Found config for cordapp $name in ${configFile.absolutePath}")
                 ConfigFactory.parseFile(configFile)
