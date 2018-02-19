@@ -92,6 +92,8 @@ open class Node(configuration: NodeConfiguration,
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
         }
+
+        const val MAX_FILE_SIZE = 10485760
     }
 
     override val log: Logger get() = staticLog
@@ -204,7 +206,7 @@ open class Node(configuration: NodeConfiguration,
                                 sslConfig,
                                 securityManager,
                                 certificateChainCheckPolicies,
-                                Integer.MAX_VALUE,
+                                MAX_FILE_SIZE,
                                 exportJMXto.isNotEmpty(),
                                 rpcBrokerDirectory)
                     } else {
@@ -214,7 +216,7 @@ open class Node(configuration: NodeConfiguration,
                                 sslConfig,
                                 securityManager,
                                 certificateChainCheckPolicies,
-                                Integer.MAX_VALUE,
+                                MAX_FILE_SIZE,
                                 exportJMXto.isNotEmpty(),
                                 rpcBrokerDirectory)
                     }
