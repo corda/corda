@@ -2,7 +2,6 @@
 
 package net.corda.core.internal
 
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.NotarisationRequest
 import net.corda.core.flows.NotarisationRequestSignature
@@ -300,8 +299,8 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toWireTransaction(cordappProvider: CordappProvider, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(cordappProvider, serializationContext)
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
