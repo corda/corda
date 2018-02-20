@@ -138,7 +138,7 @@ class AMQPBridgeTest {
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(artemisAddress).whenever(it).p2pAddress
-            doReturn("").whenever(it).exportJMXto
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
         }
         artemisConfig.configureWithDevSSLCertificate()

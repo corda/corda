@@ -52,7 +52,7 @@ class ScheduledFlowsDrainingModeTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"), threadPerNode = true)
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity

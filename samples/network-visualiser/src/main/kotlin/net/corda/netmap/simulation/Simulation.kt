@@ -71,9 +71,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     val mockNet = InternalMockNetwork(
+            cordappPackages = listOf("net.corda.finance.contract", "net.corda.irs"),
             networkSendManuallyPumped = networkSendManuallyPumped,
-            threadPerNode = runAsync,
-            cordappPackages = listOf("net.corda.finance.contract", "net.corda.irs"))
+            threadPerNode = runAsync)
     // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
     //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
     //       But that's fine for visualisation purposes.
