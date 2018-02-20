@@ -4,8 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.validateRequest
 import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
+import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 
 /**
@@ -22,15 +28,15 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
-            val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
+            val stx = receiveTransaction()
             val notary = stx.notary
             checkNotary(notary)
             val timeWindow: TimeWindow? = if (stx.isNotaryChangeTransaction())
                 null
             else
                 stx.tx.timeWindow
-            val transactionWithSignatures = stx.resolveTransactionWithSignatures(serviceHub)
-            checkSignatures(transactionWithSignatures)
+            resolveAndContractVerify(stx)
+            verifySignatures(stx)
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {
@@ -39,6 +45,26 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
                 else -> e
             }
         }
+    }
+
+    @Suspendable
+    private fun receiveTransaction(): SignedTransaction {
+        return otherSideSession.receive<NotarisationPayload>().unwrap {
+            val stx = it.signedTransaction
+            validateRequest(NotarisationRequest(stx.inputs, stx.id), it.requestSignature)
+            stx
+        }
+    }
+
+    @Suspendable
+    private fun resolveAndContractVerify(stx: SignedTransaction) {
+        subFlow(ResolveTransactionsFlow(stx, otherSideSession))
+        stx.verify(serviceHub, false)
+    }
+
+    private fun verifySignatures(stx: SignedTransaction) {
+        val transactionWithSignatures = stx.resolveTransactionWithSignatures(serviceHub)
+        checkSignatures(transactionWithSignatures)
     }
 
     private fun checkSignatures(tx: TransactionWithSignatures) {

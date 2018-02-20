@@ -1,17 +1,27 @@
 package net.corda.verifier
 
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doAnswer
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.mock.Generator
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.internal.rigorousMock
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.math.BigInteger
 import java.security.PublicKey
@@ -29,11 +39,27 @@ data class GeneratedLedger(
         val attachments: Set<Attachment>,
         val identities: Set<Party>
 ) {
-    val hashTransactionMap: Map<SecureHash, WireTransaction> by lazy { transactions.associateBy(WireTransaction::id) }
-    val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
-    val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
-    val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
+    private val hashTransactionMap: Map<SecureHash, WireTransaction> by lazy { transactions.associateBy(WireTransaction::id) }
+    private val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
+    private val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
+    private val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
         attachments.mapNotNull { it as? ContractAttachment }.associateBy { it.contract }
+    }
+
+    private val services = object : ServicesForResolution {
+        override fun loadState(stateRef: StateRef): TransactionState<*> {
+            return hashTransactionMap[stateRef.txhash]?.outputs?.get(stateRef.index) ?: throw TransactionResolutionException(stateRef.txhash)
+        }
+        override val identityService = rigorousMock<IdentityService>().apply {
+            doAnswer { identityMap[it.arguments[0]] }.whenever(this).partyFromKey(any())
+        }
+        override val attachments = rigorousMock<AttachmentStorage>().apply {
+            doAnswer { attachmentMap[it.arguments[0]] }.whenever(this).openAttachment(any())
+        }
+        override val cordappProvider = rigorousMock<CordappProvider>().apply {
+            doAnswer { contractAttachmentMap[it.arguments[0]]?.id }.whenever(this).getContractAttachmentID(any())
+        }
+        override val networkParameters = testNetworkParameters()
     }
 
     companion object {
@@ -42,12 +68,7 @@ data class GeneratedLedger(
     }
 
     fun resolveWireTransaction(transaction: WireTransaction): LedgerTransaction {
-        return transaction.toLedgerTransaction(
-                resolveIdentity = { identityMap[it] },
-                resolveAttachment = { attachmentMap[it] },
-                resolveStateRef = { hashTransactionMap[it.txhash]?.outputs?.get(it.index) },
-                resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
-        )
+        return transaction.toLedgerTransaction(services)
     }
 
     val attachmentsGenerator: Generator<List<Attachment>> by lazy {

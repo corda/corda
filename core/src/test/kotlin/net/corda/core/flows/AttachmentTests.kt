@@ -13,7 +13,6 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow

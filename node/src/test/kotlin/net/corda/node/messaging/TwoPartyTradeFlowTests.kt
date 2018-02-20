@@ -103,7 +103,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // We run this in parallel threads to help catch any race conditions that may exist. The other tests
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappPackages = cordappPackages, threadPerNode = true)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
@@ -155,7 +155,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test(expected = InsufficientBalanceException::class)
     fun `trade cash for commercial paper fails using soft locking`() {
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappPackages = cordappPackages, threadPerNode = true)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode

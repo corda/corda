@@ -213,8 +213,13 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
 
     return mutableListOf<PropertyAccessor>().apply {
         kotlinConstructor.parameters.withIndex().forEach { param ->
-            val name = param.value.name ?: throw NotSerializableException(
-                    "Constructor parameter of \"$clazz\" has no name.")
+            // If a parameter doesn't have a name *at all* then chances are it's a synthesised
+            // one. A good example of this is non static nested classes in Java where instances
+            // of the nested class require access to the outer class without breaking
+            // encapsulation. Thus a parameter is inserted into the constructor that passes a
+            // reference to the enclosing class. In this case we can't do anything with
+            // it so just ignore it as it'll be supplied at runtime anyway on invocation
+            val name = param.value.name ?: return@forEach
 
             val propertyReader = if (name in classProperties) {
                 if (classProperties[name]!!.getter != null) {

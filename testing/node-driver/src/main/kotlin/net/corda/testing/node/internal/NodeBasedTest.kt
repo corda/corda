@@ -53,7 +53,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @Before
     fun init() {
-        defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(emptyList()))
+        defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters())
     }
 
     /**
