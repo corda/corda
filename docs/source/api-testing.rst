@@ -290,6 +290,13 @@ attributes.
 
 This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
 
+Further examples
+^^^^^^^^^^^^^^^^
+
+* See the flow testing tutorial :doc:`here <flow-testing>`
+* Further examples are available in the Example CorDapp in
+  `Java <https://github.com/corda/cordapp-example/blob/release-V3/java-source/src/test/java/com/example/flow/IOUFlowTests.java>`_ and
+  `Kotlin <https://github.com/corda/cordapp-example/blob/release-V3/kotlin-source/src/test/kotlin/com/example/flow/IOUFlowTests.kt>`_
 
 Contract testing
 ----------------
