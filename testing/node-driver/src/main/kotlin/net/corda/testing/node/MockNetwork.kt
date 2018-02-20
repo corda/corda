@@ -59,6 +59,8 @@ data class MockNodeParameters(
  * is used by multiple nodes. You rarely if ever need to change that, it's primarily of interest to people testing
  * notary code.
  * @property notarySpecs The notaries to use in the mock network. By default you get one mock notary and that is usually sufficient.
+ * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
+ * empty as notaries are defined by [notarySpecs].
  */
 @Suppress("unused")
 data class MockNetworkParameters(
