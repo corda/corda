@@ -156,8 +156,8 @@
       <module name="web_test" target="1.8" />
       <module name="webcapsule_main" target="1.6" />
       <module name="webcapsule_test" target="1.6" />
-      <module name="webserver-webcapsule_main" target="1.6" />
-      <module name="webserver-webcapsule_test" target="1.6" />
+      <module name="webserver-webcapsule_main" target="1.8" />
+      <module name="webserver-webcapsule_test" target="1.8" />
       <module name="webserver_integrationTest" target="1.8" />
       <module name="webserver_main" target="1.8" />
       <module name="webserver_test" target="1.8" />
