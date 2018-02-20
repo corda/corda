@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigT
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
+import java.time.Duration
 import java.util.*
 
 
@@ -54,6 +55,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
     val graphiteOptions: GraphiteOptions? get() = null
 
+    // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
+    val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
 
     fun validate(): List<String>
 

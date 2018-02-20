@@ -27,6 +27,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import rx.subjects.PublishSubject
 import java.net.ServerSocket
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -276,6 +277,8 @@ class ArtemisMessagingTest {
             handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
+        startNodeMessagingClient()
+
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
         thread(isDaemon = true) { messagingClient.run() }
 

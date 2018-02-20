@@ -30,6 +30,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -259,7 +260,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,

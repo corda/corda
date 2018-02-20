@@ -10,7 +10,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NotaryInfo
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService

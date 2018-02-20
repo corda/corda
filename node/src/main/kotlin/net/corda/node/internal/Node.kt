@@ -22,6 +22,7 @@ import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
@@ -145,7 +146,7 @@ open class Node(configuration: NodeConfiguration,
 
     private var shutdownHook: ShutdownHook? = null
 
-    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService ?:

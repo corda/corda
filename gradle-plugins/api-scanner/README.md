@@ -10,7 +10,7 @@ See [here](../../docs/source/corda-api.rst) for Corda's public API strategy. We 
 apply this plugin to other modules in future Corda releases as those modules' APIs stabilise.
 
 Basically, this plugin will document a module's `public` and `protected` classes/methods/fields,
-excluding those from our `*.internal.*` packgages, any synthetic methods, bridge methods, or methods
+excluding those from our `*.internal.*` packages, any synthetic methods, bridge methods, or methods
 identified as having Kotlin's  `internal` scope. (Kotlin doesn't seem to have implemented `internal`
 scope for classes or fields yet as these are currently `public` inside the `.class` file.)
 

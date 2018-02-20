@@ -180,7 +180,7 @@ private object RPCPermissionResolver : PermissionResolver {
                 // Leaving empty set of targets and actions to match everything
                 return RPCPermission()
             }
-            else -> throw IllegalArgumentException("Unkwnow permission action specifier: $action")
+            else -> throw IllegalArgumentException("Unknown permission action specifier: $action")
         }
     }
 }
