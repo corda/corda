@@ -28,9 +28,7 @@ class HealthCheckNotaryClientFlow(
         val notaryParty = checkTransaction()
 
         val parties = if (checkEntireCluster) {
-            serviceHub.networkMapCache
-                    .getNodesByLegalIdentityKey(notaryParty.owningKey)
-                    .map { it.legalIdentities.first() }
+            serviceHub.networkMapCache.notaryIdentities.filter { it.owningKey == notaryParty.owningKey }
         } else {
             listOf(notaryParty)
         }
