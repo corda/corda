@@ -14,8 +14,14 @@ import java.io.InputStream
 import java.util.*
 import java.util.jar.JarInputStream
 
+/**
+ * A mock implementation of [AttachmentStorage] for use within tests
+ */
 class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     companion object {
+        /**
+         * Helper method to convert an [InputStream] to a [ByteArray]
+         */
         fun getBytes(jar: InputStream) = run {
             val s = ByteArrayOutputStream()
             jar.copyTo(s)
@@ -41,6 +47,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         return importAttachment(jar)
     }
 
+    /** A map of the currently stored files by their [SecureHash] */
     val files = HashMap<SecureHash, ByteArray>()
 
     private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash) : AbstractAttachment(dataLoader)
@@ -56,6 +63,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun hasAttachment(attachmentId: AttachmentId) = files.containsKey(attachmentId)
 
+    /** Helper method returning a [Pair] containing a [ByteArray] and the sha256 hash of the bytes. */
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
         val bytes = getBytes(jar)
         return Pair(bytes.sha256(), bytes)

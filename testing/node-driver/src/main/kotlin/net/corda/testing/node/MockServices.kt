@@ -47,6 +47,9 @@ import java.sql.Connection
 import java.time.Clock
 import java.util.*
 
+/**
+ * Returns a simple [InMemoryIdentityService] containing the supplied [identities].
+ */
 fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_ROOT_CA.certificate)
 
 /**
@@ -90,10 +93,12 @@ open class MockServices private constructor(
         /**
          * Makes database and mock services appropriate for unit tests.
          *
-         * @param moreKeys a list of additional [KeyPair] instances to be used by [MockServices].
-         * @param identityService an instance of [IdentityService], see [makeTestIdentityService].
-         * @param initialIdentity the first (typically sole) identity the services will represent.
-         * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
+         * @param cordappPackages As list of [String] values which should be the package names of the CorDapps containing
+         * the contract verification code you wish to load
+         * @param identityService An instance of [IdentityService], see [makeTestIdentityService].
+         * @param initialIdentity The first (typically sole) identity the services will represent.
+         * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
+         * @return A pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
         @JvmOverloads
@@ -172,7 +177,7 @@ open class MockServices private constructor(
     /**
      * Create a mock [ServiceHub] that can't load CorDapp code, and which uses a default service identity.
      */
-    constructor(cordappPackages: List<String>): this(cordappPackages, CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
+    constructor(cordappPackages: List<String>) : this(cordappPackages, CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
     /**
      * Create a mock [ServiceHub] which uses the package of the caller to find CorDapp code. It uses the provided identity service
@@ -207,7 +212,7 @@ open class MockServices private constructor(
      * Create a mock [ServiceHub] which uses the package of the caller to find CorDapp code. It uses a default service
      * identity.
      */
-    constructor(): this(listOf(getCallerPackage()), CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
+    constructor() : this(listOf(getCallerPackage()), CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
@@ -235,7 +240,9 @@ open class MockServices private constructor(
         return vaultService
     }
 
+    /** A map of available [CordaService] implementations */
     val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
+
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
         require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
         return cordappServices.getInstance(type)
@@ -246,11 +253,17 @@ open class MockServices private constructor(
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) = throw UnsupportedOperationException()
 
+    /** Add the given package name to the list of packages which will be scanned for cordapp contract verification code */
     fun addMockCordapp(contractClassName: ContractClassName) {
         mockCordappProvider.addMockCordapp(contractClassName, attachments)
     }
 }
 
+/**
+ * A class which provides an implementation of [KeyManagementService] which is used in [MockServices]
+ *
+ * @property identityService The [IdentityService] which contains the given identities.
+ */
 class MockKeyManagementService(val identityService: IdentityService,
                                vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
@@ -290,6 +303,9 @@ class MockKeyManagementService(val identityService: IdentityService,
     }
 }
 
+/**
+ * A class which provides an implementation of [WritableTransactionStorage] which is used in [MockServices]
+ */
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return DataFeed(txns.values.toList(), _updatesPublisher)
@@ -299,11 +315,21 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
 
+    /**
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
+     * incorporate the update.
+     */
     override val updates: Observable<SignedTransaction>
         get() = _updatesPublisher
 
     private fun notify(transaction: SignedTransaction) = _updatesPublisher.onNext(transaction)
 
+    /**
+     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
+     * overwritten.
+     * @param transaction The transaction to be recorded.
+     * @return true if the transaction was recorded successfully, false if it was already recorded.
+     */
     override fun addTransaction(transaction: SignedTransaction): Boolean {
         val recorded = txns.putIfAbsent(transaction.id, transaction) == null
         if (recorded) {
@@ -312,9 +338,15 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         return recorded
     }
 
+    /**
+     * Return the transaction with the given [id], or null if no such transaction exists.
+     */
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
 }
 
+/**
+ * Function which can be used to create a mock [CordaService] for use within testing, such as an Oracle.
+ */
 fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T): T {
     class MockAppServiceHubImpl<out T : SerializeAsToken>(val serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T) : AppServiceHub, ServiceHub by serviceHub {
         val serviceInstance: T = serviceConstructor(this)

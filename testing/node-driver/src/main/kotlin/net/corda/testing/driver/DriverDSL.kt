@@ -11,6 +11,9 @@ import net.corda.testing.node.User
 import net.corda.testing.node.NotarySpec
 import java.nio.file.Path
 
+/**
+ * Underlying interface for the driver DSL. Do not instantiate directly, instead use the [driver] function.
+ * */
 @DoNotImplement
 interface DriverDSL {
     /** Returns a list of [NotaryHandle]s matching the list of [NotarySpec]s passed into [driver]. */
@@ -53,10 +56,12 @@ interface DriverDSL {
      *   when called from Java code.
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *     random. Note that this must be unique as the driver uses it as a primary key!
-     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType].
+     * @param customOverrides A map of custom node configuration overrides.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
      */
     fun startNode(

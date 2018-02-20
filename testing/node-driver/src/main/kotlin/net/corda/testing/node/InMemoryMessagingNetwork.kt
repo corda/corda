@@ -69,6 +69,7 @@ class InMemoryMessagingNetwork private constructor(
     private var counter = 0   // -1 means stopped.
     private val handleEndpointMap = HashMap<PeerHandle, InMemoryMessaging>()
 
+    /** A class which represents a message being transferred from sender to recipients, within the []InMemoryMessageNetwork]. **/
     @CordaSerializable
     data class MessageTransfer(val sender: PeerHandle, val message: Message, val recipients: MessageRecipients) {
         override fun toString() = "${message.topic} from '$sender' to '$recipients'"
@@ -79,7 +80,7 @@ class InMemoryMessagingNetwork private constructor(
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
     @Suppress("unused") // Used by the visualiser tool.
-            /** A stream of (sender, message, recipients) triples */
+            /** A stream of (sender, message, recipients) triples. */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
 
@@ -97,11 +98,13 @@ class InMemoryMessagingNetwork private constructor(
     private val peersMapping = HashMap<CordaX500Name, PeerHandle>()
 
     @Suppress("unused") // Used by the visualiser tool.
-            /** A stream of (sender, message, recipients) triples */
+            /** A stream of (sender, message, recipients) triples. */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
 
+    /** Get a [List] of all the [TestMessagingService] endpoints **/
     val endpoints: List<TestMessagingService> @Synchronized get() = handleEndpointMap.values.toList()
+
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
      *
@@ -135,6 +138,7 @@ class InMemoryMessagingNetwork private constructor(
         }
     }
 
+    /** Implement this interface in order to inject artificial latency between sender/recipient pairs. */
     interface LatencyCalculator { // XXX: Used?
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
@@ -165,6 +169,9 @@ class InMemoryMessagingNetwork private constructor(
         }
     }
 
+    /**
+     * Stop all nodes within the network and clear any buffered messages
+     */
     fun stop() {
         val nodes = synchronized(this) {
             counter = -1
@@ -179,6 +186,12 @@ class InMemoryMessagingNetwork private constructor(
         timer.cancel()
     }
 
+    /**
+     * A class which represents information about an entity on the [InMemoryMessagingNetwork].
+     *
+     * @property id An integer giving the node an ID on the [InMemoryMessagingNetwork].
+     * @property description The node's [CordaX500Name].
+     */
     @CordaSerializable
     data class PeerHandle(val id: Int, val description: CordaX500Name) : SingleMessageRecipient {
         override fun toString() = description.toString()
@@ -186,6 +199,11 @@ class InMemoryMessagingNetwork private constructor(
         override fun hashCode() = id.hashCode()
     }
 
+    /**
+     * A class which represents information about nodes offering services on the [InMemoryMessagingNetwork].
+     *
+     * @property party The [Party] offering the service.
+     */
     @CordaSerializable
     data class ServiceHandle(val party: Party) : MessageRecipientGroup {
         override fun toString() = "Service($party)"
@@ -215,7 +233,12 @@ class InMemoryMessagingNetwork private constructor(
         }
     }
 
-    // If block is set to true this function will only return once a message has been pushed onto the recipients' queues
+    /**
+     * Send the next queued message to the requested recipient(s) within the network
+     *
+     * @param block If set to true this function will only return once a message has been pushed onto the recipients'
+     * queues. This is only relevant if a [latencyCalculator] is being used to simulate latency in the network.
+     */
     fun pumpSend(block: Boolean): MessageTransfer? {
         val transfer = (if (block) messageSendQueue.take() else messageSendQueue.poll()) ?: return null
 
@@ -257,6 +280,9 @@ class InMemoryMessagingNetwork private constructor(
         _sentMessages.onNext(transfer)
     }
 
+    /**
+     * An implementation of [Message] for in memory messaging by the test [InMemoryMessagingNetwork].
+     */
     data class InMemoryMessage(override val topic: String,
                                override val data: ByteSequence,
                                override val uniqueMessageId: String,
@@ -277,7 +303,15 @@ class InMemoryMessagingNetwork private constructor(
      */
     @DoNotImplement
     interface TestMessagingService : MessagingService {
+        /**
+         * Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
+         * is true, waits until one has been provided on a different thread via send. If block is false, the return
+         * result indicates whether a message was delivered or not.
+         *
+         * @return the message that was processed, if any in this round.
+         */
         fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
+
         fun stop()
     }
 

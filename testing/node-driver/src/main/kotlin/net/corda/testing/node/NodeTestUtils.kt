@@ -55,13 +55,13 @@ fun ServiceHub.transaction(
     TransactionDSL(TestTransactionDSLInterpreter(interpreter, TransactionBuilder(notary)), notary).script()
 }
 
+/** Creates a new [Actor] for use in testing with the given [owningLegalIdentity]. */
 fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = Actor(Actor.Id("Only For Testing"), AuthServiceId("TEST"), owningLegalIdentity)
 
+/** Creates a new [InvocationContext] for use in testing with the given [owningLegalIdentity]. */
 fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext.rpc(testActor(owningLegalIdentity))
 
-/**
- * Creates a new [InvocationContext] for testing purposes.
- */
+/** Creates a new [InvocationContext] for testing purposes. */
 fun StartedNodeServices.newContext() = testContext(myInfo.chooseIdentity().name)
 
 /**

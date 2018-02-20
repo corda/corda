@@ -190,6 +190,10 @@ fun <S, E : Any> S.genericExpectEvents(
     finishFuture.getOrThrow()
 }
 
+/**
+ * @suppress
+ * Part of the Expectation dsl
+ */
 @DoNotImplement
 sealed class ExpectCompose<out E> {
     internal class Single<out E, T : E>(val expect: Expect<E, T>) : ExpectCompose<E>()

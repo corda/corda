@@ -33,18 +33,27 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHandles: CordaFuture<List<NodeHandle>>)
 
+/**
+ * A base interface which represents a node as part of the [driver] dsl, extended by [InProcess] and [OutOfProcess]
+ */
 @DoNotImplement
 interface NodeHandle : AutoCloseable {
+    /** Get the [NodeInfo] for this node */
     val nodeInfo: NodeInfo
     /**
      * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one
      * will be added and that will be used.
      */
     val rpc: CordaRPCOps
+    /** Get the p2p address for this node **/
     val p2pAddress: NetworkHostAndPort
+    /** Get the rpc address for this node **/
     val rpcAddress: NetworkHostAndPort
+    /** Get a [List] of [User]'s for this node **/
     val rpcUsers: List<User>
+    /** The location of the node's base directory **/
     val baseDirectory: Path
+
     /**
      * Stops the referenced node.
      */
@@ -52,35 +61,59 @@ interface NodeHandle : AutoCloseable {
 }
 
 
+/** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement
 interface OutOfProcess : NodeHandle {
+    /** The process in which this node is running **/
     val process: Process
 }
 
+/** Interface which represents an in process node and exposes available services. **/
 @DoNotImplement
 interface InProcess : NodeHandle {
+    /** Services which are available to this node **/
     val services: StartedNodeServices
+
     /**
      * Register a flow that is initiated by another flow
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
 }
 
+/**
+ * Class which represents a handle to a webserver process and its [NetworkHostAndPort] testing purposes.
+ *
+ * @property listenAddress The [NetworkHostAndPort] for communicating with this webserver.
+ * @property process The [Process] in which the websever is running
+ * */
 data class WebserverHandle(
         val listenAddress: NetworkHostAndPort,
         val process: Process
 )
 
+/**
+ * An abstract helper class which is used within the driver to allocate unused ports for testing. Use either
+ * the [Incremental] or [RandomFree] concrete implementations.
+ */
 @DoNotImplement
 sealed class PortAllocation {
+    /** Get the next available port **/
     abstract fun nextPort(): Int
+
+    /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
 
+    /**
+     * An implementation of [PortAllocation] which allocates ports sequentially
+     */
     class Incremental(startingPort: Int) : PortAllocation() {
+        /** An [AtomicInteger] used to keep track of the currently allocated port */
         val portCounter = AtomicInteger(startingPort)
+
         override fun nextPort() = portCounter.andIncrement
     }
 
+    /** An implementation of [PortAllocation] which allocates free ports randomly **/
     object RandomFree : PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
@@ -91,7 +124,18 @@ sealed class PortAllocation {
     }
 }
 
-/** Helper builder for configuring a [Node] from Java. */
+/**
+ * Helper builder for configuring a [Node] from Java.
+ *
+ * @property providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+ *     random. Note that this must be unique as the driver uses it as a primary key!
+ * @property rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+ * @property verifierType The type of transaction verifier to use. See: [VerifierType]
+ * @property customOverrides A map of custom node configuration overrides.
+ * @property startInSameProcess Determines if the node should be started inside the same process the Driver is running
+ *     in. If null the Driver-level value will be used.
+ * @property maximumHeapSize The maximum JVM heap size to use for the node.
+ */
 @Suppress("unused")
 data class NodeParameters(
         val providedName: CordaX500Name? = null,
@@ -104,12 +148,14 @@ data class NodeParameters(
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
     fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
-    fun withCustomerOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
+    fun withCustomOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
 }
 
 /**
+ * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver]
+ *
  * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
  * JMX monitoring using HTTP/JSON
  * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
@@ -171,12 +217,16 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @property systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @property useTestClock If true the test clock will be used in Node.
+ * @property initialiseSerialization If true then a serialization environment will be created for this test otherwise a
+ * dummy one is used.
  * @property startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
  * @property waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the
  * driver DSL block. It will wait for them to be shut down externally instead.
  * @property notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
  * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
+ * @property extraCordappPackagesToScan a [List] of additional cordapp packages to scann for contract verification
+ * code
  * @property jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON.
  * @property networkParameters The network parmeters to be used by all the nodes. [NetworkParameters.notaries] must be
  * empty as notaries are defined by [notarySpecs].
