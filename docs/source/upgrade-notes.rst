@@ -89,14 +89,31 @@ cordaCompile, cordaRuntime, cordapp
                         JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
                 override var participants: MutableSet<AbstractParty>? = null,
 
-* With AMQP enabled Java classes must be compiled with the -parameter flag.
+AMQP
+^^^^
 
-  * If they aren't, then the error message will complain about ``arg<N>`` being an unknown parameter.
-  * If recompilation is not viable, a custom serializer can be written as per :doc:`cordapp-custom-serializers`
-  * It is important to bear in mind that with AMQP there must be an implicit mapping between constructor
-    parameters and properties you wish included in the serialized form of a class.
+Whilst the enablement of AMQP is a transparent change, as noted in the :doc:`serialization` documentation
+the way classes, and states in particular, should be written to work with this new library may require some
+alteration to your current implementation.
 
-    * See :doc:`serialization` for more information
+  * With AMQP enabled Java classes must be compiled with the -parameter flag.
+
+    * If they aren't, then the error message will complain about ``arg<N>`` being an unknown parameter.
+    * If recompilation is not viable, a custom serializer can be written as per :doc:`cordapp-custom-serializers`
+    * It is important to bear in mind that with AMQP there must be an implicit mapping between constructor
+      parameters and properties you wish included in the serialized form of a class.
+
+      * See :doc:`serialization` for more information
+
+  * Error messages of the form
+
+    ``Constructor parameter - "<some parameter of a constructor>" - doesn't refer to a property of "class <some.class.being.serialized>"``
+
+    Indicate that a class, in the above example ``some.class.being.serialized``, has a parameter on its primary constructor that
+    doesn't correlate to a property of the class. This is a problem because the Corda AMQP serialization library uses a classes
+    constructor (default, primary, or annotated) as the means by which instances of the serialized form are reconstituted.
+
+    See the section "Mismatched Class Properties / Constructor Parameters" in the :doc:`serialization` documentation
 
 Configuration
 ^^^^^^^^^^^^^
