@@ -156,7 +156,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
             ),
             coerce = { it },
             dsl = dsl,
-            initialiseSerialization = defaultParameters.initialiseSerialization
+            initialiseSerialization = true
     )
 }
 
@@ -189,7 +189,6 @@ data class DriverParameters(
         val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
-        val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
@@ -203,7 +202,6 @@ data class DriverParameters(
     fun withDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
     fun withSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
     fun withUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
-    fun withInitialiseSerialization(initialiseSerialization: Boolean): DriverParameters = copy(initialiseSerialization = initialiseSerialization)
     fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
     fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
     fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
