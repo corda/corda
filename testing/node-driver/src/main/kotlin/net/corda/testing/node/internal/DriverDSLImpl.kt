@@ -188,10 +188,9 @@ class DriverDSLImpl(
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
         synchronized(nodeNames) {
-            nodeNames.add(name).let { added ->
-                if (!added) {
-                    throw IllegalArgumentException("Node with name $name is already started or starting.")
-                }
+            val wasANewNode = nodeNames.add(name)
+            if (!wasANewNode) {
+                throw IllegalArgumentException("Node with name $name is already started or starting.")
             }
         }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
