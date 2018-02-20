@@ -27,15 +27,16 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
         throw Exception("Missing rpc address property. Either 'rpcSettings' or 'rpcAddress' must be specified.")
     }
     val webAddress: NetworkHostAndPort by config
-    val runAs = // TODO: replace with credentials supplied by a user
-        if (config.hasPath("rpcUsers")) {
+    val runAs: User
+
+    init {
+        // TODO: replace with credentials supplied by a user
+        val users = if (config.hasPath("rpcUsers")) {
             // TODO: remove this once config format is updated
             config.getConfigList("rpcUsers")
-                    .first()
-                    .parseAs<User>()
         } else {
-            config.getConfig("security.authService.dataSource.users")
-                    .parseAs<List<User>>()
-                    .first()
+            config.getConfigList("security.authService.dataSource.users")
         }
+        runAs = users.first().parseAs<User>()
+    }
 }
