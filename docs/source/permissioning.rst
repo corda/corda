@@ -20,9 +20,9 @@ Certificate hierarchy
 A Corda network has three types of certificate authorities (CAs):
 
 * The **root network CA**
-* The **intermediate network CA**
+* The **doorman CA**
 
-  * The intermediate network CA is used instead of the root network CA for day-to-day
+  * The doorman CA is used instead of the root network CA for day-to-day
     key signing to reduce the risk of the root network CA's private key being compromised
 
 * The **node CAs**
@@ -45,7 +45,7 @@ The following constraints are also imposed:
   certificate hierarchy design. As as side-effect this also acts as a secondary depth restriction on issued
   certificates
 
-All the certificates except the Doorman certificates must be issued with the custom role extension (see below).
+All the certificates must be issued with the custom role extension (see below).
 
 We can visualise the permissioning structure as follows:
 
@@ -64,7 +64,7 @@ public/private keypairs and certificates. The keypairs and certificates should o
 
 * The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`_
 
-* The root network CA, intermediate network CA and node CA keys, as well as the node TLS
+* The root network CA, doorman CA and node CA keys, as well as the node TLS
   keys, must follow one of the following schemes:
 
     * ECDSA using the NIST P-256 curve (secp256r1)
@@ -92,8 +92,8 @@ these constraints.
 Certificate path validation is extended so that a certificate must contain the extension if the extension was present
 in the certificate of the issuer.
 
-Creating the root and intermediate network CAs
-----------------------------------------------
+Creating the root and doorman CAs
+---------------------------------
 
 Creating the root network CA's keystore and truststore
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -108,31 +108,32 @@ Creating the root network CA's keystore and truststore
 
 3. Create a new keystore and store the root network CA's keypair and certificate in it for later use
 
-   * This keystore will be used by the root network CA to sign the intermediate network CA's certificate
+   * This keystore will be used by the root network CA to sign the doorman CA's certificate
 
 4. Create a new Java keystore named ``truststore.jks`` and store the root network CA's certificate in it using the
    alias ``cordarootca``
 
-   * This keystore will be provisioned to the individual nodes later
+   * This keystore will be provisioned to the individual nodes later. The `truststore.jks` needs to be given to the node
+    before it does registration with the doorman.
 
 .. warning:: The root network CA's private key should be protected and kept safe.
 
-Creating the intermediate network CA's keystore
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Creating the doorman CA's keystore
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Create a new keypair
 
-   * This will be used as the intermediate network CA's keypair
+   * This will be used as the doorman CA's keypair
 
 2. Obtain a certificate for the keypair signed with the root network CA key. The basic constraints extension must be
    set to ``true``
 
-   * This will be used as the intermediate network CA's certificate
+   * This will be used as the doorman CA's certificate
 
-3. Create a new keystore and store the intermediate network CA's keypair and certificate chain
-   (i.e. the intermediate network CA certificate *and* the root network CA certificate) in it for later use
+3. Create a new keystore and store the doorman CA's keypair and certificate chain
+   (i.e. the doorman CA certificate *and* the root network CA certificate) in it for later use
 
-   * This keystore will be used by the intermediate network CA to sign the nodes' identity certificates
+   * This keystore will be used by the doorman CA to sign the nodes' identity certificates
 
 Creating the node CA keystores and TLS keystores
 ------------------------------------------------
@@ -142,7 +143,7 @@ Creating the node CA keystores
 
 1. For each node, create a new keypair
 
-2. Obtain a certificate for the keypair signed with the intermediate network CA key. The basic constraints extension must be
+2. Obtain a certificate for the keypair signed with the doorman CA key. The basic constraints extension must be
    set to ``true``
 
 3. Create a new Java keystore named ``nodekeystore.jks`` and store the keypair in it using the alias ``cordaclientca``
