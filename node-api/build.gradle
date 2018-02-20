@@ -41,6 +41,10 @@ dependencies {
     compile "org.liquibase:liquibase-core:$liquibase_version"
     runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
+    // Apache Curator: a client library for Zookeeper
+    compile "org.apache.curator:curator-recipes:${curator_version}"
+    testCompile "org.apache.curator:curator-test:${curator_version}"
+
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
