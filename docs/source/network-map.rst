@@ -42,7 +42,7 @@ The set of REST end-points for the network map service are as follows.
 | GET            | /network-map/network-parameters/{hash}  | Retrieve the signed network parameters (see below). The entire object is signed with the network map certificate which is also attached.     |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
-We use HTTP is used for the network map service instead of Corda's own AMQP based peer to peer messaging protocol to
+HTTP is used for the network map service instead of Corda's own AMQP based peer to peer messaging protocol to
 enable the server to be placed behind caching content delivery networks like Cloudflare, Akamai, Amazon Cloudfront and so on.
 By using industrial HTTP cache networks the map server can be shielded from DoS attacks more effectively. Additionally,
 for the case of distributing small files that rarely change, HTTP is a well understood and optimised protocol. Corda's
@@ -158,7 +158,7 @@ If the network operator starts advertising a different set of new parameters the
 Only the latest update can be accepted.
 
 To send back parameters approval to the zone operator, the RPC method ``fun acceptNewNetworkParameters(parametersHash: SecureHash)``
-has to be called with ``parametersHash`` from update. Note that approval cannot be undone. You can do this via the Corda
+has to be called with ``parametersHash`` from the update. Note that approval cannot be undone. You can do this via the Corda
 shell (see :doc:`shell`):
 
 ``run acceptNewNetworkParameters parametersHash: "ba19fc1b9e9c1c7cbea712efda5f78b53ae4e5d123c89d02c9da44ec50e9c17d"``
