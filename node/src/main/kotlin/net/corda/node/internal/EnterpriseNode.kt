@@ -14,16 +14,15 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.config.GraphiteOptions
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
-import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
+import java.net.Inet6Address
 import java.net.InetAddress
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -38,11 +37,18 @@ open class EnterpriseNode(configuration: NodeConfiguration,
         private val logger by lazy { loggerFor<EnterpriseNode>() }
 
         private fun defaultGraphitePrefix(legalName: CordaX500Name): String {
-            return legalName.organisation + "_" + InetAddress.getLocalHost().hostAddress.trim().replace(".", "_")
+            return (legalName.organisation + "_" + legalName.locality + "_" + legalName.country + "_" + Inet6Address.getLocalHost().hostAddress)
         }
 
-        private fun getGraphitePrefix(configuration: NodeConfiguration): String {
-            return configuration.graphiteOptions!!.prefix ?: defaultGraphitePrefix(configuration.myLegalName)
+        fun getGraphitePrefix(configuration: NodeConfiguration): String {
+            val customPrefix = configuration.graphiteOptions!!.prefix
+            // Create a graphite prefix stripping all non-allowed characteres
+            val graphiteName = (customPrefix ?: defaultGraphitePrefix(configuration.myLegalName))
+                    .trim().replace(Regex("[^0-9a-zA-Z_]"), "_")
+            if (customPrefix != null && graphiteName != customPrefix) {
+                logger.warn("Invalid graphite prefix ${customPrefix} specified in config - got mangled to ${graphiteName}. Only letters, numbers and underscores are allowed")
+            }
+            return graphiteName
         }
     }
 
@@ -140,7 +146,7 @@ D""".trimStart()
                     GraphiteReporter.forRegistry(metrics)
                             .prefixedWith(getGraphitePrefix(configuration))
                             .convertDurationsTo(TimeUnit.MILLISECONDS)
-                            .convertRatesTo(TimeUnit.MINUTES)
+                            .convertRatesTo(TimeUnit.SECONDS)
                             .filter(MetricFilter.ALL)
                             .build(PickledGraphite(configuration.graphiteOptions!!.server, configuration.graphiteOptions!!.port))
                             .start(configuration.graphiteOptions!!.sampleInvervallSeconds, TimeUnit.SECONDS)
