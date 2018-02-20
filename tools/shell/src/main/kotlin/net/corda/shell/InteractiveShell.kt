@@ -101,7 +101,7 @@ data class ShellConfiguration(
         val hostAndPort: NetworkHostAndPort,
         val ssl: SslConfiguration?,
         val sshdPort: Int?,
-        val noLocalShell: Boolean) {
+        val noLocalShell: Boolean) { //TODO SzSz remove?
     val cordappsDirectory: Path = baseDirectory / "cordapps"
 }
 

@@ -134,16 +134,17 @@ data class CmdLineOptions(val configFile: String?,
                 val password: String?,
                 val hostAndPort: NetworkHostAndPort,
                 val ssl: SslConfigurationFile?,
-                val sshdPort: Int?,
-                val noLocalShell: Boolean = false) {
+                val sshdPort: Int?) {
             fun toShellOptions() : ShellConfiguration {
-                val ssl = SslConfiguration(baseDirectory / "certificates", ssl?.keyStorePassword ?:"", ssl?.trustStorePassword ?: "")
-                return ShellConfiguration(baseDirectory, user, password, hostAndPort, ssl, sshdPort, noLocalShell)
+                val ssl = SslConfiguration(baseDirectory / "certificates",
+                        ssl?.keyStorePassword ?:"", ssl?.trustStorePassword ?: "")
+                return ShellConfiguration(baseDirectory, user, password, hostAndPort, ssl, sshdPort, noLocalShell = false)
             }
         }
 
         val parseOptions = ConfigParseOptions.defaults()
-        val config = ConfigFactory.parseFile(Paths.get(configFile).toFile(), parseOptions.setAllowMissing(false)).resolve().parseAs<ShellConfigurationFile>()
+        val config = ConfigFactory.parseFile(Paths.get(configFile).toFile(), parseOptions.setAllowMissing(false))
+                .resolve().parseAs<ShellConfigurationFile>()
         return config.toShellOptions()
     }
 }
