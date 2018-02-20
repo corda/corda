@@ -338,17 +338,6 @@ public final class net.corda.core.contracts.ComponentGroupEnum extends java.lang
   public static net.corda.core.contracts.ComponentGroupEnum valueOf(String)
   public static net.corda.core.contracts.ComponentGroupEnum[] values()
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.ConstraintAttachment extends java.lang.Object implements net.corda.core.contracts.Attachment
-  public <init>(net.corda.core.contracts.ContractAttachment, String)
-  public void extractFile(String, java.io.OutputStream)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ContractAttachment getContractAttachment()
-  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
-  @org.jetbrains.annotations.NotNull public List getSigners()
-  public int getSize()
-  @org.jetbrains.annotations.NotNull public final String getStateContract()
-  @org.jetbrains.annotations.NotNull public java.io.InputStream open()
-  @org.jetbrains.annotations.NotNull public jar.JarInputStream openAsJAR()
-##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.Contract
   public abstract void verify(net.corda.core.transactions.LedgerTransaction)
 ##
@@ -641,7 +630,6 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.ContractState upgrade(net.corda.core.contracts.ContractState)
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
-  public <init>(Map)
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.cordapp.Cordapp
