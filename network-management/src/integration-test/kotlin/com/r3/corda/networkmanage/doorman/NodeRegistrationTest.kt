@@ -26,6 +26,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -110,11 +111,13 @@ class NodeRegistrationTest : IntegrationTest() {
                     startNode(providedName = aliceName),
                     defaultNotaryNode
             ).transpose().getOrThrow()
-
+            alice as NodeHandleInternal
+            notary as NodeHandleInternal
             alice.onlySeesFromNetworkMap(alice, notary)
             notary.onlySeesFromNetworkMap(alice, notary)
 
             val genevieve = startNode(providedName = genevieveName).getOrThrow()
+            genevieve as NodeHandleInternal
 
             // Wait for the nodes to poll again
             Thread.sleep(timeoutMillis * 2)
@@ -156,7 +159,7 @@ class NodeRegistrationTest : IntegrationTest() {
         }
     }
 
-    private fun NodeHandle.onlySeesFromNetworkMap(vararg nodes: NodeHandle) {
+    private fun NodeHandleInternal.onlySeesFromNetworkMap(vararg nodes: NodeHandle) {
         // Make sure the nodes aren't getting the node infos from their additional directories
         val nodeInfosDir = configuration.baseDirectory / CordformNode.NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {

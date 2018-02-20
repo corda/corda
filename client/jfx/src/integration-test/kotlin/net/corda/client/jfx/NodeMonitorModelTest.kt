@@ -29,11 +29,12 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
@@ -61,7 +62,7 @@ class NodeMonitorModelTest : IntegrationTest() {
     }
 
     private fun setup(runTest: () -> Unit) {
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val cashUser = User("user1", "test", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),
@@ -85,7 +86,7 @@ class NodeMonitorModelTest : IntegrationTest() {
             vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
             networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-            monitor.register(aliceNodeHandle.configuration.rpcOptions.address!!, cashUser.username, cashUser.password)
+            monitor.register(aliceNodeHandle.rpcAddress, cashUser.username, cashUser.password)
             rpc = monitor.proxyObservable.value!!
             notaryParty = defaultNotaryIdentity
 
@@ -93,7 +94,7 @@ class NodeMonitorModelTest : IntegrationTest() {
             bobNode = bobNodeHandle.nodeInfo
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-            monitorBob.register(bobNodeHandle.configuration.rpcOptions.address!!, cashUser.username, cashUser.password)
+            monitorBob.register(bobNodeHandle.rpcAddress, cashUser.username, cashUser.password)
             rpcBob = monitorBob.proxyObservable.value!!
             runTest()
         }

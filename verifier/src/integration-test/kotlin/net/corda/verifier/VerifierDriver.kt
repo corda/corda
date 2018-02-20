@@ -5,13 +5,13 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.GlobalProperties
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -24,10 +24,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.driver.JmxPolicy
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
+import net.corda.testing.driver.*
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -52,41 +50,19 @@ import java.util.concurrent.atomic.AtomicInteger
  * Behaves the same as [driver] and adds verifier-related functionality.
  */
 fun <A> verifierDriver(
-        isDebug: Boolean = false,
-        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        systemProperties: Map<String, String> = emptyMap(),
-        useTestClock: Boolean = false,
-        startNodesInProcess: Boolean = false,
-        waitForNodesToFinish: Boolean = false,
-        extraCordappPackagesToScan: List<String> = emptyList(),
-        notarySpecs: List<NotarySpec> = emptyList(),
-        jmxPolicy: JmxPolicy = JmxPolicy(),
-        maxTransactionSize: Int = Int.MAX_VALUE,
-        dsl: VerifierDriverDSL.() -> A
-) = genericDriver(
-        driverDsl = VerifierDriverDSL(
-                DriverDSLImpl(
-                        portAllocation = portAllocation,
-                        debugPortAllocation = debugPortAllocation,
-                        systemProperties = systemProperties,
-                        driverDirectory = driverDirectory.toAbsolutePath(),
-                        useTestClock = useTestClock,
-                        isDebug = isDebug,
-                        startNodesInProcess = startNodesInProcess,
-                        waitForNodesToFinish = waitForNodesToFinish,
-                        extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs,
-                        jmxPolicy = jmxPolicy,
-                        compatibilityZone = null,
-                        maxTransactionSize = maxTransactionSize
-                )
+        defaultParameters: DriverParameters = DriverParameters().copy(
+                notarySpecs = emptyList(),
+                initialiseSerialization = false
         ),
-        coerce = { it },
-        dsl = dsl,
-        initialiseSerialization = false
-)
+        dsl: VerifierDriverDSL.() -> A
+): A {
+    return genericDriver(
+            defaultParameters = defaultParameters,
+            driverDslWrapper = ::VerifierDriverDSL,
+            coerce = { it },
+            dsl = dsl
+    )
+}
 
 /** A handle for a verifier */
 data class VerifierHandle(
@@ -166,7 +142,6 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
     fun startVerificationRequestor(name: CordaX500Name): CordaFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
-        GlobalProperties.networkParameters = testNetworkParameters(emptyList(), maxTransactionSize = driverDSL.maxTransactionSize)
         return driverDSL.executorService.fork {
             startVerificationRequestorInternal(name, hostAndPort)
         }
@@ -255,7 +230,7 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
 
     /** Starts a verifier connecting to the specified node */
     fun startVerifier(nodeHandle: NodeHandle): CordaFuture<VerifierHandle> {
-        return startVerifier(nodeHandle.configuration.p2pAddress)
+        return startVerifier(nodeHandle.p2pAddress)
     }
 
     /** Starts a verifier connecting to the specified requestor */
@@ -263,8 +238,8 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
         return startVerifier(verificationRequestorHandle.p2pAddress)
     }
 
-    private fun <A> NodeHandle.connectToNode(closure: (ClientSession) -> A): A {
-        val transport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), configuration.p2pAddress, configuration)
+    private fun <A> NodeHandleInternal.connectToNode(closure: (ClientSession) -> A): A {
+        val transport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), p2pAddress, configuration)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(transport)
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(NODE_USER, NODE_USER, false, true, true, locator.isPreAcknowledge, locator.ackBatchSize)
@@ -277,7 +252,7 @@ data class VerifierDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDri
      * Waits until [number] verifiers are listening for verification requests coming from the Node. Check
      * [VerificationRequestorHandle.waitUntilNumberOfVerifiers] for an equivalent for requestors.
      */
-    fun NodeHandle.waitUntilNumberOfVerifiers(number: Int) {
+    fun NodeHandleInternal.waitUntilNumberOfVerifiers(number: Int) {
         connectToNode { session ->
             poll(driverDSL.executorService, "$number verifiers to come online") {
                 if (session.queueQuery(SimpleString(VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount >= number) {

@@ -6,6 +6,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -25,7 +26,7 @@ class NodeUnloadHandlerTests : IntegrationTest() {
 
     @Test
     fun `should be able to register run on stop lambda`() {
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"), isDebug = true) {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"), isDebug = true)) {
             startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
             // just want to fall off the end of this for the mo...
         }

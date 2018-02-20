@@ -35,7 +35,7 @@ class DriverTests : IntegrationTest() {
         fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = nodeInfo.addresses.single()
             // Check that the port is bound
-            addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
+            addressMustBeBound(executorService, hostAndPort, (this as? OutOfProcess)?.process)
         }
 
         fun nodeMustBeDown(handle: NodeHandle) {
@@ -76,7 +76,7 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
+        val nodeHandle = driver(DriverParameters(portAllocation = PortAllocation.RandomFree)) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -88,8 +88,11 @@ class DriverTests : IntegrationTest() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().configuration.baseDirectory
+        driver(DriverParameters(
+                isDebug = true,
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+        )) {
+            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
@@ -98,7 +101,7 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(jmxPolicy = JmxPolicy(true)) {
+        driver(DriverParameters(jmxPolicy = JmxPolicy(true))) {
             // start another node so we gain access to node JMX metrics
             startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             val webAddress = NetworkHostAndPort("localhost", 7006)
@@ -114,7 +117,7 @@ class DriverTests : IntegrationTest() {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
         driver {
-            val baseDirectory = defaultNotaryNode.getOrThrow().configuration.baseDirectory
+            val baseDirectory = defaultNotaryNode.getOrThrow().baseDirectory
             assertThat(baseDirectory / "process-id").exists()
         }
 

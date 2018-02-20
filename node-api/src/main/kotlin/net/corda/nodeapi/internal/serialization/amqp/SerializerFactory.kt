@@ -40,7 +40,13 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 open class SerializerFactory(
         val whitelist: ClassWhitelist,
         cl: ClassLoader,
-        private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()) {
+        private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
+        val fingerPrinter: FingerPrinter = SerializerFingerPrinter()) {
+
+    init {
+        fingerPrinter.setOwner(this)
+    }
+
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()

@@ -31,7 +31,8 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
                 "${type.componentType().typeName}$arrayType"
             }
 
-    override val typeDescriptor by lazy { Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}") }
+    override val typeDescriptor by lazy {
+        Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}") }
     internal val elementType: Type by lazy { type.componentType() }
     internal open val typeName by lazy { calcTypeName(type) }
 

@@ -137,6 +137,25 @@ a single node to run the network map service, by putting its name in the ``netwo
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
+Specifying a custom webserver
+-----------------------------
+By default, any node listing a webport will use the default development webserver, which is not production-ready. You
+can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
+block:
+
+.. sourcecode:: groovy
+
+    node {
+        name "O=PartyA,L=New York,C=US"
+        webPort 10005
+        webserverJar "lib/my_webserver.jar"
+    }
+
+The webserver JAR will be copied into the node's ``build`` folder with the name ``corda-webserver.jar``.
+
+.. warning:: This is an experimental feature. There is currently no support for reading the webserver's port from the
+   node's ``node.conf`` file.
+
 Running deployNodes
 -------------------
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root

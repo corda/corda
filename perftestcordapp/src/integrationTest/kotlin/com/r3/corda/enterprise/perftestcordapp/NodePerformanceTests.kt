@@ -3,6 +3,7 @@ package com.r3.corda.enterprise.perftestcordapp
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
 import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueAndPaymentNoSelection
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
@@ -14,7 +15,8 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
-import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
@@ -57,10 +59,10 @@ class NodePerformanceTests : IntegrationTest() {
 
     @Test
     fun `empty flow per second`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
-
-            a.rpcClientToNode().use("A", "A") { connection ->
+            
+            CordaRPCClient(a.rpcAddress).use("A", "A") { connection ->
                 val timings = Collections.synchronizedList(ArrayList<Long>())
                 val N = 10000
                 val overallTiming = Stopwatch.createStarted().apply {
@@ -87,11 +89,11 @@ class NodePerformanceTests : IntegrationTest() {
 
     @Test
     fun `empty flow rate`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
-            a as NodeHandle.InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.node.services.monitoringService.metrics)
-            a.rpcClientToNode().use("A", "A") { connection ->
+            a as InProcess
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.services.monitoringService.metrics)
+            CordaRPCClient(a.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
                         parallelism = 16,
@@ -107,11 +109,11 @@ class NodePerformanceTests : IntegrationTest() {
 
     @Test
     fun `issue flow rate`() {
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(DriverParameters( startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<CashIssueFlow>())))).get()
-            a as NodeHandle.InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.node.services.monitoringService.metrics)
-            a.rpcClientToNode().use("A", "A") { connection ->
+            a as InProcess
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.services.monitoringService.metrics)
+            CordaRPCClient(a.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
                         parallelism = 16,
@@ -128,15 +130,15 @@ class NodePerformanceTests : IntegrationTest() {
     @Test
     fun `self pay rate`() {
         val user = User("A", "A", setOf(startFlow<CashIssueAndPaymentFlow>()))
-        driver(
+        driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance", "com.r3.corda.enterprise.perftestcordapp"),
                 portAllocation = PortAllocation.Incremental(20000)
-        ) {
-            val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.node.services.monitoringService.metrics)
-            notary.rpcClientToNode().use("A", "A") { connection ->
+        )) {
+            val notary = defaultNotaryNode.getOrThrow() as InProcess
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.services.monitoringService.metrics)
+            CordaRPCClient(notary.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
                         parallelism = 64,
@@ -153,16 +155,16 @@ class NodePerformanceTests : IntegrationTest() {
     @Test
     fun `self pay rate without selection`() {
         val user = User("A", "A", setOf(startFlow<CashIssueAndPaymentNoSelection>()))
-        driver(
+        driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                 startNodesInProcess = true,
                 portAllocation = PortAllocation.Incremental(20000)
-        ) {
+        )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
-            val alice = aliceFuture.getOrThrow() as NodeHandle.InProcess
+            val alice = aliceFuture.getOrThrow() as InProcess
             defaultNotaryNode.getOrThrow()
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, alice.node.services.monitoringService.metrics)
-            alice.rpcClientToNode().use("A", "A") { connection ->
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, alice.services.monitoringService.metrics)
+            CordaRPCClient(alice.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
                         parallelism = 64,
@@ -179,17 +181,17 @@ class NodePerformanceTests : IntegrationTest() {
     @Test
     fun `single pay`() {
         val user = User("A", "A", setOf(startFlow<CashIssueAndPaymentNoSelection>()))
-        driver(
+        driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                 startNodesInProcess = true,
                 portAllocation = PortAllocation.Incremental(20000)
-        ) {
+        )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bobFuture = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
-            val alice = aliceFuture.getOrThrow() as NodeHandle.InProcess
-            val bob = bobFuture.getOrThrow() as NodeHandle.InProcess
+            val alice = aliceFuture.getOrThrow() as InProcess
+            val bob = bobFuture.getOrThrow() as InProcess
             defaultNotaryNode.getOrThrow()
-            alice.rpcClientToNode().use("A", "A") { connection ->
+            CordaRPCClient(alice.rpcAddress).use("A", "A") { connection ->
                 connection.proxy.startFlow(::CashIssueAndPaymentNoSelection, 1.DOLLARS, OpaqueBytes.of(0), bob.nodeInfo.legalIdentities[0], false, defaultNotaryIdentity).returnValue.getOrThrow()
             }
         }

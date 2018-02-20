@@ -201,6 +201,10 @@ allprojects {
                 systemProperty(it, property)
             }
         }
+
+        if (System.getProperty("test.maxParallelForks") != null) {
+            maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
+        }
     }
 
     group 'com.r3.corda'

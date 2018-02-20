@@ -6,6 +6,8 @@ from previous releases. Please refer to :doc:`upgrade-notes` for detailed instru
 
 UNRELEASED
 ----------
+* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
+
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
@@ -208,6 +210,18 @@ R3 Corda 3.0 Developer Preview
 
 * Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
   only for internal use
+
+* Provided experimental support for specifying your own webserver to be used instead of the default development
+  webserver in ``Cordform`` using the ``webserverJar`` argument
+
+* Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
+  that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
+
+* The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved
+  from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the
+  ``net.corda.testing.services`` package. Moving items out of the ``net.corda.testing.*`` package will help make it clearer which
+  parts of the api are stable. The bash script ``tools\scripts\update-test-packages.sh`` can be used to smooth the upgrade
+  process for existing projects.
 
 .. _changelog_v2:
 

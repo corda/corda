@@ -69,7 +69,7 @@ class NetworkMapTest : IntegrationTest() {
                 notarySpecs = emptyList()
         ) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val networkParameters = (alice.configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+            val networkParameters = (alice.baseDirectory / NETWORK_PARAMS_FILE_NAME)
                     .readAll()
                     .deserialize<SignedDataWithCert<NetworkParameters>>()
                     .verified()
@@ -153,7 +153,7 @@ class NetworkMapTest : IntegrationTest() {
 
     private fun NodeHandle.onlySees(vararg nodes: NodeInfo) {
         // Make sure the nodes aren't getting the node infos from their additional directories
-        val nodeInfosDir = configuration.baseDirectory / CordformNode.NODE_INFO_DIRECTORY
+        val nodeInfosDir = baseDirectory / CordformNode.NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
             assertThat(nodeInfosDir.list { it.toList() }).isEmpty()
         }
