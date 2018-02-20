@@ -552,7 +552,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
-        val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
+        val cordappProvider = CordappProviderImpl(cordappLoader, attachments, networkParameters.whitelistedContractImplementations)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
                 identityService,

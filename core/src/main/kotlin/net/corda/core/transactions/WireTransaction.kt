@@ -88,7 +88,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) },
                 maxTransactionSize = services.networkParameters.maxTransactionSize
         )
     }
@@ -108,17 +107,16 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, resolveContractAttachment, 10485760)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, 10485760)
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
             maxTransactionSize: Int
     ): LedgerTransaction {
-        // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
+        // Look up public keys to authenticated identities.
         val authenticatedArgs = commands.map {
             val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
             CommandWithParties(it.signers, parties, it.value)
@@ -126,10 +124,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
-        val contractAttachments = findAttachmentContracts(resolvedInputs, resolveContractAttachment, resolveAttachment)
-        // Order of attachments is important since contracts may refer to indexes so only append automatic attachments
-        val attachments = (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) } + contractAttachments).distinct()
+        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
         val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
         checkTransactionSize(ltx, maxTransactionSize)
         return ltx
@@ -263,19 +258,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
-    }
-
-    private fun findAttachmentContracts(resolvedInputs: List<StateAndRef<ContractState>>,
-                                        resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
-                                        resolveAttachment: (SecureHash) -> Attachment?
-    ): List<Attachment> {
-        val contractAttachments = (outputs + resolvedInputs.map { it.state }).map { Pair(it, resolveContractAttachment(it)) }
-        val missingAttachments = contractAttachments.filter { it.second == null }
-        return if (missingAttachments.isEmpty()) {
-            contractAttachments.map { ContractAttachment(resolveAttachment(it.second!!) ?: throw AttachmentResolutionException(it.second!!), it.first.contract) }
-        } else {
-            throw MissingContractAttachments(missingAttachments.map { it.first })
-        }
     }
 
     override fun equals(other: Any?): Boolean {

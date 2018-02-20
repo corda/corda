@@ -209,7 +209,7 @@ public static final class net.corda.core.context.Trace$InvocationId$Companion ex
 public static final class net.corda.core.context.Trace$SessionId$Companion extends java.lang.Object
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AlwaysAcceptAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.AlwaysAcceptAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AlwaysAcceptAttachmentConstraint INSTANCE
 ##
@@ -284,14 +284,14 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public abstract jar.JarInputStream openAsJAR()
 ##
-@net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public interface net.corda.core.contracts.AttachmentConstraint
   public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getHash()
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AutomaticHashConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.AutomaticHashConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AutomaticHashConstraint INSTANCE
 ##
@@ -338,19 +338,36 @@ public final class net.corda.core.contracts.ComponentGroupEnum extends java.lang
   public static net.corda.core.contracts.ComponentGroupEnum valueOf(String)
   public static net.corda.core.contracts.ComponentGroupEnum[] values()
 ##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.ConstraintAttachment extends java.lang.Object implements net.corda.core.contracts.Attachment
+  public <init>(net.corda.core.contracts.ContractAttachment, String)
+  public void extractFile(String, java.io.OutputStream)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ContractAttachment getContractAttachment()
+  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
+  @org.jetbrains.annotations.NotNull public List getSigners()
+  public int getSize()
+  @org.jetbrains.annotations.NotNull public final String getStateContract()
+  @org.jetbrains.annotations.NotNull public java.io.InputStream open()
+  @org.jetbrains.annotations.NotNull public jar.JarInputStream openAsJAR()
+##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.Contract
   public abstract void verify(net.corda.core.transactions.LedgerTransaction)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.ContractAttachment extends java.lang.Object implements net.corda.core.contracts.Attachment
   public <init>(net.corda.core.contracts.Attachment, String)
+  public <init>(net.corda.core.contracts.Attachment, String, Set)
+  public <init>(net.corda.core.contracts.Attachment, String, Set, String)
   public void extractFile(String, java.io.OutputStream)
+  @org.jetbrains.annotations.NotNull public final Set getAdditionalContracts()
+  @org.jetbrains.annotations.NotNull public final Set getAllContracts()
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.Attachment getAttachment()
   @org.jetbrains.annotations.NotNull public final String getContract()
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public List getSigners()
   public int getSize()
+  @org.jetbrains.annotations.Nullable public final String getUploader()
   @org.jetbrains.annotations.NotNull public java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public jar.JarInputStream openAsJAR()
+  @org.jetbrains.annotations.NotNull public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.ContractState
   @org.jetbrains.annotations.NotNull public abstract List getParticipants()
@@ -366,7 +383,7 @@ public final class net.corda.core.contracts.ContractsDSL extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract Collection getExitKeys()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.FungibleAsset withNewOwnerAndAmount(net.corda.core.contracts.Amount, net.corda.core.identity.AbstractParty)
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.HashAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.HashAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public <init>(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component1()
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.HashAttachmentConstraint copy(net.corda.core.crypto.SecureHash)
@@ -557,6 +574,9 @@ public final class net.corda.core.contracts.TransactionStateKt extends java.lang
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.contracts.TransactionVerificationException extends net.corda.core.flows.FlowException
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getTxId()
 ##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$ConflictingAttachmentsRejection extends net.corda.core.contracts.TransactionVerificationException
+  public <init>(net.corda.core.crypto.SecureHash, String)
+##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$ContractConstraintRejection extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String)
 ##
@@ -619,6 +639,10 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.UpgradedContract extends net.corda.core.contracts.Contract
   @org.jetbrains.annotations.NotNull public abstract String getLegacyContract()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.ContractState upgrade(net.corda.core.contracts.ContractState)
+##
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
+  public <init>(Map)
+  public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.cordapp.Cordapp
   @org.jetbrains.annotations.NotNull public abstract List getContractClassNames()
@@ -1128,7 +1152,8 @@ public final class net.corda.core.flows.ContractUpgradeFlow extends java.lang.Ob
   public <init>(net.corda.core.contracts.StateAndRef, Class)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected net.corda.core.flows.AbstractStateReplacementFlow$UpgradeTx assembleTx()
 ##
-public abstract class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.FlowLogic
+public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.FlowLogic
+  public <init>(net.corda.core.flows.FlowSession, Object)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.Nullable public Void call()
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowSession getOtherSideSession()
   @org.jetbrains.annotations.NotNull public final Object getPayload()
@@ -1322,11 +1347,11 @@ public @interface net.corda.core.flows.InitiatingFlow
   @org.jetbrains.annotations.NotNull public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.NotaryError$General extends net.corda.core.flows.NotaryError
-  public <init>(String)
-  @org.jetbrains.annotations.NotNull public final String component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError$General copy(String)
+  public <init>(Throwable)
+  @org.jetbrains.annotations.NotNull public final Throwable component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError$General copy(Throwable)
   public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final String getCause()
+  @org.jetbrains.annotations.NotNull public final Throwable getCause()
   public int hashCode()
   @org.jetbrains.annotations.NotNull public String toString()
 ##
@@ -1369,6 +1394,8 @@ public final class net.corda.core.flows.NotaryFlow extends java.lang.Object
   public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public List call()
   @org.jetbrains.annotations.NotNull public net.corda.core.utilities.ProgressTracker getProgressTracker()
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected final net.corda.core.utilities.UntrustworthyData notarise(net.corda.core.identity.Party)
+  @org.jetbrains.annotations.NotNull protected final List validateResponse(net.corda.core.utilities.UntrustworthyData, net.corda.core.identity.Party)
   public static final net.corda.core.flows.NotaryFlow$Client$Companion Companion
 ##
 public static final class net.corda.core.flows.NotaryFlow$Client$Companion extends java.lang.Object
@@ -1745,14 +1772,15 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowProgressHandle startTrackedFlow(net.corda.core.flows.FlowLogic)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NetworkParameters extends java.lang.Object
-  public <init>(int, List, int, int, java.time.Instant, int)
+  public <init>(int, List, int, int, java.time.Instant, int, Map)
   public final int component1()
   @org.jetbrains.annotations.NotNull public final List component2()
   public final int component3()
   public final int component4()
   @org.jetbrains.annotations.NotNull public final java.time.Instant component5()
   public final int component6()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters copy(int, List, int, int, java.time.Instant, int)
+  @org.jetbrains.annotations.NotNull public final Map component7()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters copy(int, List, int, int, java.time.Instant, int, Map)
   public boolean equals(Object)
   public final int getEpoch()
   public final int getMaxMessageSize()
@@ -1760,6 +1788,7 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   public final int getMinimumPlatformVersion()
   @org.jetbrains.annotations.NotNull public final java.time.Instant getModifiedTime()
   @org.jetbrains.annotations.NotNull public final List getNotaries()
+  @org.jetbrains.annotations.NotNull public final Map getWhitelistedContractImplementations()
   public int hashCode()
   public String toString()
 ##
@@ -1836,9 +1865,9 @@ public final class net.corda.core.node.StatesToRecord extends java.lang.Enum
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.node.services.AttachmentStorage
   public abstract boolean hasAttachment(net.corda.core.crypto.SecureHash)
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream, String, String)
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importOrGetAttachment(java.io.InputStream)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importOrGetAttachment(java.io.InputStream)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.contracts.Attachment openAttachment(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)
 ##
@@ -2920,7 +2949,7 @@ public static final class net.corda.core.serialization.SingletonSerializationTok
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public final String getReason()
 ##
-@net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.CoreTransaction extends net.corda.core.transactions.BaseTransaction
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.CoreTransaction extends net.corda.core.transactions.BaseTransaction
   public <init>()
   @org.jetbrains.annotations.NotNull public abstract List getInputs()
 ##
@@ -3162,7 +3191,7 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   public abstract void verifyRequiredSignatures()
   public abstract void verifySignaturesExcept(Collection)
 ##
-@net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.TraversableTransaction extends net.corda.core.transactions.CoreTransaction
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.TraversableTransaction extends net.corda.core.transactions.CoreTransaction
   public <init>(List)
   @org.jetbrains.annotations.NotNull public final List getAttachments()
   @org.jetbrains.annotations.NotNull public final List getAvailableComponentGroups()
@@ -3684,20 +3713,19 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public final boolean getWaitForAllNodesToFinish()
   public int hashCode()
   public final boolean isDebug()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setDebugPortAllocation(net.corda.testing.driver.PortAllocation)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setDriverDirectory(java.nio.file.Path)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setExtraCordappPackagesToScan(List)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setInitialiseSerialization(boolean)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setIsDebug(boolean)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setJmxPolicy(net.corda.testing.driver.JmxPolicy)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setNetworkParameters(net.corda.core.node.NetworkParameters)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setNotarySpecs(List)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setPortAllocation(net.corda.testing.driver.PortAllocation)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setStartNodesInProcess(boolean)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setSystemProperties(Map)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setUseTestClock(boolean)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters setWaitForAllNodesToFinish(boolean)
   public String toString()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withDebugPortAllocation(net.corda.testing.driver.PortAllocation)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withDriverDirectory(java.nio.file.Path)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withExtraCordappPackagesToScan(List)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withIsDebug(boolean)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withJmxPolicy(net.corda.testing.driver.JmxPolicy)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withNetworkParameters(net.corda.core.node.NetworkParameters)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withNotarySpecs(List)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withPortAllocation(net.corda.testing.driver.PortAllocation)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withStartNodesInProcess(boolean)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withSystemProperties(Map)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withUseTestClock(boolean)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.DriverParameters withWaitForAllNodesToFinish(boolean)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.testing.driver.InProcess extends net.corda.testing.driver.NodeHandle
   @org.jetbrains.annotations.NotNull public abstract net.corda.node.services.api.StartedNodeServices getServices()
@@ -3742,13 +3770,13 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   @org.jetbrains.annotations.Nullable public final Boolean getStartInSameProcess()
   @org.jetbrains.annotations.NotNull public final net.corda.node.services.config.VerifierType getVerifierType()
   public int hashCode()
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters setCustomerOverrides(Map)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters setMaximumHeapSize(String)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters setProvidedName(net.corda.core.identity.CordaX500Name)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters setRpcUsers(List)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters setStartInSameProcess(Boolean)
-  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters setVerifierType(net.corda.node.services.config.VerifierType)
   public String toString()
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters withCustomerOverrides(Map)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters withMaximumHeapSize(String)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters withProvidedName(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters withRpcUsers(List)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters withStartInSameProcess(Boolean)
+  @org.jetbrains.annotations.NotNull public final net.corda.testing.driver.NodeParameters withVerifierType(net.corda.node.services.config.VerifierType)
 ##
 public final class net.corda.testing.driver.NotaryHandle extends java.lang.Object
   public <init>(net.corda.core.identity.Party, boolean, net.corda.core.concurrent.CordaFuture)
@@ -4646,6 +4674,7 @@ public final class net.corda.testing.services.MockAttachmentStorage extends net.
   public boolean hasAttachment(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream)
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream, String, String)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash importContractAttachment(List, String, java.io.InputStream)
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash importOrGetAttachment(java.io.InputStream)
   @org.jetbrains.annotations.Nullable public net.corda.core.contracts.Attachment openAttachment(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)

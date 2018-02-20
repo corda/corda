@@ -13,7 +13,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
-import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
@@ -26,9 +25,10 @@ import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.core.node.NotaryInfo
+import net.corda.testing.core.chooseIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.chooseIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -48,7 +48,7 @@ class BFTNotaryServiceTests {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(emptyList())
+        mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
     }
 
     @After
