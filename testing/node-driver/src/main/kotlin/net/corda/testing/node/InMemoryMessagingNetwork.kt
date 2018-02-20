@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
@@ -46,7 +47,7 @@ import kotlin.concurrent.thread
  *     a service is addressed.
  */
 @ThreadSafe
-class InMemoryMessagingNetwork internal constructor(
+class InMemoryMessagingNetwork private constructor(
         private val sendManuallyPumped: Boolean,
         private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         private val messagesInFlight: ReusableLatch = ReusableLatch()
@@ -54,6 +55,13 @@ class InMemoryMessagingNetwork internal constructor(
     companion object {
         private const val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
+
+        internal fun create(
+                sendManuallyPumped: Boolean,
+                servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+                messagesInFlight: ReusableLatch = ReusableLatch()): InMemoryMessagingNetwork {
+            return InMemoryMessagingNetwork(sendManuallyPumped, servicePeerAllocationStrategy, messagesInFlight)
+        }
     }
 
     private var counter = 0   // -1 means stopped.
@@ -113,7 +121,8 @@ class InMemoryMessagingNetwork internal constructor(
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
-        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) } ?: emptyList() //TODO only notary can be distributed?
+        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) }
+                ?: emptyList() //TODO only notary can be distributed?
         synchronized(this) {
             val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
             handleEndpointMap[peerHandle] = node
@@ -181,7 +190,8 @@ class InMemoryMessagingNetwork internal constructor(
     }
 
     /**
-     * Mock service loadbalancing
+     * How traffic is allocated in the case where multiple nodes share a single identity, which happens for notaries
+     * in a cluster. You don't normally ever need to change this: it is mostly useful for testing notary implementations.
      */
     @DoNotImplement
     sealed class ServicePeerAllocationStrategy {
@@ -305,7 +315,8 @@ class InMemoryMessagingNetwork internal constructor(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
+                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name]
+                        ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
                 is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
             }
         }

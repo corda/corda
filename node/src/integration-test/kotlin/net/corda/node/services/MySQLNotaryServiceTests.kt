@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.MySQLConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
@@ -23,8 +24,11 @@ import net.corda.testing.core.chooseIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.*
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.inMemoryH2DataSourceConfig
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.ClassRule
@@ -41,14 +45,14 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2")
     }
 
-    private lateinit var mockNet: MockNetwork
-    private lateinit var node: StartedMockNode
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var node: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var notaryParty: Party
-    private lateinit var notaryNode: StartedMockNode
+    private lateinit var notaryNode: StartedNode<InternalMockNetwork.MockNode>
 
     @Before
     fun before() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(mockNet.baseDirectory(mockNet.nextNodeId), notaryName)
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryParty, false))))
         val notaryNodeUnstarted = createNotaryNode()
@@ -123,7 +127,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         checkSignature(signatureRetry)
     }
 
-    private fun createNotaryNode(): UnstartedMockNode {
+    private fun createNotaryNode(): InternalMockNetwork.MockNode {
         val dataStoreProperties = makeTestDataSourceProperties(configSupplier = ::inMemoryH2DataSourceConfig).apply {
             setProperty("autoCommit", "false")
         }
@@ -139,7 +143,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         )
     }
 
-    private fun issueState(node: StartedMockNode, notary: Party): StateAndRef<*> {
+    private fun issueState(node: StartedNode<InternalMockNetwork.MockNode>, notary: Party): StateAndRef<*> {
         return node.database.transaction {
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
             val stx = node.services.signInitialTransaction(builder)

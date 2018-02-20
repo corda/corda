@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
@@ -45,7 +46,7 @@ class RpcSslTest : IntegrationTest() {
                 var successful = false
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
-                        CordaRPCClient(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
+                        createCordaRPCClientWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
                             connection.proxy.apply {
                                 nodeInfo()
                                 successful = true

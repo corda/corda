@@ -35,6 +35,7 @@ class NodeData {
     val nearestCity = SimpleObjectProperty(CityDatabase["London"]!!)
     val p2pPort = SimpleIntegerProperty()
     val rpcPort = SimpleIntegerProperty()
+    val rpcAdminPort = SimpleIntegerProperty()
     val webPort = SimpleIntegerProperty()
     val h2Port = SimpleIntegerProperty()
     val extraServices = SimpleListProperty(observableArrayList<ExtraService>())
@@ -45,6 +46,7 @@ class NodeDataModel : ItemViewModel<NodeData>(NodeData()) {
     val nearestCity = bind { item?.nearestCity }
     val p2pPort = bind { item?.p2pPort }
     val rpcPort = bind { item?.rpcPort }
+    val rpcAdminPort = bind { item?.rpcAdminPort }
     val webPort = bind { item?.webPort }
     val h2Port = bind { item?.h2Port }
 }

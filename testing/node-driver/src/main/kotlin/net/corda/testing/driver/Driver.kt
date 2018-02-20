@@ -102,13 +102,13 @@ data class NodeParameters(
         val maximumHeapSize: String = "200m",
         val logLevel: String? = null
 ) {
-    fun setProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
-    fun setRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
-    fun setVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
-    fun setCustomerOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
-    fun setStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
-    fun setMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
-    fun setLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
+    fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
+    fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
+    fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
+    fun withCustomerOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
+    fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
+    fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
+    fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
 }
 
 /**
@@ -199,17 +199,17 @@ data class DriverParameters(
         val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList())
 ) {
-    fun setIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
-    fun setDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
-    fun setPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
-    fun setDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
-    fun setSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
-    fun setUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
-    fun setInitialiseSerialization(initialiseSerialization: Boolean): DriverParameters = copy(initialiseSerialization = initialiseSerialization)
-    fun setStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
-    fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
-    fun setNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
-    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
-    fun setJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
-    fun setNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
+    fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
+    fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
+    fun withPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
+    fun withDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
+    fun withSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
+    fun withUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
+    fun withInitialiseSerialization(initialiseSerialization: Boolean): DriverParameters = copy(initialiseSerialization = initialiseSerialization)
+    fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
+    fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
+    fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
+    fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+    fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
+    fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
 }

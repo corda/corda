@@ -2,9 +2,16 @@
 
 package net.corda.core.internal
 
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappConfig
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -375,3 +382,23 @@ inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
 }
 
 fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }
+
+fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
+    return CordappContext(cordapp, attachmentId, classLoader, config)
+}
+/** Verifies that the correct notarisation request was signed by the counterparty. */
+fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+    val requestingParty = otherSideSession.counterparty
+    request.verifySignature(signature, requestingParty)
+    // TODO: persist the signature for traceability. Do we need to persist the request as well?
+}
+
+/** Creates a signature over the notarisation request using the legal identity key. */
+fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
+    val serializedRequest = this.serialize().bytes
+    val signature = with(serviceHub) {
+        val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
+        keyManagementService.sign(serializedRequest, myLegalIdentity)
+    }
+    return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
+}

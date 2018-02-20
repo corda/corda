@@ -1,5 +1,7 @@
 package net.corda.client.rpc.internal
 
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
 import net.corda.core.context.Actor
@@ -42,8 +44,6 @@ data class RPCClientConfiguration(
         val reapInterval: Duration,
         /** The number of threads to use for observations (for executing [Observable.onNext]) */
         val observationExecutorPoolSize: Int,
-        /** The maximum number of producers to create to handle outgoing messages */
-        val producerPoolBound: Int,
         /**
          * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
          * the limit on the number of leaked observables reaped because of garbage collection per reaping.
@@ -56,9 +56,12 @@ data class RPCClientConfiguration(
         val connectionRetryIntervalMultiplier: Double,
         /** Maximum retry interval */
         val connectionMaxRetryInterval: Duration,
+        /** Maximum reconnect attempts on failover */
         val maxReconnectAttempts: Int,
         /** Maximum file size */
-        val maxFileSize: Int
+        val maxFileSize: Int,
+        /** The cache expiry of a deduplication watermark per client. */
+        val deduplicationCacheExpiry: Duration
 ) {
     companion object {
         val unlimitedReconnectAttempts = -1
@@ -68,14 +71,14 @@ data class RPCClientConfiguration(
                 trackRpcCallSites = false,
                 reapInterval = 1.seconds,
                 observationExecutorPoolSize = 4,
-                producerPoolBound = 1,
                 cacheConcurrencyLevel = 8,
                 connectionRetryInterval = 5.seconds,
                 connectionRetryIntervalMultiplier = 1.5,
                 connectionMaxRetryInterval = 3.minutes,
                 maxReconnectAttempts = unlimitedReconnectAttempts,
                 /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
-                maxFileSize = 10485760
+                maxFileSize = 10485760,
+                deduplicationCacheExpiry = 1.days
         )
     }
 }

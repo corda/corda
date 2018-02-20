@@ -101,10 +101,11 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(DriverParameters(jmxPolicy = JmxPolicy(true))) {
+        driver(DriverParameters(startNodesInProcess = false, jmxPolicy = JmxPolicy(true))) {
             // start another node so we gain access to node JMX metrics
-            startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             val webAddress = NetworkHostAndPort("localhost", 7006)
+            startNode(providedName = DUMMY_REGULATOR_NAME,
+                      customOverrides = mapOf("jmxMonitoringHttpPort" to webAddress.port)).getOrThrow()
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
             val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")

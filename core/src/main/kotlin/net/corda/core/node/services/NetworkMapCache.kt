@@ -67,11 +67,21 @@ interface NetworkMapCacheBase {
     fun track(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
 
     /**
-     * Look up the node info for a legal name.
-     * Notice that when there are more than one node for a given name (in case of distributed services) first service node
-     * found will be returned.
+     * Return a [NodeInfo] which has the given legal name for one of its identities, or null if no such node is found.
+     *
+     * @throws IllegalArgumentException If more than one matching node is found, in the case of a distributed service identity
+     * (such as with a notary cluster). For such a scenerio use [getNodesByLegalName] instead.
      */
     fun getNodeByLegalName(name: CordaX500Name): NodeInfo?
+
+    /**
+     * Return a list of [NodeInfo]s which have the given legal name for one of their identities, or an empty list if no
+     * such nodes are found.
+     *
+     * Normally there is at most one node for a legal name, but for distributed service identities (such as with a notary
+     * cluster) there can be multiple nodes sharing the same identity.
+     */
+    fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
 
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
@@ -99,13 +109,6 @@ interface NetworkMapCacheBase {
      * can be multiple nodes.
      */
     fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
-
-    /**
-     * Look up the node information entries for a legal name.
-     * Note that normally there will be only one node for a legal name, but for clusters of nodes or distributed services there
-     * can be multiple nodes.
-     */
-    fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
 
     /** Returns information about the party, which may be a specific node or a service */
     fun getPartyInfo(party: Party): PartyInfo?

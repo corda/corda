@@ -39,9 +39,9 @@ class EnclaveletTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }, MEGA_CORP.name)
+    })
 
     @Ignore("Pending Gradle bug: https://github.com/gradle/gradle/issues/2657")
     @Test

@@ -2,12 +2,12 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.GlobalProperties.networkParameters
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
@@ -16,6 +16,8 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.node.CordaClock
+import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
@@ -146,7 +148,10 @@ open class Node(configuration: NodeConfiguration,
 
     private var shutdownHook: ShutdownHook? = null
 
-    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore): MessagingService {
+    override fun makeMessagingService(database: CordaPersistence,
+                                      info: NodeInfo,
+                                      nodeProperties: NodePropertiesStore,
+                                      networkParameters: NetworkParameters): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService ?:
@@ -154,9 +159,13 @@ open class Node(configuration: NodeConfiguration,
 
         securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 
-        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
-        val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress) else startLocalRpcBroker()
-        val advertisedAddress = info.addresses.single()
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker(networkParameters)
+        val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
+            BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
+        } else {
+            startLocalRpcBroker(networkParameters)
+        }
+        val advertisedAddress = info.addresses[0]
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
@@ -188,16 +197,31 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    private fun startLocalRpcBroker(): BrokerAddresses? {
+    private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {
         with(configuration) {
             return rpcOptions.address?.let {
                 require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(
+                                this.address!!,
+                                sslConfig,
+                                securityManager,
+                                certificateChainCheckPolicies,
+                                networkParameters.maxMessageSize,
+                                jmxMonitoringHttpPort != null,
+                                rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, networkParameters.maxMessageSize, exportJMXto.isNotEmpty(), rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(
+                                this.address!!,
+                                adminAddress!!,
+                                sslConfig,
+                                securityManager,
+                                certificateChainCheckPolicies,
+                                networkParameters.maxMessageSize,
+                                jmxMonitoringHttpPort != null,
+                                rpcBrokerDirectory)
                     }
                 }
                 return rpcBroker!!.addresses
@@ -205,16 +229,14 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    private fun makeLocalMessageBroker(): NetworkHostAndPort {
+    private fun makeLocalMessageBroker(networkParameters: NetworkParameters): NetworkHostAndPort {
         with(configuration) {
             messageBroker = ArtemisMessagingServer(this, p2pAddress.port, networkParameters.maxMessageSize)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
-    override fun myAddresses(): List<NetworkHostAndPort> {
-        return listOf(configuration.messagingServerAddress ?: getAdvertisedAddress())
-    }
+    override fun myAddresses(): List<NetworkHostAndPort> = listOf(getAdvertisedAddress())
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {

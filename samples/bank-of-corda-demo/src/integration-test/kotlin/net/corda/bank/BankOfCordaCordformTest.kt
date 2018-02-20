@@ -4,7 +4,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.internal.demorun.deployNodesThen
+import net.corda.testing.node.internal.demorun.nodeRunner
 import org.junit.ClassRule
 import org.junit.Test
 
@@ -16,7 +16,7 @@ class BankOfCordaCordformTest : IntegrationTest() {
 
     @Test
     fun `run demo`() {
-        BankOfCordaCordform().deployNodesThen {
+        BankOfCordaCordform().nodeRunner().scanPackages(listOf("net.corda.finance")).deployAndRunNodesThen {
             IssueCash.requestWebIssue(30000.POUNDS)
             IssueCash.requestRpcIssue(20000.DOLLARS)
         }

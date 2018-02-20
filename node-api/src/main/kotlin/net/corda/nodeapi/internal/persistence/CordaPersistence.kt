@@ -47,6 +47,7 @@ private val _contextDatabase = ThreadLocal<CordaPersistence>()
 var contextDatabase: CordaPersistence
     get() = _contextDatabase.get() ?: error("Was expecting to find CordaPersistence set on current thread: ${Strand.currentStrand()}")
     set(database) = _contextDatabase.set(database)
+val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
         val dataSource: DataSource,
