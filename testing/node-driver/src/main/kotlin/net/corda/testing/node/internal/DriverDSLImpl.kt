@@ -952,7 +952,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(defaultParameters.initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(true)
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -1003,7 +1003,7 @@ fun <A> internalDriver(
         debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
+        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
