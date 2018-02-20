@@ -268,7 +268,7 @@ class Node(private val project: Project) : CordformNode() {
      *
      * @return List of this node's cordapps.
      */
-    private fun getCordappList(): Collection<File> {
+    fun getCordappList(): Collection<File> {
         // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
         @Suppress("RemoveRedundantCallsOfConversionMethods")
         val cordapps: List<String> = cordapps.map { it.toString() }

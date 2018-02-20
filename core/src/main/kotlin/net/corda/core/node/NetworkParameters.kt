@@ -1,6 +1,7 @@
 package net.corda.core.node
 
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import java.time.Instant
 
@@ -14,6 +15,8 @@ import java.time.Instant
  * @property modifiedTime Last modification time of network parameters set.
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
+ * @property whitelistedContractImplementations List of whitelisted jars containing contract code for each contract class.
+ *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. Read more about contract constraints here: <https://docs.corda.net/api-contract-constraints.html>
  */
 // TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
 //  It needs separate design.
@@ -24,7 +27,8 @@ data class NetworkParameters(
         val maxMessageSize: Int,
         val maxTransactionSize: Int,
         val modifiedTime: Instant,
-        val epoch: Int
+        val epoch: Int,
+        val whitelistedContractImplementations: Map<String, List<AttachmentId>>
 ) {
     init {
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }

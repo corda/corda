@@ -226,7 +226,7 @@ open class MockServices private constructor(
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
-    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments)
+    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments, networkParameters.whitelistedContractImplementations)
     override val cordappProvider: CordappProvider get() = mockCordappProvider
 
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
