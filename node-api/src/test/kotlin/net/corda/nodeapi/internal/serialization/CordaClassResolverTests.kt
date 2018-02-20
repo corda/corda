@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.nhaarman.mockito_kotlin.*
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.AttachmentsClassLoader
@@ -196,12 +197,21 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(DefaultSerializable::class.java)
     }
 
-    private fun importJar(storage: AttachmentStorage) = AttachmentsClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
+    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = AttachmentsClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
 
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage)
+        val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
+        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
+        CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `Attempt to load contract attachment with the incorrect uploader should fails with IAE`() {
+        val storage = MockAttachmentStorage()
+        val attachmentHash = importJar(storage, "some_uploader")
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
         val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
