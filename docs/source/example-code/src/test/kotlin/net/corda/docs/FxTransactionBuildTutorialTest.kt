@@ -13,6 +13,7 @@ import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -36,6 +37,7 @@ class FxTransactionBuildTutorialTest {
         mockNet.stopNodes()
     }
 
+    @Ignore("Pending fix from corda")
     @Test
     fun `Run ForeignExchangeFlow to completion`() {
         // Use NodeA as issuer and create some dollars
