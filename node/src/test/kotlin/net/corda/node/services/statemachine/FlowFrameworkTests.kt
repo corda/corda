@@ -77,8 +77,8 @@ class FlowFrameworkTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                servicePeerAllocationStrategy = RoundRobin(),
-                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts")
+                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                servicePeerAllocationStrategy = RoundRobin()
         )
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))

@@ -13,17 +13,25 @@ import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
 
-class ArtemisMessagingClient(private val config: SSLConfiguration, private val serverAddress: NetworkHostAndPort, private val maxMessageSize: Int) {
+interface ArtemisSessionProvider {
+    fun start(): ArtemisMessagingClient.Started
+    fun stop()
+    val started: ArtemisMessagingClient.Started?
+}
+
+class ArtemisMessagingClient(private val config: SSLConfiguration,
+                             private val serverAddress: NetworkHostAndPort,
+                             private val maxMessageSize: Int) : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
     }
 
     class Started(val sessionFactory: ClientSessionFactory, val session: ClientSession, val producer: ClientProducer)
 
-    var started: Started? = null
+    override var started: Started? = null
         private set
 
-    fun start(): Started = synchronized(this) {
+    override fun start(): Started = synchronized(this) {
         check(started == null) { "start can't be called twice" }
         log.info("Connecting to message broker: $serverAddress")
         // TODO Add broker CN to config for host verification in case the embedded broker isn't used
@@ -48,7 +56,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration, private val s
         return Started(sessionFactory, session, producer).also { started = it }
     }
 
-    fun stop() = synchronized(this) {
+    override fun stop() = synchronized(this) {
         started?.run {
             producer.close()
             // Ensure any trailing messages are committed to the journal
