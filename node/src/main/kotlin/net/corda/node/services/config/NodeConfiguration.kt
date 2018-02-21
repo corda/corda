@@ -164,7 +164,7 @@ data class NodeConfigurationImpl(
 
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
-        errors + validateRpcOptions(rpcOptions)
+        errors += validateRpcOptions(rpcOptions)
         return errors
     }
 
@@ -172,7 +172,7 @@ data class NodeConfigurationImpl(
         val errors = mutableListOf<String>()
         if (!options.useSsl) {
             if (options.adminAddress == null) {
-                errors + "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+                errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
             }
         }
         return errors
