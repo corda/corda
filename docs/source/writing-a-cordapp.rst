@@ -26,6 +26,8 @@ For testing purposes, CorDapps may also include:
 In production, a production-ready webserver should be used, and these files should be moved into a different module or
 project so that they do not bloat the CorDapp at build time.
 
+.. _cordapp-structure:
+
 Structure
 ---------
 You should base the structure of your project on the Java or Kotlin templates:
