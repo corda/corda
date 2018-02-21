@@ -149,10 +149,10 @@ a single node to run the network map service, by putting its name in the ``netwo
 The Dockerform task
 -------------------
 
-The ```Dockerform``` is a sister task of ```Cordform```. It operates on nearly the same syntax and produces very
-similar results - enhanced by extra file to enable easy spin up of nodes using ```docker-compose```.
-Below you can find the example task from ```IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>```
-included in samples directory of main Corda GitHub repository:
+The ```Dockerform``` is a sister task of ```Cordform```. It has nearly the same syntax and produces very
+similar results - enhanced by an extra file to enable easy spin up of nodes using ```docker-compose```.
+Below you can find the example task from the ```IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>```
+included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
 
@@ -202,9 +202,9 @@ included in samples directory of main Corda GitHub repository:
     }
 
 There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur.
-Running the task will create the same folders structure as described in :ref:`The Cordform task` with additional
+Running the task will create the same folders structure as described in :ref:`The Cordform task` with an additional
 ```Dockerfile`` in each node directory, and ```docker-compose.yml``` in ```build/nodes``` directory. Every node
-by default exposes port 10003 which is the default one for RPC connection.
+by default exposes port 10003 which is the default one for RPC connections.
 
 .. warning:: Webserver is not supported by this task!
 
