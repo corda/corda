@@ -11,7 +11,6 @@ changes to this list.
 * Andras Slemmer (R3)
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)
-* Anthony Coates (Deutsche Bank)
 * Anton Semenov (Commerzbank)
 * Antonio Cerrato (SEB)
 * Anthony Woolley (Société Générale)
