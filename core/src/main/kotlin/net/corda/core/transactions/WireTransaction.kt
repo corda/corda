@@ -5,6 +5,7 @@ import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -88,7 +89,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                maxTransactionSize = services.networkParameters.maxTransactionSize
+                maxTransactionSize = services.networkParameters.maxTransactionSize,
+                networkParameters = services.networkParameters
         )
     }
 
@@ -107,14 +109,15 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, 10485760)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, 10485760, null)
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            maxTransactionSize: Int
+            maxTransactionSize: Int,
+            networkParameters: NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedArgs = commands.map {
@@ -125,7 +128,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters)
         checkTransactionSize(ltx, maxTransactionSize)
         return ltx
     }
