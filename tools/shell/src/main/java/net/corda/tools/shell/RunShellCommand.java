@@ -36,8 +36,10 @@ public class RunShellCommand extends InteractiveShellCommand {
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {
         // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
         // Each element we emit is a map of column -> content.
-        Map<String, String> cmdsAndArgs = parser.getAvailableCommands();
-        for (Map.Entry<String, String> entry : cmdsAndArgs.entrySet()) {
+        Set<Map.Entry<String, String>> entries = parser.getAvailableCommands().entrySet();
+        ArrayList<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
+        entryList.sort(Comparator.comparing(Map.Entry::getKey));
+        for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.
             if (entry.getKey().equals("startFlowDynamic")) continue;
             if (entry.getKey().equals("getProtocolVersion")) continue;
