@@ -16,12 +16,24 @@ The transition between two valid states may be invalid, if the rules of the appl
 For instance, two cash states of $100 and $200 may both be internally valid, but replacing the first with the second
 isn't allowed unless you're a cash issuer - otherwise you could print money for free.
 
-So what defines which ``verify`` method is used? This is in fact chosen by the creator of the transaction. However,
-states specify a constraint over the contracts (really, apps) that can be used. This creates a balance of
-power between the creator of data on the ledger and the user who is trying to edit it, which can be very useful when
-managing upgrades to Corda applications.
+For a transaction to be valid, the ``verify`` function associated with each state must run successfully. However,
+for this to be secure, it is not sufficient to specify the ``verify`` function by name as there may exist multiple
+different implementations with the same method signature and enclosing class. This normally will happen as applications
+evolve, but could also happen maliciously.
 
-There are two ways of upgrading a smart contract in Corda:
+Contract constraints solve this problem by allowing a contract developer to constrain which ``verify`` functions out of
+the universe of implementations can be used (i.e. the universe is everything that matches the signature and contract
+constraints restrict this universe to a subset). Constraints are satisfied by attachments (JARs). You are not allowed to
+attach two JARs that both define the same application due to the *no overlap rule*. This rule specifies that two
+attachment JARs may not provide the same file path. If they do, the transaction is considered invalid. Because each
+state specifies both a constraint over attachments *and* a Contract class name to use, the specified class must appear
+in only one attachment.
+
+So who picks the attachment to use? It is chosen by the creator of the transaction. However, states specify a constraint
+over the contracts (really, apps) that can be used. This creates a balance of power between the creator of data on
+the ledger and the user who is trying to edit it, which can be very useful when managing upgrades to Corda applications.
+
+There are two ways of handling upgrades to a smart contract in Corda:
 
 1. *Implicit:* By allowing multiple implementations of the contract ahead of time, using constraints.
 2. *Explicit:* By creating a special *contract upgrade transaction* and getting all participants of a state to sign it using the
@@ -38,17 +50,6 @@ consumes notary and ledger resources, and is just in general more complex.
 
 How constraints work
 --------------------
-
-For a transaction to be valid, the ``verify`` function associated with each state must run successfully. However,
-for this to be secure, it is not sufficient to specify the ``verify`` function by name as there may exist multiple
-different implementations with the same method signature and enclosing class. Contract constraints solve this
-problem by allowing a contract developer to constrain which ``verify`` functions out of the universe of
-implementations can be used (i.e. the universe is everything that matches the signature and contract constraints
-restrict this universe to a subset). Constraints are satisfied by attachments: by attaching an app JAR to a transaction,
-the constraints on the inputs can be satisfied. You are not allowed to attach two JARs that both define the same
-application due to the **no overlap rule**. This rule specifies that two attachment JARs may not provide the same
-file path. If they do, the transaction is considered invalid. Because each state specifies both a constraint over
-attachments *and* a Contract class name to use, the specified class must appear in only one attachment.
 
 Starting from Corda 3 there are two types of constraint that can be used: hash and zone whitelist. In future
 releases a third type will be added, the signature constraint.
