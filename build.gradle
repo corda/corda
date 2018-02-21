@@ -61,7 +61,7 @@ buildscript {
     ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = 'df87f8944b83b1187a6c741253d2aa7b232a1c62'
+    ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
