@@ -255,6 +255,11 @@ Minor Changes
 ~~~~~~~~~~~~~
 
   * Upgraded gradle to 4.4.1.
+
+    .. note:: To avoid potential incompaitability issues we recomend you also upgrade your CorDapp's gradle
+      pllugin to match. Details on how to do this can be found on the offical
+      `gradle website <https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:upgrading_wrapper>`_
+
   * Cash Spending now allows for sending multiple amounts to multiple parties with a single API call
 
     - documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
