@@ -129,8 +129,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      *
      * Params
      *  [expression] refers to a (composable) type safe [CriteriaExpression]
-     *
-     * Refer to [CommercialPaper.State] for a concrete example.
      */
     data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
     (val expression: CriteriaExpression<L, Boolean>,
