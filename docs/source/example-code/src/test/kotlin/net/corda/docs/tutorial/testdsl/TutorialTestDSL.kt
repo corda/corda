@@ -137,6 +137,7 @@ class CommercialPaperTest {
                 input(CP_PROGRAM_ID, inState)
                 command(megaCorp.publicKey, CommercialPaper.Commands.Move())
                 attachments(CP_PROGRAM_ID)
+                timeWindow(TEST_TX_TIME)
                 output(CP_PROGRAM_ID, "alice's paper", inState.withOwner(alice.party))
                 verifies()
             }

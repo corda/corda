@@ -301,13 +301,13 @@ Further examples
 Contract testing
 ----------------
 
-MockServices
-^^^^^^^^^^^^
-
 The Corda test framework includes the ability to create a test ledger by calling the ``ledger`` function
 on an implementation of the ``ServiceHub`` interface.
 
-A mock implementation of ``ServiceHub`` is provided in ``MockServices``. This is a minimal ServiceHub that
+MockServices
+^^^^^^^^^^^^
+
+A mock implementation of ``ServiceHub`` is provided in ``MockServices``. This is a minimal ``ServiceHub`` that
 suffices to test contract logic. It has the ability to insert states into the vault, query the vault, and
 construct and check transactions.
 
@@ -327,9 +327,9 @@ construct and check transactions.
 
 
 Alternatively, there is a helper constructor which just accepts a list of ``TestIdentity``. The first identity provided is
-the nodes identity, and any subsequent identities are identities that the node knows about. The calling package
-is provided as the location to scan for cordapps and a test ``IdentityService`` is created for you using all the
-given identities.
+the identity of the node whose ``ServiceHub`` is being mocked, and any subsequent identities are identities that the node
+knows about. Only the calling package is scanned for cordapps and a test ``IdentityService`` is created
+for you, using all the given identities.
 
 .. container:: codeset
 
@@ -351,8 +351,8 @@ Writing tests using a test ledger
 
 The ``ServiceHub.ledger`` extension function allows you to create a test ledger. Within the ledger wrapper you can create
 transactions using the ``transaction`` function. Within a transaction you can define the ``input`` and
-``output`` states for the transaction, alongside the ``command`` that is being executed, and any
-``attachments``, as shown in this example test:
+``output`` states for the transaction, alongside any commands that are being executed, the ``timeWindow`` in which the
+transaction has been executed, and any ``attachments``, as shown in this example test:
 
 .. container:: codeset
 
@@ -368,12 +368,14 @@ transactions using the ``transaction`` function. Within a transaction you can de
         :end-before: DOCEND 13
         :dedent: 4
 
-Once the input and output states have been specified, you can run ``verifies()`` to check that the given state is valid.
+Once all the transaction components have been specified, you can run ``verifies()`` to check that the given transaction is valid.
 
 Checking for failure states
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In order to test for failures, you can use the ``failsWith`` method, or in Kotlin the ``fails with`` helper method.
+In order to test for failures, you can use the ``failsWith`` method, or in Kotlin the ``fails with`` helper method, which
+assert that the transaction fails with a specific error. If you just want to assert that the transaction has failed without
+verifying the message, there is also a ``fails`` method.
 
 .. container:: codeset
 
@@ -389,13 +391,15 @@ In order to test for failures, you can use the ``failsWith`` method, or in Kotli
         :end-before: DOCEND 4
         :dedent: 4
 
-Note: The transaction DSL forces the last line of the test to be either a ``verifies`` or ``fails with`` statement.
+.. note::
+
+    The transaction DSL forces the last line of the test to be either a ``verifies`` or ``fails with`` statement.
 
 Testing multiple scenarios at once
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Within one transaction, you can check for multiple different states in order to reduce the amount of test code
-needed. For example, you could test that a contract fails to verify because it has no output states, and then
+Within a single transaction block, you can assert several times that the transaction constructed so far either passes or
+fails verification. For example, you could test that a contract fails to verify because it has no output states, and then
 add the relevant output state and check that the contract verifies successfully, as in the following example:
 
 .. container:: codeset
@@ -430,8 +434,34 @@ and then return to the original, unmodified transaction. As in the following exa
         :dedent: 4
 
 
+Chaining transactions
+~~~~~~~~~~~~~~~~~~~~~
+
+The following example shows that within a ``ledger``, you can create more than one ``transaction`` in order to test chains
+of transactions. ``unverifiedTransaction`` can be used, as in the example below, to create transactions on the ledger
+without verifying them, for pre-populating the ledger with existing data. When chaining transactions, it is important
+to note that even though a ``transaction`` ``verifies`` successfully, the overall ledger may not be valid. This can
+be verified separately by placing a ``verifies`` or ``fails`` statement  within the ``ledger`` block.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
+        :dedent: 4
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
+        :dedent: 4
+
+
 Further examples
 ^^^^^^^^^^^^^^^^
 
-* See the contract testing tutorial here: https://docs.corda.net/tutorial-test-dsl.html
-* Further examples are available in the example cordapp here: https://github.com/corda/cordapp-example/blob/release-V3/kotlin-source/src/test/kotlin/com/example/contract/IOUContractTests.kt
+* See the flow testing tutorial :doc:`here <tutorial-test-dsl>`
+* Further examples are available in the Example CorDapp in
+  `Java <https://github.com/corda/cordapp-example/blob/release-V3/java-source/src/test/java/com/example/flow/IOUFlowTests.java>`_ and
+  `Kotlin <https://github.com/corda/cordapp-example/blob/release-V3/kotlin-source/src/test/kotlin/com/example/flow/IOUFlowTests.kt>`_

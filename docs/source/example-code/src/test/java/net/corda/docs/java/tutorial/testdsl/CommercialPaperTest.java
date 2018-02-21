@@ -59,7 +59,6 @@ public class CommercialPaperTest {
     );
     // DOCEND 12
 
-
     // DOCSTART 1
     private ICommercialPaperState getPaper() {
         return new JavaCommercialPaper.State(
@@ -147,6 +146,7 @@ public class CommercialPaperTest {
                 tx.input(JCP_PROGRAM_ID, inState);
                 tx.command(megaCorp.getPublicKey(), new JavaCommercialPaper.Commands.Move());
                 tx.attachments(JCP_PROGRAM_ID);
+                tx.timeWindow(TEST_TX_TIME);
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inState.withOwner(alice.getParty()));
                 return tx.verifies();
             });
