@@ -271,7 +271,6 @@ class ArtemisMessagingTest {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
-        startNodeMessagingClient()
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
             database.transaction { handle.persistDeduplicationId() }
             handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
