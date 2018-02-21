@@ -394,6 +394,9 @@ class DriverDSLImpl(
         if (startNodesInProcess) {
             Schedulers.reset()
         }
+        if (waitForAllNodesToFinish) {
+            require(!startNodesInProcess) { "waitForAllNodesToFinish can only be specified in out-of-process mode" }
+        }
         require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
