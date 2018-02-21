@@ -71,10 +71,7 @@ The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
 nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined in the
-
-!! Check/change the link when the branch will be there!
-
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V2/build.gradle#L97>`_:
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
 
 .. sourcecode:: groovy
 
@@ -154,10 +151,8 @@ The Dockerform task
 
 The ```Dockerform``` is a sister task of ```Cordform```. It operates on nearly the same syntax and produces very
 similar results - enhanced by extra file to enable easy spin up of nodes using ```docker-compose```.
-Below you can find the example task from ```IRS Demo<https://github.com/corda/corda/blob/master/samples/irs-demo/cordapp/build.gradle#L111>```
+Below you can find the example task from ```IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>```
 included in samples directory of main Corda GitHub repository:
-
-!! Check above link too!!
 
 .. sourcecode:: groovy
 
