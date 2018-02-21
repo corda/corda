@@ -78,10 +78,7 @@ class UnknownConfigurationKeysException private constructor(val unknownKeys: Set
 
         fun of(offendingKeys: Set<String>): UnknownConfigurationKeysException = UnknownConfigurationKeysException(offendingKeys)
 
-        private fun message(offendingKeys: Set<String>): String {
-
-            return "Unknown configuration keys: ${offendingKeys.joinToString(", ", "[", "]")}."
-        }
+        private fun message(offendingKeys: Set<String>) = "Unknown configuration keys: ${offendingKeys.joinToString(", ", "[", "]")}."
     }
 }
 

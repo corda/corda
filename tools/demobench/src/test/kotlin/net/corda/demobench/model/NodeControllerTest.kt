@@ -150,7 +150,7 @@ class NodeControllerTest {
             organisation: String = "Unknown",
             p2pPort: Int = 0,
             rpcPort: Int = 0,
-            rpcAdminPort: Int= 0,
+            rpcAdminPort: Int = 0,
             webPort: Int = 0,
             h2port: Int = 0,
             notary: NotaryService? = null,

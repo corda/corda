@@ -124,7 +124,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             Files.write(confFile, config.nodeConfig.toNodeConfText().toByteArray())
 
             // Write this node's configuration file into its working directory.
-            val webConfFile = config.nodeDir / "webserver.conf"
+            val webConfFile = config.nodeDir / "web-server.conf"
             Files.write(webConfFile, config.nodeConfig.toWebServerConfText().toByteArray())
 
             // Execute the Corda node
