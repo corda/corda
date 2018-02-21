@@ -29,8 +29,11 @@ attachment JARs may not provide the same file path. If they do, the transaction 
 state specifies both a constraint over attachments *and* a Contract class name to use, the specified class must appear
 in only one attachment.
 
-So who picks the attachment to use? It is chosen by the creator of the transaction. However, states specify a constraint
-over the contracts (really, apps) that can be used. This creates a balance of power between the creator of data on
+So who picks the attachment to use? It is chosen by the creator of the transaction that has to satisfy input constraints.
+The transaction creator also gets to pick the constraints used by any output states, but the contract logic itself may
+have opinions about what those constraints are - a typical contract would require that the constraints are propagated,
+that is, the contract will not just enforce the validity of the next transaction that uses a state, but *all successive
+transactions as well*. The constraints mechanism creates a balance of power between the creator of data on
 the ledger and the user who is trying to edit it, which can be very useful when managing upgrades to Corda applications.
 
 There are two ways of handling upgrades to a smart contract in Corda:
@@ -65,7 +68,7 @@ accept a transaction if it uses that exact JAR file as an attachment. By implica
 or state definitions cannot be fixed except by using an explicit upgrade process via ``ContractUpgradeFlow``.
 
 .. note:: Corda does not support any way to create states that can never be upgraded at all, but the same effect can be
-   obtained by using a hash constraint and then simply refusing to agree to any explicit upgrades. The point is, hash
+   obtained by using a hash constraint and then simply refusing to agree to any explicit upgrades. Hash
    constraints put you in control by requiring an explicit agreement to any upgrade.
 
 **Zone constraints.** Often a hash constraint will be too restrictive. You do want the ability to upgrade an app,
@@ -78,11 +81,12 @@ command to accept the new parameters file and then restarting the node. Node own
 time effectively stop being a part of the network.
 
 **Signature constraints.** These are not yet supported, but once implemented they will allow a state to require a JAR
-that is code signed by a specified identity, via the regular Java jarsigner tool. This will be the most flexible type
+signed by a specified identity, via the regular Java jarsigner tool. This will be the most flexible type
 and the smoothest to deploy: no restarts or contract upgrade transactions are needed.
 
 **Defaults.** The default constraint type is either a zone constraint, if the network parameters in effect when the
 transaction is built contain an entry for that contract class, or a hash constraint if not.
+
 A ``TransactionState`` has a ``constraint`` field that represents that state's attachment constraint. When a party
 constructs a ``TransactionState``, or adds a state using ``TransactionBuilder.addOutput(ContractState)`` without
 specifying the constraint parameter, a default value (``AutomaticHashConstraint``) is used. This default will be
@@ -124,7 +128,7 @@ a flow:
 
 Hard-coding the hash of your app in the code itself can be pretty awkward, so the API also offers the ``AutomaticHashConstraint``.
 This isn't a real constraint that will appear in a transaction: it acts as a marker to the ``TransactionBuilder`` that
-you'd like the hash of the node's installed app which supplies the specified contract to be used. In practice, when using
+you require the hash of the node's installed app which supplies the specified contract to be used. In practice, when using
 hash constraints, you almost always want "whatever the current code is" and not a hard-coded hash. So this automatic
 constraint placeholder is useful.
 
@@ -144,7 +148,7 @@ contracts, attachments are associated with their respective contracts.
    (1) it is inefficient, and (2) it means changes to your flows or other parts of the app will be seen by the ledger
    as a "new app", which may end up requiring essentially unnecessary upgrade procedures. It's better to split your
    app into multiple modules: one which contains just states, contracts and core data types. And another which contains
-   the rest of the app.
+   the rest of the app. See :ref:`cordapp-structure`.
 
 Testing
 -------
