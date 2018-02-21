@@ -101,6 +101,7 @@ class DriverDSLImpl(
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
+    private val nodeNames = mutableSetOf<CordaX500Name>()
     /**
      * Future which completes when the network map is available, whether a local one or one from the CZ. This future acts
      * as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap] object, which
@@ -186,6 +187,12 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        synchronized(nodeNames) {
+            val wasANewNode = nodeNames.add(name)
+            if (!wasANewNode) {
+                throw IllegalArgumentException("Node with name $name is already started or starting.")
+            }
+        }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
@@ -642,6 +649,9 @@ class DriverDSLImpl(
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
             countObservables.remove(config.corda.myLegalName)
+            synchronized(nodeNames) {
+                nodeNames.remove(config.corda.myLegalName)
+            }
         }
 
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
