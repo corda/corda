@@ -89,7 +89,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                maxTransactionSize = services.networkParameters.maxTransactionSize,
                 networkParameters = services.networkParameters
         )
     }
@@ -109,14 +108,13 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, 10485760, null)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, null)
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            maxTransactionSize: Int,
             networkParameters: NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
@@ -129,7 +127,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
         val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters)
-        checkTransactionSize(ltx, maxTransactionSize)
+        checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
         return ltx
     }
 
