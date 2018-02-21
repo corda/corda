@@ -44,6 +44,10 @@ data class ParametersUpdate(
         val updateDeadline: Instant
 )
 
+/** Verify that a Network Map certificate is issued by Root CA and its [CertRole] is correct. */
+// TODO: Current implementation works under the assumption that there are no intermediate CAs between Root and
+//      Network Map. Consider a more flexible implementation without the above assumption.
+
 fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
     require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
     X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
