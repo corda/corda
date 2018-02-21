@@ -8,12 +8,13 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.VerifierType
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -58,7 +59,6 @@ interface OutOfProcess : NodeHandle {
 
 @DoNotImplement
 interface InProcess : NodeHandle {
-    val database: CordaPersistence
     val services: StartedNodeServices
     /**
      * Register a flow that is initiated by another flow
@@ -101,14 +101,20 @@ data class NodeParameters(
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "200m"
 ) {
-    fun setProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
-    fun setRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
-    fun setVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
-    fun setCustomerOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
-    fun setStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
-    fun setMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
+    fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
+    fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
+    fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
+    fun withCustomerOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
+    fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
+    fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
 }
 
+/**
+ * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
+ * JMX monitoring using HTTP/JSON
+ * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
+ * Defaults to incremental.
+ */
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
                      val jmxHttpServerPortAllocation: PortAllocation? =
                      if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
@@ -128,30 +134,10 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  *
  * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
  *   when called from Java code.
- * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
- * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
- *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
- *   and may be specified in [DriverDSL.startNode].
- * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
- * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
- * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
- * @param useTestClock If true the test clock will be used in Node.
- * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
- *     not. Note that this may be overridden in [DriverDSL.startNode].
- * @param waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the driver DSL block.
- *     It will wait for them to be shut down externally instead.
- * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
- * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
- * @param jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON. Defines two attributes:
- *      startJmxHttpServer: indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote JMX monitoring using HTTP/JSON.
- *      jmxHttpServerPortAllocation: the port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP. Defaults to incremental.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
-fun <A> driver(
-        defaultParameters: DriverParameters = DriverParameters(),
-        dsl: DriverDSL.() -> A
-): A {
+fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {
     return genericDriver(
             driverDsl = DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -166,15 +152,35 @@ fun <A> driver(
                     extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
-                    maxTransactionSize = defaultParameters.maxTransactionSize
+                    networkParameters = defaultParameters.networkParameters
             ),
             coerce = { it },
             dsl = dsl,
-            initialiseSerialization = defaultParameters.initialiseSerialization
+            initialiseSerialization = true
     )
 }
 
-/** Helper builder for configuring a [driver] from Java. */
+/**
+ * Builder for configuring a [driver].
+ * @property isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
+ * @property driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
+ *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
+ *   and may be specified in [DriverDSL.startNode].
+ * @property portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults
+ * to incremental.
+ * @property debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @property systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
+ * @property useTestClock If true the test clock will be used in Node.
+ * @property startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
+ *     not. Note that this may be overridden in [DriverDSL.startNode].
+ * @property waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the
+ * driver DSL block. It will wait for them to be shut down externally instead.
+ * @property notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
+ * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
+ * @property jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON.
+ * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
+ * empty as notaries are defined by [notarySpecs].
+ */
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
@@ -183,24 +189,23 @@ data class DriverParameters(
         val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
-        val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy(),
-        val maxTransactionSize: Int = Int.MAX_VALUE
+        val networkParameters: NetworkParameters = testNetworkParameters()
 ) {
-    fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
-    fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
-    fun setPortAllocation(portAllocation: PortAllocation) = copy(portAllocation = portAllocation)
-    fun setDebugPortAllocation(debugPortAllocation: PortAllocation) = copy(debugPortAllocation = debugPortAllocation)
-    fun setSystemProperties(systemProperties: Map<String, String>) = copy(systemProperties = systemProperties)
-    fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
-    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
-    fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
-    fun setWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean) = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
-    fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
-    fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
-    fun setJmxPolicy(jmxPolicy: JmxPolicy) = copy(jmxPolicy = jmxPolicy)
+    fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
+    fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
+    fun withPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
+    fun withDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
+    fun withSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
+    fun withUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
+    fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
+    fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
+    fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
+    fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
+    fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
+    fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
 }

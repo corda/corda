@@ -8,14 +8,15 @@ import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -25,7 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class MaxTransactionSizeTests {
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
     private lateinit var notaryServices: StartedNodeServices
     private lateinit var aliceServices: StartedNodeServices
     private lateinit var notary: Party
@@ -34,7 +35,9 @@ class MaxTransactionSizeTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"), maxTransactionSize = 3_000_000)
+        mockNet = InternalMockNetwork(
+                listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"),
+                networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notaryServices = mockNet.defaultNotaryNode.services

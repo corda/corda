@@ -29,7 +29,7 @@ class LedgerTransactionQueryTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val keyPair = generateKeyPair()
-    private val services = MockServices(emptyList(), CordaX500Name("MegaCorp", "London", "GB"),
+    private val services = MockServices(listOf("net.corda.testing.contracts"), CordaX500Name("MegaCorp", "London", "GB"),
             rigorousMock<IdentityServiceInternal>().also {
                 doReturn(null).whenever(it).partyFromKey(keyPair.public)
             }, keyPair)
@@ -37,7 +37,7 @@ class LedgerTransactionQueryTests {
 
     @Before
     fun setup() {
-        services.mockCordappProvider.addMockCordapp(DummyContract.PROGRAM_ID, services.attachments)
+        services.addMockCordapp(DummyContract.PROGRAM_ID)
     }
 
     interface Commands {
