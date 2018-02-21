@@ -317,7 +317,6 @@ class RPCServer(
                     context.invocation.pushToLoggingContext()
                     when (arguments) {
                         is Try.Success -> {
-                            log.info("SUBMITTING")
                             rpcExecutor!!.submit {
                                 val result = invokeRpc(context, clientToServer.methodName, arguments.value)
                                 sendReply(clientToServer.replyId, clientToServer.clientAddress, result)

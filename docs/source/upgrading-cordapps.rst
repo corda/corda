@@ -48,9 +48,6 @@ The ``version`` property, which defaults to 1, specifies the flow's version. Thi
 whenever there is a release of a flow which has changes that are not backwards-compatible. A non-backwards compatible
 change is one that changes the interface of the flow.
 
-Currently, CorDapp developers have to explicitly write logic to handle these flow version numbers. In the future,
-however, the platform will use prescribed rules for handling versions.
-
 What defines the interface of a flow?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The flow interface is defined by the sequence of ``send`` and ``receive`` calls between an ``InitiatingFlow`` and an
@@ -103,28 +100,19 @@ following behaviour:
 
 How do I upgrade my flows?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-For flag-day upgrades, the process is simple.
 
-Assumptions
-^^^^^^^^^^^
-
-* All nodes in the business network can be shut down for a period of time
-* All nodes retire the old flows and adopt the new flows at the same time
-
-Process
-^^^^^^^
-
-1. Update the flow and test the changes. Increment the flow version number in the ``InitiatingFlow`` annotation
+1. Update the flow and test the changes. Increment the flow version number in the ``InitiatingFlow`` annotation.
 2. Ensure that all versions of the existing flow have finished running and there are no pending ``SchedulableFlows`` on
-   any of the nodes on the business network
-3. Shut down all the nodes
-4. Replace the existing CorDapp JAR with the CorDapp JAR containing the new flow
-5. Start the nodes
+   any of the nodes on the business network. This can be done by *draining the node* (see below).
+3. Shut down the node.
+4. Replace the existing CorDapp JAR with the CorDapp JAR containing the new flow.
+5. Start the node.
 
-From this point onwards, all the nodes will be using the updated flows.
+If you shut down all nodes and upgrade them all at the same time, any incompatible change can be made.
 
-In situations where some nodes may still be using previous versions of a flow, the updated flows need to be
-backwards-compatible.
+In situations where some nodes may still be using previous versions of a flow and thus new versions of your flow may
+talk to old versions, the updated flows need to be backwards-compatible. This will be the case for almost any real
+deployment in which you cannot easily coordinate the rollout of new code across the network.
 
 How do I ensure flow backwards-compatibility?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -262,37 +250,57 @@ In code, inlined subflows appear as regular ``FlowLogic`` instances without eith
 Inlined flows are not versioned, as they inherit the version of their parent ``InitiatingFlow`` or ``InitiatedBy``
 flow.
 
-Are there any other considerations?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Suspended flows
-^^^^^^^^^^^^^^^
-Currently, serialised flow state machines persisted in the node's database cannot be updated. All flows must finish
-before the updated flow classes are added to the node's plugins folder.
-
-Flows that don't create sessions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Flows which are not an ``InitiatingFlow`` or ``InitiatedBy`` flow, or inlined subflows that are not called from an
 ``InitiatingFlow`` or ``InitiatedBy`` flow, can be updated without consideration of backwards-compatibility. Flows of
 this type include utility flows for querying the vault and flows for reaching out to external systems.
 
+Flow drains
+~~~~~~~~~~~
+
+A flow *checkpoint* is a serialised snapshot of the flow's stack frames and any objects reachable from the stack.
+Checkpoints are saved to the database automatically when a flow suspends or resumes, which typically happens when
+sending or receiving messages. A flow may be replayed from the last checkpoint if the node restarts. Automatic
+checkpointing is an unusual feature of Corda and significantly helps developers write reliable code that can survive
+node restarts and crashes. It also assists with scaling up, as flows that are waiting for a response can be flushed
+from memory.
+
+However, this means that restoring an old checkpoint to a new version of a flow may cause resume failures. For example
+if you remove a local variable from a method that previously had one, then the flow engine won't be able to figure out
+where to put the stored value of the variable.
+
+For this reason, in currently released versions of Corda you must *drain the node* before doing an app upgrade that
+changes ``@Suspendable`` code. A drain blocks new flows from starting but allows existing flows to finish. Thus once
+a drain is complete there should be no outstanding checkpoints or running flows. Upgrading the app will then succeed.
+
+A node can be drained or undrained via RPC using the ``setFlowsDrainingModeEnabled`` method, and via the shell using
+the standard ``run`` command to invoke the RPC. See :doc:`shell` to learn more.
+
 Contract and state versioning
 -----------------------------
-Contracts and states can be upgraded if and only if all of the state's participants agree to the proposed upgrade. The
-following combinations of upgrades are possible:
 
-* A contract is upgraded while the state definition remains the same
-* A state is upgraded while the contract stays the same
-* The state and the contract are updated simultaneously
+There are two types of contract/state upgrade:
+
+1. *Implicit:* By allowing multiple implementations of the contract ahead of time, using constraints. See :doc:`api-contract-constraints` to learn more.
+2. *Explicit:* By creating a special *contract upgrade transaction* and getting all participants of a state to sign it using the
+   contract upgrade flows.
+
+This section of the documentation focuses only on the *explicit* type of upgrade.
+
+In an explicit upgrade contracts and states can be changed in arbitrary ways, if and only if all of the state'
+s participants agree to the proposed upgrade. The following combinations of upgrades are possible:
+
+* A contract is upgraded while the state definition remains the same.
+* A state is upgraded while the contract stays the same.
+* The state and the contract are updated simultaneously.
 
 The procedure for updating a state or a contract using a flag-day approach is quite simple:
 
-* Update and test the state or contract
-* Stop all the nodes on the business network
-* Produce a new CorDapp JAR file and distribute it to all the relevant parties
-* Start all nodes on the network
-* Run the contract upgrade authorisation flow for each state that requires updating on every node
-* For each state, one node should run the contract upgrade initiation flow
+* Update and test the state or contract.
+* Produce a new CorDapp JAR file and distribute it to all the relevant parties.
+* Each node operator stops their node, replaces the existing JAR with the new one, and restarts. They may wish to do
+  a node drain first to avoid the definition of states or contracts changing whilst a flow is in progress.
+* Run the contract upgrade authorisation flow for each state that requires updating on every node.
+* For each state, one node should run the contract upgrade initiation flow, which will contact the rest.
 
 Update Process
 ~~~~~~~~~~~~~~
