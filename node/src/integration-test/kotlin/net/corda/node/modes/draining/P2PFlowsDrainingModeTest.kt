@@ -17,11 +17,13 @@ import net.corda.testing.node.User
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.test.fail
 
+@Ignore("Pending implementation")
 class P2PFlowsDrainingModeTest {
 
     private val portAllocation = PortAllocation.Incremental(10000)
