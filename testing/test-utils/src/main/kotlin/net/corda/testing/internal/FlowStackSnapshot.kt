@@ -22,9 +22,6 @@ import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * A basic implementation of [FlowStackSnapshotFactory] for use when testing.
- */
 class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
     @Suspendable
     override fun getFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot {

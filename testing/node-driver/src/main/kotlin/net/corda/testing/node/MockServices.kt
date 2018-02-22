@@ -232,6 +232,7 @@ open class MockServices private constructor(
         return vaultService
     }
 
+    // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API
     /** A map of available [CordaService] implementations */
     internal val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
 

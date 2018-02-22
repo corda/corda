@@ -92,7 +92,7 @@ class InMemoryMessagingNetwork private constructor(
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
 
     // Holds the mapping from services to peers advertising the service.
-    private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
+    private val serviceToPeersMapping = HashMap<DistributedServiceHandle, LinkedHashSet<PeerHandle>>()
     // Holds the mapping from node's X.500 name to PeerHandle.
     private val peersMapping = HashMap<CordaX500Name, PeerHandle>()
 
@@ -125,7 +125,7 @@ class InMemoryMessagingNetwork private constructor(
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
-        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) }
+        val serviceHandles = notaryService?.let { listOf(DistributedServiceHandle(it.party)) }
                 ?: emptyList() //TODO only notary can be distributed?
         synchronized(this) {
             val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
@@ -162,7 +162,7 @@ class InMemoryMessagingNetwork private constructor(
     private fun getQueueForPeerHandle(recipients: PeerHandle) = messageReceiveQueues.getOrPut(recipients) { LinkedBlockingQueue() }
 
     @Synchronized
-    private fun getQueuesForServiceHandle(recipients: ServiceHandle): List<LinkedBlockingQueue<MessageTransfer>> {
+    private fun getQueuesForServiceHandle(recipients: DistributedServiceHandle): List<LinkedBlockingQueue<MessageTransfer>> {
         return serviceToPeersMapping[recipients]!!.map {
             messageReceiveQueues.getOrPut(it) { LinkedBlockingQueue() }
         }
@@ -199,12 +199,12 @@ class InMemoryMessagingNetwork private constructor(
     }
 
     /**
-     * A class which represents information about nodes offering services on the [InMemoryMessagingNetwork].
+     * A class which represents information about nodes offering the same distributed service on the [InMemoryMessagingNetwork].
      *
      * @property party The [Party] offering the service.
      */
     @CordaSerializable
-    data class ServiceHandle(val party: Party) : MessageRecipientGroup {
+    data class DistributedServiceHandle(val party: Party) : MessageRecipientGroup {
         override fun toString() = "Service($party)"
     }
 
@@ -214,16 +214,16 @@ class InMemoryMessagingNetwork private constructor(
      */
     @DoNotImplement
     sealed class ServicePeerAllocationStrategy {
-        abstract fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A
+        abstract fun <A> pickNext(service: DistributedServiceHandle, pickFrom: List<A>): A
         class Random(val random: SplittableRandom = SplittableRandom()) : ServicePeerAllocationStrategy() {
-            override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
+            override fun <A> pickNext(service: DistributedServiceHandle, pickFrom: List<A>): A {
                 return pickFrom[random.nextInt(pickFrom.size)]
             }
         }
 
         class RoundRobin : ServicePeerAllocationStrategy() {
-            private val previousPicks = HashMap<ServiceHandle, Int>()
-            override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
+            private val previousPicks = HashMap<DistributedServiceHandle, Int>()
+            override fun <A> pickNext(service: DistributedServiceHandle, pickFrom: List<A>): A {
                 val nextIndex = previousPicks.compute(service) { _, previous ->
                     (previous?.plus(1) ?: 0) % pickFrom.size
                 }!!
@@ -263,7 +263,7 @@ class InMemoryMessagingNetwork private constructor(
     private fun pumpSendInternal(transfer: MessageTransfer) {
         when (transfer.recipients) {
             is PeerHandle -> getQueueForPeerHandle(transfer.recipients).add(transfer)
-            is ServiceHandle -> {
+            is DistributedServiceHandle -> {
                 val queues = getQueuesForServiceHandle(transfer.recipients)
                 val queue = servicePeerAllocationStrategy.pickNext(transfer.recipients, queues)
                 queue.add(transfer)
@@ -349,7 +349,7 @@ class InMemoryMessagingNetwork private constructor(
             return when (partyInfo) {
                 is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name]
                         ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
-                is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
+                is PartyInfo.DistributedNode -> DistributedServiceHandle(partyInfo.party)
             }
         }
 

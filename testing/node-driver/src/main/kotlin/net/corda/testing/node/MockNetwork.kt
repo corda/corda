@@ -129,8 +129,8 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
     val id get() : Int = node.internals.id
     /** The [NodeInfo] for the underlying node. **/
     val info get() : NodeInfo = node.services.myInfo
-    /** The [MessagingService] for the underlying node. **/
-    val network get() : MessagingService = node.network
+    /** The [InMemoryMessagingNetwork.TestMessagingService] for the underlying node. **/
+    val network get() : InMemoryMessagingNetwork.TestMessagingService = node.network as InMemoryMessagingNetwork.TestMessagingService
 
     /** Register a flow that is initiated by another flow .**/
     fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>): Observable<F> = node.registerInitiatedFlow(initiatedFlowClass)
@@ -146,7 +146,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
 
     /** Receive a message from the queue. */
     fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-        return (services.networkService as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
+        return network.pumpReceive(block)
     }
 
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */

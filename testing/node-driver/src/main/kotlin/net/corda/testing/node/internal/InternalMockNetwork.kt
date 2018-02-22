@@ -76,7 +76,6 @@ data class MockNodeArgs(
         val version: VersionInfo = MOCK_VERSION_INFO
 )
 
-@Suppress("unused")
 data class InternalMockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
@@ -411,7 +410,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     fun addressToNode(msgRecipient: MessageRecipients): MockNode {
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.started!!.network.myAddress == msgRecipient }
-            is InMemoryMessagingNetwork.ServiceHandle -> {
+            is InMemoryMessagingNetwork.DistributedServiceHandle -> {
                 nodes.firstOrNull { it.started!!.info.isLegalIdentity(msgRecipient.party) }
                         ?: throw IllegalArgumentException("Couldn't find node advertising service with owning party name: ${msgRecipient.party.name} ")
             }
