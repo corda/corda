@@ -16,6 +16,7 @@ class VaultUpdateTests {
     private companion object {
         val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val emptyUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
     }
 
     object DummyContract : Contract {
@@ -42,21 +43,21 @@ class VaultUpdateTests {
 
     @Test
     fun `nothing plus nothing is nothing`() {
-        val before = Vault.NoUpdate
-        val after = before + Vault.NoUpdate
+        val before = emptyUpdate
+        val after = before + emptyUpdate
         assertEquals(before, after)
     }
 
     @Test
     fun `something plus nothing is something`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
-        val after = before + Vault.NoUpdate
+        val after = before + emptyUpdate
         assertEquals(before, after)
     }
 
     @Test
     fun `nothing plus something is something`() {
-        val before = Vault.NoUpdate
+        val before = emptyUpdate
         val after = before + Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         assertEquals(expected, after)
