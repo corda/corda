@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
@@ -69,7 +68,7 @@ class InMemoryMessagingNetwork private constructor(
     private var counter = 0   // -1 means stopped.
     private val handleEndpointMap = HashMap<PeerHandle, InMemoryMessaging>()
 
-    /** A class which represents a message being transferred from sender to recipients, within the []InMemoryMessageNetwork]. **/
+    /** A class which represents a message being transferred from sender to recipients, within the [InMemoryMessageNetwork]. **/
     @CordaSerializable
     data class MessageTransfer(val sender: PeerHandle, val message: Message, val recipients: MessageRecipients) {
         override fun toString() = "${message.topic} from '$sender' to '$recipients'"
@@ -80,7 +79,7 @@ class InMemoryMessagingNetwork private constructor(
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
     @Suppress("unused") // Used by the visualiser tool.
-            /** A stream of (sender, message, recipients) triples. */
+    /** A stream of (sender, message, recipients) triples containing messages once they have been sent by [pumpSend]. */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
 
@@ -98,7 +97,7 @@ class InMemoryMessagingNetwork private constructor(
     private val peersMapping = HashMap<CordaX500Name, PeerHandle>()
 
     @Suppress("unused") // Used by the visualiser tool.
-            /** A stream of (sender, message, recipients) triples. */
+    /** A stream of (sender, message, recipients) triples containing messages once they have been received. */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
 
@@ -124,7 +123,7 @@ class InMemoryMessagingNetwork private constructor(
             database: CordaPersistence)
             : TestMessagingService {
         val peerHandle = PeerHandle(id, description)
-        peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
+        peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
         val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) }
                 ?: emptyList() //TODO only notary can be distributed?
@@ -139,7 +138,7 @@ class InMemoryMessagingNetwork private constructor(
     }
 
     /** Implement this interface in order to inject artificial latency between sender/recipient pairs. */
-    interface LatencyCalculator { // XXX: Used?
+    interface LatencyCalculator {
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
 
@@ -190,11 +189,11 @@ class InMemoryMessagingNetwork private constructor(
      * A class which represents information about an entity on the [InMemoryMessagingNetwork].
      *
      * @property id An integer giving the node an ID on the [InMemoryMessagingNetwork].
-     * @property description The node's [CordaX500Name].
+     * @property name The node's [CordaX500Name].
      */
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: CordaX500Name) : SingleMessageRecipient {
-        override fun toString() = description.toString()
+    data class PeerHandle(val id: Int, val name: CordaX500Name) : SingleMessageRecipient {
+        override fun toString() = name.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
@@ -488,6 +487,6 @@ class InMemoryMessagingNetwork private constructor(
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,
-                sender.description)
+                sender.name)
     }
 }

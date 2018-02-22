@@ -21,6 +21,7 @@ import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
+import java.time.Instant
 
 class CommercialPaperTest {
     private companion object {
@@ -33,6 +34,7 @@ class CommercialPaperTest {
         val ALICE_PUBKEY get() = alice.publicKey
         val MEGA_CORP get() = megaCorp.party
         val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+        val TEST_TX_TIME: Instant = Instant.parse("2015-04-17T12:00:00.00Z")
     }
 
     @Rule

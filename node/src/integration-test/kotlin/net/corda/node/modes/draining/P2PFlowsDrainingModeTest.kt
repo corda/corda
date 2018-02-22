@@ -9,7 +9,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -50,7 +50,7 @@ class P2PFlowsDrainingModeTest {
         driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
             val initiatedNode = startNode().getOrThrow()
             val initiating = startNode(rpcUsers = users).getOrThrow().rpc
-            val counterParty = initiatedNode.nodeInfo.chooseIdentity()
+            val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 
             initiated.setFlowsDrainingModeEnabled(true)

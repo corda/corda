@@ -1,4 +1,4 @@
-package net.corda.testing.services
+package net.corda.testing.internal
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Instrumented

@@ -7,7 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.startFlow
@@ -62,9 +62,9 @@ class FxTransactionBuildTutorialTest {
 
         // Now run the actual Fx exchange
         val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
-                POUNDS(100).issuedBy(nodeB.info.chooseIdentity().ref(0x01)),
-                DOLLARS(200).issuedBy(nodeA.info.chooseIdentity().ref(0x01)),
-                nodeB.info.chooseIdentity(),
+                POUNDS(100).issuedBy(nodeB.info.singleIdentity().ref(0x01)),
+                DOLLARS(200).issuedBy(nodeA.info.singleIdentity().ref(0x01)),
+                nodeB.info.singleIdentity(),
                 weAreBaseCurrencySeller = false))
         // wait for the flow to finish and the vault updates to be done
         doIt.getOrThrow()

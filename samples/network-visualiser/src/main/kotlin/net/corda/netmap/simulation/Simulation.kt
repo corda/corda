@@ -15,6 +15,7 @@ import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MockNodeArgs
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -40,7 +41,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                           latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
     private companion object {
         val defaultParams // The get() is necessary so that entropyRoot isn't shared.
-            get() = MockNodeParameters(configOverrides = {
+            get() = InternalMockNodeParameters(configOverrides = {
                 doReturn(makeTestDataSourceProperties(it.myLegalName.organisation)).whenever(it).dataSourceProperties
             })
         val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party

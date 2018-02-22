@@ -13,8 +13,8 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -99,12 +99,12 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME), nodeFactory = { args ->
+        val aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME), nodeFactory = { args ->
             object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
         })
-        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        val bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         val alice = aliceNode.info.singleIdentity()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)

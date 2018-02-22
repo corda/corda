@@ -45,10 +45,12 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.*
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.pumpReceive
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -278,7 +280,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(MockNodeParameters(bobAddr.id, BOB_NAME))
+            bobNode = mockNet.createNode(InternalMockNodeParameters(bobAddr.id, BOB_NAME))
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
@@ -312,7 +314,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<InternalMockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = { args ->
+        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args ->
             object : InternalMockNetwork.MockNode(args) {
                 // That constructs a recording tx storage
                 override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {

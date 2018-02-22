@@ -46,7 +46,7 @@ class CashPaymentFlowTests {
 
     @Test
     fun `pay some cash`() {
-        val payTo = aliceNode.info.chooseIdentity()
+        val payTo = aliceNode.info.singleIdentity()
         val expectedPayment = 500.DOLLARS
         val expectedChange = 1500.DOLLARS
 
@@ -85,7 +85,7 @@ class CashPaymentFlowTests {
 
     @Test
     fun `pay more than we have`() {
-        val payTo = aliceNode.info.chooseIdentity()
+        val payTo = aliceNode.info.singleIdentity()
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo))
@@ -97,7 +97,7 @@ class CashPaymentFlowTests {
 
     @Test
     fun `pay zero cash`() {
-        val payTo = aliceNode.info.chooseIdentity()
+        val payTo = aliceNode.info.singleIdentity()
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo))

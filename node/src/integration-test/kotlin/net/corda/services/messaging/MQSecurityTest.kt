@@ -23,7 +23,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.User
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.startFlow
@@ -189,7 +189,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     protected fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB_NAME)
         bob.registerInitiatedFlow(ReceiveFlow::class.java)
-        val bobParty = bob.info.chooseIdentity()
+        val bobParty = bob.info.singleIdentity()
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).getOrThrow()
         return bobParty

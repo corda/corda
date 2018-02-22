@@ -5,13 +5,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.config.VerifierType
 
 /**
- * A data class representing parameters describing a Notary
+ * A notary spec for describing a notary which will be started automatically by the driver and which will be part of
+ * the network parameters used by all the nodes.
  *
- * @property name A [CordaX500Name] representing legal name of this node
- * @property validating If set to true, this node validates any transactions and their dependencies sent to it.
- * @property rpcUsers A list of users able to instigate RPC for this node.
+ * @property name The name of the notary. If this is a notary cluster then each node member will be assigned a name based on this name.
+ * @property validating Boolean for whether the notary is validating or non-validating.
+ * @property rpcUsers A list of users able to instigate RPC for this node or cluster of nodes.
  * @property verifierType How the notary will verify transactions.
- * @property cluster Information about the consensus algorithm used if this notary is part of a cluster.
+ * @property cluster [ClusterSpec] if this is a distributed cluster notary. If null then this is a single-node notary.
  */
 data class NotarySpec(
         val name: CordaX500Name,
@@ -20,7 +21,6 @@ data class NotarySpec(
         val verifierType: VerifierType = VerifierType.InMemory,
         val cluster: ClusterSpec? = null
 )
-
 
 /**
  * Abstract class specifying information about the consensus algorithm used for a cluster of nodes.

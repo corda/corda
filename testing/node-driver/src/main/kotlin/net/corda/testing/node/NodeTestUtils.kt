@@ -16,8 +16,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.core.chooseIdentity
 import net.corda.testing.dsl.*
+import net.corda.testing.internal.chooseIdentity
 
 /**
  * Creates and tests a ledger built by the passed in dsl.
@@ -62,7 +62,7 @@ fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company I
 fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext.rpc(testActor(owningLegalIdentity))
 
 /** Creates a new [InvocationContext] for testing purposes. */
-fun StartedNodeServices.newContext() = testContext(myInfo.chooseIdentity().name)
+fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
 
 /**
  * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]

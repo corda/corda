@@ -21,7 +21,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.node.User
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -46,7 +46,7 @@ class ONodeStatePersistenceTests {
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = PortAllocation.RandomFree)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
@@ -80,7 +80,7 @@ class ONodeStatePersistenceTests {
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = PortAllocation.RandomFree)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {

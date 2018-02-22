@@ -81,7 +81,7 @@ interface InProcess : NodeHandle {
 }
 
 /**
- * Class which represents a handle to a webserver process and its [NetworkHostAndPort] testing purposes.
+ * Class which represents a handle to a webserver process and its [NetworkHostAndPort] for testing purposes.
  *
  * @property listenAddress The [NetworkHostAndPort] for communicating with this webserver.
  * @property process The [Process] in which the websever is running
@@ -107,7 +107,7 @@ sealed class PortAllocation {
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
     class Incremental(startingPort: Int) : PortAllocation() {
-        /** An [AtomicInteger] used to keep track of the currently allocated port */
+        /** The backing [AtomicInteger] used to keep track of the currently allocated port */
         val portCounter = AtomicInteger(startingPort)
 
         override fun nextPort() = portCounter.andIncrement
@@ -129,7 +129,8 @@ sealed class PortAllocation {
  *
  * @property providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
  *     random. Note that this must be unique as the driver uses it as a primary key!
- * @property rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+ * @property rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
+ *     all permissions.
  * @property verifierType The type of transaction verifier to use. See: [VerifierType]
  * @property customOverrides A map of custom node configuration overrides.
  * @property startInSameProcess Determines if the node should be started inside the same process the Driver is running
@@ -208,28 +209,28 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 
 /**
  * Builder for configuring a [driver].
+ *
  * @property isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @property driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
- *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
- *   and may be specified in [DriverDSL.startNode].
+ *    directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
+ *    and may be specified in [DriverDSL.startNode].
  * @property portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults
- * to incremental.
+ *    to incremental.
  * @property debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @property systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @property useTestClock If true the test clock will be used in Node.
- * @property initialiseSerialization If true then a serialization environment will be created for this test otherwise a
- * dummy one is used.
  * @property startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSL.startNode].
  * @property waitForAllNodesToFinish If true, the nodes will not shut down automatically after executing the code in the
- * driver DSL block. It will wait for them to be shut down externally instead.
+ *     driver DSL block. It will wait for them to be shut down externally instead.
  * @property notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
- * available from [DriverDSL.notaryHandles]. Defaults to a simple validating notary.
- * @property extraCordappPackagesToScan a [List] of additional cordapp packages to scann for contract verification
- * code
+ *     available from [DriverDSL.notaryHandles], and will be added automatically to the network parameters.
+ *     Defaults to a simple validating notary.
+ * @property extraCordappPackagesToScan A [List] of additional cordapp packages to scan for any cordapp code, e.g.
+ *     contract verification code, flows and services. The calling package is automatically added.
  * @property jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON.
- * @property networkParameters The network parmeters to be used by all the nodes. [NetworkParameters.notaries] must be
- * empty as notaries are defined by [notarySpecs].
+ * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
+ *     empty as notaries are defined by [notarySpecs].
  */
 @Suppress("unused")
 data class DriverParameters(

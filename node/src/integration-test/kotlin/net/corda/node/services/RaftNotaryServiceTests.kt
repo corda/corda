@@ -11,7 +11,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.driver
 import net.corda.testing.core.dummyCommand
@@ -41,16 +41,16 @@ class RaftNotaryServiceTests {
 
             val firstTxBuilder = TransactionBuilder(defaultNotaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(bankA.services.myInfo.singleIdentity().owningKey))
             val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
             val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
             firstSpend.getOrThrow()
 
             val secondSpendBuilder = TransactionBuilder(defaultNotaryIdentity).withItems(inputState).run {
-                val dummyState = DummyContract.SingleOwnerState(0, bankA.services.myInfo.chooseIdentity())
+                val dummyState = DummyContract.SingleOwnerState(0, bankA.services.myInfo.singleIdentity())
                 addOutputState(dummyState, DummyContract.PROGRAM_ID)
-                addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
+                addCommand(dummyCommand(bankA.services.myInfo.singleIdentity().owningKey))
                 this
             }
             val secondSpendTx = bankA.services.signInitialTransaction(secondSpendBuilder)
@@ -65,7 +65,7 @@ class RaftNotaryServiceTests {
     private fun issueState(nodeHandle: InProcess, notary: Party): StateAndRef<*> {
         return (nodeHandle as InProcessImpl).database.transaction {
 
-            val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.chooseIdentity().ref(0))
+            val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.singleIdentity().ref(0))
             val stx = nodeHandle.services.signInitialTransaction(builder)
             nodeHandle.services.recordTransactions(stx)
             StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))

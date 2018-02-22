@@ -11,7 +11,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
@@ -29,7 +29,7 @@ class CordappScanningDriverTest {
             val initiatedFlowClass = CordaRPCClient(alice.rpcAddress)
                     .start(user.username, user.password)
                     .proxy
-                    .startFlow(::ReceiveFlow, bob.nodeInfo.chooseIdentity())
+                    .startFlow(::ReceiveFlow, bob.nodeInfo.singleIdentity())
                     .returnValue
             assertThat(initiatedFlowClass.getOrThrow()).isEqualTo(SendSubClassFlow::class.java.name)
         }

@@ -150,7 +150,7 @@ class NotaryChangeTests {
     }
 
     private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: StartedMockNode, toNode: StartedMockNode): StateAndRef<DummyContract.SingleOwnerState> {
-        val tx = DummyContract.move(state, toNode.info.chooseIdentity())
+        val tx = DummyContract.move(state, toNode.info.singleIdentity())
         val stx = fromNode.services.signInitialTransaction(tx)
 
         val notaryFlow = NotaryFlow.Client(stx)
@@ -200,7 +200,7 @@ fun issueState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party)
 }
 
 fun issueMultiPartyState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryNode: StartedMockNode, notaryIdentity: Party): StateAndRef<DummyContract.MultiOwnerState> {
-    val participants = listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())
+    val participants = listOf(nodeA.info.singleIdentity(), nodeB.info.singleIdentity())
     val state = TransactionState(
             DummyContract.MultiOwnerState(0, participants),
             DummyContract.PROGRAM_ID, notaryIdentity)

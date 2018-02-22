@@ -16,9 +16,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.node.services.statemachine.*
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork
 import rx.Scheduler
 import rx.schedulers.Schedulers
@@ -222,7 +221,7 @@ class NetworkMapVisualiser : Application() {
                         // Flow done; schedule it for removal in a few seconds. We batch them up to make nicer
                         // animations.
                         updateProgressTrackerWidget(change)
-                        println("Flow done for ${node.started!!.info.chooseIdentity().name}")
+                        println("Flow done for ${node.started!!.info.singleIdentity().name}")
                         viewModel.doneTrackers += tracker
                     } else {
                         // Subflow is done; ignore it.
@@ -230,7 +229,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = node.started!!.info.chooseIdentity().name.organisation.let { if (extraLabel != null) "$it: $extraLabel" else it }
+                    val label = node.started!!.info.singleIdentity().name.organisation.let { if (extraLabel != null) "$it: $extraLabel" else it }
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget

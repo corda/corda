@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 
 /** Returns a fake state reference for testing purposes **/
-fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
+fun generateStateRef(): StateRef = StateRef(SecureHash.randomSHA256(), 0)
 
 private val freePortCounter = AtomicInteger(30000)
 /**
@@ -130,19 +130,6 @@ class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
     /** Returns a [PartyAndReference] for this identity and the given reference */
     fun ref(vararg bytes: Byte): PartyAndReference = party.ref(*bytes)
 }
-
-/**
- * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
- * TODO: Should be removed after multiple identities are introduced.
- */
-fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
-
-/**
- * Returns the party identity of the first identity on the node. Until we have proper handling of multiple identities per node,
- * for tests we use the first identity as special one.
- * TODO: Should be removed after multiple identities are introduced.
- */
-fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 
 /**
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.

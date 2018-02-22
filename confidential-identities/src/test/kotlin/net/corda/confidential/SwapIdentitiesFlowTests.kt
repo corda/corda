@@ -62,7 +62,7 @@ class SwapIdentitiesFlowTests {
         val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
         val bob: Party = bobNode.services.myInfo.singleIdentity()
         val notBob = charlieNode.database.transaction {
-            charlieNode.services.keyManagementService.freshKeyAndCert(charlieNode.services.myInfo.chooseIdentityAndCert(), false)
+            charlieNode.services.keyManagementService.freshKeyAndCert(charlieNode.services.myInfo.singleIdentityAndCert(), false)
         }
         val sigData = SwapIdentitiesFlow.buildDataToSign(notBob)
         val signature = charlieNode.services.keyManagementService.sign(sigData, notBob.owningKey)

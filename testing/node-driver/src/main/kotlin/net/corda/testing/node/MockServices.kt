@@ -7,13 +7,11 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
@@ -23,8 +21,6 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.keys.freshCertificate
-import net.corda.node.services.keys.getSigner
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -36,13 +32,10 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.node.internal.MockKeyManagementService
+import net.corda.testing.node.internal.MockTransactionStorage
 import net.corda.testing.services.MockAttachmentStorage
-import org.bouncycastle.operator.ContentSigner
-import rx.Observable
-import rx.subjects.PublishSubject
 import java.security.KeyPair
-import java.security.PrivateKey
-import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 import java.util.*
@@ -93,8 +86,7 @@ open class MockServices private constructor(
         /**
          * Makes database and mock services appropriate for unit tests.
          *
-         * @param cordappPackages As list of [String] values which should be the package names of the CorDapps containing
-         * the contract verification code you wish to load
+         * @param cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
          * @param identityService An instance of [IdentityService], see [makeTestIdentityService].
          * @param initialIdentity The first (typically sole) identity the services will represent.
          * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
@@ -241,7 +233,7 @@ open class MockServices private constructor(
     }
 
     /** A map of available [CordaService] implementations */
-    val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
+    internal val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
 
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
         require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
@@ -257,91 +249,6 @@ open class MockServices private constructor(
     fun addMockCordapp(contractClassName: ContractClassName) {
         mockCordappProvider.addMockCordapp(contractClassName, attachments)
     }
-}
-
-/**
- * A class which provides an implementation of [KeyManagementService] which is used in [MockServices]
- *
- * @property identityService The [IdentityService] which contains the given identities.
- */
-class MockKeyManagementService(val identityService: IdentityService,
-                               vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
-    private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
-
-    override val keys: Set<PublicKey> get() = keyStore.keys
-
-    private val nextKeys = LinkedList<KeyPair>()
-
-    override fun freshKey(): PublicKey {
-        val k = nextKeys.poll() ?: generateKeyPair()
-        keyStore[k.public] = k.private
-        return k.public
-    }
-
-    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
-
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
-    }
-
-    private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
-
-    private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        val pk = publicKey.keys.firstOrNull { keyStore.containsKey(it) }
-                ?: throw IllegalArgumentException("Public key not found: ${publicKey.toStringShort()}")
-        return KeyPair(pk, keyStore[pk]!!)
-    }
-
-    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
-        val keyPair = getSigningKeyPair(publicKey)
-        return keyPair.sign(bytes)
-    }
-
-    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
-        val keyPair = getSigningKeyPair(publicKey)
-        return keyPair.sign(signableData)
-    }
-}
-
-/**
- * A class which provides an implementation of [WritableTransactionStorage] which is used in [MockServices]
- */
-open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
-    override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        return DataFeed(txns.values.toList(), _updatesPublisher)
-    }
-
-    private val txns = HashMap<SecureHash, SignedTransaction>()
-
-    private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
-
-    /**
-     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
-     * incorporate the update.
-     */
-    override val updates: Observable<SignedTransaction>
-        get() = _updatesPublisher
-
-    private fun notify(transaction: SignedTransaction) = _updatesPublisher.onNext(transaction)
-
-    /**
-     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
-     * overwritten.
-     * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded successfully, false if it was already recorded.
-     */
-    override fun addTransaction(transaction: SignedTransaction): Boolean {
-        val recorded = txns.putIfAbsent(transaction.id, transaction) == null
-        if (recorded) {
-            notify(transaction)
-        }
-        return recorded
-    }
-
-    /**
-     * Return the transaction with the given [id], or null if no such transaction exists.
-     */
-    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
 }
 
 /**

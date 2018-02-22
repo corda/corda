@@ -191,7 +191,6 @@ fun <S, E : Any> S.genericExpectEvents(
 }
 
 /**
- * @suppress
  * Part of the Expectation dsl
  */
 @DoNotImplement

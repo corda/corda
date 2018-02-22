@@ -10,9 +10,6 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import java.security.PublicKey
 import java.time.Instant
 
-/** A dummy time at which we will be pretending test transactions are created. **/
-@JvmField
-val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 /** A test notary name **/
 @JvmField
 val DUMMY_NOTARY_NAME = CordaX500Name("Notary Service", "Zurich", "CH")

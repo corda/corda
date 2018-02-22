@@ -76,6 +76,20 @@ data class MockNodeArgs(
         val version: VersionInfo = MOCK_VERSION_INFO
 )
 
+@Suppress("unused")
+data class InternalMockNodeParameters(
+        val forcedID: Int? = null,
+        val legalName: CordaX500Name? = null,
+        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val version: VersionInfo = MockServices.MOCK_VERSION_INFO) {
+    constructor(mockNodeParameters: MockNodeParameters) : this(
+            mockNodeParameters.forcedID,
+            mockNodeParameters.legalName,
+            mockNodeParameters.entropyRoot,
+            mockNodeParameters.configOverrides)
+}
+
 open class InternalMockNetwork(private val cordappPackages: List<String>,
                                defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
@@ -194,7 +208,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     @VisibleForTesting
     internal open fun createNotaries(): List<StartedNode<MockNode>> {
         return notarySpecs.map { (name, validating) ->
-            createNode(MockNodeParameters(legalName = name, configOverrides = {
+            createNode(InternalMockNodeParameters(legalName = name, configOverrides = {
                 doReturn(NotaryConfig(validating)).whenever(it).notary
             }))
         }
@@ -332,24 +346,24 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         }
     }
 
-    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): MockNode {
+    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
         return createUnstartedNode(parameters, defaultFactory)
     }
 
-    fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
+    fun <N : MockNode> createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> {
+    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): StartedNode<MockNode> {
         return createNode(parameters, defaultFactory)
     }
 
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
+    fun <N : MockNode> createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
         return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
-    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
+    private fun <N : MockNode> createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
         val config = mockNodeConfiguration().also {
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
@@ -389,9 +403,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     }
 
     @JvmOverloads
-
     fun createPartyNode(legalName: CordaX500Name? = null): StartedNode<MockNode> {
-        return createNode(MockNodeParameters(legalName = legalName))
+        return createNode(InternalMockNodeParameters(legalName = legalName))
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.

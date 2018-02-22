@@ -1,7 +1,7 @@
 package net.corda.testing.node
 
 /**
- * Object encapsulating a node rpc user and their associated permissions for use when testing
+ * Object encapsulating a node rpc user and their associated permissions for use when testing using the [driver]
  *
  * @property username The rpc user's username
  * @property password The rpc user's password

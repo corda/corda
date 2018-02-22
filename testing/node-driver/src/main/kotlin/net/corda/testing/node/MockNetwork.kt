@@ -8,7 +8,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.node.VersionInfo
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
@@ -16,6 +15,7 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.setMessagingServiceSpy
 import rx.Observable
 import java.math.BigInteger
@@ -34,20 +34,18 @@ open class MessagingServiceSpy(val messagingService: MessagingService) : Messagi
  * are more convenient.
  *
  * @property forcedID Override the ID to use for the node. By default node ID's are generated sequentially in a
- * [MockNetwork].
+ * [MockNetwork]. Specifying the same ID is required if a node is restarted.
  * @property legalName The [CordaX500Name] name to use for the node.
  * @property entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
  * but can be overridden to cause nodes to have stable or colliding identity/service keys.
  * @property configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
- * @property version [VersionInfo] for this node, defaults to the values provided in [MockServices.MOCK_VERSION_INFO].
  */
 @Suppress("unused")
 data class MockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {},
-        val version: VersionInfo = MockServices.MOCK_VERSION_INFO) {
+        val configOverrides: (NodeConfiguration) -> Any? = {}) {
     fun withForcedID(forcedID: Int?): MockNodeParameters = copy(forcedID = forcedID)
     fun withLegalName(legalName: CordaX500Name?): MockNodeParameters = copy(legalName = legalName)
     fun withEntropyRoot(entropyRoot: BigInteger): MockNodeParameters = copy(entropyRoot = entropyRoot)
@@ -88,10 +86,11 @@ data class MockNetworkParameters(
 }
 
 /**
- * Represents a node configuration for injection via [MockNetworkParameters].
+ * The spec for a notary which will used by the [MockNetwork] to automatically start a notary node. This notary will
+ * become part of the network parameters used by all the nodes.
  *
- * @property name A [CordaX500Name] representing the legal name of this node.
- * @property validating If set to true, this node validates any transactions and their dependencies sent to it.
+ * @property name The name of the notary node.
+ * @property validating Boolean for whether the notary is validating or non-validating.
  */
 data class MockNetworkNotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
     constructor(name: CordaX500Name) : this(name, validating = true)
@@ -108,8 +107,12 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
     /** An identifier for the node. By default this is allocated sequentially in a [MockNetwork] **/
     val id get() : Int = node.id
 
-    /** Start the node **/
-    fun start() = StartedMockNode.create(node.start())
+    /**
+     * Start the node
+     *
+     * @return A [StartedMockNode] object.
+     */
+    fun start(): StartedMockNode = StartedMockNode.create(node.start())
 }
 
 /** A class that represents a started mock node for testing. */
@@ -182,8 +185,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  *
- * @property cordappPackages A list of [String] values which should be the package names of the CorDapps containing the contract
- * verification code you wish to load.
+ * @property cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
  * @property defaultParameters A [MockNetworkParameters] object which contains the same parameters as the constructor, provided
  * as a convenience for Java users.
  * @property networkSendManuallyPumped If true then messages will not be routed from sender to receiver until you use
@@ -230,8 +232,7 @@ open class MockNetwork(
     val defaultNotaryIdentity get(): Party = internalMockNetwork.defaultNotaryIdentity
 
     /**
-     * Returns the list of nodes started by the network. Each notary specified when the network is constructed ([notarySpecs]
-     * parameter) maps 1:1 to the notaries returned by this list.
+     * Returns the list of notary nodes started by the network.
      */
     val notaryNodes get(): List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }
 
@@ -239,7 +240,7 @@ open class MockNetwork(
     fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
 
     /** Create a started node with the given parameters. **/
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode = StartedMockNode.create(internalMockNetwork.createNode(parameters))
+    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode = StartedMockNode.create(internalMockNetwork.createNode(InternalMockNodeParameters(parameters)))
 
     /**
      * Create a started node with the given parameters.
@@ -255,14 +256,13 @@ open class MockNetwork(
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   configOverrides: (NodeConfiguration) -> Any? = {},
-                   version: VersionInfo = MockServices.MOCK_VERSION_INFO): StartedMockNode {
-        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, version)
-        return StartedMockNode.create(internalMockNetwork.createNode(parameters))
+                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedMockNode {
+        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides)
+        return StartedMockNode.create(internalMockNetwork.createNode(InternalMockNodeParameters(parameters)))
     }
 
     /** Create an unstarted node with the given parameters. **/
-    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
+    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): UnstartedMockNode = UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
 
     /**
      * Create an unstarted node with the given parameters.
@@ -278,10 +278,9 @@ open class MockNetwork(
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                            configOverrides: (NodeConfiguration) -> Any? = {},
-                            version: VersionInfo = MockServices.MOCK_VERSION_INFO): UnstartedMockNode {
-        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, version)
-        return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(parameters))
+                            configOverrides: (NodeConfiguration) -> Any? = {}): UnstartedMockNode {
+        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides)
+        return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
     }
 
     /** Start all nodes that aren't already started. **/
