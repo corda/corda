@@ -51,13 +51,14 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 fun <A> verifierDriver(
         defaultParameters: DriverParameters = DriverParameters().copy(
-                notarySpecs = emptyList(),
-                initialiseSerialization = false
+                notarySpecs = emptyList()
         ),
         dsl: VerifierDriverDSL.() -> A
 ): A {
     return genericDriver(
-            defaultParameters = defaultParameters,
+            defaultParameters = defaultParameters.copy(
+                    initialiseSerialization = false
+            ),
             driverDslWrapper = ::VerifierDriverDSL,
             coerce = { it },
             dsl = dsl
