@@ -3,6 +3,7 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
@@ -14,15 +15,16 @@ import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import kotlin.streams.toList
 
 class DriverTests {
     private companion object {
@@ -117,4 +119,39 @@ class DriverTests {
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }
+
+    @Test
+    fun `driver rejects multiple nodes with the same name`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            assertThatThrownBy { listOf(newNode(DUMMY_BANK_A_NAME)(), newNode(DUMMY_BANK_B_NAME)(), newNode(DUMMY_BANK_A_NAME)()).transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test
+    fun `driver rejects multiple nodes with the same name parallel`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
+
+            assertThatThrownBy { nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test
+    fun `driver allows reusing names of nodes that have been stopped`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+
+            nodeA.stop()
+
+            assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
+        }
+    }
+
+    private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
 }
