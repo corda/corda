@@ -1,9 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.StateLoader
@@ -24,6 +22,15 @@ interface TransactionStorage : StateLoader {
     override fun loadState(stateRef: StateRef): TransactionState<*> {
         val stx = getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return stx.resolveBaseTransaction(this).outputs[stateRef.index]
+    }
+
+    @Throws(TransactionResolutionException::class)
+    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+        return stateRefs.groupBy { it.txhash }.map {
+            val stx = getTransaction(it.key) ?: throw TransactionResolutionException(it.key)
+            val baseTx = stx.resolveBaseTransaction(this)
+            it.value.map { StateAndRef(baseTx.outputs[it.index], it) }
+        }.flatMap { it }.toSet()
     }
 
     /**
