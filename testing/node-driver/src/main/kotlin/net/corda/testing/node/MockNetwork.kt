@@ -2,31 +2,27 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Jimfs
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.newContext
 import net.corda.testing.node.internal.setMessagingServiceSpy
 import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
-
-/**
- * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryMessagingNetwork].
- *
- * @property messagingService The [MessagingService] you want to intercept.
- */
-open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
 
 /**
  * Immutable builder for configuring a [StartedMockNode] or an [UnstartedMockNode] via [MockNetwork.createNode] and
@@ -123,30 +119,28 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
         }
     }
 
-    /** The [StartedNodeServices] for the underlying node. **/
-    val services get() : StartedNodeServices = node.services
+    /** The [ServiceHub] for the underlying node. **/
+    val services get(): ServiceHub = node.services
     /** An identifier for the node. By default this is allocated sequentially in a [MockNetwork]. **/
-    val id get() : Int = node.internals.id
+    val id get(): Int = node.internals.id
     /** The [NodeInfo] for the underlying node. **/
-    val info get() : NodeInfo = node.services.myInfo
-    /** The [InMemoryMessagingNetwork.TestMessagingService] for the underlying node. **/
-    val network get() : InMemoryMessagingNetwork.TestMessagingService = node.network as InMemoryMessagingNetwork.TestMessagingService
+    val info get(): NodeInfo = node.services.myInfo
+
+    /**
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * @param context indicates who started the flow, see: [InvocatioWnContext].
+     */
+    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = node.services.startFlow(logic, node.services.newContext()).getOrThrow().resultFuture
 
     /** Register a flow that is initiated by another flow .**/
     fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>): Observable<F> = node.registerInitiatedFlow(initiatedFlowClass)
-
-    /**
-     * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing
-     * interception and modification of messages.
-     */
-    fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) = node.setMessagingServiceSpy(messagingServiceSpy)
 
     /** Stop the node. **/
     fun stop() = node.internals.stop()
 
     /** Receive a message from the queue. */
     fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-        return network.pumpReceive(block)
+        return (node.network as InMemoryMessagingNetwork.InternalMockMessagingService).pumpReceive(block)
     }
 
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */

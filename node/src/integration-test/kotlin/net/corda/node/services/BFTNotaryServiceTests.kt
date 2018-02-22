@@ -33,7 +33,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -92,7 +92,7 @@ class BFTNotaryServiceTests {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             // Create a new consensus while the redundant replica is sleeping:
-            services.startFlow(NotaryFlow.Client(trivialTx))
+            services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
         }
         mockNet.runNetwork()
         f.getOrThrow()
@@ -127,7 +127,7 @@ class BFTNotaryServiceTests {
             val flows = spendTxs.map { NotaryFlow.Client(it) }
             val stateMachines = flows.map { services.startFlow(it) }
             mockNet.runNetwork()
-            val results = stateMachines.map { Try.on { it.getOrThrow() } }
+            val results = stateMachines.map { Try.on { it.resultFuture.getOrThrow() } }
             val successfulIndex = results.mapIndexedNotNull { index, result ->
                 if (result is Try.Success) {
                     val signers = result.value.map { it.by }

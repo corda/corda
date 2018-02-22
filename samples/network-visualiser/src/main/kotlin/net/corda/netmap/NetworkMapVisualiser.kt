@@ -340,7 +340,7 @@ class NetworkMapVisualiser : Application() {
     private fun transferIsInteresting(transfer: InMemoryMessagingNetwork.MessageTransfer): Boolean {
         // Loopback messages are boring.
         if (transfer.sender == transfer.recipients) return false
-        val message = transfer.message.data.deserialize<SessionMessage>()
+        val message = transfer.messageData.deserialize<SessionMessage>()
         return when (message) {
             is InitialSessionMessage -> message.firstPayload != null
             is ExistingSessionMessage -> when (message.payload) {

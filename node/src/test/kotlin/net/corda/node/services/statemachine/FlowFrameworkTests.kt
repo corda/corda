@@ -723,9 +723,9 @@ class FlowFrameworkTests {
     }
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
-        return filter { it.message.topic == StateMachineManagerImpl.sessionTopic }.map {
+        return filter { it.messageTopic == StateMachineManagerImpl.sessionTopic }.map {
             val from = it.sender.id
-            val message = it.message.data.deserialize<SessionMessage>()
+            val message = it.messageData.deserialize<SessionMessage>()
             SessionTransfer(from, sanitise(message), it.recipients)
         }
     }

@@ -28,7 +28,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -144,8 +144,8 @@ class ScheduledFlowTests {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
-            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)))
-            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)))
+            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)
+            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)).resultFuture)
         }
         mockNet.waitQuiescent()
 

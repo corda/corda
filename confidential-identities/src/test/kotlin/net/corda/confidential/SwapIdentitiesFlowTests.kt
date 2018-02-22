@@ -4,8 +4,8 @@ import net.corda.core.identity.*
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.*
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.startFlow
 import org.junit.Before
-import net.corda.testing.node.startFlow
 import org.junit.Test
 import kotlin.test.*
 
@@ -27,7 +27,7 @@ class SwapIdentitiesFlowTests {
         val bob = bobNode.services.myInfo.singleIdentity()
 
         // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob))
+        val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob)).resultFuture
 
         // Get the results
         val actual: Map<Party, AnonymousParty> = requesterFlow.getOrThrow().toMap()

@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 fun StartedNode<InternalMockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-    return (network as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
+    return (network as InMemoryMessagingNetwork.InternalMockMessagingService).pumpReceive(block)
 }
 
 data class MockNodeArgs(
@@ -439,6 +439,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     }
 
 }
+
+open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
 
 /**
  * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing interception and modification of messages.

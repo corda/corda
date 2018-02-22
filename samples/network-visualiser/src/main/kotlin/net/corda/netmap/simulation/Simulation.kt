@@ -142,7 +142,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
 
         // Keep going until one of the nodes has something to do, or we have checked every node.
-        val endpoints = mockNet.messagingNetwork.endpoints
+        val endpoints = mockNet.messagingNetwork.endpointsExternal
         var countDown = endpoints.size
         while (countDown > 0) {
             val handledMessage = endpoints[pumpCursor].pumpReceive(false)

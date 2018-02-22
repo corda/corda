@@ -26,7 +26,7 @@ import net.corda.testing.node.User
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -191,7 +191,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.singleIdentity()
         // Perform a protocol exchange to force the peer queue to be created
-        alice.services.startFlow(SendFlow(bobParty, 0)).getOrThrow()
+        alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
         return bobParty
     }
 

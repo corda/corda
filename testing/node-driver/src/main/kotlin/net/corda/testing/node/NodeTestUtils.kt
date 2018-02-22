@@ -60,12 +60,3 @@ fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company I
 
 /** Creates a new [InvocationContext] for use in testing with the given [owningLegalIdentity]. */
 fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext.rpc(testActor(owningLegalIdentity))
-
-/** Creates a new [InvocationContext] for testing purposes. */
-fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
-
-/**
- * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]
- * has origin [Origin.RPC] and actor with id "Only For Testing".
- */
-fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): CordaFuture<T> = startFlow(logic, newContext()).getOrThrow().resultFuture

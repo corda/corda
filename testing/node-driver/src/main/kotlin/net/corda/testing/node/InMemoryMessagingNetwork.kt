@@ -24,7 +24,8 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.node.InMemoryMessagingNetwork.TestMessagingService
+import net.corda.testing.node.InMemoryMessagingNetwork.InternalMockMessagingService
+import net.corda.testing.node.internal.InMemoryMessage
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -38,8 +39,8 @@ import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
 
 /**
- * An in-memory network allows you to manufacture [TestMessagingService]s for a set of participants. Each
- * [TestMessagingService] maintains a queue of messages it has received, and a background thread that dispatches
+ * An in-memory network allows you to manufacture [InternalMockMessagingService]s for a set of participants. Each
+ * [InternalMockMessagingService] maintains a queue of messages it has received, and a background thread that dispatches
  * messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
  * case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
  * testing).
@@ -70,7 +71,16 @@ class InMemoryMessagingNetwork private constructor(
 
     /** A class which represents a message being transferred from sender to recipients, within the [InMemoryMessageNetwork]. **/
     @CordaSerializable
-    data class MessageTransfer(val sender: PeerHandle, val message: Message, val recipients: MessageRecipients) {
+    class MessageTransfer private constructor(val sender: PeerHandle, internal val message: Message, val recipients: MessageRecipients) {
+        companion object {
+            internal fun createMessageTransfer(sender: PeerHandle, message: Message, recipients: MessageRecipients): MessageTransfer {
+                return MessageTransfer(sender, message, recipients)
+            }
+        }
+        /** Message topic **/
+        val messageTopic: String get() = message.topic
+        /** Data contained in this message transfer **/
+        val messageData: ByteSequence get() = message.data
         override fun toString() = "${message.topic} from '$sender' to '$recipients'"
     }
 
@@ -100,9 +110,9 @@ class InMemoryMessagingNetwork private constructor(
     /** A stream of (sender, message, recipients) triples containing messages once they have been received. */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
-
-    /** Get a [List] of all the [TestMessagingService] endpoints **/
-    val endpoints: List<TestMessagingService> @Synchronized get() = handleEndpointMap.values.toList()
+    internal val endpoints: List<InternalMockMessagingService> @Synchronized get() = handleEndpointMap.values.toList()
+    /** Get a [List] of all the [MockMessagingService] endpoints **/
+    val endpointsExternal: List<MockMessagingService> @Synchronized get() = handleEndpointMap.values.map{ MockMessagingService.createMockMessagingService(it) }.toList()
 
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
@@ -121,7 +131,7 @@ class InMemoryMessagingNetwork private constructor(
             notaryService: PartyAndCertificate?,
             description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
             database: CordaPersistence)
-            : TestMessagingService {
+            : InternalMockMessagingService {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
@@ -150,7 +160,7 @@ class InMemoryMessagingNetwork private constructor(
     @Synchronized
     private fun msgSend(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
         messagesInFlight.countUp()
-        messageSendQueue += MessageTransfer(from.myAddress, message, recipients)
+        messageSendQueue += MessageTransfer.createMessageTransfer(from.myAddress, message, recipients)
     }
 
     @Synchronized
@@ -279,16 +289,6 @@ class InMemoryMessagingNetwork private constructor(
         _sentMessages.onNext(transfer)
     }
 
-    /**
-     * An implementation of [Message] for in memory messaging by the test [InMemoryMessagingNetwork].
-     */
-    data class InMemoryMessage(override val topic: String,
-                               override val data: ByteSequence,
-                               override val uniqueMessageId: String,
-                               override val debugTimestamp: Instant = Instant.now()) : Message {
-        override fun toString() = "$topic#${String(data.bytes)}"
-    }
-
     private data class InMemoryReceivedMessage(override val topic: String,
                                                override val data: ByteSequence,
                                                override val platformVersion: Int,
@@ -297,11 +297,10 @@ class InMemoryMessagingNetwork private constructor(
                                                override val peer: CordaX500Name) : ReceivedMessage
 
     /**
-     * A [TestMessagingService] that provides a [MessagingService] abstraction that also contains the ability to
+     * A [InternalMockMessagingService] that provides a [MessagingService] abstraction that also contains the ability to
      * receive messages from the queue for testing purposes.
      */
-    @DoNotImplement
-    interface TestMessagingService : MessagingService {
+    internal interface InternalMockMessagingService : MessagingService {
         /**
          * Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
          * is true, waits until one has been provided on a different thread via send. If block is false, the return
@@ -314,11 +313,24 @@ class InMemoryMessagingNetwork private constructor(
         fun stop()
     }
 
+    /**
+     * A class that provides an abstraction over the nodes' messaging service that also contains the ability to
+     * receive messages from the queue for testing purposes.
+     */
+    class MockMessagingService private constructor(private val messagingService: InternalMockMessagingService) {
+        companion object {
+            internal fun createMockMessagingService(messagingService: InternalMockMessagingService): MockMessagingService {
+                return MockMessagingService(messagingService)
+            }
+        }
+        fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? = messagingService.pumpReceive(block)
+    }
+
     @ThreadSafe
     private inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                           private val peerHandle: PeerHandle,
                                           private val executor: AffinityExecutor,
-                                          private val database: CordaPersistence) : SingletonSerializeAsToken(), TestMessagingService {
+                                          private val database: CordaPersistence) : SingletonSerializeAsToken(), InternalMockMessagingService {
         inner class Handler(val topicSession: String, val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
         @Volatile
@@ -490,3 +502,4 @@ class InMemoryMessagingNetwork private constructor(
                 sender.name)
     }
 }
+

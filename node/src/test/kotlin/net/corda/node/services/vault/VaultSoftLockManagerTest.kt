@@ -30,7 +30,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
 import java.util.*

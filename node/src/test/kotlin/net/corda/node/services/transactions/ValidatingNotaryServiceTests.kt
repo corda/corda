@@ -22,7 +22,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -33,17 +33,16 @@ import kotlin.test.assertFailsWith
 
 class ValidatingNotaryServiceTests {
     private lateinit var mockNet: MockNetwork
-    private lateinit var notaryServices: StartedNodeServices
-    private lateinit var aliceServices: StartedNodeServices
+    private lateinit var notaryNode: StartedMockNode
+    private lateinit var aliceNode: StartedMockNode
     private lateinit var notary: Party
     private lateinit var alice: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        notaryServices = mockNet.defaultNotaryNode.services
-        aliceServices = aliceNode.services
+        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
     }
@@ -56,11 +55,11 @@ class ValidatingNotaryServiceTests {
     @Test
     fun `should report error for invalid transaction dependency`() {
         val stx = run {
-            val inputState = issueInvalidState(aliceServices, alice, notary)
+            val inputState = issueInvalidState(aliceNode.services, alice, notary)
             val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(alice.owningKey))
-            aliceServices.signInitialTransaction(tx)
+            aliceNode.services.signInitialTransaction(tx)
         }
 
         val future = runClient(stx)
@@ -74,11 +73,11 @@ class ValidatingNotaryServiceTests {
     fun `should report error for missing signatures`() {
         val expectedMissingKey = generateKeyPair().public
         val stx = run {
-            val inputState = issueState(aliceServices, alice)
+            val inputState = issueState(aliceNode.services, alice)
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
             val tx = TransactionBuilder(notary).withItems(inputState, command)
-            aliceServices.signInitialTransaction(tx)
+            aliceNode.services.signInitialTransaction(tx)
         }
 
         val ex = assertFailsWith(NotaryException::class) {
@@ -94,7 +93,7 @@ class ValidatingNotaryServiceTests {
 
     private fun runClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
-        val future = aliceServices.startFlow(flow)
+        val future = aliceNode.startFlow(flow)
         mockNet.runNetwork()
         return future
     }
@@ -102,7 +101,7 @@ class ValidatingNotaryServiceTests {
     private fun issueState(serviceHub: ServiceHub, identity: Party): StateAndRef<*> {
         val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
         val signedByNode = serviceHub.signInitialTransaction(tx)
-        val stx = notaryServices.addSignature(signedByNode, notary.owningKey)
+        val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         serviceHub.recordTransactions(stx)
         return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
     }

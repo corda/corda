@@ -78,22 +78,23 @@ class TutorialMockNetwork {
 
         // DOCSTART 1
         // modify message if it's 1
-        nodeB.setMessagingServiceSpy(object : MessagingServiceSpy(nodeB.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
-                val messageData = message.data.deserialize<Any>() as? ExistingSessionMessage
-                val payload = messageData?.payload
-
-                if (payload is DataSessionMessage && payload.payload.deserialize() == 1) {
-                    val alteredMessageData = messageData.copy(payload = payload.copy(99.serialize())).serialize().bytes
-                    messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData), message.uniqueMessageId), target, retryId)
-                } else {
-                    messagingService.send(message, target, retryId)
-                }
-            }
-        })
+        // TODO: Move this test somewhere
+//        nodeB.setMessagingServiceSpy(object : MessagingServiceSpy(nodeB.network) {
+//            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+//                val messageData = message.data.deserialize<Any>() as? ExistingSessionMessage
+//                val payload = messageData?.payload
+//
+//                if (payload is DataSessionMessage && payload.payload.deserialize() == 1) {
+//                    val alteredMessageData = messageData.copy(payload = payload.copy(99.serialize())).serialize().bytes
+//                    messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData), message.uniqueMessageId), target, retryId)
+//                } else {
+//                    messagingService.send(message, target, retryId)
+//                }
+//            }
+//        })
         // DOCEND 1
 
-        val initiatingReceiveFlow = nodeA.services.startFlow(FlowA(nodeB.info.legalIdentities.first()))
+        val initiatingReceiveFlow = nodeA.startFlow(FlowA(nodeB.info.legalIdentities.first()))
 
         mockNet.runNetwork()
 
