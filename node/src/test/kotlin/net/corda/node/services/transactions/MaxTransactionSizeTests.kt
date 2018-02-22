@@ -21,6 +21,7 @@ import net.corda.testing.node.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -50,6 +51,7 @@ class MaxTransactionSizeTests {
         mockNet.stopNodes()
     }
 
+    @Ignore
     @Test
     fun `check transaction will fail when exceed max transaction size limit`() {
         // These 4 attachments yield a transaction that's got ~ 4mb, which will exceed the 3mb max transaction size limit
@@ -73,6 +75,7 @@ class MaxTransactionSizeTests {
         assertThat(exception).hasMessageContaining("Transaction exceeded network's maximum transaction size limit")
     }
 
+    @Ignore
     @Test
     fun `check transaction will be rejected by counterparty when exceed max transaction size limit`() {
         // These 4 attachments yield a transaction that's got ~ 4mb, which will exceed the 3mb max transaction size limit
