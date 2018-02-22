@@ -438,9 +438,9 @@ Chaining transactions
 ~~~~~~~~~~~~~~~~~~~~~
 
 The following example shows that within a ``ledger``, you can create more than one ``transaction`` in order to test chains
-of transactions. ``unverifiedTransaction`` can be used, as in the example below, to create transactions on the ledger
-without verifying them, for pre-populating the ledger with existing data. When chaining transactions, it is important
-to note that even though a ``transaction`` ``verifies`` successfully, the overall ledger may not be valid. This can
+of transactions. In addition to ``transaction``, ``unverifiedTransaction`` can be used, as in the example below, to create
+transactions on the ledger without verifying them, for pre-populating the ledger with existing data. When chaining transactions,
+it is important to note that even though a ``transaction`` ``verifies`` successfully, the overall ledger may not be valid. This can
 be verified separately by placing a ``verifies`` or ``fails`` statement  within the ``ledger`` block.
 
 .. container:: codeset
