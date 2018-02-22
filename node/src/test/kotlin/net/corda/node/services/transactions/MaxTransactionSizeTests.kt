@@ -88,12 +88,11 @@ class MaxTransactionSizeTests {
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4, verify = false)
         }
-        val ex = assertFailsWith<UnexpectedFlowEndException> {
+        assertFailsWith<UnexpectedFlowEndException> {
             val future = aliceServices.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }
-        assertThat(ex).hasMessageContaining("Counterparty flow on O=Bob Plc, L=Rome, C=IT had an internal error and has terminated")
     }
 
     @StartableByRPC
