@@ -232,7 +232,7 @@ abstract class FlowLogic<out T> {
      * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
      */
     @Suspendable
-    open fun receiveAll(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
+    open fun receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
         return stateMachine.receiveAll(sessions, this)
     }
 
@@ -250,7 +250,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
         enforceNoDuplicates(sessions)
-        return castMapValuesToKnownType(receiveAll(associateSessionsToReceiveType(receiveType, sessions)))
+        return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
     }
 
     /**
