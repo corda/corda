@@ -22,6 +22,7 @@ import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -128,6 +129,7 @@ object DefaultKryoCustomizer {
 
             register(java.lang.invoke.SerializedLambda::class.java)
             register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
+            register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
 
             for (whitelistProvider in serializationWhitelists) {
                 val types = whitelistProvider.whitelist
