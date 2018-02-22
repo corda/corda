@@ -144,7 +144,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
 
         // Check attachment size first as they are most likely to go over the limit.
-        ltx.attachments.forEach { minus(it.size) }
+        ltx.attachments.associateBy(Attachment::id).values.forEach { minus(it.size) }
         minus(ltx.inputs.serialize().size)
         minus(ltx.commands.serialize().size)
         minus(ltx.outputs.serialize().size)
