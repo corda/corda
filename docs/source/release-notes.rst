@@ -161,7 +161,7 @@ Significant Changes in 3.0
   over time. This should greatly increase confidence when upgrading between versions, as your testing environments will work
   without alteration.
 
-  Please see the :doc:`upgrade-notes` for more information on transitionining older tests to the new framework
+  Please see the :doc:`upgrade-notes` for more information on transitioning older tests to the new framework
 
 Other Functional Improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
