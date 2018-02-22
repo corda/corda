@@ -11,16 +11,16 @@ import net.corda.testing.core.TestIdentity;
 import net.corda.testing.node.MockServices;
 import org.junit.Test;
 
-import java.security.PublicKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import static net.corda.core.crypto.Crypto.generateKeyPair;
+import static java.util.Collections.emptyList;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.BOB_NAME;
+import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static net.corda.testing.node.NodeTestUtils.ledger;
 import static net.corda.testing.node.NodeTestUtils.transaction;
 
