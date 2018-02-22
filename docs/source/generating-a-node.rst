@@ -120,6 +120,24 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         }
     }
 
+To extend node configuration beyond properties defined in ``deployNodes`` task use ``configFile`` property with the path (relative or absolute) to an additional configuration file.
+The file should has a standard format as node.conf one. The properties from that file will be appended as it is to the resulting node configuration.
+The path to the file can also be added while running Gradle task via ``-PconfigFile`` command line option, however the same file will be added to all nodes.
+Following the previous example `PartyB` node will have additional configuration options added from a file `none-b.conf`:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        [...]
+        node {
+            name "O=PartyB,L=New York,C=US"
+            [...]
+            // Grants user1 the ability to start the MyFlow flow.
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
+            configFile = "samples/trader-demo/src/main/resources/none-b.conf"
+        }
+    }
+
 Running this task will create three nodes in the ``build/nodes`` folder:
 
 * A ``NetworkMapAndNotary`` node that:
