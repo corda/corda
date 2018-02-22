@@ -31,6 +31,9 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 V2.0 to V3.0
 ------------
 
+Network Map Service
+^^^^^^^^^^^^^^^^^^^
+
 * With the re-designed network map service the following changes need to be made:
 
   * The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
@@ -52,6 +55,9 @@ V2.0 to V3.0
     ``NetworkMap`` parameter can be removed for any "controller" node which is both the network map and a notary.
 
   * For registering a node with the doorman the ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL``.
+
+Corda Plugins
+^^^^^^^^^^^^^
 
 * Corda plugins have been modularised further so the following additional gradle entries are necessary:
   For example:
