@@ -26,6 +26,10 @@ interface StateLoader {
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
+     * *WARNING* Do not use this method unless you really only want a single state - any batch loading should
+     * go through [loadStates] as repeatedly calling [loadState] can lead to repeat deserialsiation work and
+     * severe performance degradation.
+     *
      * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
      */
     @Throws(TransactionResolutionException::class)
@@ -39,9 +43,7 @@ interface StateLoader {
     // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
     // as the existing transaction store will become encrypted at some point
     @Throws(TransactionResolutionException::class)
-    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
-    }
+    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 }
 
 /**

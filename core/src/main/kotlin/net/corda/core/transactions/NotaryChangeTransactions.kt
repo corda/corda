@@ -42,9 +42,7 @@ data class NotaryChangeWireTransaction(
 
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as StateLoader, sigs)
     fun resolve(stateLoader: StateLoader, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
-        val resolvedInputs = inputs.map { ref ->
-            stateLoader.loadState(ref).let { StateAndRef(it, ref) }
-        }
+        val resolvedInputs = stateLoader.loadStates(inputs.toSet()).toList()
         return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
     }
 }

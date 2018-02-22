@@ -2,10 +2,7 @@ package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.UnexpectedFlowEndException
@@ -87,6 +84,7 @@ class AttachmentLoadingTests {
 
     private val services = object : ServicesForResolution {
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {
             doReturn(null).whenever(this).partyFromKey(DUMMY_BANK_A.owningKey)
         }
