@@ -98,9 +98,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             banJavaSerialisation(conf)
             preNetworkRegistration(conf)
-            if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
+            if (cmdlineOptions.nodeRegistrationConfig != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, cmdlineOptions.networkRootTruststorePath!!, cmdlineOptions.networkRootTruststorePassword!!)
+                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationConfig)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -183,12 +183,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    private fun shouldRegisterWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration): Boolean {
-        val compatibilityZoneURL = conf.compatibilityZoneURL
-        return !(!cmdlineOptions.isRegistration || compatibilityZoneURL == null)
-    }
-
-    open protected fun registerWithNetwork(conf: NodeConfiguration, networkRootTruststorePath: Path, networkRootTruststorePassword: String) {
+    open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.compatibilityZoneURL!!
         println()
         println("******************************************************************")
@@ -196,7 +191,7 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), networkRootTruststorePath, networkRootTruststorePassword).buildKeystore()
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()

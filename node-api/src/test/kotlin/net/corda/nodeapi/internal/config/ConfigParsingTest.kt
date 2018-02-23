@@ -87,10 +87,15 @@ class ConfigParsingTest {
 
     @Test
     fun CordaX500Name() {
+        val name1 = CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB")
         testPropertyType<CordaX500NameData, CordaX500NameListData, CordaX500Name>(
-                CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB"),
+                name1,
                 CordaX500Name(organisation = "Mock Party 2", locality = "London", country = "GB"),
                 valuesToString = true)
+
+        // Test with config object.
+        val config = config("value" to mapOf("organisation" to "Mock Party", "locality" to "London", "country" to "GB"))
+        assertThat(config.parseAs<CordaX500NameData>().value).isEqualTo(name1)
     }
 
     @Test
@@ -273,6 +278,7 @@ class ConfigParsingTest {
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)
+
     data class DataWithCompanion(val value: Int) {
         companion object {
             @Suppress("unused")

@@ -23,6 +23,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
@@ -265,7 +266,7 @@ class DriverDSLImpl(
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), rootTruststorePath, rootTruststorePassword).buildKeystore()
+                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)).buildKeystore()
                 config
             }
         } else {
