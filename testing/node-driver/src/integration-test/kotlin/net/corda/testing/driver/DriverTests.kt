@@ -11,14 +11,14 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.node.internal.addressMustBeBound
-import net.corda.testing.node.internal.addressMustNotBeBound
-import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.addressMustBeBound
+import net.corda.testing.node.internal.addressMustNotBeBound
+import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Test
@@ -101,7 +101,7 @@ class DriverTests {
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
             val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
-            assertThat(versionAsJson.getValue("status")).isEqualTo(200)
+            assertThat(versionAsJson["status"]).isEqualTo(200)
         }
     }
 
@@ -122,33 +122,28 @@ class DriverTests {
 
     @Test
     fun `driver rejects multiple nodes with the same name`() {
-
         driver(DriverParameters(startNodesInProcess = true)) {
-
-            assertThatThrownBy { listOf(newNode(DUMMY_BANK_A_NAME)(), newNode(DUMMY_BANK_B_NAME)(), newNode(DUMMY_BANK_A_NAME)()).transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+            assertThatThrownBy {
+                listOf(newNode(DUMMY_BANK_A_NAME)(), newNode(DUMMY_BANK_B_NAME)(), newNode(DUMMY_BANK_A_NAME)()).transpose().getOrThrow()
+            }.isInstanceOf(IllegalArgumentException::class.java)
         }
     }
 
     @Test
-    fun `driver rejects multiple nodes with the same name parallel`() {
-
+    fun `driver rejects multiple nodes started in parallel with the same name`() {
         driver(DriverParameters(startNodesInProcess = true)) {
-
             val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
-
-            assertThatThrownBy { nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+            assertThatThrownBy {
+                nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow()
+            }.isInstanceOf(IllegalArgumentException::class.java)
         }
     }
 
     @Test
     fun `driver allows reusing names of nodes that have been stopped`() {
-
         driver(DriverParameters(startNodesInProcess = true)) {
-
             val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
-
             nodeA.stop()
-
             assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
         }
     }
