@@ -189,7 +189,7 @@ abstract class FlowLogic<out T> {
     open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>, maySkipCheckpoint: Boolean = false): List<UntrustworthyData<R>> {
         enforceNoPrimitiveInReceive(listOf(receiveType))
         enforceNoDuplicates(sessions)
-        return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions), maySkipCheckpoint))
+        return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
     }
 
     /**
