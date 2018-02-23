@@ -75,7 +75,7 @@ Significant Changes in 3.0
     features and tools planned for future releases, but feel it is more important to deliver the guarantees discussed above
     as early as possible to allow the community to develop with greater confidence.
 
-   .. important:: Whilst Corda has stabilised it's wire protocol and infrastructure for peer to peer communication and persistent storage
+   .. important:: Whilst Corda has stabilised its wire protocol and infrastructure for peer to peer communication and persistent storage
       of states; the RPC framework will, for this release, not be covered by this guarantee. The moving of the client and
       server contexts away from Kryo to our stable AMQP implementation is planned for the next release of Corda
 
@@ -83,7 +83,7 @@ Significant Changes in 3.0
 
     Corda has now achieved the long stated goal of using the AMQP 1.0 open protocol standard as its communication protocol
     between peers. This forms a strong and flexible framework upon which we can deliver future enhancements that will allow
-    for much for smoother integrations between Corda and third party brokers, languages, and messaging systems. In addition,
+    for much smoother integrations between Corda and third party brokers, languages, and messaging systems. In addition,
     this is also an important step towards formally defining the official peer to peer messaging protocol of Corda, something
     required for more in-depth security audits of the Corda protocol.
 
@@ -112,6 +112,8 @@ Significant Changes in 3.0
   There is also support for a group of nodes to operate locally in a private network, which is achieved by copying each
   node's signed info file to the other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
 
+  .. important:: This replaces the Network Map service that was present in Corda 1.0 and Corda 2.0.
+
   Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
 
 * **Contract Upgrade**
@@ -124,8 +126,8 @@ Significant Changes in 3.0
   cooperation of all involved parties (as advertised by the states themselves), but this requires explicit transactions to be
   applied to all states and be signed by all parties.
 
-  .. tip:: This is a fairly heavyweight operation and should thus be given due consideration as to the impact of running it an
-    the most opertune time to do so.
+  .. tip:: This is a fairly heavyweight operation. As such, consideration should be given as to the most opportune time at
+    which it should be performed. 
 
   Hash constraints provide for maximum decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a
   new constraint, a _network parameters_ constraint, that allows the list of acceptable contract JARs to be maintained by the
@@ -142,7 +144,7 @@ Significant Changes in 3.0
     .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
       unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
       contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. Only
-      the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "shaded" into a fat JAR,
+      the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "sharded" into a fat JAR,
       as JAR dependencies are not supported in Corda 3.0
 
   Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
@@ -222,13 +224,13 @@ Other Functional Improvements
 
 * **Pluggable Custom Serializers**
 
-  With the introduction of AMQP we have introduced the criteria that to be seamlessly serializable classes, specifically
+  With the introduction of AMQP we have introduced the requirement that to be seamlessly serializable classes, specifically
   Java classes (as opposed to Kotlin), must be compiled with the ``-parameter`` flag. However, we recognise that this
   isn't always possible, especially dealing with third party libraries in tightly controlled business environments.
 
   To work around this problem as simply as possible CorDapps now support the creation of pluggable proxy serializers for
   such classes. These should be written such that they create an intermediary representation that Corda can serialise that
-  is mappable directly to and from the unserailizable class.
+  is mappable directly to and from the unserializable class.
 
   A number of examples are provided by the SIMM Valuation Demo in
 
@@ -242,10 +244,10 @@ Security Auditing
 
   This version of Corda is the first to have had select components subjected to the newly established security review process
   by R3's internal security team. Security review will be an on-going process that seeks to provide assurance that the
-  security model of Corda has been implemented to the highest standard, and is inline with industry best practice.
+  security model of Corda has been implemented to the highest standard, and is in line with industry best practice.
 
   As part of this security review process, an independent external security audit of the HTTP based components of the code
-  was undertaken and it's recommendations were acted upon. The security assurance process will develop in parallel to the
+  was undertaken and its recommendations were acted upon. The security assurance process will develop in parallel to the
   Corda platform and will combine code review, automated security testing and secure development practices to ensure Corda
   fulfils its security guarantees.
 
@@ -254,8 +256,8 @@ Minor Changes
 
   * Upgraded gradle to 4.4.1.
 
-    .. note:: To avoid potential incompaitability issues we recomend you also upgrade your CorDapp's gradle
-      pllugin to match. Details on how to do this can be found on the offical
+    .. note:: To avoid potential incompatibility issues we recommend you also upgrade your CorDapp's gradle
+      plugin to match. Details on how to do this can be found on the official
       `gradle website <https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:upgrading_wrapper>`_
 
   * Cash Spending now allows for sending multiple amounts to multiple parties with a single API call
@@ -546,7 +548,7 @@ and prevents the node from deserialising arbitrary objects.
 
 We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
 any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
-serialisation, etc. The node exposes the platform version it's on and we envision CorDapps will use this to be able to
+serialisation, etc. The node exposes the platform version its on and we envision CorDapps will use this to be able to
 run on older versions of the platform to the one they were compiled against. Platform version borrows heavily from Android's
 API Level.
 
