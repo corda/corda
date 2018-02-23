@@ -83,7 +83,6 @@ class FastThreadLocalTest {
         return startedFibers.map { it.get() }.count { it }
     }
 
-    @Suspendable
     private class FiberTask(private val threadLocalGet: () -> ExpensiveObj) : SuspendableCallable<Boolean> {
         @Suspendable
         override fun run(): Boolean {
