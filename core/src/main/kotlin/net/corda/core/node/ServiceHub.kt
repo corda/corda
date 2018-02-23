@@ -61,6 +61,9 @@ interface ServicesForResolution : StateLoader {
 
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
+
+    /** Returns the network parameters the node is operating under. */
+    val networkParameters: NetworkParameters
 }
 
 /**

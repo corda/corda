@@ -2,12 +2,14 @@ package net.corda.node
 
 import joptsimple.OptionException
 import net.corda.core.internal.div
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import org.slf4j.event.Level
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class ArgsParserTest {
     private val parser = ArgsParser()
@@ -21,14 +23,12 @@ class ArgsParserTest {
                 help = false,
                 logToConsole = false,
                 loggingLevel = Level.INFO,
-                isRegistration = false,
+                nodeRegistrationConfig = null,
                 isVersion = false,
                 noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false,
-                bootstrapRaftCluster = false,
-                networkRootTruststorePassword = null,
-                networkRootTruststorePath = null))
+                bootstrapRaftCluster = false))
     }
 
     @Test
@@ -113,11 +113,17 @@ class ArgsParserTest {
 
     @Test
     fun `initial-registration`() {
-        val truststorePath = Paths.get("truststore") / "file.jks"
+        val truststorePath = workingDirectory / "truststore" / "file.jks"
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
+        }.withMessageContaining("Network root trust store path").withMessageContaining("doesn't exist")
+
+        X509KeyStore.fromFile(truststorePath, "dummy_password", createNew = true)
+
         val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
-        assertThat(cmdLineOptions.isRegistration).isTrue()
-        assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.networkRootTruststorePath)
-        assertEquals("password-test", cmdLineOptions.networkRootTruststorePassword)
+        assertNotNull(cmdLineOptions.nodeRegistrationConfig)
+        assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePath)
+        assertEquals("password-test", cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePassword)
     }
 
     @Test

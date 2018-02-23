@@ -57,7 +57,7 @@ class NetworkMapClientTest {
 
         val nodeInfoHash = nodeInfo.serialize().sha256()
 
-        assertThat(networkMapClient.getNetworkMap().networkMap.nodeInfoHashes).containsExactly(nodeInfoHash)
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash)
         assertEquals(nodeInfo, networkMapClient.getNodeInfo(nodeInfoHash))
 
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned(BOB_NAME)
@@ -65,7 +65,7 @@ class NetworkMapClientTest {
         networkMapClient.publish(signedNodeInfo2)
 
         val nodeInfoHash2 = nodeInfo2.serialize().sha256()
-        assertThat(networkMapClient.getNetworkMap().networkMap.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
         assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
     }
@@ -98,7 +98,7 @@ class NetworkMapClientTest {
 
     @Test
     fun `handle parameters update`() {
-        val nextParameters = testNetworkParameters(emptyList(), epoch = 2)
+        val nextParameters = testNetworkParameters(epoch = 2)
         val originalNetworkParameterHash = server.networkParameters.serialize().hash
         val nextNetworkParameterHash = nextParameters.serialize().hash
         val description = "Test parameters"

@@ -15,17 +15,13 @@ import net.corda.core.internal.*
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.nodeapi.internal.network.ParametersUpdate
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -197,11 +193,11 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `emit new parameters update info on parameters update from network map`() {
-        val paramsFeed = updater.track()
+        val paramsFeed = updater.trackParametersUpdate()
         val snapshot = paramsFeed.snapshot
         val updates = paramsFeed.updates.bufferUntilSubscribed()
         assertEquals(null, snapshot)
-        val newParameters = testNetworkParameters(emptyList(), epoch = 2)
+        val newParameters = testNetworkParameters(epoch = 2)
         val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
         scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
         updater.subscribeToNetworkMap()
@@ -219,7 +215,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `ack network parameters update`() {
-        val newParameters = testNetworkParameters(emptyList(), epoch = 314)
+        val newParameters = testNetworkParameters(epoch = 314)
         scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         updater.subscribeToNetworkMap()
         // TODO: Remove sleep in unit test.
@@ -229,7 +225,7 @@ class NetworkMapUpdaterTest {
         updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair)})
         verify(networkMapClient).ackNetworkParametersUpdate(any())
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val signedNetworkParams = updateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
+        val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
     }

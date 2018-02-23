@@ -30,8 +30,8 @@ handling, and ensures the Corda service is run at boot.
 4. (Optional) Download the `Corda webserver jar <http://r3.bintray.com/corda/net/corda/corda-webserver/>`_
    (under ``/VERSION_NUMBER/corda-VERSION_NUMBER.jar``) and place it in ``/opt/corda``
 
-5. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
-   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
+5. Create a directory called ``cordapps`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
+   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
 
 6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options
 
@@ -199,8 +199,8 @@ at boot, and means the Corda service stays running with no users connected to th
         mkdir C:\Corda
         wget http://jcenter.bintray.com/net/corda/corda/VERSION_NUMBER/corda-VERSION_NUMBER.jar -OutFile C:\Corda\corda.jar
 
-2. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively,
-   download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
+2. Create a directory called ``cordapps`` in ``C:\Corda\`` and save your CorDapp jar file to it. Alternatively,
+   download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
 
 3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options
 

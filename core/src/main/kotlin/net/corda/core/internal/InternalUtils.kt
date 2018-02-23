@@ -7,7 +7,11 @@ import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -142,6 +146,8 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
 fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
+
+inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
@@ -300,8 +306,8 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toWireTransaction(cordappProvider: CordappProvider, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(cordappProvider, serializationContext)
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
@@ -373,12 +379,27 @@ inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> Dig
     return SignedData(this, signer(this))
 }
 
-inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
-    return SignedData(this, keyPair.sign(this.bytes))
-}
+fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedData(this, keyPair.sign(this.bytes))
 
-fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }
+fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
 
 fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
     return CordappContext(cordapp, attachmentId, classLoader, config)
+}
+
+/** Verifies that the correct notarisation request was signed by the counterparty. */
+fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+    val requestingParty = otherSideSession.counterparty
+    request.verifySignature(signature, requestingParty)
+    // TODO: persist the signature for traceability. Do we need to persist the request as well?
+}
+
+/** Creates a signature over the notarisation request using the legal identity key. */
+fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
+    val serializedRequest = this.serialize().bytes
+    val signature = with(serviceHub) {
+        val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
+        keyManagementService.sign(serializedRequest, myLegalIdentity)
+    }
+    return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
 }

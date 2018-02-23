@@ -15,14 +15,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
@@ -39,15 +40,14 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
+import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
@@ -92,7 +92,7 @@ class DriverDSLImpl(
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
-        val maxTransactionSize: Int
+        val networkParameters: NetworkParameters
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -101,6 +101,7 @@ class DriverDSLImpl(
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
+    private val nodeNames = mutableSetOf<CordaX500Name>()
     /**
      * Future which completes when the network map is available, whether a local one or one from the CZ. This future acts
      * as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap] object, which
@@ -186,6 +187,12 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        synchronized(nodeNames) {
+            val wasANewNode = nodeNames.add(name)
+            if (!wasANewNode) {
+                throw IllegalArgumentException("Node with name $name is already started or starting.")
+            }
+        }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
@@ -253,7 +260,7 @@ class DriverDSLImpl(
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), rootTruststorePath, rootTruststorePassword).buildKeystore()
+                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)).buildKeystore()
                 config
             }
         } else {
@@ -387,6 +394,7 @@ class DriverDSLImpl(
         if (startNodesInProcess) {
             Schedulers.reset()
         }
+        require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
         val notaryInfosFuture = if (compatibilityZone == null) {
@@ -476,7 +484,7 @@ class DriverDSLImpl(
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
                     }
-                    val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                    val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                     NotaryInfo(nodeInfo.legalIdentities[0], spec.validating)
                 }
             }
@@ -641,6 +649,9 @@ class DriverDSLImpl(
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
             countObservables.remove(config.corda.myLegalName)
+            synchronized(nodeNames) {
+                nodeNames.remove(config.corda.myLegalName)
+            }
         }
 
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
@@ -704,7 +715,7 @@ class DriverDSLImpl(
      * The local version of the network map, which is a bunch of classes that copy the relevant files to the node directories.
      */
     private inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
-        val networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaryInfos, maxTransactionSize = maxTransactionSize))
+        val networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
         // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
         // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
         // Investigate whether we can avoid that.
@@ -951,7 +962,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(defaultParameters.initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(true)
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -966,7 +977,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     jmxPolicy = defaultParameters.jmxPolicy,
                     notarySpecs = defaultParameters.notarySpecs,
                     compatibilityZone = null,
-                    maxTransactionSize = defaultParameters.maxTransactionSize
+                    networkParameters = defaultParameters.networkParameters
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1002,13 +1013,13 @@ fun <A> internalDriver(
         debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
+        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
-        maxTransactionSize: Int = DriverParameters().maxTransactionSize,
+        networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         dsl: DriverDSLImpl.() -> A
 ): A {
@@ -1026,7 +1037,7 @@ fun <A> internalDriver(
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
-                    maxTransactionSize = maxTransactionSize
+                    networkParameters = networkParameters
             ),
             coerce = { it },
             dsl = dsl,
