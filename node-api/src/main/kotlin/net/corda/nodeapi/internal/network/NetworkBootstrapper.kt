@@ -56,8 +56,7 @@ class NetworkBootstrapper {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val baseNodeDirectory = args.firstOrNull()
-                    ?: throw IllegalArgumentException("Expecting first argument which is the nodes' parent directory")
+            val baseNodeDirectory = args.firstOrNull() ?: throw IllegalArgumentException("Expecting first argument which is the nodes' parent directory")
             val cordapps = if (args.size > 1) args.toList().drop(1) else null
             NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordapps)
         }
@@ -80,7 +79,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, cordapps)
+            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, cordapps?.distinct())
             println("Updating whitelist.")
             overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
             installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
