@@ -44,8 +44,6 @@ object ProcessUtilities {
             if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
             add("-XX:+UseG1GC")
             addAll(extraJvmArguments)
-//            add("-cp")
-//            add(classpath)
             add(className)
             addAll(arguments)
         }
