@@ -7,46 +7,48 @@ import net.corda.core.identity.CordaX500Name;
 import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
-import net.corda.testing.node.MockServices;
 import net.corda.testing.core.TestIdentity;
+import net.corda.testing.node.MockServices;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.security.PublicKey;
 import java.time.temporal.ChronoUnit;
 
-import static java.util.Collections.emptyList;
-import static net.corda.core.crypto.Crypto.generateKeyPair;
+import static java.util.Collections.singletonList;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
+import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static net.corda.testing.node.NodeTestUtils.ledger;
 import static net.corda.testing.node.NodeTestUtils.transaction;
-import static net.corda.testing.core.TestConstants.ALICE_NAME;
-import static net.corda.testing.core.TestConstants.BOB_NAME;
-import static net.corda.testing.core.TestConstants.TEST_TX_TIME;
 
 public class CommercialPaperTest {
+
     private static final TestIdentity alice = new TestIdentity(ALICE_NAME, 70L);
     private static final TestIdentity bigCorp = new TestIdentity(new CordaX500Name("BigCorp", "New York", "GB"));
     private static final TestIdentity bob = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity megaCorp = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};
+    private MockServices ledgerServices;
 
-    // DOCSTART 11
-    private final MockServices ledgerServices = new MockServices(
-            // A list of packages to scan for cordapps
-            emptyList(),
-            // The identity represented by this set of mock services. Defaults to a test identity.
-            // You can also use the alternative parameter initialIdentityName which accepts a
-            // [CordaX500Name]
-            megaCorp,
-            // An implementation of [IdentityService], which contains a list of all identities known
-            // to the node. Use [makeTestIdentityService] which returns an implementation of
-            // [InMemoryIdentityService] with the given identities
-            makeTestIdentityService(megaCorp.getIdentity())
+    @Before
+    public void setUp() {
+        // DOCSTART 11
+        ledgerServices = new MockServices(
+                // A list of packages to scan for cordapps
+                singletonList("net.corda.finance.contracts"),
+                // The identity represented by this set of mock services. Defaults to a test identity.
+                // You can also use the alternative parameter initialIdentityName which accepts a
+                // [CordaX500Name]
+                megaCorp,
+                // An implementation of [IdentityService], which contains a list of all identities known
+                // to the node. Use [makeTestIdentityService] which returns an implementation of
+                // [InMemoryIdentityService] with the given identities
+                makeTestIdentityService(megaCorp.getIdentity())
         );
-    // DOCEND 11
+        // DOCEND 11
+    }
 
     @SuppressWarnings("unused")
     // DOCSTART 12

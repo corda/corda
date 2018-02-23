@@ -1,7 +1,11 @@
 package net.corda.docs.tutorial.testdsl
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
@@ -11,6 +15,7 @@ import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.core.*
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
@@ -33,20 +38,20 @@ class CommercialPaperTest {
     // DOCSTART 11
     private val ledgerServices = MockServices(
             // A list of packages to scan for cordapps
-            cordappPackages = emptyList(),
+            listOf("net.corda.finance.contracts"),
             // The identity represented by this set of mock services. Defaults to a test identity.
             // You can also use the alternative parameter initialIdentityName which accepts a
             // [CordaX500Name]
-            initialIdentity = megaCorp,
-            // An implementation of IdentityService, which contains a list of all identities known
-            // to the node. Use [makeTestIdentityService] which returns an implementation of
-            // [InMemoryIdentityService] with the given identities
-            identityService = makeTestIdentityService(megaCorp.identity)
-    )
+            megaCorp,
+            rigorousMock<IdentityService>().also {
+        doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
+        doReturn(null).whenever(it).partyFromKey(bigCorp.publicKey)
+        doReturn(null).whenever(it).partyFromKey(alice.publicKey)
+    })
     // DOCEND 11
 
-    @Suppress("unused")
     // DOCSTART 12
+    @Suppress("unused")
     private val simpleLedgerServices = MockServices(
             // This is the identity of the node
             megaCorp,
