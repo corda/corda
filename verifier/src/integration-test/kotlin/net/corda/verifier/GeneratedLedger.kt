@@ -52,10 +52,10 @@ data class GeneratedLedger(
         }
 
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-            return stateRefs.groupBy { it.txhash }.map {
+            return stateRefs.groupBy { it.txhash }.flatMap {
                 val outputs = hashTransactionMap[it.key]?.outputs ?: throw TransactionResolutionException(it.key)
                 it.value.map { StateAndRef(outputs[it.index], it) }
-            }.flatMap { it }.toSet()
+            }.toSet()
         }
         override val identityService = rigorousMock<IdentityService>().apply {
             doAnswer { identityMap[it.arguments[0]] }.whenever(this).partyFromKey(any())
