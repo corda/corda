@@ -19,6 +19,7 @@ fun testNetworkParameters(
             modifiedTime = modifiedTime,
             maxMessageSize = maxMessageSize,
             maxTransactionSize = maxTransactionSize,
-            epoch = epoch
+            epoch = epoch,
+            whitelistedContractImplementations = emptyMap()
     )
 }

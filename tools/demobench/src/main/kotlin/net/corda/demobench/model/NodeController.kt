@@ -145,7 +145,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
-                epoch = 1
+                epoch = 1,
+                whitelistedContractImplementations = emptyMap()
         ))
         notaryIdentity = identity
         networkParametersCopier = parametersCopier
