@@ -116,7 +116,6 @@ ext {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 
@@ -260,36 +259,6 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
 
 tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
-}
-
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    directory "./build/nodes"
-    node {
-        name "O=Controller,OU=corda,L=London,C=GB"
-        notary = [validating : true]
-        p2pPort 10002
-        cordapps = []
-    }
-    node {
-        name "O=Bank A,OU=corda,L=London,C=GB"
-        p2pPort 10012
-        rpcSettings {
-            address "localhost:10013"
-            adminAddress "localhost:10023"
-        }
-        webPort 10014
-        cordapps = []
-    }
-    node {
-        name "O=Bank B,OU=corda,L=London,C=GB"
-        p2pAddress "localhost:10007"
-        rpcSettings {
-            address "localhost:10018"
-            adminAddress "localhost:10028"
-        }
-        webAddress "localhost:10009"
-        cordapps = []
-    }
 }
 
 bintrayConfig {

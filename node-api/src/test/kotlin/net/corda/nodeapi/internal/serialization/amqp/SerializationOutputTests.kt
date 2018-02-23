@@ -1071,6 +1071,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertEquals(obj.id, obj2.attachment.id)
         assertEquals(obj.contract, obj2.contract)
+        assertEquals(obj.additionalContracts, obj2.additionalContracts)
         assertArrayEquals(obj.open().readBytes(), obj2.open().readBytes())
     }
 
