@@ -122,32 +122,18 @@ alteration to your current implementation.
     See the section "Mismatched Class Properties / Constructor Parameters" in the :doc:`serialization` documentation
 
 
-* Database schema changes:
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
 
   H2 database instance (persistence.mv.db file) working against Corda 2.0 can not be reused for Corda 3.0.
   The release introduces a stable database schema resulting in changes to tables and column names.
   Following Corda node changes some tables were removed and some columns were introduced or column type/semantics has been changed
-  (e.g. ``OWNING_KEY`` column of ``NODE_INFO_PARTY_CERT`` table was renamed to ``OWNING_KEY_HASH`` and stores hash of the public key instead of the key).
+  (e.g. ``NODE_INFO_PARTY_CERT`` stores hash of the public key instead of the key).
 
-  Vault related tables have been identified as feasible ones for migration to Corda 3.0 database for development/testing purposes,
-  however we advise no to migrate and use a fresh database if feasible.
-  The following migration step for Vault tables is suggested:
-
-    1. In existing database rename schema name (by the default it’s ``public``).
-
-    2. Run Corda 3.0 node against this database instance - it will create new schema with tables.
-
-    3. Migrate via insert `into my_table(...) select ...` following changes in table names, column names and types:
-
-       Example SQL migration of ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"`` table:
-       ::
-
-         INSERT INTO NEW_SCHEMA.VAULT_FUNGIBLE_STATES_PARTS( OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) select (OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) FROM OLD.SCHEMA."VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"
-
-       The list of Vault related tables  feasible for migration and required changes:
+  List of changes to Vault related tables:
 
        1. ``NODE_TRANSACTIONS``:
-          no changes
+          column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``
 
        2. ``VAULT_STATES``:
           column ``CONTRACT_STATE`` removed (and  compound index reintroduced ``LOCK_ID,STATE_STATUS``)
@@ -162,7 +148,7 @@ alteration to your current implementation.
 
        5. ``VAULT_LINEAR_STATES``:
           type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)``
-          - use ``CAST("UUID" AS UUID)`` when selecting ``"UUID"`` column to insert
+          - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in  varchar format
 
        6. ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
           table renamed to ``VAULT_LINEAR_STATES_PARTS``,
@@ -172,10 +158,28 @@ alteration to your current implementation.
        7. ``VAULT_TRANSACTION_NOTES``:
           no changes
 
-  These tables are not advised for migration: ``contract_cash_states`` and ``cp_states``.
-  Columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store
-  Base58 representation of SHA-256 of public key prefixed with `DL`.
+       8. ``contract_cash_states``:
+          columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store
+          Base58 representation of SHA-256 of public key prefixed with `DL`
 
+       9. ``contract_cp_states``:
+          table renamed to ``cp_states``, column changes as for ``contract_cash_states``
+
+       We advise not to migrate data and use a fresh database,
+       however for any historical reporting usage part of the vault (tables 1-7) could be migrated using the example guideline:
+
+       1. In existing database rename schema name (by the default it’s ``public``).
+
+       2. Run Corda 3.0 node against this database instance - it will create new schema with tables.
+
+       3. Migrate via insert `into my_table(...) select ...` following changes in table names, column names and types.
+          Example SQL migration of ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"`` table:
+
+          .. sourcecode:: sql
+
+             INSERT INTO NEW_SCHEMA.VAULT_FUNGIBLE_STATES_PARTS(OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) select (OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) FROM OLD_SCHEMA."VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"
+
+       4. Delete old schema.
 
 Configuration
 ^^^^^^^^^^^^^
