@@ -17,6 +17,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
@@ -137,7 +138,8 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                 doReturn(nodeKeyStore).whenever(it).loadNodeKeyStore(any())
                 doReturn(sslKeyStore).whenever(it).loadSslKeyStore(any())
             }
-            NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!), networkTrustStorePath, networkTrustStorePassword).buildKeystore()
+            val regConfig = NodeRegistrationOption(networkTrustStorePath, networkTrustStorePassword)
+            NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!), regConfig).buildKeystore()
             verify(hsmSigner).sign(any())
         }
     }

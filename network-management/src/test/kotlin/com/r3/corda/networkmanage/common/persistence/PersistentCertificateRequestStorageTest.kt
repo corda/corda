@@ -6,6 +6,7 @@ import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRe
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -40,7 +41,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `valid request`() {
-        val request = createRequest("LegalName").first
+        val request = createRequest("LegalName", certRole = CertRole.NODE_CA).first
         val requestId = storage.saveRequest(request)
         assertNotNull(storage.getRequest(requestId)).apply {
             assertEquals(request, this.request)
@@ -49,8 +50,28 @@ class PersistentCertificateRequestStorageTest : TestBase() {
     }
 
     @Test
+    fun `valid service identity request`() {
+        val request = createRequest("LegalName", certRole = CertRole.SERVICE_IDENTITY).first
+        val requestId = storage.saveRequest(request)
+        assertNotNull(storage.getRequest(requestId)).apply {
+            assertEquals(request, this.request)
+        }
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId)
+    }
+
+    @Test
+    fun `invalid cert role request`() {
+        val request = createRequest("LegalName", certRole = CertRole.INTERMEDIATE_CA).first
+        val requestId = storage.saveRequest(request)
+        assertNotNull(storage.getRequest(requestId)).apply {
+            assertEquals(request, this.request)
+        }
+        assertThat(storage.getRequests(RequestStatus.REJECTED).map { it.requestId }).containsOnly(requestId)
+    }
+
+    @Test
     fun `approve request`() {
-        val (request, _) = createRequest("LegalName")
+        val (request, _) = createRequest("LegalName", certRole = CertRole.NODE_CA)
         // Add request to DB.
         val requestId = storage.saveRequest(request)
         // Pending request should equals to 1.
@@ -69,7 +90,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `sign request`() {
-        val (csr, nodeKeyPair) = createRequest("LegalName")
+        val (csr, nodeKeyPair) = createRequest("LegalName", certRole = CertRole.NODE_CA)
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // New request should equals to 1.
@@ -95,7 +116,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `sign request ignores subsequent sign requests`() {
-        val (csr, nodeKeyPair) = createRequest("LegalName")
+        val (csr, nodeKeyPair) = createRequest("LegalName", certRole = CertRole.NODE_CA)
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // Store certificate to DB.
@@ -118,7 +139,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `sign request rejects requests with the same public key`() {
-        val (csr, nodeKeyPair) = createRequest("LegalName")
+        val (csr, nodeKeyPair) = createRequest("LegalName", certRole = CertRole.NODE_CA)
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // Store certificate to DB.
@@ -132,7 +153,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         )
         // Sign certificate
         // When request with the same public key is requested
-        val (newCsr, _) = createRequest("NewLegalName", nodeKeyPair)
+        val (newCsr, _) = createRequest("NewLegalName", nodeKeyPair, certRole = CertRole.NODE_CA)
         val duplicateRequestId = storage.saveRequest(newCsr)
         assertThat(storage.getRequests(RequestStatus.NEW)).isEmpty()
         val duplicateRequest = storage.getRequest(duplicateRequestId)
@@ -142,7 +163,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `reject request`() {
-        val requestId = storage.saveRequest(createRequest("BankA").first)
+        val requestId = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         storage.rejectRequest(requestId, DOORMAN_SIGNATURE, "Because I said so!")
         assertThat(storage.getRequests(RequestStatus.NEW)).isEmpty()
         assertThat(storage.getRequest(requestId)!!.remark).isEqualTo("Because I said so!")
@@ -150,9 +171,9 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `request with the same legal name as a pending request`() {
-        val requestId1 = storage.saveRequest(createRequest("BankA").first)
+        val requestId1 = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId1)
-        val requestId2 = storage.saveRequest(createRequest("BankA").first)
+        val requestId2 = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId1)
         assertEquals(RequestStatus.REJECTED, storage.getRequest(requestId2)!!.status)
         assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
@@ -164,16 +185,16 @@ class PersistentCertificateRequestStorageTest : TestBase() {
 
     @Test
     fun `request with the same legal name as a previously approved request`() {
-        val requestId1 = storage.saveRequest(createRequest("BankA").first)
+        val requestId1 = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         storage.markRequestTicketCreated(requestId1)
         storage.approveRequest(requestId1, DOORMAN_SIGNATURE)
-        val requestId2 = storage.saveRequest(createRequest("BankA").first)
+        val requestId2 = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
     }
 
     @Test
     fun `request with the same legal name as a previously signed request`() {
-        val (csr, nodeKeyPair) = createRequest("BankA")
+        val (csr, nodeKeyPair) = createRequest("BankA", certRole = CertRole.NODE_CA)
         val requestId = storage.saveRequest(csr)
         storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
@@ -183,15 +204,15 @@ class PersistentCertificateRequestStorageTest : TestBase() {
                 generateSignedCertPath(csr, nodeKeyPair),
                 listOf(DOORMAN_SIGNATURE)
         )
-        val rejectedRequestId = storage.saveRequest(createRequest("BankA").first)
+        val rejectedRequestId = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         assertThat(storage.getRequest(rejectedRequestId)!!.remark).containsIgnoringCase("duplicate")
     }
 
     @Test
     fun `request with the same legal name as a previously rejected request`() {
-        val requestId1 = storage.saveRequest(createRequest("BankA").first)
+        val requestId1 = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         storage.rejectRequest(requestId1, DOORMAN_SIGNATURE, "Because I said so!")
-        val requestId2 = storage.saveRequest(createRequest("BankA").first)
+        val requestId2 = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId2)
         storage.markRequestTicketCreated(requestId2)
         storage.approveRequest(requestId2, DOORMAN_SIGNATURE)
@@ -204,7 +225,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         val approver = "APPROVER"
 
         // when
-        val requestId = storage.saveRequest(createRequest("BankA").first)
+        val requestId = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, approver)
 
@@ -242,7 +263,8 @@ class PersistentCertificateRequestStorageTest : TestBase() {
     }
 }
 
-internal fun createRequest(organisation: String, keyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): Pair<PKCS10CertificationRequest, KeyPair> {
-    val request = X509Utilities.createCertificateSigningRequest(X500Principal("O=$organisation,L=London,C=GB"), "my@mail.com", keyPair)
-    return Pair(request, keyPair)
+internal fun createRequest(organisation: String, keyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME), certRole: CertRole): Pair<PKCS10CertificationRequest, KeyPair> {
+    val request = X509Utilities.createCertificateSigningRequest(X500Principal("O=$organisation,L=London,C=GB"), "my@mail.com", keyPair, certRole = certRole)
+    // encode and decode the request to make sure class information (CertRole) etc are not passed into the test.
+    return Pair(JcaPKCS10CertificationRequest(request.encoded), keyPair)
 }

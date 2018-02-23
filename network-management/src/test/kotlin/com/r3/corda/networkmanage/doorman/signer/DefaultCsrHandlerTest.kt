@@ -8,7 +8,6 @@ import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -83,6 +82,49 @@ class DefaultCsrHandlerTest : TestBase() {
                 assertThat(CertRole.extract(this)).isEqualTo(CertRole.NODE_CA)
                 assertThat(publicKey).isEqualTo(Crypto.toSupportedPublicKey(requests[index].subjectPublicKeyInfo))
                 assertThat(subjectX500Principal).isEqualTo(X500Principal("O=Test${index + 1},L=London,C=GB"))
+                // Is CA
+                assertThat(basicConstraints != -1)
+            }
+        }
+    }
+
+    @Test
+    fun `process approved service identity request`() {
+        val requests = (1..3).map {
+            X509Utilities.createCertificateSigningRequest(
+                    X500Principal("O=Test$it,L=London,C=GB"),
+                    "my@email.com",
+                    Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME), certRole = CertRole.SERVICE_IDENTITY)
+        }
+
+        val requestStorage: CertificationRequestStorage = mock {
+            on { getRequests(RequestStatus.APPROVED) }.thenReturn(listOf(
+                    certificateSigningRequest(requestId = "1", request = requests[0], status = RequestStatus.APPROVED)
+            ))
+        }
+
+        val (rootCa, csrCa) = createDevIntermediateCaCertPath()
+        val csrCertPathAndKey = CertPathAndKey(listOf(csrCa.certificate, rootCa.certificate), csrCa.keyPair.private)
+        val requestProcessor = DefaultCsrHandler(requestStorage, csrCertPathAndKey)
+
+        requestProcessor.processRequests()
+
+        val certPathCapture = argumentCaptor<CertPath>()
+
+        // Verify only the approved requests are taken
+        verify(requestStorage, times(1)).getRequests(RequestStatus.APPROVED)
+        verify(requestStorage, times(1)).putCertificatePath(eq("1"), certPathCapture.capture(), eq(listOf(DOORMAN_SIGNATURE)))
+
+        // Then make sure the generated node cert paths are correct
+        certPathCapture.allValues.forEachIndexed { index, certPath ->
+            X509Utilities.validateCertificateChain(rootCa.certificate, certPath.x509Certificates)
+            assertThat(certPath.certificates).hasSize(3).element(1).isEqualTo(csrCa.certificate)
+            (certPath.certificates[0] as X509Certificate).apply {
+                assertThat(CertRole.extract(this)).isEqualTo(CertRole.SERVICE_IDENTITY)
+                assertThat(publicKey).isEqualTo(Crypto.toSupportedPublicKey(requests[index].subjectPublicKeyInfo))
+                assertThat(subjectX500Principal).isEqualTo(X500Principal("O=Test${index + 1},L=London,C=GB"))
+                // Not a CA
+                assertThat(basicConstraints == -1)
             }
         }
     }

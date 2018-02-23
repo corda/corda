@@ -1,17 +1,20 @@
 package com.r3.corda.networkmanage.hsm.signer
 
+import com.r3.corda.networkmanage.common.utils.getCertRole
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createClientCertificate
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveCertAndKeyPair
+import net.corda.core.internal.CertRole
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.buildCertPath
+import net.corda.nodeapi.internal.crypto.certificateType
 import org.bouncycastle.asn1.x500.X500Name
 import java.io.PrintStream
 
@@ -49,8 +52,9 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
             logger.debug("Retrieving the doorman certificate $CORDA_INTERMEDIATE_CA from HSM...")
             val doormanCertAndKey = retrieveCertAndKeyPair(CORDA_INTERMEDIATE_CA, keyStore)
             toSign.forEach {
+                val certRole = it.request.getCertRole()
                 val nodeCaCert = createClientCertificate(
-                        CertificateType.NODE_CA,
+                        certRole.certificateType,
                         doormanCertAndKey,
                         it.request,
                         validDays,

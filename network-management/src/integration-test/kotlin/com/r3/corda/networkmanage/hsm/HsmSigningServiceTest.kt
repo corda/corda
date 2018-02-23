@@ -14,49 +14,32 @@ import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import com.r3.corda.networkmanage.hsm.signer.HsmSigner
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name.Companion.parse
+import net.corda.core.internal.CertRole
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.createCertificateSigningRequest
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 class HsmSigningServiceTest : HsmBaseTest() {
-
     @Before
     fun setUp() {
         loadOrCreateKeyStore(rootKeyStoreFile, TRUSTSTORE_PASSWORD)
     }
 
     @Test
-    fun `HSM signing service can sign CSR data`() {
-        // when root cert is created
-        run(createGeneratorParameters(
-                keyGroup = ROOT_CERT_KEY_GROUP,
-                rootKeyGroup = null,
-                certificateType = CertificateType.ROOT_CA,
-                subject = ROOT_CERT_SUBJECT
-        ))
-        // when network map cert is created
-        run(createGeneratorParameters(
-                keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
-                rootKeyGroup = ROOT_CERT_KEY_GROUP,
-                certificateType = CertificateType.NETWORK_MAP,
-                subject = NETWORK_MAP_CERT_SUBJECT
-        ))
-        // when doorman cert is created
-        run(createGeneratorParameters(
-                keyGroup = DOORMAN_CERT_KEY_GROUP,
-                rootKeyGroup = ROOT_CERT_KEY_GROUP,
-                certificateType = CertificateType.INTERMEDIATE_CA,
-                subject = DOORMAN_CERT_SUBJECT
-        ))
+    fun `HSM signing service can sign node CSR data`() {
+        setupCertificates()
+
         // given authenticated user
         val userInput = givenHsmUserAuthenticationInput()
 
@@ -92,31 +75,59 @@ class HsmSigningServiceTest : HsmBaseTest() {
         assertNotNull(toSign.certPath)
         val certificates = toSign.certPath!!.certificates
         assertEquals(3, certificates.size)
+        // Is a CA
+        assertNotEquals(-1, certificates.first().x509.basicConstraints)
+        assertEquals(CertRole.NODE_CA, CertRole.extract(certificates.first().x509))
+    }
+
+    @Test
+    fun `HSM signing service can sign service identity CSR data`() {
+        setupCertificates()
+
+        // given authenticated user
+        val userInput = givenHsmUserAuthenticationInput()
+
+        // given HSM CSR signer
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val doormanCertificateConfig = hsmSigningServiceConfig.csrSigning!!
+        val signer = HsmCsrSigner(
+                mock(),
+                doormanCertificateConfig.loadRootKeyStore(),
+                "",
+                null,
+                3650,
+                Authenticator(
+                        provider = createProvider(
+                                doormanCertificateConfig.keyGroup,
+                                hsmSigningServiceConfig.keySpecifier,
+                                hsmSigningServiceConfig.device),
+                        inputReader = userInput)
+        )
+
+        // give random data to sign
+        val toSign = ApprovedCertificateRequestData(
+                "test",
+                createCertificateSigningRequest(
+                        parse("O=R3Cev,L=London,C=GB").x500Principal,
+                        "my@mail.com",
+                        generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME),
+                        certRole = CertRole.SERVICE_IDENTITY))
+
+        // when
+        signer.sign(listOf(toSign))
+
+        // then
+        assertNotNull(toSign.certPath)
+        val certificates = toSign.certPath!!.certificates
+        assertEquals(3, certificates.size)
+        // Not a CA
+        assertEquals(-1, certificates.first().x509.basicConstraints)
+        assertEquals(CertRole.SERVICE_IDENTITY, CertRole.extract(certificates.first().x509))
     }
 
     @Test
     fun `HSM signing service can sign and serialize network map data to the Doorman DB`() {
-        // when root cert is created
-        run(createGeneratorParameters(
-                keyGroup = ROOT_CERT_KEY_GROUP,
-                rootKeyGroup = null,
-                certificateType = CertificateType.ROOT_CA,
-                subject = ROOT_CERT_SUBJECT
-        ))
-        // when network map cert is created
-        run(createGeneratorParameters(
-                keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
-                rootKeyGroup = ROOT_CERT_KEY_GROUP,
-                certificateType = CertificateType.NETWORK_MAP,
-                subject = NETWORK_MAP_CERT_SUBJECT
-        ))
-        // when doorman cert is created
-        run(createGeneratorParameters(
-                keyGroup = DOORMAN_CERT_KEY_GROUP,
-                rootKeyGroup = ROOT_CERT_KEY_GROUP,
-                certificateType = CertificateType.INTERMEDIATE_CA,
-                subject = DOORMAN_CERT_SUBJECT
-        ))
+        setupCertificates()
 
         // given authenticated user
         val userInput = givenHsmUserAuthenticationInput()
@@ -149,5 +160,29 @@ class HsmSigningServiceTest : HsmBaseTest() {
         val persistedNetworkMap = signedNetworkMap!!.verified()
         assertEquals(networkMapParameters.serialize().hash, persistedNetworkMap.networkParameterHash)
         assertThat(persistedNetworkMap.nodeInfoHashes).isEmpty()
+    }
+
+    private fun setupCertificates(){
+        // when root cert is created
+        run(createGeneratorParameters(
+                keyGroup = ROOT_CERT_KEY_GROUP,
+                rootKeyGroup = null,
+                certificateType = CertificateType.ROOT_CA,
+                subject = ROOT_CERT_SUBJECT
+        ))
+        // when network map cert is created
+        run(createGeneratorParameters(
+                keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
+                rootKeyGroup = ROOT_CERT_KEY_GROUP,
+                certificateType = CertificateType.NETWORK_MAP,
+                subject = NETWORK_MAP_CERT_SUBJECT
+        ))
+        // when doorman cert is created
+        run(createGeneratorParameters(
+                keyGroup = DOORMAN_CERT_KEY_GROUP,
+                rootKeyGroup = ROOT_CERT_KEY_GROUP,
+                certificateType = CertificateType.INTERMEDIATE_CA,
+                subject = DOORMAN_CERT_SUBJECT
+        ))
     }
 }

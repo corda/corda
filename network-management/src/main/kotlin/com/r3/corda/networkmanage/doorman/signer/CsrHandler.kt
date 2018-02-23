@@ -5,9 +5,12 @@ import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
+import com.r3.corda.networkmanage.common.utils.getCertRole
+import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.certificateType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -54,11 +57,12 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage,
         // We assume all attributes in the subject name has been checked prior approval.
         // TODO: add validation to subject name.
         val request = JcaPKCS10CertificationRequest(certificationRequest)
+        val certRole = request.getCertRole()
         val nameConstraints = NameConstraints(
                 arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject))),
                 arrayOf())
         val nodeCaCert = X509Utilities.createCertificate(
-                CertificateType.NODE_CA,
+                certRole.certificateType,
                 csrCertPathAndKey.certPath[0],
                 csrCertPathAndKey.toKeyPair(),
                 X500Principal(request.subject.encoded),
