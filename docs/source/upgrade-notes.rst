@@ -34,27 +34,27 @@ V2.0 to V3.0
 Network Map Service
 ^^^^^^^^^^^^^^^^^^^
 
-* With the re-designed network map service the following changes need to be made:
+With the re-designed network map service the following changes need to be made:
 
-  * The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
-    network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
-    using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
-    See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network.rst` on how to use the network
-    bootstrapper for deploying a local network.
+* The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
+  network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
+  using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
+  See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network.rst` on how to use the network
+  bootstrapper for deploying a local network.
 
-  * Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``
-    and ``bftSMaRt`` configs have been replaced by a single ``notary`` config object. See :doc:`corda-configuration-file`
-    for more details.
+* Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``
+  and ``bftSMaRt`` configs have been replaced by a single ``notary`` config object. See :doc:`corda-configuration-file`
+  for more details.
 
-  * The advertisement of the notary to the rest of the network, and its validation type, is no longer determined by the
-    ``extraAdvertisedServiceIds`` config. Instead it has been moved to the control of the network operator via
-    the introduction of network parameters. The network bootstrapper automatically includes the configured notaries
-    when generating the network parameters file for a local deployment.
+* The advertisement of the notary to the rest of the network, and its validation type, is no longer determined by the
+  ``extraAdvertisedServiceIds`` config. Instead it has been moved to the control of the network operator via
+  the introduction of network parameters. The network bootstrapper automatically includes the configured notaries
+  when generating the network parameters file for a local deployment.
 
-  * Any nodes defined in a ``deployNodes`` gradle task performing the function of the network map can be removed, or the
-    ``NetworkMap`` parameter can be removed for any "controller" node which is both the network map and a notary.
+* Any nodes defined in a ``deployNodes`` gradle task performing the function of the network map can be removed, or the
+  ``NetworkMap`` parameter can be removed for any "controller" node which is both the network map and a notary.
 
-  * For registering a node with the doorman the ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL``.
+* For registering a node with the doorman the ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL``.
 
 Corda Plugins
 ^^^^^^^^^^^^^
@@ -115,92 +115,107 @@ alteration to your current implementation.
 
     ``Constructor parameter - "<some parameter of a constructor>" - doesn't refer to a property of "class <some.class.being.serialized>"``
 
-    Indicate that a class, in the above example ``some.class.being.serialized``, has a parameter on its primary constructor that
-    doesn't correlate to a property of the class. This is a problem because the Corda AMQP serialization library uses a classes
+    indicate that a class, in the above example ``some.class.being.serialized``, has a parameter on its primary constructor that
+    doesn't correlate to a property of the class. This is a problem because the Corda AMQP serialization library uses a class's
     constructor (default, primary, or annotated) as the means by which instances of the serialized form are reconstituted.
 
     See the section "Mismatched Class Properties / Constructor Parameters" in the :doc:`serialization` documentation
 
-
 Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-  H2 database instance (persistence.mv.db file) working against Corda 2.0 can not be reused for Corda 3.0.
-  The release introduces a stable database schema resulting in changes to tables and column names.
-  Following Corda node changes some tables were removed and some columns were introduced or column type/semantics has been changed
-  (e.g. ``NODE_INFO_PARTY_CERT`` stores hash of the public key instead of the key).
+H2 database instance (persistence.mv.db file) working against Corda 2.0 can not be reused for Corda 3.0.
+The release of Corda 3.0 introduces a stable database schema resulting in changes to tables and columns.
+For exaple, ``NODE_INFO_PARTY_CERT`` now stores the hash of the public key instead of the key.
 
-  List of changes to Vault related tables:
+List of changes to Vault related tables:
 
-       1. ``NODE_TRANSACTIONS``:
-          column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``
+  1. ``NODE_TRANSACTIONS``:
 
-       2. ``VAULT_STATES``:
-          column ``CONTRACT_STATE`` removed (and  compound index reintroduced ``LOCK_ID,STATE_STATUS``)
+     column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``
 
-       3. ``VAULT_FUNGIBLE_STATES``:
-          column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` (also the field size was increased)
+  2. ``VAULT_STATES``:
 
-       4. ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
-          table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``,
-          column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
-          column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+     column ``CONTRACT_STATE`` removed (and  compound index reintroduced ``LOCK_ID,STATE_STATUS``)
 
-       5. ``VAULT_LINEAR_STATES``:
-          type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)``
-          - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in  varchar format
+  3. ``VAULT_FUNGIBLE_STATES``:
 
-       6. ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
-          table renamed to ``VAULT_LINEAR_STATES_PARTS``,
-          column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
-          column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+     column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` (also the field size was increased)
 
-       7. ``VAULT_TRANSACTION_NOTES``:
-          no changes
+  4. ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
 
-       8. ``contract_cash_states``:
-          columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store
-          Base58 representation of SHA-256 of public key prefixed with `DL`
+     table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``,
 
-       9. ``contract_cp_states``:
-          table renamed to ``cp_states``, column changes as for ``contract_cash_states``
+     column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
 
-       We advise not to migrate data and use a fresh database,
-       however for any historical reporting usage part of the vault (tables 1-7) could be migrated using the example guideline:
+     column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
 
-       1. In existing database rename schema name (by the default it’s ``public``).
+  5. ``VAULT_LINEAR_STATES``:
 
-       2. Run Corda 3.0 node against this database instance - it will create new schema with tables.
+     type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)``
+     - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in  varchar format
 
-       3. Migrate via insert `into my_table(...) select ...` following changes in table names, column names and types.
-          Example SQL migration of ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"`` table:
+  6. ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
 
-          .. sourcecode:: sql
+     table renamed to ``VAULT_LINEAR_STATES_PARTS``,
 
-             INSERT INTO NEW_SCHEMA.VAULT_FUNGIBLE_STATES_PARTS(OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) select (OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) FROM OLD_SCHEMA."VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"
+     column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
 
-       4. Delete old schema.
+     column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+
+  7. ``VAULT_TRANSACTION_NOTES``:
+
+     no changes
+
+  8. ``contract_cash_states``:
+
+     columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store
+     Base58 representation of SHA-256 of public key prefixed with `DL`
+
+  9. ``contract_cp_states``:
+
+     table renamed to ``cp_states``, column changes as for ``contract_cash_states``
+
+  .. note:: We advise not to migrate your schema, but to use a fresh database. However, for any historical reporting using a part of the vault then Tables 1-7
+    could be migrated using the example guideline:
+
+    1. In existing database rename schema name (by the default it’s ``public``).
+
+    2. Run Corda 3.0 node against this database instance - it will create new schema with tables.
+
+    3. Migrate via insert `into my_table(...) select ...` following changes in table names, column names and types.
+       Example SQL migration of ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"`` table:
+
+      .. sourcecode:: sql
+
+        INSERT INTO NEW_SCHEMA.VAULT_FUNGIBLE_STATES_PARTS(OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) select (OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) FROM OLD_SCHEMA."VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"
+
+    4. Delete old schema.
 
 Configuration
 ^^^^^^^^^^^^^
 
-* Nodes that do not require SSL to be enabled for RPC clients now need an additional port to be specified as part of their configuration.
-  In order to do that, add block e.g.,
-  ```
-  rpcSettings {
-              adminAddress "localhost:10007"
-  }
-  ```
-  to `node.conf` files.
+Nodes that do not require SSL to be enabled for RPC clients now need an additional port to be specified as part of their configuration.
+To do this, add a block as follows to the nodes configuraiton:
 
-  Also, property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block e.g., 
-  ```
-  rpcSettings {
-              address "localhost:10006"
-              adminAddress "localhost:10007"
-  }
-  ```
-  Equivalent changes should be performed on classes extending `CordformDefinition`.
+  .. sourcecode:: script
+
+    rpcSettings {
+        adminAddress "localhost:10007"
+    }
+
+to `node.conf` files.
+
+Also, the property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block as follows:
+
+  .. sourcecode:: script
+
+    rpcSettings {
+        address "localhost:10006"
+        adminAddress "localhost:10007"
+    }
+
+Equivalent changes should be performed on classes extending `CordformDefinition`.
 
 Testing
 ^^^^^^^
