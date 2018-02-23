@@ -51,6 +51,7 @@ class CommercialPaperTest {
     // DOCEND 11
 
     // DOCSTART 12
+    @Suppress("unused")
     private val simpleLedgerServices = MockServices(
             // This is the identity of the node
             megaCorp,
