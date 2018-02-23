@@ -3,9 +3,11 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.UpgradeCommand
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try
 import java.security.PublicKey
@@ -27,7 +29,7 @@ import java.util.function.Predicate
 // currently sends this across to out-of-process verifiers. We'll need to change that first.
 // DOCSTART 1
 @CordaSerializable
-data class LedgerTransaction(
+data class LedgerTransaction @JvmOverloads constructor(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
         override val inputs: List<StateAndRef<ContractState>>,
         override val outputs: List<TransactionState<ContractState>>,
@@ -39,7 +41,8 @@ data class LedgerTransaction(
         override val id: SecureHash,
         override val notary: Party?,
         val timeWindow: TimeWindow?,
-        val privacySalt: PrivacySalt
+        val privacySalt: PrivacySalt,
+        private val networkParameters: NetworkParameters? = null
 ) : FullTransaction() {
     //DOCEND 1
     init {
@@ -87,17 +90,29 @@ data class LedgerTransaction(
     /**
      * Verify that all contract constraints are valid for each state before running any contract code
      *
+     * In case the transaction was created on this node then the attachments will contain the hash of the current cordapp jars.
+     * In case this verifies an older transaction or one originated on a different node, then this verifies that the attachments
+     * are valid.
+     *
      * @throws TransactionVerificationException if the constraints fail to verify
      */
     private fun verifyConstraints() {
         val contractAttachments = attachments.filterIsInstance<ContractAttachment>()
         (inputs.map { it.state } + outputs).forEach { state ->
-            // Ordering of attachments matters - if two attachments contain the same named contract then the second
-            // will be shadowed by the first.
-            val contractAttachment = contractAttachments.find { it.contract == state.contract }
-                    ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+            val stateAttachments = contractAttachments.filter { state.contract in it.allContracts }
+            if (stateAttachments.isEmpty()) throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
-            if (!state.constraint.isSatisfiedBy(contractAttachment)) {
+            val uniqueAttachmentsForStateContract = stateAttachments.distinctBy { it.id }
+
+            // In case multiple attachments have been added for the same contract, fail because this transaction will not be able to be verified
+            // because it will break the no-overlap rule that we have implemented in our Classloaders
+            if (uniqueAttachmentsForStateContract.size > 1) {
+                throw TransactionVerificationException.ConflictingAttachmentsRejection(id, state.contract)
+            }
+
+            val contractAttachment = uniqueAttachmentsForStateContract.first()
+            val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract, networkParameters?.whitelistedContractImplementations)
+            if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
@@ -403,5 +418,14 @@ data class LedgerTransaction(
      * @throws IllegalArgumentException if no item matches the id.
      */
     fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
-}
 
+    fun copy(inputs: List<StateAndRef<ContractState>>,
+             outputs: List<TransactionState<ContractState>>,
+             commands: List<CommandWithParties<CommandData>>,
+             attachments: List<Attachment>,
+             id: SecureHash,
+             notary: Party?,
+             timeWindow: TimeWindow?,
+             privacySalt: PrivacySalt
+    ) = copy(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null)
+}
