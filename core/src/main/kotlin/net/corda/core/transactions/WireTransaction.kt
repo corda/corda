@@ -143,8 +143,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             remainingTransactionSize -= size
         }
 
-        // Check attachment size first as they are most likely to go over the limit.
-        ltx.attachments.forEach { minus(it.size) }
+        // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
+        // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
+        ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
         minus(ltx.inputs.serialize().size)
         minus(ltx.commands.serialize().size)
         minus(ltx.outputs.serialize().size)
