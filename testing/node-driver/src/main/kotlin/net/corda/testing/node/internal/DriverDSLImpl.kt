@@ -18,12 +18,12 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
@@ -260,7 +260,7 @@ class DriverDSLImpl(
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), rootTruststorePath, rootTruststorePassword).buildKeystore()
+                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)).buildKeystore()
                 config
             }
         } else {
@@ -484,7 +484,7 @@ class DriverDSLImpl(
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
                     }
-                    val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                    val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                     NotaryInfo(nodeInfo.legalIdentities[0], spec.validating)
                 }
             }

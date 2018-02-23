@@ -1,9 +1,11 @@
 package net.corda.core.contracts
 
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.allOnesHash
 import net.corda.core.internal.UpgradeCommand
 import net.corda.core.node.ServicesForResolution
 import net.corda.testing.contracts.DummyContract
@@ -34,7 +36,9 @@ class DummyContractV2Tests {
     @Test
     fun `upgrade from v1`() {
         val services = rigorousMock<ServicesForResolution>().also {
-            doReturn(rigorousMock<CordappProvider>()).whenever(it).cordappProvider
+            doReturn(rigorousMock<CordappProvider>().also {
+                doReturn(allOnesHash).whenever(it).getContractAttachmentID(any())
+            }).whenever(it).cordappProvider
         }
         val contractUpgrade = DummyContractV2()
         val v1State = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
