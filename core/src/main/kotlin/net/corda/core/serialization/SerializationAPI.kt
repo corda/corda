@@ -175,6 +175,11 @@ interface SerializationContext {
     fun withPreferredSerializationVersion(magic: SerializationMagic): SerializationContext
 
     /**
+     * A shallow copy of this context but with the given (possibly null) encoding.
+     */
+    fun withEncoding(encoding: SerializationEncoding?): SerializationContext
+
+    /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }

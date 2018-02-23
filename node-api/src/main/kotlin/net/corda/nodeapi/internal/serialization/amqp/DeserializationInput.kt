@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import com.esotericsoftware.kryo.io.ByteBufferInputStream
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializedBytes
@@ -57,8 +58,9 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
             return size + BYTES_NEEDED_TO_PEEK
         }
 
+        @VisibleForTesting
         @Throws(NotSerializableException::class)
-        fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
+        internal fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
             // Check that the lead bytes match expected header
             val amqpSequence = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
             var stream: InputStream = ByteBufferInputStream(amqpSequence)

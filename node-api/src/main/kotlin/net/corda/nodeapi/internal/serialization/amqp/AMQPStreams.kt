@@ -18,12 +18,12 @@ fun InputStream.asByteBuffer(): ByteBuffer {
     }
 }
 
-fun <T> OutputStream.asByteBuffer(remaining: Int, task: (ByteBuffer) -> T): T {
+fun <T> OutputStream.alsoAsByteBuffer(remaining: Int, task: (ByteBuffer) -> T): T {
     return if (this is ByteBufferOutputStream) {
-        asByteBuffer(remaining, task)
+        alsoAsByteBuffer(remaining, task)
     } else {
         serializeOutputStreamPool.run {
-            val result = it.asByteBuffer(remaining, task)
+            val result = it.alsoAsByteBuffer(remaining, task)
             it.copyTo(this)
             result
         }

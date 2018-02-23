@@ -75,6 +75,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     }
 
     override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)
+    override fun withEncoding(encoding: SerializationEncoding?) = copy(encoding = encoding)
 }
 
 open class SerializationFactoryImpl : SerializationFactory() {

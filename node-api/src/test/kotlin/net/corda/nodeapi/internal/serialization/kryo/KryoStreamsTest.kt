@@ -70,14 +70,14 @@ class KryoStreamsTest {
         assertEquals(3, getBuf().size)
         repeat(2) {
             assertSame<Any>(BufferOverflowException::class.java, catchThrowable {
-                stream.asByteBuffer(9) {
+                stream.alsoAsByteBuffer(9) {
                     it.put("0123456789".toByteArray())
                 }
             }.javaClass)
             assertEquals(3 + 9, getBuf().size)
         }
         // This time make too much space:
-        stream.asByteBuffer(11) {
+        stream.alsoAsByteBuffer(11) {
             it.put("0123456789".toByteArray())
         }
         stream.write("def".toByteArray())
@@ -87,7 +87,7 @@ class KryoStreamsTest {
     @Test
     fun `ByteBufferOutputStream discards data after final position`() {
         val stream = ByteBufferOutputStream(0)
-        stream.asByteBuffer(10) {
+        stream.alsoAsByteBuffer(10) {
             it.put("0123456789".toByteArray())
             it.position(5)
         }

@@ -80,7 +80,7 @@ open class SerializationOutput @JvmOverloads constructor(internal val serializer
                     stream = encoding.wrap(stream)
                 }
                 SectionId.DATA_AND_STOP.writeTo(stream)
-                stream.asByteBuffer(data.encodedSize().toInt(), data::encode)
+                stream.alsoAsByteBuffer(data.encodedSize().toInt(), data::encode)
             } finally {
                 stream.close()
             }

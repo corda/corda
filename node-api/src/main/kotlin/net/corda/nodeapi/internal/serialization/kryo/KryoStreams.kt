@@ -13,7 +13,7 @@ class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {
         }
     }
 
-    fun <T> asByteBuffer(remaining: Int, task: (ByteBuffer) -> T): T {
+    fun <T> alsoAsByteBuffer(remaining: Int, task: (ByteBuffer) -> T): T {
         ensureCapacity.invoke(this, count + remaining)
         val buffer = ByteBuffer.wrap(buf, count, remaining)
         val result = task(buffer)
