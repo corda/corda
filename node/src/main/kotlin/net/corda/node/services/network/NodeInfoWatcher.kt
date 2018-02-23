@@ -4,12 +4,11 @@ import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
@@ -118,7 +117,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     private fun processFile(file: Path): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
-            val signedData = file.readAll().deserialize<SignedNodeInfo>()
+            val signedData = file.readObject<SignedNodeInfo>()
             signedData.verified()
         } catch (e: Exception) {
             logger.warn("Exception parsing NodeInfo from file. $file", e)
