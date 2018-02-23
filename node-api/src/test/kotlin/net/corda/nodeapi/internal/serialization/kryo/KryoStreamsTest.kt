@@ -1,12 +1,16 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
+import net.corda.core.internal.declaredField
+import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import java.io.*
+import java.nio.BufferOverflowException
 import java.util.*
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class KryoStreamsTest {
     class NegOutputStream(private val stream: OutputStream) : OutputStream() {
@@ -56,5 +60,38 @@ class KryoStreamsTest {
             assertArrayEquals(data, readBytes(data.size))
             assertEquals(-1, read())
         }
+    }
+
+    @Test
+    fun `ByteBufferOutputStream works`() {
+        val stream = ByteBufferOutputStream(3)
+        stream.write("abc".toByteArray())
+        val getBuf = stream.declaredField<ByteArray>(ByteArrayOutputStream::class, "buf")::value
+        assertEquals(3, getBuf().size)
+        repeat(2) {
+            assertSame<Any>(BufferOverflowException::class.java, catchThrowable {
+                stream.alsoAsByteBuffer(9) {
+                    it.put("0123456789".toByteArray())
+                }
+            }.javaClass)
+            assertEquals(3 + 9, getBuf().size)
+        }
+        // This time make too much space:
+        stream.alsoAsByteBuffer(11) {
+            it.put("0123456789".toByteArray())
+        }
+        stream.write("def".toByteArray())
+        assertArrayEquals("abc0123456789def".toByteArray(), stream.toByteArray())
+    }
+
+    @Test
+    fun `ByteBufferOutputStream discards data after final position`() {
+        val stream = ByteBufferOutputStream(0)
+        stream.alsoAsByteBuffer(10) {
+            it.put("0123456789".toByteArray())
+            it.position(5)
+        }
+        stream.write("def".toByteArray())
+        assertArrayEquals("01234def".toByteArray(), stream.toByteArray())
     }
 }
