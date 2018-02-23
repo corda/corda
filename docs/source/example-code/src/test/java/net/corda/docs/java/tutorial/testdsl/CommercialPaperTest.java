@@ -24,6 +24,7 @@ import static net.corda.testing.node.NodeTestUtils.ledger;
 import static net.corda.testing.node.NodeTestUtils.transaction;
 
 public class CommercialPaperTest {
+
     private static final TestIdentity alice = new TestIdentity(ALICE_NAME, 70L);
     private static final TestIdentity bigCorp = new TestIdentity(new CordaX500Name("BigCorp", "New York", "GB"));
     private static final TestIdentity bob = new TestIdentity(BOB_NAME, 80L);
