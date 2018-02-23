@@ -87,13 +87,6 @@ Significant Changes in 3.0
     this is also an important step towards formally defining the official peer to peer messaging protocol of Corda, something
     required for more in-depth security audits of the Corda protocol.
 
-    .. warning:: The Artemis topics used for peer-to-peer communication have been changed to be more consistent with future
-      cryptographic agility and to open up the future possibility of sharing brokers between nodes. This is a breaking wire
-      level change as it means that nodes after this change will not be able to communicate correctly with nodes running the
-      previous version. Also, any pending enqueued messages in the Artemis message store will not be delivered correctly to
-      their original target. However, assuming a clean reset of the artemis data and that the nodes are consistent versions,
-      data persisted via the AMQP serializer will be forward compatible.
-
 * **New Network Map Service**:
 
   This release introduces the new network map architecture. The network map service has been completely redesigned and
