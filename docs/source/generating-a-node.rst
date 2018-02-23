@@ -121,8 +121,8 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
     }
 
 To extend node configuration beyond properties defined in the ``deployNodes`` task use ``configFile`` property with the path (relative or absolute) set to an additional configuration file.
-This file should have a standard format as node.conf one. The properties from that file will be appended as it is to the resulting node configuration.
-The path to the file can also be added while running Gradle task via ``-PconfigFile`` command line option. However, the same file will be applied to all nodes.
+This file should follow the standard format, as per node.conf. The properties from this file will be appended to the generated node configuration.
+Additionaly, the path to the file can also be added while running the Gradle task via the ``-PconfigFile`` command line option. However, the same file will be applied to all nodes.
 Following the previous example `PartyB` node will have additional configuration options added from a file `none-b.conf`:
 
 .. sourcecode:: groovy
