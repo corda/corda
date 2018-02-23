@@ -14,7 +14,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.ByteSequence
@@ -164,7 +163,7 @@ class NetworkBootstrapper {
             if (nodeConfig.hasPath("notary")) {
                 val validating = nodeConfig.getConfig("notary").getBoolean("validating")
                 // And the node-info file contains the notary's identity
-                val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                 NotaryInfo(nodeInfo.notaryIdentity(), validating)
             } else {
                 null
