@@ -319,7 +319,8 @@ class X509UtilitiesTest {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.P2P,
+                null)
         val expected = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Principal, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         val serialized = expected.serialize(factory, context).bytes
         val actual = serialized.deserialize<X509Certificate>(factory, context)
@@ -334,7 +335,8 @@ class X509UtilitiesTest {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.P2P,
+                null)
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB_NAME.x500Principal, BOB.publicKey)
