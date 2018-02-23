@@ -2,18 +2,20 @@ package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.list
+import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.CompatibilityZoneParams
@@ -64,8 +66,7 @@ class NetworkMapTest {
         ) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val networkParameters = (alice.baseDirectory / NETWORK_PARAMS_FILE_NAME)
-                    .readAll()
-                    .deserialize<SignedDataWithCert<NetworkParameters>>()
+                    .readObject<SignedNetworkParameters>()
                     .verified()
             // We use a random modified time above to make the network parameters unqiue so that we're sure they came
             // from the server

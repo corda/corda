@@ -9,14 +9,13 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
@@ -150,7 +149,7 @@ class NetworkBootstrapper {
             if (nodeConfig.hasPath("notary")) {
                 val validating = nodeConfig.getConfig("notary").getBoolean("validating")
                 // And the node-info file contains the notary's identity
-                val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                 NotaryInfo(nodeInfo.notaryIdentity(), validating)
             } else {
                 null
