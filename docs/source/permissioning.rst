@@ -32,9 +32,9 @@ A Corda network has three types of certificate authorities (CAs):
 
 The following constraints are also imposed:
 
-* Doorman certificates are issued by a certificate
-* Well-known service identity certificates are issued by a certificate marked as Doorman
-* Node CA certificates are issued by a certificate marked as Doorman
+* Doorman certificates are issued by a network root which certificate doesn't contain the extension
+* Well-known service identity certificates are issued by an entity with a Doorman certificate
+* Node CA certificates are issued by an entity with a Doorman certificate
 * Well known legal identity/TLS certificates are issued by a certificate marked as node CA
 * Confidential legal identity certificates are issued by a certificate marked as well known legal identity
 * Party certificates are marked as either a well known identity or a confidential identity
@@ -114,7 +114,7 @@ Creating the root network CA's keystore and truststore
    alias ``cordarootca``
 
    * This keystore will be provisioned to the individual nodes later. The `truststore.jks` needs to be given to the node
-    before it does registration with the doorman.
+    before it registers with the doorman by the network operator.
 
 .. warning:: The root network CA's private key should be protected and kept safe.
 
