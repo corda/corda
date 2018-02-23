@@ -2,10 +2,7 @@
 
 package net.corda.nodeapi.internal.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigUtil
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.uncheckedCast
@@ -78,7 +75,12 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
-        CordaX500Name::class -> CordaX500Name.parse(getString(path))
+        CordaX500Name::class -> {
+            when (getValue(path).valueType()) {
+                ConfigValueType.OBJECT -> getConfig(path).parseAs()
+                else -> CordaX500Name.parse(getString(path))
+            }
+        }
         Properties::class -> getConfig(path).toProperties()
         Config::class -> getConfig(path)
         else -> if (typeClass.java.isEnum) {
