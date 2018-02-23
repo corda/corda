@@ -29,10 +29,10 @@ As such we'd like to extend special thanks to
     Tomas's contribution can be found on GitHub
     `here <https://github.com/corda/corda/commit/342090db62ae40cef2be30b2ec4aa451b099d0b7>`_
 
-    .. warning:: This is an experimental feature that has not been tested as part of our standard release testing. 
+    .. warning:: This is an experimental feature that has not been tested as part of our standard release testing.
 
   * Rose Molina Atienza for correcting our careless spelling slip
-    
+
     Rose's change can be found on GitHub
     `here <https://github.com/corda/corda/commit/128d5cad0af7fc5595cac3287650663c9c9ac0a3>`_
 
@@ -65,7 +65,7 @@ Significant Changes in 3.0
 
     .. note:: This release delivers the bulk of our transition from Kryo serialisation to AMQP serialisation. This means
       that many of the restrictions that were documented in previous versions of Corda are now enforced.
- 
+
       In particular, you are advised to review the section titled :ref:`Custom Types <amqp_custom_types_ref>`.
       To aid with the transition, we have included support in this release for default construction and instantiation of
       objects with inaccessible private fields, but it is not guaranteed that this support will continue into future versions;
@@ -126,12 +126,12 @@ Significant Changes in 3.0
 
   .. tip:: This is a fairly heavyweight operation and should thus be given due consideration as to the impact of running it an
     the most opertune time to do so.
-  
+
   Hash constraints provide for maximum decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a
   new constraint, a _network parameters_ constraint, that allows the list of acceptable contract JARs to be maintained by the
   operator of the compatibility zone rather than being hard-coded. This allows for simple upgrades at the cost of the introduction
   of an element of centralisation.
-  
+
   .. note:: In prior versions of Corda, states included the hash of their defining application JAR. However, the code that was
     used actually came from the class path. In this release, transactions have the JAR containing the contract and states attached
     to them. The code will be copied over the network to the recipient if that peer lacks a copy of the app. However, for security
@@ -150,9 +150,7 @@ Significant Changes in 3.0
   can be performed without any additional steps or transactions being signed, at the cost of trusting the app developer more and
   some additional complexity around managing app signing.
 
-  .. info:: A good example of this is the << app >> found << here >>
-
-  <<Andrius to provide link to doc and fill in above>>
+  Please see the :doc:`upgrading-cordapps` for more information on upgrading contracts.
 
 * **Test API Stability**
 
@@ -161,7 +159,7 @@ Significant Changes in 3.0
   over time. This should greatly increase confidence when upgrading between versions, as your testing environments will work
   without alteration.
 
-  Please see the :doc:`upgrade-notes` for more information on transitioning older tests to the new framework
+  Please see the :doc:`upgrade-notes` for more information on transitioning older tests to the new framework.
 
 Other Functional Improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
