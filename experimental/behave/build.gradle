@@ -48,7 +48,7 @@ dependencies {
 
     // Library
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     compile("com.github.corda.crash:crash.shell:$crash_version") {
@@ -102,6 +102,11 @@ compileScenarioKotlin {
 
 test {
     testLogging.showStandardStreams = true
+    outputs.upToDateWhen { false }
+    onlyIf {
+        // Only run tests if the sub-project is run explicitly
+        project.projectDir.path == System.getProperty("user.dir")
+    }
 }
 
 task scenarios(type: Test) {
@@ -114,6 +119,3 @@ task scenarios(type: Test) {
         logger.warn("Only running tests tagged with: $tags ...")
     }
 }
-
-//scenarios.mustRunAfter test
-//scenarios.dependsOn test
