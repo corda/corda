@@ -8,6 +8,41 @@ import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
 
+    if(args.isEmpty()) {
+        println("Usage: launcher <main-class-name> [args]")
+        exitProcess(0)
+    }
+
+    // TODO: --base-directory is specific of the Node app, it should be controllable by a config property
+    val nodeBaseDir = Settings.WORKING_DIR
+            .resolve(getBaseDirectory(args) ?: ".")
+            .toAbsolutePath()
+
+    val appClassLoader = setupClassLoader(nodeBaseDir)
+
+    val appMain = try {
+        appClassLoader
+                .loadClass(args[0])
+                .getMethod("main", Array<String>::class.java)
+    } catch (e: Exception) {
+        System.err.println("Error looking for method 'main' in class ${args[0]}:")
+        e.printStackTrace()
+        exitProcess(1)
+    }
+
+    // Propagate current working directory via system property, to patch it after javapackager
+    System.setProperty("corda.launcher.cwd", nodeBaseDir.toString())
+    System.setProperty("user.dir", nodeBaseDir.toString())
+
+    try {
+        appMain.invoke(null, args.sliceArray(1..args.lastIndex))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        exitProcess(1)
+    }
+}
+
+private fun setupClassLoader(nodeBaseDir: Path): ClassLoader {
     val sysClassLoader = ClassLoader.getSystemClassLoader()
 
     val appClassLoader = (sysClassLoader as? Loader) ?: {
@@ -15,16 +50,7 @@ fun main(args: Array<String>) {
         Loader(sysClassLoader)
     } ()
 
-    if(args.isEmpty()) {
-        println("Usage: launcher <main-class-name>")
-        exitProcess(0)
-    }
-
-    // Resolve plugins directory and extend classpath
-    val nodeBaseDir = Settings.WORKING_DIR
-            .resolve(getBaseDirectory(args) ?: ".")
-            .toAbsolutePath()
-
+    // Lookup plugins and extend classpath
     val pluginURLs = Settings.PLUGINS.flatMap {
         val entry = nodeBaseDir.resolve(it)
         if (Files.isDirectory(entry)) {
@@ -36,19 +62,10 @@ fun main(args: Array<String>) {
 
     appClassLoader.augmentClasspath(pluginURLs)
 
-    // Propagate current working directory via system property, to patch it after javapackager
-    System.setProperty("corda.launcher.cwd", nodeBaseDir.toString())
-    System.setProperty("user.dir", nodeBaseDir.toString())
+    // For logging
+    System.setProperty("corda.launcher.appclassloader.urls", appClassLoader.urLs.joinToString(":"))
 
-    try {
-        appClassLoader
-                .loadClass(args[0])
-                .getMethod("main", Array<String>::class.java)
-                .invoke(null, args.sliceArray(1..args.lastIndex))
-    } catch (e: Exception) {
-        e.printStackTrace()
-        exitProcess(1)
-    }
+    return appClassLoader
 }
 
 private fun getBaseDirectory(args: Array<String>): String? {

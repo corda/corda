@@ -8,19 +8,30 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.collections.HashSet
 
+// Expose Corda bootstrapping settings from property file
 object Settings {
 
-    val CORDA_RUNTIME_SETTINGS = "../runtime.properties"
-    val WORKING_DIR: Path
+    // JavaPackager reset cwd to the "/apps" subfolder, so its location is in the parent directory
+    private val LAUNCHER_PATH = Paths.get("..")
+
+    // Launcher property file
+    private val CORDA_RUNTIME_SETTINGS = LAUNCHER_PATH.resolve("runtime.properties")
+
+    // The application working directory
+    val WORKING_DIR: Path = System.getenv("CORDA_LAUNCHER_CWD")?.let {Paths.get(it)} ?: LAUNCHER_PATH
+
+    // Application classpath
     val CLASSPATH: List<URL>
+
+    // Plugin directories (all contained jar files are added to classpath)
     val PLUGINS: List<Path>
-    val LIBPATH: Path
+
+    // Path of the "lib" subdirectory in bundle
+    private val LIBPATH: Path
 
     init {
-        WORKING_DIR = Paths.get(System.getenv("CORDA_LAUNCHER_CWD") ?: "..")
-
         val settings = Properties().apply {
-            load(FileInputStream(CORDA_RUNTIME_SETTINGS))
+            load(FileInputStream(CORDA_RUNTIME_SETTINGS.toFile()))
         }
 
         LIBPATH = Paths.get(settings.getProperty("libpath") ?: ".")
@@ -29,7 +40,7 @@ object Settings {
     }
 
     private fun parseClasspath(config: Properties): List<URL> {
-        val libDir = Paths.get("..").resolve(LIBPATH).toAbsolutePath()
+        val libDir = LAUNCHER_PATH.resolve(LIBPATH).toAbsolutePath()
         val cp = config.getProperty("classpath") ?:
                 throw Error("Missing 'classpath' property from config")
 
