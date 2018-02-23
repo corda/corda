@@ -8,10 +8,12 @@ import com.atlassian.jira.rest.client.api.domain.Issue
 import com.atlassian.jira.rest.client.api.domain.IssueType
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder
 import com.atlassian.jira.rest.client.api.domain.input.TransitionInput
+import com.r3.corda.networkmanage.common.utils.getCertRole
+import com.r3.corda.networkmanage.common.utils.getEmail
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.util.io.pem.PemObject
@@ -33,6 +35,7 @@ class JiraClient(private val restClient: JiraRestClient, private val projectCode
     private var canceledTransitionId: Int = -1
     private var startProgressTransitionId: Int = -1
 
+    // TODO: Pass in a parsed object instead of raw PKCS10 request.
     fun createRequestTicket(requestId: String, signingRequest: PKCS10CertificationRequest) {
         // Check there isn't already a ticket for this request.
         if (getIssueById(requestId) != null) {
@@ -49,13 +52,29 @@ class JiraClient(private val restClient: JiraRestClient, private val projectCode
         // TODO The subject of the signing request has already been validated and parsed into a CordaX500Name. We shouldn't
         // have to do it again here.
         val subject = CordaX500Name.build(X500Principal(signingRequest.subject.encoded))
+        val email = signingRequest.getEmail()
 
-        val email = signingRequest.getAttributes(BCStyle.E).firstOrNull()?.attrValues?.firstOrNull()?.toString()
+        val certRole = signingRequest.getCertRole()
+
+        val ticketSummary = if (subject.organisationUnit != null) {
+            "${subject.organisationUnit}, ${subject.organisation}"
+        } else {
+            subject.organisation
+        }
+
+        val data = mapOf("Requested Role Type" to certRole.name,
+                "Organisation" to subject.organisation,
+                "Organisation Unit" to subject.organisationUnit,
+                "Nearest City" to subject.locality,
+                "Country" to subject.country,
+                "Email" to email)
+
+        val ticketDescription = data.filter { it.value != null }.map { "${it.key}: ${it.value}" }.joinToString("\n") + "\n\n{code}$request{code}"
 
         val issue = IssueInputBuilder().setIssueTypeId(taskIssueType.id)
                 .setProjectKey(projectCode)
-                .setDescription("Organisation: ${subject.organisation}\nNearest City: ${subject.locality}\nCountry: ${subject.country}\nEmail: $email\n\n{code}$request{code}")
-                .setSummary(subject.organisation)
+                .setDescription(ticketDescription)
+                .setSummary(ticketSummary)
                 .setFieldValue(requestIdField.id, requestId)
         // This will block until the issue is created.
         restClient.issueClient.createIssue(issue.build()).fail { logger.error("Exception when creating JIRA issue.", it) }.claim()

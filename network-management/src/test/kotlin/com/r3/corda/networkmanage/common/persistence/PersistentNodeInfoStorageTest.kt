@@ -5,6 +5,7 @@ import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -132,7 +133,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
 internal fun createValidSignedNodeInfo(organisation: String,
                                        storage: CertificationRequestStorage): Pair<NodeInfoWithSigned, PrivateKey> {
-    val (csr, nodeKeyPair) = createRequest(organisation)
+    val (csr, nodeKeyPair) = createRequest(organisation, certRole = CertRole.NODE_CA)
     val requestId = storage.saveRequest(csr)
     storage.markRequestTicketCreated(requestId)
     storage.approveRequest(requestId, "TestUser")

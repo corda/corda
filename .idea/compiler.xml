@@ -134,6 +134,9 @@
       <module name="quasar-hook_test" target="1.8" />
       <module name="quasar-utils_main" target="1.8" />
       <module name="quasar-utils_test" target="1.8" />
+      <module name="registration-tool_integrationTest" target="1.8" />
+      <module name="registration-tool_main" target="1.8" />
+      <module name="registration-tool_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />

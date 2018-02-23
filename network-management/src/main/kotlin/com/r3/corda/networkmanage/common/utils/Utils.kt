@@ -5,7 +5,9 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
+import net.corda.core.CordaOID
 import net.corda.core.crypto.sha256
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -16,6 +18,10 @@ import net.corda.nodeapi.internal.network.NetworkParameters
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
+import org.bouncycastle.asn1.ASN1Encodable
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.x500.style.BCStyle
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -75,4 +81,25 @@ private fun String.toCamelcase(): String {
     return if (contains('_') || contains('-')) {
         CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, this.replace("-", "_"))
     } else this
+}
+
+private fun PKCS10CertificationRequest.firstAttributeValue(identifier: ASN1ObjectIdentifier): ASN1Encodable? {
+    return getAttributes(identifier).firstOrNull()?.attrValues?.firstOrNull()
+}
+
+/**
+ * Helper method to extract cert role from certificate signing request. Default to NODE_CA if not exist for backward compatibility.
+ */
+fun PKCS10CertificationRequest.getCertRole(): CertRole {
+    // Default cert role to Node_CA for backward compatibility.
+    val encoded = firstAttributeValue(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE))?.toASN1Primitive()?.encoded ?: return CertRole.NODE_CA
+    return CertRole.getInstance(encoded)
+}
+
+/**
+ * Helper method to extract email from certificate signing request.
+ */
+fun PKCS10CertificationRequest.getEmail(): String {
+    // TODO: Add basic email check?
+    return firstAttributeValue(BCStyle.E).toString()
 }
