@@ -31,20 +31,34 @@ To get started, please follow the instructions below:
  * Go up to the root directory and build the capsule JAR.
 
     ```bash
-    $ cd ../../
-    $ ./gradlew install
+    experimental/behave> cd ../../
+    > ./gradlew install
     ```
 
  * Come back to this folder and run:
 
     ```bash
-    $ cd experimental/behave
-    $ ./prepare.sh
+    > cd experimental/behave
+    experimental/behave> ./prepare.sh
     ```
 
 This script will download necessary database drivers and set up
 the dependencies directory with copies of the Corda fat-JAR and
 the network bootstrapping tool.
+
+# Unit Tests
+
+Note that the unit tests for this experimental module is not
+included in the root project build, so running `./gradlew test`
+from the top level directory will simply skip all tests in this
+sub-project.
+
+To run the unit tests, navigate to the `behave`-folder and run
+the following command:
+
+```bash
+experimental/behave> ../../gradlew test
+```
 
 # Selective Runs
 
@@ -52,7 +66,7 @@ If you only want to run tests of a specific tag, you can append
 the following parameter to the Gradle command:
 
 ```bash
-$ ../../gradlew scenario -Ptags="@cash"
+experimental/behave> ../../gradlew scenario -Ptags="@cash"
 # or
-$ ../../gradlew scenario -Ptags="@cash,@logging"
+experimental/behave> ../../gradlew scenario -Ptags="@cash,@logging"
 ```
