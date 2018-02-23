@@ -667,8 +667,8 @@ private class P2PMessagingConsumer(
         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>) : LifecycleSupport {
 
     private companion object {
-        private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY}=${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}"
-        private const val existingSessionMessages = "${P2PMessagingHeaders.Type.KEY}<>${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}"
+        private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY}='${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}'"
+        private const val existingSessionMessages = "${P2PMessagingHeaders.Type.KEY}<>'${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}'"
     }
 
     private var startedFlag = false
