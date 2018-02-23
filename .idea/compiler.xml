@@ -10,6 +10,9 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="behave_main" target="1.8" />
+      <module name="behave_scenario" target="1.8" />
+      <module name="behave_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
@@ -27,6 +30,8 @@
       <module name="confidential-identities_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
+      <module name="cordapp-configuration_main" target="1.8" />
+      <module name="cordapp-configuration_test" target="1.8" />
       <module name="cordapp_integrationTest" target="1.8" />
       <module name="cordapp_main" target="1.8" />
       <module name="cordapp_test" target="1.8" />
@@ -65,6 +70,7 @@
       <module name="intellij-plugin_test" target="1.8" />
       <module name="irs-demo_integrationTest" target="1.8" />
       <module name="irs-demo_main" target="1.8" />
+      <module name="irs-demo_systemTest" target="1.8" />
       <module name="irs-demo_test" target="1.8" />
       <module name="isolated_main" target="1.8" />
       <module name="isolated_test" target="1.8" />
@@ -130,6 +136,12 @@
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
+      <module name="smoke-test-utils_main" target="1.8" />
+      <module name="smoke-test-utils_test" target="1.8" />
+      <module name="test-common_main" target="1.8" />
+      <module name="test-common_test" target="1.8" />
+      <module name="test-utils_main" target="1.8" />
+      <module name="test-utils_test" target="1.8" />
       <module name="testing-smoke-test-utils_main" target="1.8" />
       <module name="testing-smoke-test-utils_test" target="1.8" />
       <module name="testing-test-common_main" target="1.8" />

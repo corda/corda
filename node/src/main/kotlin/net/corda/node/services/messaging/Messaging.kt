@@ -97,7 +97,7 @@ interface MessagingService {
      * @param additionalProperties optional additional message headers.
      * @param topic identifier for the topic the message is sent to.
      */
-    fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom())): Message
+    fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom()), additionalHeaders: Map<String, String> = emptyMap()): Message
 
     /** Given information about either a specific node or a service returns its corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
@@ -106,9 +106,8 @@ interface MessagingService {
     val myAddress: SingleMessageRecipient
 }
 
-
-fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom()), retryId: Long? = null)
-        = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId), to, retryId)
+fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom()), retryId: Long? = null, additionalHeaders: Map<String, String> = emptyMap())
+        = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to, retryId)
 
 interface MessageHandlerRegistration
 
@@ -129,6 +128,7 @@ interface Message {
     val debugTimestamp: Instant
     val uniqueMessageId: DeduplicationId
     val senderUUID: String?
+    val additionalHeaders: Map<String, String>
 }
 
 // TODO Have ReceivedMessage point to the TLS certificate of the peer, and [peer] would simply be the subject DN of that.
@@ -165,3 +165,11 @@ interface AcknowledgeHandle {
 }
 
 typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, AcknowledgeHandle) -> Unit
+
+object P2PMessagingHeaders {
+
+    object Type {
+        const val KEY = "corda_p2p_message_type"
+        const val SESSION_INIT_VALUE = "session_init"
+    }
+}

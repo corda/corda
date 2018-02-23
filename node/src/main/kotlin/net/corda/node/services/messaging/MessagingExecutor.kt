@@ -223,6 +223,7 @@ class MessagingExecutor(
             if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {
                 putLongProperty(org.apache.activemq.artemis.api.core.Message.HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
             }
+            message.additionalHeaders.forEach { key, value -> putStringProperty(key, value) }
         }
     }
 

@@ -193,8 +193,9 @@ open class Node(configuration: NodeConfiguration,
                 services.networkMapCache,
                 services.monitoringService.metrics,
                 advertisedAddress,
-                networkParameters.maxMessageSize
-        )
+                networkParameters.maxMessageSize,
+                nodeProperties.flowsDrainingMode::isEnabled,
+                nodeProperties.flowsDrainingMode.values)
     }
 
     private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {

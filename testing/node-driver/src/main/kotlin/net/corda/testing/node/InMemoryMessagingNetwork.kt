@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
@@ -19,7 +18,12 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.AcknowledgeHandle
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.messaging.MessageHandler
+import net.corda.node.services.messaging.MessageHandlerRegistration
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -260,6 +264,9 @@ class InMemoryMessagingNetwork private constructor(
                                override val uniqueMessageId: DeduplicationId,
                                override val debugTimestamp: Instant = Instant.now(),
                                override val senderUUID: String? = null) : Message {
+
+        override val additionalHeaders: Map<String, String> = emptyMap()
+
         override fun toString() = "$topic#${String(data.bytes)}"
     }
 
@@ -270,7 +277,10 @@ class InMemoryMessagingNetwork private constructor(
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name,
                                                override val senderUUID: String? = null,
-                                               override val senderSeqNo: Long? = null) : ReceivedMessage
+                                               override val senderSeqNo: Long? = null) : ReceivedMessage {
+
+        override val additionalHeaders: Map<String, String> = emptyMap()
+    }
 
     /**
      * A [TestMessagingService] that provides a [MessagingService] abstraction that also contains the ability to
@@ -368,7 +378,7 @@ class InMemoryMessagingNetwork private constructor(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId): Message {
+        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
             return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId)
         }
 

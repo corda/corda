@@ -1,7 +1,11 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
@@ -19,18 +23,18 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
-@Ignore("Pending implementation")
 class P2PFlowsDrainingModeTest {
 
     private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
-    private var executor: ExecutorService? = null
+    private var executor: ScheduledExecutorService? = null
 
     companion object {
         private val logger = loggerFor<P2PFlowsDrainingModeTest>()
@@ -38,7 +42,7 @@ class P2PFlowsDrainingModeTest {
 
     @Before
     fun setup() {
-        executor = Executors.newSingleThreadExecutor()
+        executor = Executors.newSingleThreadScheduledExecutor()
     }
 
     @After
@@ -49,7 +53,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `flows draining mode suspends consumption of initial session messages`() {
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
             val initiatedNode = startNode().getOrThrow()
             val initiating = startNode(rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.chooseIdentity()
@@ -61,11 +65,11 @@ class P2PFlowsDrainingModeTest {
             initiating.apply {
                 val flow = startFlow(::InitiateSessionFlow, counterParty)
                 // this should be really fast, for the flow has already started, so 5 seconds should never be a problem
-                executor!!.submit({
+                executor!!.schedule({
                     logger.info("Now disabling flows draining mode for $counterParty.")
                     shouldFail = false
                     initiated.setFlowsDrainingModeEnabled(false)
-                })
+                }, 5, TimeUnit.SECONDS)
                 flow.returnValue.map { result ->
                     if (shouldFail) {
                         fail("Shouldn't happen until flows draining mode is switched off.")

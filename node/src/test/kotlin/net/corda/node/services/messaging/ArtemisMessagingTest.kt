@@ -6,20 +6,29 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
-import net.corda.node.services.config.*
+import net.corda.node.services.config.CertChainPolicyConfig
+import net.corda.node.services.config.EnterpriseConfiguration
+import net.corda.node.services.config.MutualExclusionConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.freeLocalHostAndPort
+import net.corda.testing.core.freePort
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -260,7 +269,6 @@ class ArtemisMessagingTest {
         }
     }
 
-
     private fun startNodeMessagingClient() {
         messagingClient!!.start()
     }
@@ -296,7 +304,9 @@ class ArtemisMessagingTest {
                     database,
                     networkMapCache,
                     MetricRegistry(),
-                    maxMessageSize = maxMessageSize).apply {
+                    maxMessageSize = maxMessageSize,
+                    isDrainingModeOn = { false },
+                    drainingModeWasChangedEvents = PublishSubject.create()).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

@@ -10,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.AcknowledgeHandle
+import net.corda.node.services.messaging.P2PMessagingHeaders
 import net.corda.node.services.messaging.ReceivedMessage
 import java.io.NotSerializableException
 
@@ -50,7 +51,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     @Suspendable
     override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId) {
         log.trace { "Sending message $deduplicationId $message to party $party" }
-        val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId)
+        val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders())
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party) ?: throw IllegalArgumentException("Don't know about $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val sequenceKey = when (message) {
@@ -58,6 +59,13 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             is ExistingSessionMessage -> message.recipientSessionId
         }
         serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey)
+    }
+
+    private fun SessionMessage.additionalHeaders(): Map<String, String> {
+        return when (this) {
+            is InitialSessionMessage -> mapOf(P2PMessagingHeaders.Type.KEY to P2PMessagingHeaders.Type.SESSION_INIT_VALUE)
+            else -> emptyMap()
+        }
     }
 
     private fun serializeSessionMessage(message: SessionMessage): SerializedBytes<SessionMessage> {
