@@ -30,6 +30,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 class RPCStabilityTests {
     @Rule
@@ -127,7 +128,7 @@ class RPCStabilityTests {
         rpcDriver {
             fun startAndCloseServer(broker: RpcBrokerHandle) {
                 startRpcServerWithBrokerRunning(
-                        configuration = RPCServerConfiguration.default.copy(consumerPoolSize = 1, producerPoolBound = 1),
+                        configuration = RPCServerConfiguration.default,
                         ops = DummyOps,
                         brokerHandle = broker
                 ).rpcServer.close()
@@ -148,7 +149,7 @@ class RPCStabilityTests {
     @Test
     fun `rpc client close doesnt leak broker resources`() {
         rpcDriver {
-            val server = startRpcServer(configuration = RPCServerConfiguration.default.copy(consumerPoolSize = 1, producerPoolBound = 1), ops = DummyOps).get()
+            val server = startRpcServer(configuration = RPCServerConfiguration.default, ops = DummyOps).get()
             RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password).close()
             val initial = server.broker.getStats()
             repeat(100) {
@@ -337,11 +338,12 @@ class RPCStabilityTests {
             val request = RPCApi.ClientToServer.RpcRequest(
                     clientAddress = SimpleString(myQueue),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
-                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes,
+                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT),
                     replyId = Trace.InvocationId.newInstance(),
                     sessionId = Trace.SessionId.newInstance()
             )
             request.writeToClientMessage(message)
+            message.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, 0)
             producer.send(message)
             session.commit()
 
@@ -350,6 +352,79 @@ class RPCStabilityTests {
         }
     }
 
+    @Test
+    fun `deduplication in the server`() {
+        rpcDriver {
+            val server = startRpcServer(ops = SlowConsumerRPCOpsImpl()).getOrThrow()
+
+            // Construct an RPC client session manually
+            val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
+            val session = startArtemisSession(server.broker.hostAndPort!!)
+            session.createTemporaryQueue(myQueue, myQueue)
+            val consumer = session.createConsumer(myQueue, null, -1, -1, false)
+            val replies = ArrayList<Any>()
+            consumer.setMessageHandler {
+                replies.add(it)
+                it.acknowledge()
+            }
+
+            val producer = session.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
+            session.start()
+
+            pollUntilClientNumber(server, 1)
+
+            val message = session.createMessage(false)
+            val request = RPCApi.ClientToServer.RpcRequest(
+                    clientAddress = SimpleString(myQueue),
+                    methodName = DummyOps::protocolVersion.name,
+                    serialisedArguments = emptyList<Any>().serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT),
+                    replyId = Trace.InvocationId.newInstance(),
+                    sessionId = Trace.SessionId.newInstance()
+            )
+            request.writeToClientMessage(message)
+            message.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, 0)
+            producer.send(message)
+            // duplicate the message
+            producer.send(message)
+
+            pollUntilTrue("Number of replies is 1") {
+                replies.size == 1
+            }.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `deduplication in the client`() {
+        rpcDriver {
+            val broker = startRpcBroker().getOrThrow()
+
+            // Construct an RPC server session manually
+            val session = startArtemisSession(broker.hostAndPort!!)
+            val consumer = session.createConsumer(RPCApi.RPC_SERVER_QUEUE_NAME)
+            val producer = session.createProducer()
+            val dedupeId = AtomicLong(0)
+            consumer.setMessageHandler {
+                it.acknowledge()
+                val request = RPCApi.ClientToServer.fromClientMessage(it)
+                when (request) {
+                    is RPCApi.ClientToServer.RpcRequest -> {
+                        val reply = RPCApi.ServerToClient.RpcReply(request.replyId, Try.Success(0), "server")
+                        val message = session.createMessage(false)
+                        reply.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
+                        message.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, dedupeId.getAndIncrement())
+                        producer.send(request.clientAddress, message)
+                        // duplicate the reply
+                        producer.send(request.clientAddress, message)
+                    }
+                    is RPCApi.ClientToServer.ObservablesClosed -> {
+                    }
+                }
+            }
+            session.start()
+
+            startRpcClient<RPCOps>(broker.hostAndPort!!).getOrThrow()
+        }
+    }
 }
 
 fun RPCDriverDSL.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {

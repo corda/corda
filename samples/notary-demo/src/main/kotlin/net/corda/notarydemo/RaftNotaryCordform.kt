@@ -13,7 +13,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
-fun main(args: Array<String>) = RaftNotaryCordform().deployNodes()
+fun main(args: Array<String>) = RaftNotaryCordform().nodeRunner().deployAndRunNodes()
 
 internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
 

@@ -11,7 +11,6 @@ import org.junit.Test
 import java.nio.file.Paths
 import java.util.*
 import kotlin.test.assertEquals
-import java.util.*
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -61,6 +60,18 @@ class NodeConfigurationImplTest {
         HikariConfig(testConf.dataSourceProperties)
     }
 
+    @Test
+    fun `check crashShell flags helper`() {
+        assertFalse { testConfiguration.copy(sshd = null).shouldStartSSHDaemon() }
+        assertTrue { testConfiguration.copy(sshd = SSHDConfiguration(1234)).shouldStartSSHDaemon() }
+        assertFalse { testConfiguration.copy(noLocalShell = true).shouldStartLocalShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = false, devMode = false).shouldStartLocalShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = false, devMode = true).shouldStartLocalShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = true).shouldInitCrashShell() }
+        assertFalse { testConfiguration.copy(sshd = null).shouldInitCrashShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = true, sshd = null).shouldInitCrashShell() }
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
@@ -95,6 +106,7 @@ class NodeConfigurationImplTest {
                 notary = null,
                 certificateChainCheckPolicies = emptyList(),
                 devMode = true,
+                noLocalShell = false,
                 activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
                 rpcSettings = rpcSettings,
                 relay = null,

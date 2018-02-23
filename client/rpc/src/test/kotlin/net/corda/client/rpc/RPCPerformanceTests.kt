@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.RPCOps
+import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -88,13 +89,10 @@ class RPCPerformanceTests : AbstractRPCTest() {
                 val proxy = testProxy(
                         RPCClientConfiguration.default.copy(
                                 cacheConcurrencyLevel = 16,
-                                observationExecutorPoolSize = 2,
-                                producerPoolBound = 2
+                                observationExecutorPoolSize = 2
                         ),
                         RPCServerConfiguration.default.copy(
-                                rpcThreadPoolSize = 8,
-                                consumerPoolSize = 2,
-                                producerPoolBound = 8
+                                rpcThreadPoolSize = 8
                         )
                 )
 
@@ -131,13 +129,10 @@ class RPCPerformanceTests : AbstractRPCTest() {
             val proxy = testProxy(
                     RPCClientConfiguration.default.copy(
                             reapInterval = 1.seconds,
-                            cacheConcurrencyLevel = 16,
-                            producerPoolBound = 8
+                            cacheConcurrencyLevel = 16
                     ),
                     RPCServerConfiguration.default.copy(
-                            rpcThreadPoolSize = 8,
-                            consumerPoolSize = 1,
-                            producerPoolBound = 8
+                            rpcThreadPoolSize = 8
                     )
             )
             startPublishingFixedRateInjector(
@@ -167,9 +162,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
             rpcDriver {
                 val proxy = testProxy(
                         RPCClientConfiguration.default,
-                        RPCServerConfiguration.default.copy(
-                                consumerPoolSize = 1
-                        )
+                        RPCServerConfiguration.default
                 )
                 val numberOfMessages = 1000
                 val bigSize = 10_000_000

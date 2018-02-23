@@ -144,7 +144,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
         connectionTtlCheckInterval = config.enterpriseConfiguration.tuning.brokerConnectionTtlCheckIntervalMs
         // JMX enablement
-        if (config.exportJMXto.isNotEmpty()) {
+        if (config.jmxMonitoringHttpPort != null) {
             isJMXManagementEnabled = true
             isJMXUseBrokerName = true
         }

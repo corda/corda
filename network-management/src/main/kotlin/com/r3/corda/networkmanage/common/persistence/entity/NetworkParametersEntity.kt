@@ -3,10 +3,10 @@ package com.r3.corda.networkmanage.common.persistence.entity
 import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.network.NetworkParameters
 import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
 import javax.persistence.*

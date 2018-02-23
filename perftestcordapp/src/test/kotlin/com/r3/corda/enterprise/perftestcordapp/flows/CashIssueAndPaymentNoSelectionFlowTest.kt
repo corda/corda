@@ -13,7 +13,8 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -30,16 +31,16 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
         fun data() = listOf(false, true)
     }
 
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: StartedNode<MockNode>
+    private lateinit var bankOfCordaNode: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var notary: Party
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
+        mockNet = InternalMockNetwork(servicePeerAllocationStrategy = RoundRobin(),
                 cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -67,7 +68,7 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
                     = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentNoSelection(
-                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary)).resultFuture
+                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary))
             mockNet.runNetwork()
             future.getOrThrow()
 

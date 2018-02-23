@@ -108,7 +108,7 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
   It can bridge any data input to any output using their plugin system, for example, Telegraf can
   be configured to collect data from Jolokia and write to DataDog web api.
 
-The Node configuration parameter `exportJMXTo` should be set to ``http`` to ensure a Jolokia agent is instrumented with
+The Node configuration parameter `jmxMonitoringHttpPort` has to be present in order to ensure a Jolokia agent is instrumented with
 the JVM run-time.
 
 The following JMX statistics are exported:

@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.utilities.ByteSequence
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import org.apache.qpid.proton.codec.Data
 import org.assertj.core.api.Assertions
@@ -30,8 +30,7 @@ class OverridePKSerializerTest {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
-        override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean = true
-
+        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase) = true
         override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }

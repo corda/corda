@@ -93,6 +93,8 @@ interface MessagingService {
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
      *
+     * @param topicSession identifier for the topic and session the message is sent to.
+     * @param additionalProperties optional additional message headers.
      * @param topic identifier for the topic the message is sent to.
      */
     fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom())): Message

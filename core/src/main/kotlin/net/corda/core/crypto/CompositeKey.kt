@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import net.corda.core.utilities.sequence
@@ -12,7 +11,7 @@ import java.util.*
 
 /**
  * A tree data structure that enables the representation of composite public keys, which are used to represent
- * the signing requirements for multisignature scenarios such as RAFT notary services. A composite key is a list
+ * the signing requirements for multi-signature scenarios such as RAFT notary services. A composite key is a list
  * of leaf keys and their contributing weight, and each leaf can be a conventional single key or a composite key.
  * Keys contribute their weight to the total if they are matched by the signature.
  *
@@ -53,9 +52,19 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             }
             return builder.build(threshold)
         }
+        // Required for sorting [children] list. To ensure a deterministic way of adding children required for equality
+        // checking, [children] list is sorted during construction. A DESC ordering in the [NodeAndWeight.weight] field
+        // will improve efficiency, because keys with bigger "weights" are the first to be checked and thus the
+        // threshold requirement might be met earlier without requiring a full [children] scan.
+        // TODO: node.encoded.sequence() might be expensive, consider a faster deterministic compareTo implementation
+        //      for public keys in general.
+        private val descWeightComparator = compareBy<NodeAndWeight>({ -it.weight }, { it.node.encoded.sequence() })
     }
 
-    val children: List<NodeAndWeight> = children.sorted()
+    /**
+     * Τhe order of the children may not be the same to what was provided in the builder.
+     */
+    val children: List<NodeAndWeight> = children.sortedWith(descWeightComparator)
 
     init {
         // TODO: replace with the more extensive, but slower, checkValidity() test.
@@ -103,9 +112,9 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
      * requirements are met, while it tests for aggregated-weight integer overflow.
      * In practice, this method should be always invoked on the root [CompositeKey], as it inherently
      * validates the child nodes (all the way till the leaves).
-     * TODO: Always call this method when deserialising [CompositeKey]s.
      */
     fun checkValidity() {
+        if (validated) return
         val visitedMap = IdentityHashMap<CompositeKey, Boolean>()
         visitedMap.put(this, true)
         cycleDetection(visitedMap) // Graph cycle testing on the root node.
@@ -143,6 +152,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         override fun compareTo(other: NodeAndWeight): Int {
             return if (weight == other.weight)
+                // TODO: this might be expensive, consider a faster deterministic compareTo implementation when weights are equal.
                 node.encoded.sequence().compareTo(other.node.encoded.sequence())
             else
                 weight.compareTo(other.weight)
@@ -180,17 +190,18 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
     override fun getFormat() = ASN1Encoding.DER
 
-    // Extracted method from isFulfilledBy.
+    // Return true when and if the threshold requirement is met.
     private fun checkFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
-        if (keysToCheck.any { it is CompositeKey }) return false
-        val totalWeight = children.map { (node, weight) ->
+        var totalWeight = 0
+        children.forEach { (node, weight) ->
             if (node is CompositeKey) {
-                if (node.checkFulfilledBy(keysToCheck)) weight else 0
+                if (node.checkFulfilledBy(keysToCheck)) totalWeight += weight
             } else {
-                if (keysToCheck.contains(node)) weight else 0
+                if (node in keysToCheck) totalWeight += weight
             }
-        }.sum()
-        return totalWeight >= threshold
+            if (totalWeight >= threshold) return true
+        }
+        return false
     }
 
     /**
@@ -201,8 +212,8 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
     fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
         // We validate keys only when checking if they're matched, as this checks subkeys as a result.
         // Doing these checks at deserialization/construction time would result in duplicate checks.
-        if (!validated)
-            checkValidity() // TODO: remove when checkValidity() will be eventually invoked during/after deserialization.
+        checkValidity()
+        if (keysToCheck.any { it is CompositeKey }) return false
         return checkFulfilledBy(keysToCheck)
     }
 

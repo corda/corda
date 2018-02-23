@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
+import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companion.getBridgeName
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -35,7 +36,7 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(val config: NodeSSLConfiguration, val p2pAddress: NetworkHostAndPort, val maxMessageSize: Int) : BridgeManager {
+class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
@@ -43,7 +44,9 @@ class AMQPBridgeManager(val config: NodeSSLConfiguration, val p2pAddress: Networ
     private val keyStore = config.loadSslKeyStore().internal
     private val keyStorePrivateKeyPassword: String = config.keyStorePassword
     private val trustStore = config.loadTrustStore().internal
-    private var artemis: ArtemisMessagingClient? = null
+    private var artemis: ArtemisSessionProvider? = null
+
+    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -64,7 +67,7 @@ class AMQPBridgeManager(val config: NodeSSLConfiguration, val p2pAddress: Networ
                              keyStorePrivateKeyPassword: String,
                              trustStore: KeyStore,
                              sharedEventGroup: EventLoopGroup,
-                             private val artemis: ArtemisMessagingClient) {
+                             private val artemis: ArtemisSessionProvider) {
         companion object {
             fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
         }
@@ -155,9 +158,8 @@ class AMQPBridgeManager(val config: NodeSSLConfiguration, val p2pAddress: Networ
         }
     }
 
-    private fun gatherAddresses(node: NodeInfo): Sequence<ArtemisMessagingComponent.ArtemisPeerAddress> {
-        val address = node.addresses.single()
-        return node.legalIdentitiesAndCerts.map { ArtemisMessagingComponent.NodeAddress(it.party.owningKey, address) }.asSequence()
+    private fun gatherAddresses(node: NodeInfo): List<ArtemisMessagingComponent.NodeAddress> {
+        return node.legalIdentitiesAndCerts.map { ArtemisMessagingComponent.NodeAddress(it.party.owningKey, node.addresses[0]) }
     }
 
     override fun deployBridge(queueName: String, target: NetworkHostAndPort, legalNames: Set<CordaX500Name>) {
@@ -191,7 +193,7 @@ class AMQPBridgeManager(val config: NodeSSLConfiguration, val p2pAddress: Networ
 
     override fun start() {
         sharedEventLoopGroup = NioEventLoopGroup(NUM_BRIDGE_THREADS)
-        val artemis = ArtemisMessagingClient(config, p2pAddress, maxMessageSize)
+        val artemis = artemisMessageClientFactory()
         this.artemis = artemis
         artemis.start()
     }

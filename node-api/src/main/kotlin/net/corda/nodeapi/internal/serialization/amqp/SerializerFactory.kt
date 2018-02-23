@@ -40,7 +40,13 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 open class SerializerFactory(
         val whitelist: ClassWhitelist,
         cl: ClassLoader,
-        private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()) {
+        private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
+        val fingerPrinter: FingerPrinter = SerializerFingerPrinter()) {
+
+    init {
+        fingerPrinter.setOwner(this)
+    }
+
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
@@ -112,7 +118,7 @@ open class SerializerFactory(
      */
     // TODO: test GenericArrayType
     private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>,
-                                   declaredType: Type) : Type? = when (declaredType) {
+                                   declaredType: Type): Type? = when (declaredType) {
         is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
     // Nothing to infer, otherwise we'd have ParameterizedType
         is Class<*> -> actualClass
@@ -218,7 +224,6 @@ open class SerializerFactory(
         for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
             try {
                 val serialiser = processSchemaEntry(typeNotation)
-
                 // if we just successfully built a serializer for the type but the type fingerprint
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerializer

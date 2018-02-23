@@ -94,7 +94,7 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
             }
         } catch (e: Exception) {
             log.error("Internal error", e)
-            throw NotaryException(NotaryError.General("Service unavailable, please try again later"))
+            throw NotaryException(NotaryError.General(Exception("Service unavailable, please try again later")))
         }
     }
 
@@ -104,14 +104,18 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
         return NotaryException(NotaryError.Conflict(txId, signedConflict))
     }
 
+    /** Sign a [ByteArray] input. */
     fun sign(bits: ByteArray): DigitalSignature.WithKey {
         return services.keyManagementService.sign(bits, notaryIdentityKey)
     }
 
+    /** Sign a single transaction. */
     fun sign(txId: SecureHash): TransactionSignature {
         val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
+
+    // TODO: Sign multiple transactions at once by building their Merkle tree and then signing over its root.
 
     @Deprecated("This property is no longer used") @Suppress("DEPRECATION")
     protected open val timeWindowChecker: TimeWindowChecker get() = throw UnsupportedOperationException("No default implementation, need to override")

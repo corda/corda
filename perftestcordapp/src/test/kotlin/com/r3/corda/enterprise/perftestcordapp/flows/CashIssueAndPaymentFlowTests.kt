@@ -12,8 +12,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -21,17 +20,16 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class CashIssueAndPaymentFlowTests {
-    private lateinit var mockNet: MockNetwork
-    private val initialBalance = 2000.DOLLARS
+    private lateinit var mockNet: InternalMockNetwork
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: StartedNode<MockNode>
+    private lateinit var bankOfCordaNode: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var notary: Party
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
+        mockNet = InternalMockNetwork(servicePeerAllocationStrategy = RoundRobin(),
                 cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -56,7 +54,7 @@ class CashIssueAndPaymentFlowTests {
             val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
             val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
-            val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentFlow(expectedPayment, OpaqueBytes.of(1), payTo, false, notary)).resultFuture
+            val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentFlow(expectedPayment, OpaqueBytes.of(1), payTo, false, notary))
             mockNet.runNetwork()
             future.getOrThrow()
 

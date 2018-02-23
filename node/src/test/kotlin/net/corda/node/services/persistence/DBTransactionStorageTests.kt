@@ -172,9 +172,22 @@ class DBTransactionStorageTests {
         assertEquals(expected, actual)
     }
 
-    private fun newTransactionStorage() {
+    @Test
+    fun `duplicates are detected when transaction is evicted from cache`() {
+        newTransactionStorage(cacheSizeBytesOverride = 0)
+        val transaction = newTransaction()
         database.transaction {
-            transactionStorage = DBTransactionStorage(NodeConfiguration.defaultTransactionCacheSize)
+            val firstInserted = transactionStorage.addTransaction(transaction)
+            val secondInserted = transactionStorage.addTransaction(transaction)
+            require(firstInserted) { "We inserted a fresh transaction" }
+            require(!secondInserted) { "Second time should be redundant" }
+            println("$firstInserted $secondInserted")
+        }
+    }
+
+    private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {
+        database.transaction {
+            transactionStorage = DBTransactionStorage(cacheSizeBytesOverride ?: NodeConfiguration.defaultTransactionCacheSize)
         }
     }
 

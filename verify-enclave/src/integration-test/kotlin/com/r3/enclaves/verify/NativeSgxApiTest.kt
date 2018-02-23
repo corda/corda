@@ -38,9 +38,9 @@ class NativeSgxApiTest {
         val MINI_CORP_PUBKEY = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).keyPair.public
     }
 
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), NativeSgxApiTest.MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
         doReturn(NativeSgxApiTest.MEGA_CORP).whenever(it).partyFromKey(NativeSgxApiTest.MEGA_CORP_PUBKEY)
-    }, NativeSgxApiTest.MEGA_CORP.name)
+    })
 
     @Ignore("The SGX code is not part of the standard build yet")
     @Test

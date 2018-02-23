@@ -5,10 +5,10 @@ import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.network.NetworkParameters
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.time.Instant
 import kotlin.concurrent.thread

@@ -33,6 +33,7 @@ import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
@@ -76,8 +77,7 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
 
             @Lob
             @Column(name = "state_value")
-            var value: ByteArray = ByteArray(0),
-
+            var value: ByteArray = EMPTY_BYTE_ARRAY,
             @Column(name = "state_index")
             var index: Long = 0
     )

@@ -27,6 +27,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import rx.subjects.PublishSubject
 import java.net.ServerSocket
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -67,7 +68,7 @@ class ArtemisMessagingTest {
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
-            doReturn("").whenever(it).exportJMXto
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(5).whenever(it).messageRedeliveryDelaySeconds
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
@@ -270,12 +271,13 @@ class ArtemisMessagingTest {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
-        startNodeMessagingClient()
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
             database.transaction { handle.persistDeduplicationId() }
             handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
+        startNodeMessagingClient()
+
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
         thread(isDaemon = true) { messagingClient.run() }
 

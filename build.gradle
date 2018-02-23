@@ -15,7 +15,9 @@ buildscript {
     //
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.quasar_version = '0.7.9'
+    // use our fork of quasar
+    ext.quasar_group = 'com.github.corda.quasar'
+    ext.quasar_version = '7629695563deae6cc95adcfbebcbc8322fd0241a'
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
@@ -37,10 +39,9 @@ buildscript {
      * https://issues.apache.org/jira/browse/ARTEMIS-1559
      */
     ext.artemis_version = '2.2.0'
-    ext.jackson_version = '2.9.2'
+    ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.jolokia_version = '1.3.7'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
@@ -71,6 +72,11 @@ buildscript {
     ext.liquibase_version = '3.5.3'
     ext.shadow_version = '2.0.2'
     ext.hikari_version = '2.5.1'
+    ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
+    ext.docker_compose_rule_version = '0.33.0'
+    ext.selenium_version = '3.8.1'
+    ext.ghostdriver_version = '2.1.0'
+    ext.eaagentloader_version = '1.0.3'
     ext.curator_version = '4.0.0'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
@@ -80,6 +86,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
+        // This repository is needed for Dokka until 0.9.16 is released.
         maven {
             url 'https://dl.bintray.com/kotlin/kotlin-eap/'
         }
@@ -196,6 +203,10 @@ allprojects {
             if (property != null) {
                 systemProperty(it, property)
             }
+        }
+
+        if (System.getProperty("test.maxParallelForks") != null) {
+            maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
         }
     }
 
@@ -379,8 +390,12 @@ task generateApi(type: net.corda.plugins.GenerateApi){
 }
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)
-if(System.getenv('CORDA_DOCS_ONLY_BUILD') != null) {
-    logger.info("Tests are disabled due to presence of envvar CORDA_DOCS_ONLY_BUILD")
+if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
+    if(file('corda-docs-only-build').exists()) {
+        logger.info("Tests are disabled due to presence of file 'corda-docs-only-build' in the project root")
+    } else {
+        logger.info("Tests are disabled due to the presence of envvar CORDA_DOCS_ONLY_BUILD")
+    }
 
     allprojects {
         test {

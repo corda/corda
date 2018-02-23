@@ -237,14 +237,14 @@ class IRSTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
-    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
-    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
+    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), MINI_CORP.name, rigorousMock(), MINI_CORP_KEY)
+    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
     private val ledgerServices
-        get() = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+        get() = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
-        }, MEGA_CORP.name)
+        })
 
     @Test
     fun ok() {
@@ -341,11 +341,12 @@ class IRSTests {
      */
     @Test
     fun generateIRSandFixSome() {
-        val services = MockServices(listOf("net.corda.irs.contract"), rigorousMock<IdentityServiceInternal>().also {
-            listOf(MEGA_CORP, MINI_CORP).forEach { party ->
-                doReturn(party).whenever(it).partyFromKey(party.owningKey)
-            }
-        }, MEGA_CORP.name)
+        val services = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name,
+                rigorousMock<IdentityServiceInternal>().also {
+                    listOf(MEGA_CORP, MINI_CORP).forEach { party ->
+                        doReturn(party).whenever(it).partyFromKey(party.owningKey)
+                    }
+                })
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
@@ -429,13 +430,13 @@ class IRSTests {
                 input("irs post agreement")
                 val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
                 output(IRS_PROGRAM_ID, "irs post first fixing",
-                    postAgreement.copy(
-                            postAgreement.fixedLeg,
-                            postAgreement.floatingLeg,
-                            postAgreement.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                            postAgreement.common))
+                        postAgreement.copy(
+                                postAgreement.fixedLeg,
+                                postAgreement.floatingLeg,
+                                postAgreement.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                                postAgreement.common))
                 command(ORACLE_PUBKEY,
-                    InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)))
+                        InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -620,7 +621,7 @@ class IRSTests {
             // Templated tweak for reference. A corrent fixing applied should be ok
             tweak {
                 command(ORACLE_PUBKEY,
-                    InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)))
+                        InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)))
                 timeWindow(TEST_TX_TIME)
                 output(IRS_PROGRAM_ID, newIRS)
                 this.verifies()
@@ -643,12 +644,12 @@ class IRSTests {
                 val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
                 val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
                 output(IRS_PROGRAM_ID,
-                    newIRS.copy(
-                            newIRS.fixedLeg,
-                            newIRS.floatingLeg,
-                            newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
-                                    Pair(firstResetKey, modifiedFirstResetValue))),
-                            newIRS.common))
+                        newIRS.copy(
+                                newIRS.fixedLeg,
+                                newIRS.floatingLeg,
+                                newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
+                                        Pair(firstResetKey, modifiedFirstResetValue))),
+                                newIRS.common))
                 this `fails with` "There is only one change in the IRS floating leg payment schedule"
             }
 
@@ -660,12 +661,12 @@ class IRSTests {
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
                 val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
                 output(IRS_PROGRAM_ID,
-                    newIRS.copy(
-                            newIRS.fixedLeg,
-                            newIRS.floatingLeg,
-                            newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
-                                    Pair(latestReset.key, modifiedLatestResetValue))),
-                            newIRS.common))
+                        newIRS.copy(
+                                newIRS.fixedLeg,
+                                newIRS.floatingLeg,
+                                newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
+                                        Pair(latestReset.key, modifiedLatestResetValue))),
+                                newIRS.common))
                 this `fails with` "The fix payment has the same currency as the notional"
             }
         }
@@ -687,11 +688,11 @@ class IRSTests {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement1",
-                    irs.copy(
-                            irs.fixedLeg,
-                            irs.floatingLeg,
-                            irs.calculation,
-                            irs.common.copy(tradeID = "t1")))
+                        irs.copy(
+                                irs.fixedLeg,
+                                irs.floatingLeg,
+                                irs.calculation,
+                                irs.common.copy(tradeID = "t1")))
                 command(MEGA_CORP_PUBKEY, InterestRateSwap.Commands.Agree())
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
@@ -700,12 +701,12 @@ class IRSTests {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement2",
-                    irs.copy(
-                            linearId = UniqueIdentifier("t2"),
-                            fixedLeg = irs.fixedLeg,
-                            floatingLeg = irs.floatingLeg,
-                            calculation = irs.calculation,
-                            common = irs.common.copy(tradeID = "t2")))
+                        irs.copy(
+                                linearId = UniqueIdentifier("t2"),
+                                fixedLeg = irs.fixedLeg,
+                                floatingLeg = irs.floatingLeg,
+                                calculation = irs.calculation,
+                                common = irs.common.copy(tradeID = "t2")))
                 command(MEGA_CORP_PUBKEY, InterestRateSwap.Commands.Agree())
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
@@ -717,25 +718,23 @@ class IRSTests {
                 input("irs post agreement2")
                 val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
                 output(IRS_PROGRAM_ID, "irs post first fixing1",
-                    postAgreement1.copy(
-                            postAgreement1.fixedLeg,
-                            postAgreement1.floatingLeg,
-                            postAgreement1.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            postAgreement1.common.copy(tradeID = "t1")))
+                        postAgreement1.copy(
+                                postAgreement1.fixedLeg,
+                                postAgreement1.floatingLeg,
+                                postAgreement1.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                                postAgreement1.common.copy(tradeID = "t1")))
                 val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
                 output(IRS_PROGRAM_ID, "irs post first fixing2",
-                    postAgreement2.copy(
-                            postAgreement2.fixedLeg,
-                            postAgreement2.floatingLeg,
-                            postAgreement2.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            postAgreement2.common.copy(tradeID = "t2")))
+                        postAgreement2.copy(
+                                postAgreement2.fixedLeg,
+                                postAgreement2.floatingLeg,
+                                postAgreement2.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                                postAgreement2.common.copy(tradeID = "t2")))
                 command(ORACLE_PUBKEY,
-                    InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1)))
+                        InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1)))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
         }
     }
 }
-
-

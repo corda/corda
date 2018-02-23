@@ -84,11 +84,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransaction(
+        return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
+                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) },
+                maxTransactionSize = services.networkParameters.maxTransactionSize
         )
     }
 
@@ -99,12 +100,23 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
+    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+    ): LedgerTransaction {
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, resolveContractAttachment, 10485760)
+    }
+
+    private fun toLedgerTransactionInternal(
+            resolveIdentity: (PublicKey) -> Party?,
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
+            maxTransactionSize: Int
     ): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
@@ -118,7 +130,24 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val contractAttachments = findAttachmentContracts(resolvedInputs, resolveContractAttachment, resolveAttachment)
         // Order of attachments is important since contracts may refer to indexes so only append automatic attachments
         val attachments = (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) } + contractAttachments).distinct()
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        checkTransactionSize(ltx, maxTransactionSize)
+        return ltx
+    }
+
+    private fun checkTransactionSize(ltx: LedgerTransaction, maxTransactionSize: Int) {
+        var remainingTransactionSize = maxTransactionSize
+
+        fun minus(size: Int) {
+            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : $maxTransactionSize bytes." }
+            remainingTransactionSize -= size
+        }
+
+        // Check attachment size first as they are most likely to go over the limit.
+        ltx.attachments.associateBy(Attachment::id).values.forEach { minus(it.size) }
+        minus(ltx.inputs.serialize().size)
+        minus(ltx.commands.serialize().size)
+        minus(ltx.outputs.serialize().size)
     }
 
     /**

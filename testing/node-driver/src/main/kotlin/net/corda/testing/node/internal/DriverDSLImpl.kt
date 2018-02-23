@@ -6,6 +6,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
@@ -14,6 +15,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
@@ -38,13 +41,14 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.nodeapi.internal.network.NotaryInfo
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.setGlobalSerialization
 import net.corda.testing.driver.*
+import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.driver.internal.OutOfProcessImpl
+import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
@@ -84,11 +88,12 @@ class DriverDSLImpl(
         val useTestClock: Boolean,
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
-        val waitForNodesToFinish: Boolean,
+        val waitForAllNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
-        val compatibilityZone: CompatibilityZoneParams?
+        val compatibilityZone: CompatibilityZoneParams?,
+        val networkParameters: NetworkParameters
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -97,6 +102,7 @@ class DriverDSLImpl(
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
+    private val nodeNames = mutableSetOf<CordaX500Name>()
     /**
      * Future which completes when the network map is available, whether a local one or one from the CZ. This future acts
      * as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap] object, which
@@ -135,7 +141,7 @@ class DriverDSLImpl(
     }
 
     override fun shutdown() {
-        if (waitForNodesToFinish) {
+        if (waitForAllNodesToFinish) {
             state.locked {
                 processes.forEach { it.waitFor() }
             }
@@ -147,7 +153,7 @@ class DriverDSLImpl(
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address!!
         val client = if (config.corda.rpcOptions.useSsl) {
-            CordaRPCClient(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
+            createCordaRPCClientWithSsl(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
         } else {
             CordaRPCClient(rpcAddress)
         }
@@ -156,7 +162,7 @@ class DriverDSLImpl(
                 config.corda.rpcUsers[0].run { client.start(username, password) }
             } catch (e: Exception) {
                 if (processDeathFuture.isDone) throw e
-                log.error("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
+                log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
                 null
             }
         }
@@ -182,6 +188,12 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        synchronized(nodeNames) {
+            val wasANewNode = nodeNames.add(name)
+            if (!wasANewNode) {
+                throw IllegalArgumentException("Node with name $name is already started or starting.")
+            }
+        }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
@@ -214,7 +226,6 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = configOf(
-                        "database" to mapOf("runMigration" to "true"),
                         "myLegalName" to name.toString(),
                         "p2pAddress" to p2pAddress.toString(),
                         "rpcSettings.address" to rpcAddress.toString(),
@@ -234,7 +245,6 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
-                        "database" to mapOf("runMigration" to "true"),
                         "p2pAddress" to "localhost:1222", // required argument, not really used
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString())
@@ -350,15 +360,14 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = cordform.config + rpcAddress + notary + mapOf(
-                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers,
-                        "database" to mapOf("runMigration" to "true")
+                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
                 )
         ))
         return startNodeInternal(config, webAddress, null, "200m", localNetworkMap)
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
-        val protocol = if (handle.useHTTPS) "https://" else "http://"
+        val protocol = if ((handle as NodeHandleInternal).useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
@@ -378,7 +387,7 @@ class DriverDSLImpl(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startWebserver(handle, debugPort, maximumHeapSize)
         shutdownManager.registerProcessShutdown(process)
-        val webReadyFuture = addressMustBeBoundFuture(executorService, handle.webAddress, process)
+        val webReadyFuture = addressMustBeBoundFuture(executorService, (handle as NodeHandleInternal).webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process) }
     }
 
@@ -386,6 +395,7 @@ class DriverDSLImpl(
         if (startNodesInProcess) {
             Schedulers.reset()
         }
+        require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
         val notaryInfosFuture = if (compatibilityZone == null) {
@@ -531,7 +541,9 @@ class DriverDSLImpl(
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress)
+                customOverrides = notaryConfig(clusterAddress) + mapOf(
+                        "database.serverNameTablePrefix" to nodeNames[0].toString().replace(Regex("[^0-9A-Za-z]+"), "")
+                )
         )
 
         // All other nodes will join the cluster
@@ -542,7 +554,9 @@ class DriverDSLImpl(
                     localNetworkMap,
                     spec.rpcUsers,
                     spec.verifierType,
-                    customOverrides = notaryConfig(nodeAddress, clusterAddress)
+                    customOverrides = notaryConfig(nodeAddress, clusterAddress) + mapOf(
+                            "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), "")
+                    )
             )
         }
 
@@ -636,6 +650,9 @@ class DriverDSLImpl(
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
             countObservables.remove(config.corda.myLegalName)
+            synchronized(nodeNames) {
+                nodeNames.remove(config.corda.myLegalName)
+            }
         }
 
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
@@ -653,7 +670,7 @@ class DriverDSLImpl(
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
-                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, node, thread, onNodeExit)
+                        InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
             }
@@ -661,7 +678,7 @@ class DriverDSLImpl(
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
-            if (waitForNodesToFinish) {
+            if (waitForAllNodesToFinish) {
                 state.locked {
                     processes += process
                 }
@@ -682,7 +699,7 @@ class DriverDSLImpl(
                         }
                         processDeathFuture.cancel(false)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
-                        NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
+                        OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
                 }
             }
@@ -699,7 +716,7 @@ class DriverDSLImpl(
      * The local version of the network map, which is a bunch of classes that copy the relevant files to the node directories.
      */
     private inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
-        val networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        val networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
         // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
         // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
         // Investigate whether we can avoid that.
@@ -711,7 +728,12 @@ class DriverDSLImpl(
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
     private class NodeConfig(val typesafe: Config) {
-        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration()
+        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().also { nodeConfiguration ->
+            val errors = nodeConfiguration.validate()
+            if (errors.isNotEmpty()) {
+                throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            }
+        }
     }
 
     companion object {
@@ -827,10 +849,10 @@ class DriverDSLImpl(
             val className = "net.corda.webserver.WebServer"
             return ProcessUtilities.startCordaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
+                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                            "-Dname=node-${handle.p2pAddress}-webserver",
                             "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                     ),
                     errorLogPath = Paths.get("error.$className.log"),
@@ -938,36 +960,25 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
  */
 fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         defaultParameters: DriverParameters = DriverParameters(),
-        isDebug: Boolean = defaultParameters.isDebug,
-        driverDirectory: Path = defaultParameters.driverDirectory,
-        portAllocation: PortAllocation = defaultParameters.portAllocation,
-        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
-        systemProperties: Map<String, String> = defaultParameters.systemProperties,
-        useTestClock: Boolean = defaultParameters.useTestClock,
-        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        waitForNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
-        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        notarySpecs: List<NotarySpec>,
-        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(defaultParameters.initialiseSerialization)
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
-                    portAllocation = portAllocation,
-                    debugPortAllocation = debugPortAllocation,
-                    systemProperties = systemProperties,
-                    driverDirectory = driverDirectory.toAbsolutePath(),
-                    useTestClock = useTestClock,
-                    isDebug = isDebug,
-                    startNodesInProcess = startNodesInProcess,
-                    waitForNodesToFinish = waitForNodesToFinish,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    jmxPolicy = jmxPolicy,
-                    notarySpecs = notarySpecs,
-                    compatibilityZone = null
+                    portAllocation = defaultParameters.portAllocation,
+                    debugPortAllocation = defaultParameters.debugPortAllocation,
+                    systemProperties = defaultParameters.systemProperties,
+                    driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
+                    useTestClock = defaultParameters.useTestClock,
+                    isDebug = defaultParameters.isDebug,
+                    startNodesInProcess = defaultParameters.startNodesInProcess,
+                    waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
+                    jmxPolicy = defaultParameters.jmxPolicy,
+                    notarySpecs = defaultParameters.notarySpecs,
+                    compatibilityZone = null,
+                    networkParameters = defaultParameters.networkParameters
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1003,12 +1014,13 @@ fun <A> internalDriver(
         debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
+        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
+        networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         dsl: DriverDSLImpl.() -> A
 ): A {
@@ -1021,11 +1033,12 @@ fun <A> internalDriver(
                     useTestClock = useTestClock,
                     isDebug = isDebug,
                     startNodesInProcess = startNodesInProcess,
-                    waitForNodesToFinish = waitForAllNodesToFinish,
+                    waitForAllNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
-                    compatibilityZone = compatibilityZone
+                    compatibilityZone = compatibilityZone,
+                    networkParameters = networkParameters
             ),
             coerce = { it },
             dsl = dsl,

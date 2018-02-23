@@ -12,13 +12,14 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
-import net.corda.testing.*
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import org.junit.ClassRule
 import org.junit.Rule
@@ -51,7 +52,7 @@ class VerifierTests  : IntegrationTest() {
 
     @Test
     fun `single verifier works with requestor`() {
-        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
+        verifierDriver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance.contracts"))) {
             val aliceFuture = startVerificationRequestor(ALICE_NAME)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
@@ -68,7 +69,7 @@ class VerifierTests  : IntegrationTest() {
 
     @Test
     fun `single verification fails`() {
-        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
+        verifierDriver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance.contracts"))) {
             val aliceFuture = startVerificationRequestor(ALICE_NAME)
             // Generate transactions as per usual, but then remove attachments making transaction invalid.
             val transactions = generateTransactions(1).map { it.copy(attachments = emptyList()) }
@@ -143,12 +144,12 @@ class VerifierTests  : IntegrationTest() {
 
     @Test
     fun `single verifier works with a node`() {
-        verifierDriver(
+        verifierDriver(DriverParameters(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, verifierType = VerifierType.OutOfProcess))
-        ) {
+        )) {
             val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()
-            val notaryNode = defaultNotaryNode.getOrThrow()
+            val notaryNode = defaultNotaryNode.getOrThrow() as NodeHandleInternal
             val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
             startVerifier(notaryNode)
             aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()

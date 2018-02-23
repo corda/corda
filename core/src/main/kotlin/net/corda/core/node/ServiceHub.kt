@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
@@ -60,6 +61,9 @@ interface ServicesForResolution : StateLoader {
 
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
+
+    /** Returns the network parameters the node is operating under. */
+    val networkParameters: NetworkParameters
 }
 
 /**
@@ -369,4 +373,9 @@ interface ServiceHub : ServicesForResolution {
      * node starts.
      */
     fun registerUnloadHandler(runOnStop: () -> Unit)
+
+    /**
+     * See [CordappProvider.getAppContext]
+     */
+    fun getAppContext(): CordappContext = cordappProvider.getAppContext()
 }

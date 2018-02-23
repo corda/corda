@@ -63,7 +63,6 @@ The name must also obey the following constraints:
 * The organisation field of the name also obeys the following constraints:
 
     * No double-spacing
-    * Does not contain the words "node" or "server"
 
         * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
           character confusability attacks
@@ -137,6 +136,25 @@ You can extend ``deployNodes`` to generate additional nodes. The only requiremen
 a single node to run the network map service, by putting its name in the ``networkMap`` field.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
+
+Specifying a custom webserver
+-----------------------------
+By default, any node listing a webport will use the default development webserver, which is not production-ready. You
+can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
+block:
+
+.. sourcecode:: groovy
+
+    node {
+        name "O=PartyA,L=New York,C=US"
+        webPort 10005
+        webserverJar "lib/my_webserver.jar"
+    }
+
+The webserver JAR will be copied into the node's ``build`` folder with the name ``corda-webserver.jar``.
+
+.. warning:: This is an experimental feature. There is currently no support for reading the webserver's port from the
+   node's ``node.conf`` file.
 
 Running deployNodes
 -------------------

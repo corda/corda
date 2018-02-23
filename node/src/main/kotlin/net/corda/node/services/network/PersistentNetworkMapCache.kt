@@ -9,9 +9,9 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.schemas.NodeInfoSchemaV1
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
@@ -20,10 +20,10 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
-import net.corda.nodeapi.internal.network.NotaryInfo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -154,8 +154,17 @@ open class PersistentNetworkMapCache(
         return null
     }
 
-    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = getNodesByLegalName(name).firstOrNull()
+    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? {
+        val nodeInfos = getNodesByLegalName(name)
+        return when (nodeInfos.size) {
+            0 -> null
+            1 -> nodeInfos[0]
+            else -> throw IllegalArgumentException("More than one node found with legal name $name")
+        }
+    }
+
     override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(session, name) }
+
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024, 8, { key -> database.transaction { queryByIdentityKey(session, key) } })

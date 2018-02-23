@@ -9,6 +9,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -36,7 +37,7 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
 
     @Test
     fun `closure sent via RPC`() {
-        driver(startNodesInProcess = true) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(KryoException::class.java)

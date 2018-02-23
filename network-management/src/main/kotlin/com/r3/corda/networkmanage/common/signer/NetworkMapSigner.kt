@@ -3,10 +3,10 @@ package com.r3.corda.networkmanage.common.signer
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.nodeapi.internal.network.NetworkParameters
 
 class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private val signer: Signer) {
     private companion object {
@@ -37,7 +37,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         logger.debug("Fetching node info hashes with VALID certificates...")
         val nodeInfoHashes = networkMapStorage.getNodeInfoHashes(CertificateStatus.VALID)
         logger.debug("Retrieved node info hashes: $nodeInfoHashes")
-        val newNetworkMap = NetworkMap(nodeInfoHashes, latestNetworkParameters.serialize().hash)
+        val newNetworkMap = NetworkMap(nodeInfoHashes, latestNetworkParameters.serialize().hash, null)
         val serialisedNetworkMap = newNetworkMap.serialize()
         if (serialisedNetworkMap != currentSignedNetworkMap?.raw) {
             logger.info("Signing a new network map: $newNetworkMap")

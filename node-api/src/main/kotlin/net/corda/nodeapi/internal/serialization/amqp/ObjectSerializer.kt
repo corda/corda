@@ -31,7 +31,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     private val typeName = nameForType(clazz)
 
-    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
+    override val typeDescriptor = Symbol.valueOf(
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
 
     // We restrict to only those annotated or whitelisted
     private val interfaces = interfacesForSerialization(clazz, factory)
@@ -52,13 +53,18 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({ clazz.typeName }) {
+    override fun writeObject(
+            obj: Any,
+            data: Data,
+            type: Type,
+            output: SerializationOutput,
+            debugIndent: Int) = ifThrowsAppend({ clazz.typeName }) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             // Write list
             withList {
                 propertySerializers.serializationOrder.forEach { property ->
-                    property.getter.writeProperty(obj, this, output)
+                    property.getter.writeProperty(obj, this, output, debugIndent+1)
                 }
             }
         }

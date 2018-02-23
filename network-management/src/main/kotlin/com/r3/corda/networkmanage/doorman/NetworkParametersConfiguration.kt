@@ -1,21 +1,15 @@
 package com.r3.corda.networkmanage.doorman
 
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.internal.exists
 import net.corda.core.internal.readAll
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.days
-import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.network.NetworkParameters
-import net.corda.nodeapi.internal.network.NotaryInfo
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.time.Instant
 
 /**

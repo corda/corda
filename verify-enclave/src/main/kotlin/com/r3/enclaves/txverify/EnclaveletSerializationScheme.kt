@@ -4,14 +4,15 @@ package com.r3.enclaves.txverify
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.toHexString
-import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 
 @Suppress("UNUSED")
 private class EnclaveletSerializationScheme {
@@ -40,8 +41,8 @@ private class EnclaveletSerializationScheme {
 }
 
 private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
-    override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-        return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+        return magic == kryoMagic && target == SerializationContext.UseCase.P2P
     }
 
     override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
@@ -49,8 +50,8 @@ private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme
 }
 
 private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
-    override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-        return (byteSequence == AmqpHeaderV1_0 && (target == SerializationContext.UseCase.P2P))
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+        return magic == amqpMagic && target == SerializationContext.UseCase.P2P
     }
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory = throw UnsupportedOperationException()

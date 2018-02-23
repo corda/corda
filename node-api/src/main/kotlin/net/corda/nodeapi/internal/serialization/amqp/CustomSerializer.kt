@@ -40,7 +40,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     override val revealSubclassesInSchema: Boolean get() = false
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         data.withDescribed(descriptor) {
             writeDescribedObject(uncheckedCast(obj), data, type, output)
         }
@@ -60,7 +60,9 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
-        override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), nameForType(clazz))}")
+        override val typeDescriptor by lazy {
+            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${SerializerFingerPrinter().fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), nameForType(clazz))}")
+        }
         private val typeNotation: TypeNotation = RestrictedType(
                 SerializerFactory.nameForType(clazz),
                 null,

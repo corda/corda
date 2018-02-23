@@ -14,6 +14,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -101,7 +102,7 @@ class SSHServerTest : IntegrationTest() {
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(DriverParameters(isDebug = true)) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -131,7 +132,7 @@ class SSHServerTest : IntegrationTest() {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(DriverParameters(isDebug = true)) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()

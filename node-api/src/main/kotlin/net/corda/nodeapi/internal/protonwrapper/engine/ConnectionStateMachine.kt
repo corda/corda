@@ -168,12 +168,14 @@ internal class ConnectionStateMachine(serverMode: Boolean,
         val transport = event.transport
         log.debug { "Transport Head Closed $transport" }
         transport.close_tail()
+        onTransportInternal(transport)
     }
 
     override fun onTransportTailClosed(event: Event) {
         val transport = event.transport
         log.debug { "Transport Tail Closed $transport" }
         transport.close_head()
+        onTransportInternal(transport)
     }
 
     override fun onTransportClosed(event: Event) {
@@ -195,6 +197,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
         } else {
             log.info("Error (no description returned).")
         }
+        onTransportInternal(transport)
     }
 
     override fun onTransport(event: Event) {

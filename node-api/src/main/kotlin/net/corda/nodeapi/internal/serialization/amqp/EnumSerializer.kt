@@ -11,8 +11,9 @@ import java.lang.reflect.Type
  */
 class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
-    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")!!
     private val typeNotation: TypeNotation
+    override val typeDescriptor = Symbol.valueOf(
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
 
     init {
         typeNotation = RestrictedType(
@@ -39,7 +40,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
         return fromOrd
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         if (obj !is Enum<*>) throw NotSerializableException("Serializing $obj as enum when it isn't")
 
         data.withDescribed(typeNotation.descriptor) {

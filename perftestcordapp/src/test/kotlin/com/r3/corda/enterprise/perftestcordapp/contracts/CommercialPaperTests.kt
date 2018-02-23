@@ -96,11 +96,11 @@ class CommercialPaperTestsGeneric {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
-    }, MEGA_CORP.name)
+    })
 
 
     @Test
@@ -240,8 +240,8 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
 
-    private val notaryServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, dummyNotary.keyPair)
-    private val issuerServices = MockServices(emptyList(), rigorousMock(), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
+    private val notaryServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock(), dummyNotary.keyPair)
+    private val issuerServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock(), DUMMY_CASH_ISSUER_KEY)
 
     private lateinit var moveTX: SignedTransaction
 }

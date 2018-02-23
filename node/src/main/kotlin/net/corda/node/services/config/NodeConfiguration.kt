@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigT
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
+import java.time.Duration
 import java.util.*
 
 
@@ -25,7 +26,7 @@ val Int.MB: Long get() = this * 1024L * 1024L
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
-    val exportJMXto: String
+    val jmxMonitoringHttpPort: Int?
     val dataSourceProperties: Properties
     val rpcUsers: List<User>
     val security: SecurityConfiguration?
@@ -48,11 +49,16 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val relay: RelayConfiguration?
+    val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
     val graphiteOptions: GraphiteOptions? get() = null
 
+    // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
+    val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
+
+    fun validate(): List<String>
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -80,6 +86,10 @@ data class GraphiteOptions(
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
+
+fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
+fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
+fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
@@ -130,6 +140,7 @@ data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
         override val baseDirectory: Path,
         override val myLegalName: CordaX500Name,
+        override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
@@ -152,6 +163,7 @@ data class NodeConfigurationImpl(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
+        override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
@@ -182,7 +194,22 @@ data class NodeConfigurationImpl(
         }.asOptions(fallbackSslOptions)
     }
 
-    override val exportJMXto: String get() = "http"
+    override fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+        errors + validateRpcOptions(rpcOptions)
+        return errors
+    }
+
+    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+        val errors = mutableListOf<String>()
+        if (!options.useSsl) {
+            if (options.adminAddress == null) {
+                errors + "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+            }
+        }
+        return errors
+    }
+
     override val transactionCacheSizeBytes: Long
         get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
     override val attachmentContentCacheSizeBytes: Long

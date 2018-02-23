@@ -3,7 +3,7 @@ package net.corda.node.services.events
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
@@ -21,15 +21,17 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.node.internal.CordaClock
-import net.corda.node.internal.MutableClock
+import net.corda.node.CordaClock
+import net.corda.node.MutableClock
 import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
@@ -59,6 +61,8 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val stateLoader: StateLoader,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val flowLogicRefFactory: FlowLogicRefFactory,
+                           private val nodeProperties: NodePropertiesStore,
+                           private val drainingModePollPeriod: Duration,
                            private val log: Logger = staticLog,
                            private val scheduledStates: MutableMap<StateRef, ScheduledStateRef> = createMap())
     : SchedulerService, SingletonSerializeAsToken() {
@@ -250,7 +254,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                 if (scheduledFlow != null) {
                     flowName = scheduledFlow.javaClass.name
                     // TODO refactor the scheduler to store and propagate the original invocation context
-                    val context = InvocationContext.newInstance(Origin.Scheduled(scheduledState))
+                    val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
                     val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                     future.then {
                         unfinishedSchedules.countDown()
@@ -282,10 +286,19 @@ class NodeSchedulerService(private val clock: CordaClock,
                     scheduledStatesQueue.add(newState)
                 } else {
                     val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
-                    log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                    scheduledFlow = flowLogic
-                    scheduledStates.remove(scheduledState.ref)
-                    scheduledStatesQueue.remove(scheduledState)
+                    scheduledFlow = when {
+                        nodeProperties.flowsDrainingMode.isEnabled() -> {
+                            log.warn("Ignoring scheduled flow start because of draining mode. FlowLogic: $flowLogic.")
+                            awaitWithDeadline(clock, Instant.now() + drainingModePollPeriod)
+                            null
+                        }
+                        else -> {
+                            log.trace { "Scheduler starting FlowLogic $flowLogic" }
+                            scheduledStates.remove(scheduledState.ref)
+                            scheduledStatesQueue.remove(scheduledState)
+                            flowLogic
+                        }
+                    }
                 }
             }
             // and schedule the next one

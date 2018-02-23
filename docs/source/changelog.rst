@@ -6,6 +6,22 @@ from previous releases. Please refer to :doc:`upgrade-notes` for detailed instru
 
 UNRELEASED
 ----------
+
+* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+  one node with the legal name is found.
+
+* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
+  at CorDapp context creation time from a file source during runtime.
+
+* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
+  In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
+  This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
+
+* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
+
+* Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
+
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
 
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
@@ -71,7 +87,10 @@ R3 Corda 3.0 Developer Preview
      :doc:`corda-configuration-file` for more details.
 
    * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
-     to correctly interop.
+     to correctly interop. These can be retrieved from ``ServiceHub.networkParameters``.
+
+   * One of these parameters, ``maxTransactionSize``, limits the size of a transaction, including its attachments, so that
+     all nodes have sufficient memory to validate transactions.
 
    * The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
      their X.500 name.
@@ -195,6 +214,26 @@ R3 Corda 3.0 Developer Preview
 
 * Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
   This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
+
+* A ``CordaInternal`` attribute has been added to identify properties that are not intended to form part of the
+  public api and as such are not intended for public use. This is alongside the existing ``DoNotImplement`` attribute for classes which
+  provide Corda functionality to user applications, but should not be implemented by consumers, and any classes which
+  are defined in ``.internal`` packages, which are also not for public use.
+
+* Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
+  only for internal use
+
+* Provided experimental support for specifying your own webserver to be used instead of the default development
+  webserver in ``Cordform`` using the ``webserverJar`` argument
+
+* Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
+  that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
+
+* The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved
+  from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the
+  ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
+  will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
+  process for existing projects in the ``tools\scripts`` directory of the Corda repo.
 
 .. _changelog_v2:
 

@@ -33,10 +33,10 @@ class CashSelectionH2Test {
         // spend operation below.
         // Issuing Integer.MAX_VALUE will not cause an exception since PersistentCashState.pennies is a long
         nCopies(2, Integer.MAX_VALUE).map { issueAmount ->
-            node.services.startFlow(CashIssueFlow(issueAmount.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).resultFuture
+            node.services.startFlow(CashIssueFlow(issueAmount.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity))
         }.transpose().getOrThrow()
         // The spend must be more than the size of a single cash state to force the accumulator onto the second state.
-        node.services.startFlow(CashPaymentFlow((Integer.MAX_VALUE + 1L).POUNDS, node.info.legalIdentities[0])).resultFuture.getOrThrow()
+        node.services.startFlow(CashPaymentFlow((Integer.MAX_VALUE + 1L).POUNDS, node.info.legalIdentities[0])).getOrThrow()
     }
 
     @Test
@@ -52,8 +52,8 @@ class CashSelectionH2Test {
         val flow2 = bankA.services.startFlow(CashPaymentFlow(amount = 100.DOLLARS, anonymous = false, recipient = notary))
         val flow3 = bankA.services.startFlow(CashPaymentFlow(amount = 100.DOLLARS, anonymous = false, recipient = notary))
 
-        assertThatThrownBy { flow1.resultFuture.getOrThrow() }.isInstanceOf(CashException::class.java)
-        assertThatThrownBy { flow2.resultFuture.getOrThrow() }.isInstanceOf(CashException::class.java)
-        assertThatThrownBy { flow3.resultFuture.getOrThrow() }.isInstanceOf(CashException::class.java)
+        assertThatThrownBy { flow1.getOrThrow() }.isInstanceOf(CashException::class.java)
+        assertThatThrownBy { flow2.getOrThrow() }.isInstanceOf(CashException::class.java)
+        assertThatThrownBy { flow3.getOrThrow() }.isInstanceOf(CashException::class.java)
     }
 }

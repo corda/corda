@@ -12,8 +12,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
@@ -22,23 +21,23 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashPaymentFlowTests {
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: StartedNode<MockNode>
+    private lateinit var bankOfCordaNode: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
 
     @Before
     fun start() {
-        mockNet = MockNetwork(
+        mockNet = InternalMockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
                 cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         mockNet.runNetwork()
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, mockNet.defaultNotaryIdentity)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, mockNet.defaultNotaryIdentity))
         future.getOrThrow()
     }
 
@@ -60,7 +59,7 @@ class CashPaymentFlowTests {
             val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
-                    payTo)).resultFuture
+                    payTo))
             mockNet.runNetwork()
             future.getOrThrow()
 
@@ -92,7 +91,7 @@ class CashPaymentFlowTests {
         val payTo = aliceNode.info.chooseIdentity()
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
-                payTo)).resultFuture
+                payTo))
         mockNet.runNetwork()
         assertFailsWith<CashException> {
             future.getOrThrow()
@@ -104,7 +103,7 @@ class CashPaymentFlowTests {
         val payTo = aliceNode.info.chooseIdentity()
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
-                payTo)).resultFuture
+                payTo))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()

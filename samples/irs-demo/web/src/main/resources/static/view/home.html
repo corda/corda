@@ -34,7 +34,7 @@
             <i class="browser icon"></i>
             Recent deals
         </h3>
-        <table class="ui striped table">
+        <table class="ui striped table" id="deal-list">
             <thead>
             <tr class="center aligned">
                 <th>Trade Id</th>
@@ -45,7 +45,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr class="center aligned" ng-repeat="deal in deals">
+            <tr class="center aligned" ng-repeat="deal in deals" id="deal-{{deal.ref}}">
                 <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
                 <td class="single line">{{renderX500Name(deal.fixedLeg.fixedRatePayer)}}</td>
                 <td class="single line">{{deal.fixedLeg.notional}}</td>

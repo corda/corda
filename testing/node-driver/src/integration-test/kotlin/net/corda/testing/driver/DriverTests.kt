@@ -3,6 +3,7 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
@@ -11,6 +12,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
@@ -20,12 +22,13 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import kotlin.streams.toList
 
 class DriverTests : IntegrationTest() {
     companion object {
@@ -35,7 +38,7 @@ class DriverTests : IntegrationTest() {
         fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = nodeInfo.addresses.single()
             // Check that the port is bound
-            addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
+            addressMustBeBound(executorService, hostAndPort, (this as? OutOfProcess)?.process)
         }
 
         fun nodeMustBeDown(handle: NodeHandle) {
@@ -76,7 +79,7 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
+        val nodeHandle = driver(DriverParameters(portAllocation = PortAllocation.RandomFree)) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -88,8 +91,11 @@ class DriverTests : IntegrationTest() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().configuration.baseDirectory
+        driver(DriverParameters(
+                isDebug = true,
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+        )) {
+            val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
@@ -98,10 +104,11 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(jmxPolicy = JmxPolicy(true)) {
+        driver(DriverParameters(startNodesInProcess = false, jmxPolicy = JmxPolicy(true))) {
             // start another node so we gain access to node JMX metrics
-            startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             val webAddress = NetworkHostAndPort("localhost", 7006)
+            startNode(providedName = DUMMY_REGULATOR_NAME,
+                      customOverrides = mapOf("jmxMonitoringHttpPort" to webAddress.port)).getOrThrow()
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
             val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
@@ -114,7 +121,7 @@ class DriverTests : IntegrationTest() {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
         driver {
-            val baseDirectory = defaultNotaryNode.getOrThrow().configuration.baseDirectory
+            val baseDirectory = defaultNotaryNode.getOrThrow().baseDirectory
             assertThat(baseDirectory / "process-id").exists()
         }
 
@@ -123,4 +130,39 @@ class DriverTests : IntegrationTest() {
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }
+
+    @Test
+    fun `driver rejects multiple nodes with the same name`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            assertThatThrownBy { listOf(newNode(DUMMY_BANK_A_NAME)(), newNode(DUMMY_BANK_B_NAME)(), newNode(DUMMY_BANK_A_NAME)()).transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test
+    fun `driver rejects multiple nodes with the same name parallel`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
+
+            assertThatThrownBy { nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test
+    fun `driver allows reusing names of nodes that have been stopped`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+
+            nodeA.stop()
+
+            assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
+        }
+    }
+
+    private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
 }

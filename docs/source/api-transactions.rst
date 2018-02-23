@@ -615,6 +615,24 @@ which the signatures are allowed to be missing:
        :end-before: DOCEND 36
        :dedent: 16
 
+There is also an overload of ``SignedTransaction.verifySignaturesExcept``, which takes a ``Collection`` of the
+public keys for which the signatures are allowed to be missing:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 54
+       :end-before: DOCEND 54
+       :dedent: 8
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 54
+       :end-before: DOCEND 54
+       :dedent: 16
+
+
 If the transaction is missing any signatures without the corresponding public keys being passed in, a
 ``SignaturesMissingException`` is thrown.
 

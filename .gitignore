@@ -6,6 +6,7 @@ tags
 .DS_Store
 *.log
 *.orig
+corda-docs-only-build
 
 # Created by .ignore support plugin (hsz.mobi)
 

@@ -2,17 +2,24 @@
 
 package net.corda.core.internal
 
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappConfig
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.*
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -26,10 +33,12 @@ import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -307,6 +316,16 @@ val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
+fun URL.post(serializedData: OpaqueBytes) {
+    openHttpConnection().apply {
+        doOutput = true
+        requestMethod = "POST"
+        setRequestProperty("Content-Type", "application/octet-stream")
+        outputStream.use { serializedData.open().copyTo(it) }
+        checkOkResponse()
+    }
+}
+
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != 200) {
         val message = errorStream.use { it.reader().readText() }
@@ -352,4 +371,34 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     val serialised = serialize()
     val signature = Crypto.doSign(privateKey, serialised.bytes)
     return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
+}
+
+inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
+    return SignedData(this, signer(this))
+}
+
+inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
+    return SignedData(this, keyPair.sign(this.bytes))
+}
+
+fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }
+
+fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
+    return CordappContext(cordapp, attachmentId, classLoader, config)
+}
+/** Verifies that the correct notarisation request was signed by the counterparty. */
+fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+    val requestingParty = otherSideSession.counterparty
+    request.verifySignature(signature, requestingParty)
+    // TODO: persist the signature for traceability. Do we need to persist the request as well?
+}
+
+/** Creates a signature over the notarisation request using the legal identity key. */
+fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
+    val serializedRequest = this.serialize().bytes
+    val signature = with(serviceHub) {
+        val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
+        keyManagementService.sign(serializedRequest, myLegalIdentity)
+    }
+    return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
 }

@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.signWithCert
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -55,7 +54,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val parametersSignature = networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig
         // Create network parameters
         val networkParametersHash = networkMapStorage.saveNetworkParameters(networkParameters, parametersSignature)
-        val networkMap = NetworkMap(listOf(nodeInfoHash), networkParametersHash)
+        val networkMap = NetworkMap(listOf(nodeInfoHash), networkParametersHash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
 
         // when
@@ -96,7 +95,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         // Create empty network map
 
         // Sign network map making it current network map
-        val networkMap = NetworkMap(emptyList(), networkParametersHash)
+        val networkMap = NetworkMap(emptyList(), networkParametersHash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         networkMapStorage.saveNetworkMap(signedNetworkMap)
 
@@ -125,7 +124,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         // Create network parameters
         val testParameters = testNetworkParameters(emptyList())
         val networkParametersHash = networkMapStorage.saveNetworkParameters(testParameters, testParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig)
-        val networkMap = NetworkMap(listOf(nodeInfoHashA), networkParametersHash)
+        val networkMap = NetworkMap(listOf(nodeInfoHashA), networkParametersHash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
 
         // Sign network map

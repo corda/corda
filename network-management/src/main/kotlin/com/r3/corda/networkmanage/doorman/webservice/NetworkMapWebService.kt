@@ -10,13 +10,13 @@ import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.network.NetworkParameters
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException

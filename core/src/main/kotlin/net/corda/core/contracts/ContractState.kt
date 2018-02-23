@@ -1,7 +1,6 @@
 package net.corda.core.contracts
 
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 
 // DOCSTART 1
