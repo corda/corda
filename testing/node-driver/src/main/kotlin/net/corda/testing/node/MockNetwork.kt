@@ -125,7 +125,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
-     * @param context indicates who started the flow, see: [InvocatioWnContext].
+     * @param context indicates who started the flow, see: [InvocationContext].
      */
     fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = node.services.startFlow(logic, node.services.newContext()).getOrThrow().resultFuture
 

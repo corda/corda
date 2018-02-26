@@ -73,3 +73,5 @@ data class InProcessImpl(
     override fun close() = stop()
     override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> = node.registerInitiatedFlow(initiatedFlowClass)
 }
+
+fun InProcess.getInternalServices(): StartedNodeServices = services as StartedNodeServices

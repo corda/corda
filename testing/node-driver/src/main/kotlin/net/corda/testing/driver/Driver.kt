@@ -10,17 +10,21 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.internal.getInternalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import net.corda.testing.node.internal.newContext
 import rx.Observable
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -72,12 +76,18 @@ interface OutOfProcess : NodeHandle {
 @DoNotImplement
 interface InProcess : NodeHandle {
     /** Services which are available to this node **/
-    val services: StartedNodeServices
+    val services: ServiceHub
 
     /**
      * Register a flow that is initiated by another flow
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
+
+    /**
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * @param context indicates who started the flow, see: [InvocationContext].
+     */
+    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = getInternalServices().startFlow(logic, getInternalServices().newContext()).getOrThrow().resultFuture
 }
 
 /**
