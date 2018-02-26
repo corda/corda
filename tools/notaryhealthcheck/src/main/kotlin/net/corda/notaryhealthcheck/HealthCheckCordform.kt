@@ -31,20 +31,32 @@ class HealthCheckCordform : CordformDefinition() {
         }
         notaryNode(0, 10008) {
             p2pPort(10009)
-            rpcPort(10010)
+            rpcSettings {
+                port(10010)
+                adminPort(10110)
+            }
         }
         notaryNode(1, 10012, 10008) {
             p2pPort(10013)
-            rpcPort(10014)
+            rpcSettings {
+                port(10014)
+                adminPort(10114)
+            }
         }
         notaryNode(2, 10016, 10008) {
             p2pPort(10017)
-            rpcPort(10018)
+            rpcSettings {
+                port(10018)
+                adminPort(10118)
+            }
         }
         node {
             name(CordaX500Name("R3 Notary Health Check", "London", "GB"))
             p2pPort(10002)
-            rpcPort(10003)
+            rpcSettings {
+                port(10003)
+                adminPort(10103)
+            }
             rpcUsers(notaryDemoUser)
         }
     }
