@@ -161,6 +161,10 @@ class RPCClientProxyHandler(
                 build()
     }
 
+    // Used toto buffer client requests if the server is unavailable
+    private var bufferOutgoingRequests = false
+    private val outgoingRequestBuffer = ArrayList<RPCApi.ClientToServer.RpcRequest>()
+
     private var sessionFactory: ClientSessionFactory? = null
     private var producerSession: ClientSession? = null
     private var consumerSession: ClientSession? = null
@@ -195,6 +199,7 @@ class RPCClientProxyHandler(
         consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
+        handleConnectionFailover(producerSession)
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         consumerSession!!.start()
         producerSession!!.start()
@@ -228,7 +233,14 @@ class RPCClientProxyHandler(
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
             }
-            sendMessage(request)
+
+            if (bufferOutgoingRequests) {
+                log.info("Buffering request ${method.name}")
+                outgoingRequestBuffer.add(request)
+            } else {
+                sendMessage(request)
+            }
+
             return replyFuture.getOrThrow()
         } catch (e: RuntimeException) {
             // Already an unchecked exception, so just rethrow it
@@ -391,6 +403,34 @@ class RPCClientProxyHandler(
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
             sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
+        }
+    }
+
+    private fun handleConnectionFailover(session: ClientSession?) {
+        session!!.addFailoverListener { event ->
+            when(event) {
+                FailoverEventType.FAILURE_DETECTED -> {
+                    log.warn("RPC server unavailable. RPC calls are being buffered.")
+                    bufferOutgoingRequests = true
+                }
+
+                FailoverEventType.FAILOVER_COMPLETED -> {
+                    log.info("RPC server available. Draining request buffer.")
+                    bufferOutgoingRequests = false
+                    outgoingRequestBuffer.forEach { request -> sendMessage(request) }
+                    outgoingRequestBuffer.clear()
+                }
+
+                FailoverEventType.FAILOVER_FAILED -> {
+                    log.error("Could not reconnect to the RPC server. All buffered requests will be discarded and RPC calls " +
+                            "will throw an RPCException.")
+                    rpcReplyMap.values.forEach { replyFuture ->
+                        replyFuture.setException(RPCException("Could not connect to RPC server."))
+                    }
+                    rpcReplyMap.clear()
+                    callSiteMap?.clear()
+                }
+            }
         }
     }
 }
