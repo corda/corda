@@ -81,7 +81,6 @@ interface ServiceHubInternal : ServiceHub {
         }
 
         if (statesToRecord != StatesToRecord.NONE) {
-            val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
             // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
             // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
             // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
@@ -116,7 +115,7 @@ interface ServiceHubInternal : ServiceHub {
             //
             // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
             // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-            vaultService.notifyAll(statesToRecord, toNotify)
+            vaultService.notifyAll(statesToRecord, txs.map { it.coreTransaction })
         }
     }
 

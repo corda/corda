@@ -15,7 +15,9 @@ import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
@@ -104,10 +106,11 @@ class NotaryFlow {
 
         @Suspendable
         private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<List<TransactionSignature>> {
-            val tx: CoreTransaction = if (stx.isNotaryChangeTransaction()) {
-                stx.notaryChangeTx // Notary change transactions do not support filtering
-            } else {
-                stx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+            val ctx = stx.coreTransaction
+            val tx = when (ctx) {
+                is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+                else -> ctx
             }
             return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))
         }
@@ -168,12 +171,10 @@ class NotaryFlow {
         @Suspendable
         abstract fun receiveAndVerifyTx(): TransactionParts
 
-        // Check if transaction is intended to be signed by this notary.
+        /** Check if transaction is intended to be signed by this notary. */
         @Suspendable
         protected fun checkNotary(notary: Party?) {
-            // TODO This check implies that it's OK to use the node's main identity. Shouldn't it be just limited to the
-            // notary identities?
-            if (notary == null || !serviceHub.myInfo.isLegalIdentity(notary)) {
+            if (notary?.owningKey != service.notaryIdentityKey) {
                 throw NotaryException(NotaryError.WrongNotary)
             }
         }

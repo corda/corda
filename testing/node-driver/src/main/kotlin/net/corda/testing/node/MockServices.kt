@@ -2,6 +2,9 @@ package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -15,6 +18,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
+import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
@@ -61,8 +65,7 @@ open class MockServices private constructor(
         final override val networkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>
-) : ServiceHub, StateLoader by validatedTransactions {
-
+) : ServiceHub {
     companion object {
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
@@ -107,7 +110,7 @@ open class MockServices private constructor(
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         super.recordTransactions(statesToRecord, txs)
                         // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                        (vaultService as VaultServiceInternal).notifyAll(statesToRecord, txs.map { it.tx })
+                        (vaultService as VaultServiceInternal).notifyAll(statesToRecord, txs.map { it.coreTransaction })
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()
@@ -223,8 +226,10 @@ open class MockServices private constructor(
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments, networkParameters.whitelistedContractImplementations)
     override val cordappProvider: CordappProvider get() = mockCordappProvider
 
+    protected val servicesForResolution: ServicesForResolution get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, validatedTransactions)
+
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, validatedTransactions, hibernateConfig)
+        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig)
         HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
         return vaultService
     }
@@ -247,6 +252,9 @@ open class MockServices private constructor(
     fun addMockCordapp(contractClassName: ContractClassName) {
         mockCordappProvider.addMockCordapp(contractClassName, attachments)
     }
+
+    override fun loadState(stateRef: StateRef) = servicesForResolution.loadState(stateRef)
+    override fun loadStates(stateRefs: Set<StateRef>) = servicesForResolution.loadStates(stateRefs)
 }
 
 /**
