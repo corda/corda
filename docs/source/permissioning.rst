@@ -113,8 +113,7 @@ Creating the root network CA's keystore and truststore
 4. Create a new Java keystore named ``truststore.jks`` and store the root network CA's certificate in it using the
    alias ``cordarootca``
 
-   * This keystore will be provisioned to the individual nodes later. The `truststore.jks` needs to be given to the node
-    before it registers with the doorman by the network operator.
+   * This keystore must then be provisioned to the individual nodes later so they can store it in their ``certificates`` folder
 
 .. warning:: The root network CA's private key should be protected and kept safe.
 
