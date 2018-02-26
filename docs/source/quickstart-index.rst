@@ -6,5 +6,5 @@ Quickstart
 
    getting-set-up
    tutorial-cordapp
+   CordApp Showcase <http://explore.corda.zone/>
    Other CorDapps <https://www.corda.net/samples/>
-   Utilities <https://www.corda.net/utilities/>
