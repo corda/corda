@@ -28,4 +28,9 @@ fun startupSteps(steps: StepsBlock) = steps {
         }
     }
 
+    Then<String>("^user can retrieve node identity information for node (\\w+)") { name ->
+        withNetwork {
+            startup.hasIdentityDetails(name)
+        }
+    }
 }

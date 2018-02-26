@@ -73,9 +73,11 @@ dependencies {
     compile "io.kubernetes:client-java:$kubernetes_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
 
-    compile project(':finance')
-    compile project(':node-api')
-    compile project(':client:rpc')
+    compileOnly project(':finance')
+    compileOnly project(':node-api')
+    compileOnly project(':client:rpc')
+
+    testCompile project(':test-utils')
 
     // Unit Tests
 
@@ -87,6 +89,16 @@ dependencies {
     scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
+
+    // Jetty http server
+    compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
+    compile "org.eclipse.jetty:jetty-webapp:$jetty_version"
+    compile "javax.servlet:javax.servlet-api:3.1.0"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
 
 }
 
@@ -115,6 +127,20 @@ task scenarios(type: Test) {
         systemProperty "cucumber.options", "--tags $tags"
         logger.warn("Only running tests tagged with: $tags ...")
     }
+}
+
+task rpcProxyJar(type: Jar) {
+    from {
+        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    exclude("META-INF/*.DSA")
+    exclude("META-INF/*.RSA")
+    exclude("META-INF/*.SF")
+    manifest {
+        attributes 'Main-Class': 'net.corda.behave.service.proxy.RPCProxyServerKt'
+    }
+    archiveName "corda-rpcProxy.jar"
 }
 
 //scenarios.mustRunAfter test

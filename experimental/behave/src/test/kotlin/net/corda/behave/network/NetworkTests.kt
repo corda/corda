@@ -10,6 +10,20 @@ class NetworkTests {
 
     @Ignore
     @Test
+    fun `network of single node with RPC proxy can be spun up`() {
+        val network = Network
+                .new()
+                .addNode(name = "Foo", withRPCProxy = true)
+                .generate()
+        network.use {
+            it.waitUntilRunning(30.seconds)
+            it.signal()
+            it.keepAlive(30.seconds)
+        }
+    }
+
+    @Ignore
+    @Test
     fun `network of two nodes can be spun up`() {
         val network = Network
                 .new()

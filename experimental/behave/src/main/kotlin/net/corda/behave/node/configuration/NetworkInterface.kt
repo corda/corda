@@ -8,6 +8,7 @@ data class NetworkInterface(
         val sshPort: Int = getPort(2222 + nodeIndex),
         val p2pPort: Int = getPort(12001 + (nodeIndex * 5)),
         val rpcPort: Int = getPort(12002 + (nodeIndex * 5)),
+        val rpcProxy: Int = getPort(13002 + (nodeIndex * 5)),
         val rpcAdminPort: Int = getPort(12003 + (nodeIndex * 5)),
         val webPort: Int = getPort(12004 + (nodeIndex * 5)),
         val dbPort: Int = getPort(12005 + (nodeIndex * 5)),
@@ -41,9 +42,9 @@ data class NetworkInterface(
 
         private fun getPort(suggestedPortNumber: Int): Int {
             var portNumber = suggestedPortNumber
-            while (isPortInUse(portNumber)) {
-                portNumber = startOfBackupRange.getAndIncrement()
-            }
+//            while (isPortInUse(portNumber)) {
+//                portNumber = startOfBackupRange.getAndIncrement()
+//            }
             if (portNumber >= 65535) {
                 throw Exception("No free port found (suggested $suggestedPortNumber)")
             }

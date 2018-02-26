@@ -11,6 +11,7 @@
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
       <module name="behave_main" target="1.8" />
+      <module name="behave_rpcProxy" target="1.8" />
       <module name="behave_scenario" target="1.8" />
       <module name="behave_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />

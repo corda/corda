@@ -3,8 +3,11 @@ package net.corda.behave.scenarios
 import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
 import net.corda.behave.node.Node
+import net.corda.behave.scenarios.helpers.Substeps
+import net.corda.behave.service.proxy.RPCProxyOps
 import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat
+import java.time.Duration
 
 class ScenarioState {
 
@@ -47,7 +50,8 @@ class ScenarioState {
         }
         network = networkBuilder.generate()
         network?.start()
-        assertThat(network?.waitUntilRunning()).isTrue()
+        // TODO switch back
+        assertThat(network?.waitUntilRunning(Duration.ofMinutes(10))).isTrue()
     }
 
     inline fun <T> withNetwork(action: ScenarioState.() -> T): T {
@@ -58,6 +62,14 @@ class ScenarioState {
     inline fun <T> withClient(nodeName: String, crossinline action: (CordaRPCOps) -> T): T {
         withNetwork {
             return node(nodeName).rpc {
+                action(it)
+            }
+        }
+    }
+
+    inline fun <T> withClientProxy(nodeName: String, crossinline action: (RPCProxyOps) -> T): T {
+        withNetwork {
+            return node(nodeName).http {
                 action(it)
             }
         }

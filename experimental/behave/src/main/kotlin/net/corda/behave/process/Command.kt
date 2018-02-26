@@ -46,6 +46,7 @@ open class Command(
 
     private val thread = Thread(Runnable {
         try {
+            log.info("Command: $command")
             val processBuilder = ProcessBuilder(command)
                     .directory(directory)
                     .redirectErrorStream(true)
