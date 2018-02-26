@@ -56,7 +56,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryId
  */
 open class MockServices private constructor(
         cordappLoader: CordappLoader,
-        override val validatedTransactions: WritableTransactionStorage,
+        override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
         final override val networkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
@@ -205,7 +205,7 @@ open class MockServices private constructor(
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
-            validatedTransactions.addTransaction(it)
+            (validatedTransactions as WritableTransactionStorage).addTransaction(it)
         }
     }
 
