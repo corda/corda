@@ -320,6 +320,23 @@ upgraded contracts must implement the ``UpgradedContract`` interface. This inter
 The ``upgrade`` method describes how the old state type is upgraded to the new state type. When the state isn't being
 upgraded, the same state type can be used for both the old and new state type parameters.
 
+By default this new contract will only be able to upgrade legacy states which are constrained by the zone whitelist (see :doc:`api-contract-constraints`).
+If hash or other constraint types are used, the new contract should implement ``UpgradedContractWithLegacyConstraint``
+instead, and specify the constraint explicitly:
+
+.. sourcecode:: kotlin
+
+    interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out NewState : ContractState> : UpgradedContract<OldState, NewState> {
+        val legacyContractConstraint: AttachmentConstraint
+    }
+
+For example, in case of hash constraints the hash of the legacy JAR file should be provided:
+
+.. sourcecode:: kotlin
+
+    override val legacyContractConstraint: AttachmentConstraint
+        get() = HashAttachmentConstraint(SecureHash.parse("E02BD2B9B010BBCE49C0D7C35BECEF2C79BEB2EE80D902B54CC9231418A4FA0C"))
+
 Authorising the upgrade
 ^^^^^^^^^^^^^^^^^^^^^^^
 Once the new states and contracts are on the classpath for all the relevant nodes, the next step is for all nodes to
