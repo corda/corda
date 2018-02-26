@@ -29,6 +29,8 @@
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
+      <module name="cordapp-configuration_main" target="1.8" />
+      <module name="cordapp-configuration_test" target="1.8" />
       <module name="cordapp_integrationTest" target="1.8" />
       <module name="cordapp_main" target="1.8" />
       <module name="cordapp_test" target="1.8" />
@@ -37,6 +39,7 @@
       <module name="cordformation_main" target="1.8" />
       <module name="cordformation_runnodes" target="1.8" />
       <module name="cordformation_test" target="1.8" />
+      <module name="core_extraResource" target="1.8" />
       <module name="core_integrationTest" target="1.8" />
       <module name="core_main" target="1.8" />
       <module name="core_smokeTest" target="1.8" />
@@ -153,8 +156,8 @@
       <module name="web_test" target="1.8" />
       <module name="webcapsule_main" target="1.6" />
       <module name="webcapsule_test" target="1.6" />
-      <module name="webserver-webcapsule_main" target="1.6" />
-      <module name="webserver-webcapsule_test" target="1.6" />
+      <module name="webserver-webcapsule_main" target="1.8" />
+      <module name="webserver-webcapsule_test" target="1.8" />
       <module name="webserver_integrationTest" target="1.8" />
       <module name="webserver_main" target="1.8" />
       <module name="webserver_test" target="1.8" />

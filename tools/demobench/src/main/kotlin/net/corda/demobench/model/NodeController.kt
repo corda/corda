@@ -75,6 +75,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 ),
                 p2pAddress = nodeData.p2pPort.toLocalAddress(),
                 rpcAddress = nodeData.rpcPort.toLocalAddress(),
+                rpcAdminAddress = nodeData.rpcAdminPort.toLocalAddress(),
                 webAddress = nodeData.webPort.toLocalAddress(),
                 notary = notary,
                 h2port = nodeData.h2Port.value,
@@ -144,7 +145,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
-                epoch = 1
+                epoch = 1,
+                whitelistedContractImplementations = emptyMap()
         ))
         notaryIdentity = identity
         networkParametersCopier = parametersCopier

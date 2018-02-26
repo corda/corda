@@ -59,11 +59,6 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
     }
-
-    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
-    // This lets you run the file like so: ./corda.jar
-    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
-    reallyExecutable { trampolining() }
 }
 
 artifacts {

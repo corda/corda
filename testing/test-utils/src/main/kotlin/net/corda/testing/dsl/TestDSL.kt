@@ -14,7 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.services.MockCordappProvider
+import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.core.dummyCommand
 import java.io.InputStream
 import java.security.PublicKey
@@ -77,6 +77,9 @@ data class TestTransactionDSLInterpreter private constructor(
 
     val services = object : ServicesForResolution by ledgerInterpreter.services {
         override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+            return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
+        }
         override val cordappProvider: CordappProvider = ledgerInterpreter.services.cordappProvider
     }
 

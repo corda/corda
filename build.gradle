@@ -13,7 +13,9 @@ buildscript {
     //
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.quasar_version = '0.7.9'
+    // use our fork of quasar
+    ext.quasar_group = 'com.github.corda.quasar'
+    ext.quasar_version = '7629695563deae6cc95adcfbebcbc8322fd0241a'
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
@@ -38,7 +40,6 @@ buildscript {
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.jolokia_version = '1.3.7'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
@@ -69,6 +70,7 @@ buildscript {
     ext.docker_compose_rule_version = '0.33.0'
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
+    ext.eaagentloader_version = '1.0.3'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -114,7 +116,6 @@ ext {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 
@@ -171,6 +172,10 @@ allprojects {
 
         if (System.getProperty("test.maxParallelForks") != null) {
             maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
+        }
+
+        if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
+            enabled = false
         }
     }
 
@@ -258,30 +263,6 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
 
 tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
-}
-
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    directory "./build/nodes"
-    node {
-        name "O=Controller,OU=corda,L=London,C=GB"
-        notary = [validating : true]
-        p2pPort 10002
-        cordapps = []
-    }
-    node {
-        name "O=Bank A,OU=corda,L=London,C=GB"
-        p2pPort 10012
-        rpcPort 10013
-        webPort 10014
-        cordapps = []
-    }
-    node {
-        name "O=Bank B,OU=corda,L=London,C=GB"
-        p2pAddress "localhost:10007"
-        rpcAddress "localhost:10008"
-        webAddress "localhost:10009"
-        cordapps = []
-    }
 }
 
 bintrayConfig {

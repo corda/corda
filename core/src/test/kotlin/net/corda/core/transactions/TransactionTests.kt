@@ -1,5 +1,7 @@
 package net.corda.core.transactions
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
@@ -112,7 +114,9 @@ class TransactionTests {
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
         val commands = emptyList<CommandWithParties<CommandData>>()
-        val attachments = listOf<Attachment>(ContractAttachment(rigorousMock(), DummyContract.PROGRAM_ID))
+        val attachments = listOf<Attachment>(ContractAttachment(rigorousMock<Attachment>().also {
+            doReturn(SecureHash.zeroHash).whenever(it).id
+        }, DummyContract.PROGRAM_ID))
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt: PrivacySalt = PrivacySalt()

@@ -17,6 +17,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
+import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.startFlow
@@ -62,7 +63,7 @@ class RaftNotaryServiceTests {
     }
 
     private fun issueState(nodeHandle: InProcess, notary: Party): StateAndRef<*> {
-        return nodeHandle.database.transaction {
+        return (nodeHandle as InProcessImpl).database.transaction {
 
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.chooseIdentity().ref(0))
             val stx = nodeHandle.services.signInitialTransaction(builder)

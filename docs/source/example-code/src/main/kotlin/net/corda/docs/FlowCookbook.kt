@@ -27,6 +27,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import java.security.PublicKey
+import java.security.Signature
 import java.time.Instant
 
 // ``InitiatorFlow`` is our first flow, and will communicate with
@@ -204,6 +205,19 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         regulatorSession.send(Any())
         val packet3: UntrustworthyData<Any> = regulatorSession.receive<Any>()
         // DOCEND 06
+
+        // We may also batch receives in order to increase performance. This
+        // ensures that only a single checkpoint is created for all received
+        // messages.
+        // Type-safe variant:
+        val signatures: List<UntrustworthyData<Signature>> =
+                receiveAll(Signature::class.java, listOf(counterpartySession, regulatorSession))
+        // Dynamic variant:
+        val messages: Map<FlowSession, UntrustworthyData<*>> =
+                receiveAllMap(mapOf(
+                        counterpartySession to Boolean::class.java,
+                        regulatorSession to String::class.java
+                ))
 
         /**-----------------------------------
          * EXTRACTING STATES FROM THE VAULT *
@@ -522,11 +536,18 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // DOCEND 35
 
         // If the transaction is only partially signed, we have to pass in
-        // a list of the public keys corresponding to the missing
+        // a vararg of the public keys corresponding to the missing
         // signatures, explicitly telling the system not to check them.
         // DOCSTART 36
         onceSignedTx.verifySignaturesExcept(counterpartyPubKey)
         // DOCEND 36
+
+        // There is also an overload of ``verifySignaturesExcept`` which accepts
+        // a ``Collection`` of the public keys corresponding to the missing
+        // signatures.
+        // DOCSTART 54
+        onceSignedTx.verifySignaturesExcept(listOf(counterpartyPubKey))
+        // DOCEND 54
 
         // We can also choose to only check the signatures that are
         // present. BE VERY CAREFUL - this function provides no guarantees

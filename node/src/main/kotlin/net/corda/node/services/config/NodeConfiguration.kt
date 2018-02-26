@@ -25,7 +25,7 @@ val Int.MB: Long get() = this * 1024L * 1024L
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
-    val exportJMXto: String
+    val jmxMonitoringHttpPort: Int?
     val dataSourceProperties: Properties
     val rpcUsers: List<User>
     val security: SecurityConfiguration?
@@ -118,6 +118,7 @@ data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
         override val baseDirectory: Path,
         override val myLegalName: CordaX500Name,
+        override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
@@ -170,21 +171,20 @@ data class NodeConfigurationImpl(
 
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
-        errors + validateRpcOptions(rpcOptions)
+        errors += validateRpcOptions(rpcOptions)
         return errors
     }
 
     private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
         val errors = mutableListOf<String>()
-        if (!options.useSsl) {
-            if (options.adminAddress == null) {
-                errors + "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+        if (options.address != null) {
+            if (!options.useSsl && options.adminAddress == null) {
+                errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
             }
         }
         return errors
     }
 
-    override val exportJMXto: String get() = "http"
     override val transactionCacheSizeBytes: Long
         get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
     override val attachmentContentCacheSizeBytes: Long

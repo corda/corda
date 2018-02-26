@@ -13,6 +13,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
@@ -52,7 +53,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
-        return services.networkMapUpdater.track()
+        return services.networkMapUpdater.trackParametersUpdate()
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
@@ -189,7 +190,7 @@ internal class CordaRPCOpsImpl(
     override fun uploadAttachment(jar: InputStream): SecureHash {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
-            services.attachments.importAttachment(jar)
+            services.attachments.importAttachment(jar, RPC_UPLOADER, null)
         }
     }
 
