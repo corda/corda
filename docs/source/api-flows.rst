@@ -772,7 +772,7 @@ Currently the ``finance`` package uses ``FlowLogic.sleep`` to make several attem
 when many states are soft locked and we wish to wait for those, or other new states in their place, to become unlocked.
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/cash/selection/AbstractCashSelection.kt
-:language: kotlin
-            :start-after: DOCSTART CASHSELECT 1
-            :end-before: DOCEND CASHSELECT 1
-            :dedent: 8
+        :language: kotlin
+        :start-after: DOCSTART CASHSELECT 1
+        :end-before: DOCEND CASHSELECT 1
+        :dedent: 8
