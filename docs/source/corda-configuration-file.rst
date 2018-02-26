@@ -6,13 +6,16 @@ Node configuration
 File location
 -------------
 When starting a node, the ``corda.jar`` file defaults to reading the node's configuration from a ``node.conf`` file in
-the present working directory. There are two (mutually exclusive) command-line options to override this behaviour:
+the directory from which the command to launch Corda is executed. There are two command-line options to override this
+behaviour:
 
 * The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at
   different file location. Paths are relative to the current working directory
 
 * The ``--base-directory`` command line option allows you to specify the node's workspace location. A ``node.conf``
   configuration file is then expected in the root of this workspace
+
+If you specify both command line arguments at the same time, the node will fail to start.
 
 Format
 ------
@@ -35,8 +38,10 @@ Fields
 The available config fields are listed below. ``baseDirectory`` is available as a substitution value and contains the
 absolute path to the node's base directory.
 
-:myLegalName: The legal identity of the node acts as a human readable alias to the node's public key and several demos use
-    this to lookup the NodeInfo.
+:myLegalName: The legal identity of the node. This acts as a human-readable alias to the node's public key and can be used with
+    the network map to look up the node's info. This is the name that is used in the node's certificates (either when requesting them
+    from the doorman, or when auto-generating them in dev mode). At runtime, Corda checks whether this name matches the
+    name in the node's certificates.
 
 :keyStorePassword: The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
     node certificate and private key.
