@@ -184,7 +184,7 @@ Starting a flow
 
 We would start the ``CashIssue`` flow as follows:
 
-``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "O=Bank A,L=London,C=GB", notary: "O=Notary Service,OU=corda,L=London,C=GB"``
+``flow start CashIssueFlow amount: $1000, issuerBankPartyRef: 1234, notary: "O=Controller, L=London, C=GB"``
 
 This breaks down as follows:
 
