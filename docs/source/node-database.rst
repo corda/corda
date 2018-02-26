@@ -54,5 +54,3 @@ Note that:
 * The ``database.schema`` property is optional
 * The value of ``database.schema`` is not wrapped in double quotes and Postgres always treats it as a lower-case value
   (e.g. ``AliceCorp`` becomes ``alicecorp``)
-
-  * Without quotes, PostgresSQL would treat the value as ``alicecorp``
