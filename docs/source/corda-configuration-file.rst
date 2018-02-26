@@ -6,7 +6,7 @@ Node configuration
 File location
 -------------
 When starting a node, the ``corda.jar`` file defaults to reading the node's configuration from a ``node.conf`` file in
-the present working directory. This behaviour can be overridden:
+the present working directory. There are two (mutually exclusive) command-line options to override this behaviour:
 
 * The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at
   different file location. Paths are relative to the current working directory
