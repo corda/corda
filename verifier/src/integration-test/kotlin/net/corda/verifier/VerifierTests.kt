@@ -22,7 +22,6 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.util.*
@@ -143,7 +142,6 @@ class VerifierTests  : IntegrationTest() {
         }
     }
 
-    @Ignore("CORDA-1022")
     @Test
     fun `single verifier works with a node`() {
         verifierDriver(DriverParameters(

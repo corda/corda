@@ -69,7 +69,6 @@ class ListsSerializationTest {
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
             kryoMagic.writeTo(this)
-            SectionId.ALT_DATA_AND_STOP.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
             write(javaEmptyListClass.name.toAscii())

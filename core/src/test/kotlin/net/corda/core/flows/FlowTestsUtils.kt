@@ -5,6 +5,7 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.InternalMockNetwork
 import kotlin.reflect.KClass
 

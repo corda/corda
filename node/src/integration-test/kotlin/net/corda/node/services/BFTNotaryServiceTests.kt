@@ -57,7 +57,7 @@ class BFTNotaryServiceTests : IntegrationTest() {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(emptyList())
     }
 
     @After

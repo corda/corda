@@ -33,7 +33,7 @@ public final class ForbiddenLambdaSerializationTests {
         EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(EnumSet.of(SerializationContext.UseCase.Checkpoint));
 
         contexts.forEach(ctx -> {
-            SerializationContext context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoMagic(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx, null);
+            SerializationContext context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoMagic(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx);
             String value = "Hey";
             Callable<String> target = (Callable<String> & Serializable) () -> value;
 
@@ -55,7 +55,7 @@ public final class ForbiddenLambdaSerializationTests {
         EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(EnumSet.of(SerializationContext.UseCase.Checkpoint));
 
         contexts.forEach(ctx -> {
-            SerializationContext context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoMagic(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx, null);
+            SerializationContext context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoMagic(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx);
             String value = "Hey";
             Callable<String> target = () -> value;
 

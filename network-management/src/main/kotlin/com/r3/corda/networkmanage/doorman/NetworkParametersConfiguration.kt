@@ -68,7 +68,5 @@ internal fun parseNetworkParameters(configuration: NetworkParametersConfiguratio
             configuration.maxMessageSize,
             configuration.maxTransactionSize,
             Instant.now(),
-            epoch,
-            // TODO: Tudor, Michal - pass the actual network parameters where we figure out how
-            emptyMap())
+            epoch)
 }

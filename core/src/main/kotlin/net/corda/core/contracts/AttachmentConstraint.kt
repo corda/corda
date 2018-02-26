@@ -1,14 +1,10 @@
 package net.corda.core.contracts
 
-import net.corda.core.DoNotImplement
-import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
 @CordaSerializable
-@DoNotImplement
 interface AttachmentConstraint {
     /** Returns whether the given contract attachment can be used with the [ContractState] associated with this constraint object. */
     fun isSatisfiedBy(attachment: Attachment): Boolean
@@ -22,20 +18,6 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
 /** An [AttachmentConstraint] that verifies by hash */
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment) = attachment.id == attachmentId
-}
-
-/**
- * An [AttachmentConstraint] that verifies that the hash of the attachment is in the network parameters whitelist.
- * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
- * It allows for centralized control over the cordapps that can be used.
- */
-object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        return if (attachment is AttachmentWithContext) {
-            val whitelist = attachment.whitelistedContractImplementations ?: throw IllegalStateException("Unable to verify WhitelistedByZoneAttachmentConstraint - whitelist not specified")
-            attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
-        } else false
-    }
 }
 
 /**

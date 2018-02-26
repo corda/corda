@@ -3,12 +3,12 @@ package net.corda.node.internal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -26,9 +26,9 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     val networkParameters by lazy { retrieveNetworkParameters() }
 
     private fun retrieveNetworkParameters(): NetworkParameters {
-        val advertisedParametersHash = networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
+        val advertisedParametersHash = networkMapClient?.getNetworkMap()?.networkMap?.networkParameterHash
         val signedParametersFromFile = if (networkParamsFile.exists()) {
-            networkParamsFile.readObject<SignedNetworkParameters>()
+            networkParamsFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
         } else {
             null
         }
@@ -51,13 +51,13 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         return parameters
     }
 
-    private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
+    private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedDataWithCert<NetworkParameters> {
         if (!parametersUpdateFile.exists()) {
             throw IllegalArgumentException("Node uses parameters with hash: $previousParametersHash " +
-                    "but network map is advertising: $advertisedParametersHash.\n" +
+                    "but network map is advertising: ${advertisedParametersHash}.\n" +
                     "Please update node to use correct network parameters file.")
         }
-        val signedUpdatedParameters = parametersUpdateFile.readObject<SignedNetworkParameters>()
+        val signedUpdatedParameters = parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
         if (signedUpdatedParameters.raw.hash != advertisedParametersHash) {
             throw IllegalArgumentException("Both network parameters and network parameters update files don't match" +
                     "parameters advertised by network map.\n" +

@@ -17,7 +17,6 @@ The following are the core APIs that are used in the development of CorDapps:
    api-service-hub
    api-rpc
    api-core-types
-   api-testing
 
 Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
 

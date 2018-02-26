@@ -5,7 +5,6 @@ import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -89,7 +88,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
-                networkParameters = services.networkParameters
+                resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) },
+                maxTransactionSize = services.networkParameters.maxTransactionSize
         )
     }
 
@@ -108,16 +108,17 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, null)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, resolveContractAttachment, 10485760)
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            networkParameters: NetworkParameters?
+            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
+            maxTransactionSize: Int
     ): LedgerTransaction {
-        // Look up public keys to authenticated identities.
+        // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
             val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
             CommandWithParties(it.signers, parties, it.value)
@@ -125,9 +126,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters)
-        checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
+        // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
+        val contractAttachments = findAttachmentContracts(resolvedInputs, resolveContractAttachment, resolveAttachment)
+        // Order of attachments is important since contracts may refer to indexes so only append automatic attachments
+        val attachments = (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) } + contractAttachments).distinct()
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
+        checkTransactionSize(ltx, maxTransactionSize)
         return ltx
     }
 
@@ -139,9 +143,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             remainingTransactionSize -= size
         }
 
-        // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
-        // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
-        ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
+        // Check attachment size first as they are most likely to go over the limit.
+        ltx.attachments.associateBy(Attachment::id).values.forEach { minus(it.size) }
         minus(ltx.inputs.serialize().size)
         minus(ltx.commands.serialize().size)
         minus(ltx.outputs.serialize().size)
@@ -260,6 +263,19 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
+    }
+
+    private fun findAttachmentContracts(resolvedInputs: List<StateAndRef<ContractState>>,
+                                        resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
+                                        resolveAttachment: (SecureHash) -> Attachment?
+    ): List<Attachment> {
+        val contractAttachments = (outputs + resolvedInputs.map { it.state }).map { Pair(it, resolveContractAttachment(it)) }
+        val missingAttachments = contractAttachments.filter { it.second == null }
+        return if (missingAttachments.isEmpty()) {
+            contractAttachments.map { ContractAttachment(resolveAttachment(it.second!!) ?: throw AttachmentResolutionException(it.second!!), it.first.contract) }
+        } else {
+            throw MissingContractAttachments(missingAttachments.map { it.first })
+        }
     }
 
     override fun equals(other: Any?): Boolean {

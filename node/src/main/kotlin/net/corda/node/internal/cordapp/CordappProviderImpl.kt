@@ -1,12 +1,10 @@
 package net.corda.node.internal.cordapp
 
 import com.google.common.collect.HashBiMap
-import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.internal.createCordappContext
 import net.corda.core.node.services.AttachmentId
@@ -19,10 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader,
-                               private val cordappConfigProvider: CordappConfigProvider,
-                               attachmentStorage: AttachmentStorage,
-                               private val whitelistedContractImplementations: Map<String, List<AttachmentId>>) : SingletonSerializeAsToken(), CordappProviderInternal {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader, private val cordappConfigProvider: CordappConfigProvider, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
@@ -30,34 +25,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
 
     private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
 
-    /**
-     * Current known CorDapps loaded on this node
-     */
-    override val cordapps get() = cordappLoader.cordapps
-    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
-
-    init {
-        verifyInstalledCordapps(attachmentStorage)
-    }
-
-    private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
-
-        if (whitelistedContractImplementations.isEmpty()) {
-            log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
-            return
-        }
-
-        // Verify that the installed contract classes correspond with the whitelist hash
-        // And warn if node is not using latest CorDapp
-        cordappAttachments.keys.map(attachmentStorage::openAttachment).mapNotNull { it as? ContractAttachment }.forEach { attch ->
-            (attch.allContracts intersect whitelistedContractImplementations.keys).forEach { contractClassName ->
-                when {
-                    attch.id !in whitelistedContractImplementations[contractClassName]!! -> log.error("Contract $contractClassName found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
-                    attch.id != whitelistedContractImplementations[contractClassName]!!.last() -> log.warn("You are not using the latest CorDapp version for contract: $contractClassName. Please contact your zone operator.")
-                }
-            }
-        }
-    }
 
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
@@ -76,6 +43,11 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     }
 
     /**
+     * Current known CorDapps loaded on this node
+     */
+    override val cordapps get() = cordappLoader.cordapps
+    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
+    /**
      * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID
      *
      * @param cordapp The cordapp to get the attachment ID
@@ -83,16 +55,11 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      */
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(cordapp.jarPath)
 
-    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> =
-            cordapps.filter { !it.contractClassNames.isEmpty() }.map {
-                it.jarPath.openStream().use { stream ->
-                    try {
-                        attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
-                    } catch (faee: java.nio.file.FileAlreadyExistsException) {
-                        AttachmentId.parse(faee.message!!)
-                    }
-                } to it.jarPath
-            }.toMap()
+    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
+        val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it.jarPath }
+        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importOrGetAttachment(it) } }
+        return attachmentIds.zip(cordappsWithAttachments).toMap()
+    }
 
     /**
      * Get the current cordapp context for the given CorDapp

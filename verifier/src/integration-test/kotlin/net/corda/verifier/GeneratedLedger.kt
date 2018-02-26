@@ -43,7 +43,7 @@ data class GeneratedLedger(
     private val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
     private val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
     private val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
-        attachments.mapNotNull { it as? ContractAttachment }.flatMap { attch-> attch.allContracts.map { it to attch } }.toMap()
+        attachments.mapNotNull { it as? ContractAttachment }.associateBy { it.contract }
     }
 
     private val services = object : ServicesForResolution {

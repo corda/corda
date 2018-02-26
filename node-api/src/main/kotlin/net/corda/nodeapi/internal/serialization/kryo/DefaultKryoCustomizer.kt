@@ -12,7 +12,6 @@ import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
@@ -207,34 +206,29 @@ object DefaultKryoCustomizer {
                 output.writeBytesWithLength(buffer.toByteArray())
             }
             output.writeString(obj.contract)
-            kryo.writeClassAndObject(output, obj.additionalContracts)
-            output.writeString(obj.uploader)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()
-                val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
-                val uploader = input.readString()
+
                 val context = kryo.serializationContext()!!
                 val attachmentStorage = context.serviceHub.attachments
 
                 val lazyAttachment = object : AbstractAttachment({
-                    val attachment = attachmentStorage.openAttachment(attachmentHash)
-                            ?: throw MissingAttachmentsException(listOf(attachmentHash))
+                    val attachment = attachmentStorage.openAttachment(attachmentHash) ?: throw MissingAttachmentsException(listOf(attachmentHash))
                     attachment.open().readBytes()
                 }) {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contract, additionalContracts, uploader)
+                return ContractAttachment(lazyAttachment, contract)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
-                val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
-                val uploader = input.readString()
-                return ContractAttachment(attachment, contract, additionalContracts, uploader)
+
+                return ContractAttachment(attachment, contract)
             }
         }
     }

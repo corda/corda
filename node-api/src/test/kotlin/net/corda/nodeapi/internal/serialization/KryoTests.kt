@@ -1,13 +1,10 @@
 package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.internal.FetchDataFlow
@@ -19,29 +16,24 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
-import org.junit.runners.Parameterized.Parameters
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-@RunWith(Parameterized::class)
-class KryoTests(private val compression: CordaSerializationEncoding?) {
+class KryoTests {
     companion object {
         private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
-        @Parameters(name = "{0}")
-        @JvmStatic
-        fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
     }
 
     private lateinit var factory: SerializationFactory
@@ -55,11 +47,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.Storage,
-                compression,
-                rigorousMock<EncodingWhitelist>().also {
-                    if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
-                })
+                SerializationContext.UseCase.Storage)
     }
 
     @Test
@@ -271,8 +259,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P,
-                null)
+                SerializationContext.UseCase.P2P)
         pt.serialize(factory, context)
     }
 
@@ -312,25 +299,5 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val exception = FetchDataFlow.HashNotFound(randomHash)
         val exception2 = exception.serialize(factory, context).deserialize(factory, context)
         assertEquals(randomHash, exception2.requested)
-    }
-
-    @Test
-    fun `compression has the desired effect`() {
-        compression ?: return
-        val data = ByteArray(12345).also { Random(0).nextBytes(it) }.let { it + it }
-        val compressed = data.serialize(factory, context)
-        assertEquals(.5, compressed.size.toDouble() / data.size, .03)
-        assertArrayEquals(data, compressed.deserialize(factory, context))
-    }
-
-    @Test
-    fun `a particular encoding can be banned for deserialization`() {
-        compression ?: return
-        doReturn(false).whenever(context.encodingWhitelist).acceptEncoding(compression)
-        val compressed = "whatever".serialize(factory, context)
-        catchThrowable { compressed.deserialize(factory, context) }.run {
-            assertSame<Any>(KryoException::class.java, javaClass)
-            assertEquals(encodingNotPermittedFormat.format(compression), message)
-        }
     }
 }

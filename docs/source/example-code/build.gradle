@@ -80,20 +80,14 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Notary Service,OU=corda,L=London,C=GB"
         notary = [validating : true]
         p2pPort 10002
-        rpcSettings {
-            address "localhost:10003"
-            adminAddress "localhost:10013"
-        }
+        rpcPort 10003
         webPort 10004
         cordapps = []
     }
     node {
         name "O=Alice Corp,L=London,C=GB"
         p2pPort 10005
-        rpcSettings {
-            address "localhost:10006"
-            adminAddress "localhost:10016"
-        }
+        rpcPort 10006
         webPort 10007
         cordapps = []
         rpcUsers = [
