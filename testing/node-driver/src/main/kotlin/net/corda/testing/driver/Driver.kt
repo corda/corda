@@ -16,7 +16,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.internal.getInternalServices
+import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
@@ -85,7 +85,7 @@ interface InProcess : NodeHandle {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = getInternalServices().startFlow(logic, getInternalServices().newContext()).getOrThrow().resultFuture
+    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(logic, internalServices.newContext()).getOrThrow().resultFuture
 }
 
 /**
