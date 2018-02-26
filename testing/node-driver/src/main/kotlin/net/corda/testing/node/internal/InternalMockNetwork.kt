@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 fun StartedNode<InternalMockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-    return (network as InMemoryMessagingNetwork.InternalMockMessagingService).pumpReceive(block)
+    return (network as InternalMockMessagingService).pumpReceive(block)
 }
 
 data class MockNodeArgs(

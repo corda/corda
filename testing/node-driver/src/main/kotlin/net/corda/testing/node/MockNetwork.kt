@@ -14,6 +14,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.node.internal.InternalMockMessagingService
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.newContext
@@ -143,7 +144,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
      * @return the message that was processed, if any in this round.
      */
     fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-        return (node.network as InMemoryMessagingNetwork.InternalMockMessagingService).pumpReceive(block)
+        return (node.network as InternalMockMessagingService).pumpReceive(block)
     }
 
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */

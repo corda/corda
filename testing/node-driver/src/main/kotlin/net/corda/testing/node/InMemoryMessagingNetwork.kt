@@ -24,8 +24,8 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.node.InMemoryMessagingNetwork.InternalMockMessagingService
 import net.corda.testing.node.internal.InMemoryMessage
+import net.corda.testing.node.internal.InternalMockMessagingService
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -293,15 +293,6 @@ class InMemoryMessagingNetwork private constructor(
                                                override val uniqueMessageId: String,
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name) : ReceivedMessage
-    /**
-     * A [InternalMockMessagingService] that provides a [MessagingService] abstraction that also contains the ability to
-     * receive messages from the queue for testing purposes.
-     */
-    internal interface InternalMockMessagingService : MessagingService {
-        fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
-
-        fun stop()
-    }
 
     /**
      * A class that provides an abstraction over the nodes' messaging service that also contains the ability to
