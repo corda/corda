@@ -3,6 +3,7 @@ package net.corda.docs
 import net.corda.core.identity.Party
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
@@ -40,13 +41,13 @@ class FxTransactionBuildTutorialTest {
         // Use NodeA as issuer and create some dollars and wait for the flow to stop
         nodeA.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
-                notary))
+                notary)).getOrThrow()
         printBalances()
 
         // Using NodeB as Issuer create some pounds and wait for the flow to stop
         nodeB.startFlow(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
-                notary))
+                notary)).getOrThrow()
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
@@ -58,7 +59,7 @@ class FxTransactionBuildTutorialTest {
                 POUNDS(100).issuedBy(nodeB.info.singleIdentity().ref(0x01)),
                 DOLLARS(200).issuedBy(nodeA.info.singleIdentity().ref(0x01)),
                 nodeB.info.singleIdentity(),
-                weAreBaseCurrencySeller = false))
+                weAreBaseCurrencySeller = false)).getOrThrow()
         // wait for the flow to finish and the vault updates to be done
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()

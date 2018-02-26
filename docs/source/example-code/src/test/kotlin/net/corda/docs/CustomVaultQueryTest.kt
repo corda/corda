@@ -3,6 +3,7 @@ package net.corda.docs
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
@@ -56,7 +57,7 @@ class CustomVaultQueryTest {
         // Use NodeA as issuer and create some dollars
         nodeA.startFlow(CashIssueFlow(amountToIssue,
                 OpaqueBytes.of(0x01),
-                notary))
+                notary)).getOrThrow()
     }
 
     private fun topUpCurrencies() {
@@ -64,7 +65,7 @@ class CustomVaultQueryTest {
                 nodeA.info.singleIdentity(),
                 OpaqueBytes.of(0x01),
                 nodeA.info.singleIdentity(),
-                notary))
+                notary)).getOrThrow()
     }
 
     private fun getBalances(): Pair<Map<Currency, Amount<Currency>>, Map<Currency, Amount<Currency>>> {

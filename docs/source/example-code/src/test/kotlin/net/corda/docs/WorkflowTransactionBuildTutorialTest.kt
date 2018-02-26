@@ -34,8 +34,8 @@ class WorkflowTransactionBuildTutorialTest {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.docs"))
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceNode.registerInitiatedFlow(RecordCompletionFlow::class.java)
         alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
         bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
