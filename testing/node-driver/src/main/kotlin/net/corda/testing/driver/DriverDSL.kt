@@ -6,10 +6,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.node.internal.Node
-import net.corda.node.services.config.VerifierType
 import net.corda.testing.node.User
 import net.corda.testing.node.NotarySpec
 import java.nio.file.Path
+
+enum class VerifierType {
+    InMemory,
+    OutOfProcess
+}
 
 /**
  * Underlying interface for the driver DSL. Do not instantiate directly, instead use the [driver] function.

@@ -2,7 +2,7 @@ package net.corda.testing.node
 
 import net.corda.core.DoNotImplement
 import net.corda.core.identity.CordaX500Name
-import net.corda.node.services.config.VerifierType
+import net.corda.testing.driver.VerifierType
 
 /**
  * A notary spec for describing a notary which will be started automatically by the driver and which will be part of

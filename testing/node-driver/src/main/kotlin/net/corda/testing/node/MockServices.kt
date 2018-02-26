@@ -102,12 +102,12 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig, schemaService)
+                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         super.recordTransactions(statesToRecord, txs)
                         // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                        vaultService.notifyAll(statesToRecord, txs.map { it.tx })
+                        (vaultService as VaultServiceInternal).notifyAll(statesToRecord, txs.map { it.tx })
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()

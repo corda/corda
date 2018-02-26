@@ -14,8 +14,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
-import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.VerifierType
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.internal.getInternalServices

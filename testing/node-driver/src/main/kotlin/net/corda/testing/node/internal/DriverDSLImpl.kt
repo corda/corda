@@ -44,6 +44,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.driver.VerifierType
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl

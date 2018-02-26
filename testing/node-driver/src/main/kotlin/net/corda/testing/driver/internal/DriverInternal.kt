@@ -15,7 +15,6 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.node.User
 import rx.Observable
 import java.nio.file.Path
-import java.sql.Connection
 
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
