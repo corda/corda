@@ -12,7 +12,10 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.Cash
-import java.sql.*
+import java.sql.Connection
+import java.sql.DatabaseMetaData
+import java.sql.ResultSet
+import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
@@ -101,6 +104,7 @@ abstract class AbstractCashSelection {
                                         withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>> {
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
+        // DOCSTART CASHSELECT 1
         for (retryCount in 1..MAX_RETRIES) {
             if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs)) {
                 log.warn("Coin selection failed on attempt $retryCount")
@@ -116,6 +120,7 @@ abstract class AbstractCashSelection {
                 break
             }
         }
+        // DOCEND CASHSELECT 1
         return stateAndRefs
     }
 
