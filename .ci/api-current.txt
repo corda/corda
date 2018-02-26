@@ -627,6 +627,9 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
   @org.jetbrains.annotations.NotNull public abstract String getLegacyContract()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.ContractState upgrade(net.corda.core.contracts.ContractState)
 ##
+@net.corda.core.serialization.CordaSerializable public interface net.corda.core.contracts.UpgradedContractWithLegacyConstraint extends net.corda.core.contracts.UpgradedContract
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.AttachmentConstraint getLegacyContractConstraint()
+##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint INSTANCE
@@ -1894,13 +1897,11 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder, java.security.PublicKey)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.StateAndRef toStateAndRef(net.corda.core.contracts.StateRef)
 ##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.ServicesForResolution extends net.corda.core.node.StateLoader
+@net.corda.core.DoNotImplement public interface net.corda.core.node.ServicesForResolution
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.AttachmentStorage getAttachments()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.cordapp.CordappProvider getCordappProvider()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.IdentityService getIdentityService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NetworkParameters getNetworkParameters()
-##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.StateLoader
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   @org.jetbrains.annotations.NotNull public abstract Set loadStates(Set)
 ##
@@ -2052,11 +2053,9 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
   @org.jetbrains.annotations.NotNull public final java.time.Clock getClock()
   public final boolean isValid(net.corda.core.contracts.TimeWindow)
 ##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage extends net.corda.core.node.StateLoader
+@net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionStorage
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.transactions.SignedTransaction getTransaction(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract rx.Observable getUpdates()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
-  @org.jetbrains.annotations.NotNull public abstract Set loadStates(Set)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.node.services.TransactionVerifierService
@@ -3004,6 +3003,72 @@ public static final class net.corda.core.serialization.SingletonSerializationTok
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public final String getReason()
 ##
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.ContractUpgradeFilteredTransaction extends net.corda.core.transactions.CoreTransaction
+  public <init>(List, net.corda.core.identity.Party, net.corda.core.crypto.SecureHash)
+  @org.jetbrains.annotations.NotNull public final List component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component3()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeFilteredTransaction copy(List, net.corda.core.identity.Party, net.corda.core.crypto.SecureHash)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
+  @org.jetbrains.annotations.NotNull public List getInputs()
+  @org.jetbrains.annotations.NotNull public net.corda.core.identity.Party getNotary()
+  @org.jetbrains.annotations.NotNull public List getOutputs()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getRest()
+  public int hashCode()
+  public String toString()
+##
+@net.corda.core.DoNotImplement public final class net.corda.core.transactions.ContractUpgradeLedgerTransaction extends net.corda.core.transactions.FullTransaction implements net.corda.core.transactions.TransactionWithSignatures
+  public <init>(List, net.corda.core.identity.Party, net.corda.core.contracts.ContractAttachment, net.corda.core.contracts.ContractAttachment, net.corda.core.crypto.SecureHash, net.corda.core.contracts.PrivacySalt, List, net.corda.core.node.NetworkParameters)
+  public void checkSignaturesAreValid()
+  @org.jetbrains.annotations.NotNull public final List component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ContractAttachment component3()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ContractAttachment component4()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component5()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.PrivacySalt component6()
+  @org.jetbrains.annotations.NotNull public final List component7()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeLedgerTransaction copy(List, net.corda.core.identity.Party, net.corda.core.contracts.ContractAttachment, net.corda.core.contracts.ContractAttachment, net.corda.core.crypto.SecureHash, net.corda.core.contracts.PrivacySalt, List, net.corda.core.node.NetworkParameters)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
+  @org.jetbrains.annotations.NotNull public List getInputs()
+  @org.jetbrains.annotations.NotNull public List getKeyDescriptions(Set)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ContractAttachment getLegacyContractAttachment()
+  @org.jetbrains.annotations.NotNull public Set getMissingSigners()
+  @org.jetbrains.annotations.NotNull public net.corda.core.identity.Party getNotary()
+  @org.jetbrains.annotations.NotNull public List getOutputs()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.PrivacySalt getPrivacySalt()
+  @org.jetbrains.annotations.NotNull public Set getRequiredSigningKeys()
+  @org.jetbrains.annotations.NotNull public List getSigs()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ContractAttachment getUpgradedContractAttachment()
+  public int hashCode()
+  public String toString()
+  public void verifyRequiredSignatures()
+  public void verifySignaturesExcept(Collection)
+##
+@net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.ContractUpgradeWireTransaction extends net.corda.core.transactions.CoreTransaction
+  public <init>(List, net.corda.core.identity.Party, net.corda.core.crypto.SecureHash, String, net.corda.core.crypto.SecureHash, net.corda.core.contracts.PrivacySalt)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeFilteredTransaction buildFilteredTransaction()
+  @org.jetbrains.annotations.NotNull public final List component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component3()
+  @org.jetbrains.annotations.NotNull public final String component4()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component5()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.PrivacySalt component6()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeWireTransaction copy(List, net.corda.core.identity.Party, net.corda.core.crypto.SecureHash, String, net.corda.core.crypto.SecureHash, net.corda.core.contracts.PrivacySalt)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
+  @org.jetbrains.annotations.NotNull public List getInputs()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getLegacyContractAttachmentId()
+  @org.jetbrains.annotations.NotNull public net.corda.core.identity.Party getNotary()
+  @org.jetbrains.annotations.NotNull public List getOutputs()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.PrivacySalt getPrivacySalt()
+  @org.jetbrains.annotations.NotNull public final String getUpgradeContractClassName()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getUpgradedContractAttachmentId()
+  public int hashCode()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeLedgerTransaction resolve(net.corda.core.node.ServicesForResolution, List)
+  public String toString()
+##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public abstract class net.corda.core.transactions.CoreTransaction extends net.corda.core.transactions.BaseTransaction
   public <init>()
   @org.jetbrains.annotations.NotNull public abstract List getInputs()
@@ -3146,7 +3211,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @org.jetbrains.annotations.NotNull public List getOutputs()
   public int hashCode()
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolve(net.corda.core.node.ServiceHub, List)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolve(net.corda.core.node.StateLoader, List)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolve(net.corda.core.node.ServicesForResolution, List)
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.SignedTransaction extends java.lang.Object implements net.corda.core.transactions.TransactionWithSignatures
@@ -3158,6 +3223,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @org.jetbrains.annotations.NotNull public final List component2()
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction copy(net.corda.core.serialization.SerializedBytes, List)
   public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.CoreTransaction getCoreTransaction()
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public final List getInputs()
   @org.jetbrains.annotations.NotNull public ArrayList getKeyDescriptions(Set)
@@ -3169,13 +3235,14 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.WireTransaction getTx()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializedBytes getTxBits()
   public int hashCode()
-  public final boolean isNotaryChangeTransaction()
+  @kotlin.Deprecated public final boolean isNotaryChangeTransaction()
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction plus(Collection)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction plus(net.corda.core.crypto.TransactionSignature)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.BaseTransaction resolveBaseTransaction(net.corda.core.node.StateLoader)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.BaseTransaction resolveBaseTransaction(net.corda.core.node.ServicesForResolution)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeLedgerTransaction resolveContractUpgradeTransaction(net.corda.core.node.ServicesForResolution)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolveNotaryChangeTransaction(net.corda.core.node.ServiceHub)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolveNotaryChangeTransaction(net.corda.core.node.StateLoader)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionWithSignatures resolveTransactionWithSignatures(net.corda.core.node.ServiceHub)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.NotaryChangeLedgerTransaction resolveNotaryChangeTransaction(net.corda.core.node.ServicesForResolution)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionWithSignatures resolveTransactionWithSignatures(net.corda.core.node.ServicesForResolution)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub, boolean)
   @org.jetbrains.annotations.NotNull public String toString()
@@ -4043,7 +4110,7 @@ public final class net.corda.testing.node.MockNodeParameters extends java.lang.O
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNodeParameters withForcedID(Integer)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.MockNodeParameters withLegalName(net.corda.core.identity.CordaX500Name)
 ##
-public class net.corda.testing.node.MockServices extends java.lang.Object implements net.corda.core.node.StateLoader, net.corda.core.node.ServiceHub
+public class net.corda.testing.node.MockServices extends java.lang.Object implements net.corda.core.node.ServiceHub
   public <init>()
   public <init>(List)
   public <init>(List, net.corda.core.identity.CordaX500Name)
@@ -4068,6 +4135,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @org.jetbrains.annotations.NotNull public net.corda.core.node.NodeInfo getMyInfo()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters getNetworkParameters()
+  @org.jetbrains.annotations.NotNull protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.VaultService getVaultService()
@@ -4304,9 +4372,10 @@ public static final class net.corda.testing.contracts.DummyContract$SingleOwnerS
 @net.corda.core.DoNotImplement public static interface net.corda.testing.contracts.DummyContract$State extends net.corda.core.contracts.ContractState
   public abstract int getMagicNumber()
 ##
-public final class net.corda.testing.contracts.DummyContractV2 extends java.lang.Object implements net.corda.core.contracts.UpgradedContract
+public final class net.corda.testing.contracts.DummyContractV2 extends java.lang.Object implements net.corda.core.contracts.UpgradedContractWithLegacyConstraint
   public <init>()
   @org.jetbrains.annotations.NotNull public String getLegacyContract()
+  @org.jetbrains.annotations.NotNull public net.corda.core.contracts.AttachmentConstraint getLegacyContractConstraint()
   @org.jetbrains.annotations.NotNull public net.corda.testing.contracts.DummyContractV2$State upgrade(net.corda.testing.contracts.DummyContract$State)
   public void verify(net.corda.core.transactions.LedgerTransaction)
   public static final net.corda.testing.contracts.DummyContractV2$Companion Companion
