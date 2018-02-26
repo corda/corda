@@ -754,7 +754,7 @@ This is an advanced topic.  Because Corda is designed to:
 * may persist flows to storage and resurrect those flows much later,
 * (in the future) migrate flows between JVMs,
 
-flows should should avoid use of locks and typically not even attempt to interact with objects shared between flows (except
+flows should avoid use of locks and typically not even attempt to interact with objects shared between flows (except
 ``ServiceHub`` and other carefully crafted services such as Oracles.  See :doc:`oracles`).
 Locks will significantly reduce the scalability of the node, in the best case, and can cause the node to deadlock if they
 remain locked across flow context switch boundaries (such as sending and receiving
