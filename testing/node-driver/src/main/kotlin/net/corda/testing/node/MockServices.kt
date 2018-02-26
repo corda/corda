@@ -64,9 +64,6 @@ open class MockServices private constructor(
 ) : ServiceHub, StateLoader by validatedTransactions {
 
     companion object {
-        @JvmStatic
-        val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
-
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
          *

@@ -18,6 +18,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.*
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -40,7 +41,7 @@ class NetworkParametersTest {
     // Minimum Platform Version tests
     @Test
     fun `node shutdowns when on lower platform version than network`() {
-        val alice = mockNet.createUnstartedNode(InternalMockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MockServices.MOCK_VERSION_INFO.copy(platformVersion = 1)))
+        val alice = mockNet.createUnstartedNode(InternalMockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MOCK_VERSION_INFO.copy(platformVersion = 1)))
         val aliceDirectory = mockNet.baseDirectory(100)
         val netParams = testNetworkParameters(
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),
@@ -51,7 +52,7 @@ class NetworkParametersTest {
 
     @Test
     fun `node works fine when on higher platform version`() {
-        val alice = mockNet.createUnstartedNode(InternalMockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MockServices.MOCK_VERSION_INFO.copy(platformVersion = 2)))
+        val alice = mockNet.createUnstartedNode(InternalMockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MOCK_VERSION_INFO.copy(platformVersion = 2)))
         val aliceDirectory = mockNet.baseDirectory(100)
         val netParams = testNetworkParameters(
                 notaries = listOf(NotaryInfo(mockNet.defaultNotaryIdentity, true)),
