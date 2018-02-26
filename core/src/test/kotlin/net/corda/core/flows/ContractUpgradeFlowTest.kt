@@ -224,7 +224,7 @@ class ContractUpgradeFlowTest {
                         .addCommand(CashV2.Move(), alice.owningKey)
 
         )
-        aliceNode.services.startFlow(FinalityFlow(spendUpgradedTx)).apply {
+        aliceNode.services.startFlow(FinalityFlow(spendUpgradedTx)).resultFuture.apply {
             mockNet.runNetwork()
             get()
         }
