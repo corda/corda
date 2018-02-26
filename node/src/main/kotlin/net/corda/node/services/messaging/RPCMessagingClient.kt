@@ -30,6 +30,11 @@ class RPCMessagingClient(
         rpcServer!!.start(serverControl)
     }
 
+    fun resume(rpcOps: RPCOps, securityManager: RPCSecurityManager) = synchronized(this) {
+        start(rpcOps, securityManager)
+        securityManager.resume()
+    }
+
     fun stop() = synchronized(this) {
         rpcServer?.close()
         artemis.stop()

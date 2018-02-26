@@ -39,6 +39,11 @@ interface StateMachineManager {
     fun stop(allowedUnsuspendedFiberCount: Int)
 
     /**
+     * Resume state machine manager after having called [stop].
+     */
+    fun resume()
+
+    /**
      * Starts a new flow.
      *
      * @param flowLogic The flow's code.
