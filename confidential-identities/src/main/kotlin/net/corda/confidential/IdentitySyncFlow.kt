@@ -53,7 +53,7 @@ object IdentitySyncFlow {
         }
 
         private fun extractOurConfidentialIdentities(): Map<AbstractParty, PartyAndCertificate?> {
-            val states: List<ContractState> = (tx.inputs.map { serviceHub.loadState(it) }.requireNoNulls().map { it.data } + tx.outputs.map { it.data })
+            val states: List<ContractState> = (serviceHub.loadStates(tx.inputs.toSet()).map { it.state.data } + tx.outputs.map { it.data })
             val identities: Set<AbstractParty> = states.flatMap(ContractState::participants).toSet()
             // Filter participants down to the set of those not in the network map (are not well known)
             val confidentialIdentities = identities
