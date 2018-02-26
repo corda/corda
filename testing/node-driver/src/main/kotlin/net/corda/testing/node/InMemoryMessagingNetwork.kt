@@ -328,7 +328,7 @@ class InMemoryMessagingNetwork private constructor(
                                           private val peerHandle: PeerHandle,
                                           private val executor: AffinityExecutor,
                                           private val database: CordaPersistence) : SingletonSerializeAsToken(), InternalMockMessagingService {
-        inner class Handler(val topicSession: String, val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+        private inner class Handler(val topicSession: String, val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
         @Volatile
         private var running = true
