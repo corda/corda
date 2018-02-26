@@ -92,7 +92,7 @@ class AttachmentTests {
         val alice = aliceNode.info.singleIdentity()
         val bobFlow = bobNode.startAttachmentFlow(setOf(hash), alice)
         mockNet.runNetwork()
-        val e = assertFailsWith<FetchDataFlow.HashNotFound> { bobFlow }
+        val e = assertFailsWith<FetchDataFlow.HashNotFound> { bobFlow.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
     }
 
@@ -127,7 +127,7 @@ class AttachmentTests {
         mockNet.runNetwork()
         val bobFlow = bobNode.startAttachmentFlow(setOf(id), alice)
         mockNet.runNetwork()
-        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { bobFlow }
+        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { bobFlow.resultFuture.getOrThrow() }
     }
 
     private fun StartedNode<*>.startAttachmentFlow(hashes: Set<SecureHash>, otherSide: Party) = services.startFlow(InitiatingFetchAttachmentsFlow(otherSide, hashes))
