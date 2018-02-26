@@ -27,7 +27,7 @@ interface for you to query them using SQL.
 
 PostgreSQL
 ----------
-Nodes have also been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 42.1.4.
+Nodes also have untested support for PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
 
 Configuration
 ~~~~~~~~~~~~~
