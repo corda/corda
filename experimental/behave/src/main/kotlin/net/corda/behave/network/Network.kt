@@ -10,6 +10,7 @@ import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.JarCommand
+import net.corda.behave.process.JarCommandWithMain
 import org.apache.commons.io.FileUtils
 import java.io.Closeable
 import java.io.File
@@ -58,7 +59,8 @@ class Network private constructor(
                 distribution: Distribution = Distribution.LATEST_MASTER,
                 databaseType: DatabaseType = DatabaseType.H2,
                 notaryType: NotaryType = NotaryType.NONE,
-                issuableCurrencies: List<String> = emptyList()
+                issuableCurrencies: List<String> = emptyList(),
+                withRPCProxy: Boolean = false
         ): Builder {
             return addNode(Node.new()
                     .withName(name)
@@ -66,6 +68,7 @@ class Network private constructor(
                     .withDatabaseType(databaseType)
                     .withNotaryType(notaryType)
                     .withIssuableCurrencies(*issuableCurrencies.toTypedArray())
+                    .withRPCProxy(withRPCProxy)
             )
         }
 
@@ -120,7 +123,10 @@ class Network private constructor(
             hasError = true
             return
         }
+        // WARNING!! Need to use the correct bootstrapper
+        // only if using OS nodes (need to choose the latest version)
         val bootstrapper = nodes.values
+                .filter { !it.config.distribution.version.contains("r3corda") }
                 .sortedByDescending { it.config.distribution.version }
                 .first()
                 .config.distribution.networkBootstrapper
@@ -157,6 +163,45 @@ class Network private constructor(
             }
         } else {
             log.info("Network set-up completed")
+        }
+    }
+
+    private fun bootstrapRPCProxy() {
+
+        val rpcProxyMain = "net.corda.behave.service.proxy.RPCProxyServerKt"
+        val cordaJar = nodes.values
+                .sortedByDescending { it.config.distribution.version }
+                .first()
+                .config.distribution.jarFile
+
+        log.info("Bootstrapping RPC proxy, please wait ...")
+        val command = JarCommandWithMain(
+                cordaJar,
+                rpcProxyMain,
+                arrayOf("$targetDirectory"),
+                targetDirectory,
+                timeout
+        )
+        log.info("Running command: {}", command)
+        command.output.subscribe {
+            if (it.contains("Exception")) {
+                log.warn("Found error in output; interrupting bootstrapping action ...\n{}", it)
+                command.interrupt()
+            }
+        }
+        command.start()
+        if (!command.waitFor()) {
+            hasError = true
+            error("Failed to bootstrap RPC proxy") {
+                val matches = LogSource(targetDirectory)
+                        .find(".*[Ee]xception.*")
+                        .groupBy { it.filename.absolutePath }
+                for (match in matches) {
+                    log.info("Log(${match.key}):\n${match.value.joinToString("\n") { it.contents }}")
+                }
+            }
+        } else {
+            log.info("RPC Proxy set-up completed")
         }
     }
 
@@ -211,6 +256,8 @@ class Network private constructor(
         isRunning = true
         for (node in nodes.values) {
             node.start()
+//            if (node.rpcProxy)
+//                bootstrapRPCProxy()
         }
     }
 

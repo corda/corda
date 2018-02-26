@@ -17,4 +17,15 @@ fun cashSteps(steps: StepsBlock) = steps {
         }
     }
 
+    Then<String,Long,String,String>("^node (\\w+) can transfer (\\d+) (\\w+) to node (\\w+)$") { nodeA, amount, currency, nodeB ->
+        withNetwork {
+            cash.transferCash(nodeA, nodeB, amount, currency)
+        }
+    }
+
+    Then<String,Long,String>("^node (\\w+) can issue (\\d+) (\\w+)$") { nodeA, amount, currency ->
+        withNetwork {
+            cash.issueCash(nodeA, amount, currency)
+        }
+    }
 }

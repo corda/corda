@@ -27,7 +27,7 @@ fun configurationSteps(steps: StepsBlock) = steps {
                         ?: error("Unknown database type '$type'"))
     }
 
-    Given<String, String>("^node (\\w+) can issue (.+)$") { name, currencies ->
+    Given<String, String>("^node (\\w+) can issue currencies of denomination (.+)$") { name, currencies ->
         node(name).withIssuableCurrencies(currencies
                 .replace(" and ", ", ")
                 .split(", ")

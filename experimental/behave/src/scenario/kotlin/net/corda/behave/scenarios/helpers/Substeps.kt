@@ -2,6 +2,7 @@ package net.corda.behave.scenarios.helpers
 
 import net.corda.behave.logging.getLogger
 import net.corda.behave.scenarios.ScenarioState
+import net.corda.behave.service.proxy.RPCProxyOps
 import net.corda.core.messaging.CordaRPCOps
 
 abstract class Substeps(protected val state: ScenarioState) {
@@ -21,4 +22,13 @@ abstract class Substeps(protected val state: ScenarioState) {
         })
     }
 
+    protected fun <T> withClientProxy(nodeName: String, action: ScenarioState.(RPCProxyOps) -> T): T {
+        return state.withClientProxy(nodeName, {
+            return@withClientProxy try {
+                action(state, it)
+            } catch (ex: Exception) {
+                state.error<T>(ex.message ?: "Failed to execute HTTP call")
+            }
+        })
+    }
 }

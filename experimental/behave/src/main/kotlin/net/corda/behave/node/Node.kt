@@ -1,5 +1,6 @@
 package net.corda.behave.node
 
+import com.google.common.net.HostAndPort
 import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
@@ -12,10 +13,13 @@ import net.corda.behave.process.JarCommand
 import net.corda.behave.seconds
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
+import net.corda.behave.service.proxy.RPCProxyOps
 import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.internal.openHttpConnection
+import net.corda.core.internal.responseAs
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.commons.io.FileUtils
@@ -29,7 +33,8 @@ import java.util.concurrent.CountDownLatch
 class Node(
         val config: Configuration,
         private val rootDirectory: File = currentDirectory,
-        private val settings: ServiceSettings = ServiceSettings()
+        private val settings: ServiceSettings = ServiceSettings(),
+        val rpcProxy: Boolean = false
 ) {
 
     private val log = getLogger<Node>()
@@ -177,6 +182,33 @@ class Node(
         return result ?: error("Failed to run RPC action")
     }
 
+    fun <T> http(action: (RPCProxyOps) -> T): T {
+        val address = config.nodeInterface
+        val targetHost = NetworkHostAndPort(address.host, address.rpcProxy)
+
+        log.info("Establishing HTTP connection to ${targetHost.host} on port ${targetHost.port} ...")
+
+        try {
+            return action(RPCProxyOps(targetHost))
+
+//            val response = doGet<String>(targetHost, "my-ip")
+//            log.info("RPC Proxy ping: $response")
+//
+//            val responseNodeInfo = doGet<NodeInfo>(targetHost, "node-info")
+//            log.info("RPC Proxy nodeInfo: $responseNodeInfo")
+
+        }
+        catch (e: Exception) {
+            log.warn("Failed to invoke http endpoint: ", e)
+            e.printStackTrace()
+            error("Failed to run http action")
+        }
+    }
+
+    private inline fun <reified T : Any> doGet(hostAndPort: HostAndPort, path: String): T {
+        return java.net.URL("http://$hostAndPort/rpc/$path").openHttpConnection().responseAs()
+    }
+
     override fun toString(): String {
         return "Node(name = ${config.name}, version = ${config.distribution.version})"
     }
@@ -257,6 +289,8 @@ class Node(
 
         private var timeout = Duration.ofSeconds(60)
 
+        private var rpcProxy = false
+
         fun withName(newName: String): Builder {
             name = newName
             return this
@@ -313,6 +347,11 @@ class Node(
             return this
         }
 
+        fun withRPCProxy(withRPCProxy: Boolean): Builder {
+            rpcProxy = withRPCProxy
+            return this
+        }
+
         fun build(): Node {
             val name = name ?: error("Node name not set")
             val directory = directory ?: error("Runtime directory not set")
@@ -333,7 +372,8 @@ class Node(
                             )
                     ),
                     directory,
-                    ServiceSettings(timeout)
+                    ServiceSettings(timeout),
+                    rpcProxy = rpcProxy
             )
         }
 

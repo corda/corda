@@ -10,6 +10,13 @@ class Startup(state: ScenarioState) : Substeps(state) {
             if (!node(nodeName).nodeInfoGenerationOutput.find("Logs can be found in.*").any()) {
                 fail("Unable to find logging information for node $nodeName")
             }
+
+            withClient(nodeName) {
+                log.info("$nodeName: ${it.nodeInfo()} has registered flows:")
+                for (flow in it.registeredFlows()) {
+                    log.info(flow)
+                }
+            }
         }
     }
 
@@ -18,6 +25,20 @@ class Startup(state: ScenarioState) : Substeps(state) {
             log.info("Retrieving database details for node '$nodeName' ...")
             if (!node(nodeName).nodeInfoGenerationOutput.find("Database connection url is.*").any()) {
                 fail("Unable to find database details for node $nodeName")
+            }
+        }
+    }
+
+    fun hasIdentityDetails(nodeName: String) {
+        withNetwork {
+            log.info("Retrieving identity details for node '$nodeName' ...")
+            try {
+                val nodeInfo = node(nodeName).http { it.nodeInfo() }
+//                val nodeInfo = node(nodeName).rpc { it.nodeInfo() }
+                log.info("\nNode $nodeName identity details: $nodeInfo\n")
+            } catch (ex: Exception) {
+                log.warn("Failed to retrieve node identity details", ex)
+                throw ex
             }
         }
     }

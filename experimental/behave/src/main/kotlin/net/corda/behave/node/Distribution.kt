@@ -146,8 +146,10 @@ class Distribution private constructor(
             "r3-master"  -> LATEST_R3_MASTER
             "corda-3.0" -> V3
             "corda-3.0-HC02" -> fromArtifactory(version, DistributionType.CORDA)
+            "corda-3.0-RC01" -> fromArtifactory(version, DistributionType.CORDA)
             "r3corda-3.0" -> R3_V3
-            "r3corda-3.0-DP2" -> fromArtifactory("R3.CORDA-3.0.0-DEV-PREVIEW-2", DistributionType.R3_CORDA)
+//            "r3corda-3.0-DP2" -> fromArtifactory("R3.CORDA-3.0.0-DEV-PREVIEW-2", DistributionType.R3_CORDA)
+            "r3corda-3.0-DP2" -> fromJarFile("R3.CORDA-3.0.0-DEV-PREVIEW-2")
             else -> distributions.firstOrNull { it.version == version }
         }
     }
