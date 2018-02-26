@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
@@ -389,6 +390,24 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
+    /**
+     * Resume services stopped after [suspend].
+     */
+    fun resume() {
+        if (started == null) {
+            start()
+        } else if (suspended) {
+            bridgeControlListener?.start()
+            rpcMessagingClient?.resume(started!!.rpcOps, securityManager)
+            (network as P2PMessagingClient).start()
+            started!!.database.transaction {
+                smm.resume()
+                schedulerService.resume()
+            }
+            suspended = false
+        }
+    }
+
     override fun getRxIoScheduler(): Scheduler = Schedulers.io()
 
     private fun initialiseSerialization() {
@@ -407,6 +426,7 @@ open class Node(configuration: NodeConfiguration,
 
     private var rpcMessagingClient: RPCMessagingClient? = null
     private var verifierMessagingClient: VerifierMessagingClient? = null
+
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
         rpcMessagingClient?.start2(rpcBroker!!.serverControl)
@@ -435,5 +455,21 @@ open class Node(configuration: NodeConfiguration,
         shutdown = false
 
         log.info("Shutdown complete")
+    }
+
+    private var suspended = false
+
+    /**
+     * Suspend the minimum number of services([schedulerService], [smm], [network], [rpcMessagingClient], and [bridgeControlListener]).
+     */
+    fun suspend() {
+        if(started != null && !suspended) {
+            schedulerService.stop()
+            smm.stop(0)
+            (network as P2PMessagingClient).stop()
+            rpcMessagingClient?.stop()
+            bridgeControlListener?.stop()
+            suspended = true
+        }
     }
 }
