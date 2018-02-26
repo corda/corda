@@ -34,11 +34,8 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.pumpReceive
-import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -723,7 +720,7 @@ class FlowFrameworkTests {
     }
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
-        return filter { it.messageTopic == StateMachineManagerImpl.sessionTopic }.map {
+        return filter { it.getMessage().topic == StateMachineManagerImpl.sessionTopic }.map {
             val from = it.sender.id
             val message = it.messageData.deserialize<SessionMessage>()
             SessionTransfer(from, sanitise(message), it.recipients)

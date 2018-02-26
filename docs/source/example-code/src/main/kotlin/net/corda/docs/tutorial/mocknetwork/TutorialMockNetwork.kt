@@ -73,12 +73,11 @@ class TutorialMockNetwork {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `fail if initiated doesn't send back 1 on first result`() {
+//    @Test
+//    fun `fail if initiated doesn't send back 1 on first result`() {
 
         // DOCSTART 1
-        // modify message if it's 1
-        // TODO: Move this test somewhere
+        // TODO: Fix this test - accessing the MessagingService directly exposes internal interfaces
 //        nodeB.setMessagingServiceSpy(object : MessagingServiceSpy(nodeB.network) {
 //            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
 //                val messageData = message.data.deserialize<Any>() as? ExistingSessionMessage
@@ -94,12 +93,12 @@ class TutorialMockNetwork {
 //        })
         // DOCEND 1
 
-        val initiatingReceiveFlow = nodeA.startFlow(FlowA(nodeB.info.legalIdentities.first()))
-
-        mockNet.runNetwork()
-
-        expectedEx.expect(IllegalArgumentException::class.java)
-        expectedEx.expectMessage("Expected to receive 1")
-        initiatingReceiveFlow.getOrThrow()
-    }
+//        val initiatingReceiveFlow = nodeA.startFlow(FlowA(nodeB.info.legalIdentities.first()))
+//
+//        mockNet.runNetwork()
+//
+//        expectedEx.expect(IllegalArgumentException::class.java)
+//        expectedEx.expectMessage("Expected to receive 1")
+//        initiatingReceiveFlow.getOrThrow()
+//    }
 }

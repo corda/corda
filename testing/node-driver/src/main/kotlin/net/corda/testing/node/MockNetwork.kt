@@ -2,7 +2,6 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Jimfs
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
@@ -13,13 +12,11 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.newContext
-import net.corda.testing.node.internal.setMessagingServiceSpy
 import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
@@ -138,7 +135,13 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
     /** Stop the node. **/
     fun stop() = node.internals.stop()
 
-    /** Receive a message from the queue. */
+    /**
+     * Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
+     * is true, waits until one has been provided on a different thread via send. If block is false, the return
+     * result indicates whether a message was delivered or not.
+     *
+     * @return the message that was processed, if any in this round.
+     */
     fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
         return (node.network as InMemoryMessagingNetwork.InternalMockMessagingService).pumpReceive(block)
     }

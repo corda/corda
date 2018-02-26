@@ -12,6 +12,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
+import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -103,3 +104,5 @@ class ListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenProcess
 fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
 
 fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
+
+fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message

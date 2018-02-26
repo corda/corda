@@ -77,8 +77,6 @@ class InMemoryMessagingNetwork private constructor(
                 return MessageTransfer(sender, message, recipients)
             }
         }
-        /** Message topic **/
-        val messageTopic: String get() = message.topic
         /** Data contained in this message transfer **/
         val messageData: ByteSequence get() = message.data
         override fun toString() = "${message.topic} from '$sender' to '$recipients'"
@@ -295,19 +293,11 @@ class InMemoryMessagingNetwork private constructor(
                                                override val uniqueMessageId: String,
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name) : ReceivedMessage
-
     /**
      * A [InternalMockMessagingService] that provides a [MessagingService] abstraction that also contains the ability to
      * receive messages from the queue for testing purposes.
      */
     internal interface InternalMockMessagingService : MessagingService {
-        /**
-         * Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
-         * is true, waits until one has been provided on a different thread via send. If block is false, the return
-         * result indicates whether a message was delivered or not.
-         *
-         * @return the message that was processed, if any in this round.
-         */
         fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
 
         fun stop()
@@ -323,6 +313,13 @@ class InMemoryMessagingNetwork private constructor(
                 return MockMessagingService(messagingService)
             }
         }
+        /**
+         * Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
+         * is true, waits until one has been provided on a different thread via send. If block is false, the return
+         * result indicates whether a message was delivered or not.
+         *
+         * @return the message that was processed, if any in this round.
+         */
         fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? = messagingService.pumpReceive(block)
     }
 

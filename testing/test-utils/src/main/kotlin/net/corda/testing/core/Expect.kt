@@ -191,7 +191,7 @@ fun <S, E : Any> S.genericExpectEvents(
 }
 
 /**
- * Part of the Expectation dsl
+ * Part of the Expectation DSL
  */
 @DoNotImplement
 sealed class ExpectCompose<out E> {
