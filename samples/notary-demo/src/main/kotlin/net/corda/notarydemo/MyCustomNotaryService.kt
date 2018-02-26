@@ -11,8 +11,10 @@ import net.corda.core.internal.validateRequest
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import java.security.PublicKey
@@ -49,12 +51,9 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
             val stx = receiveTransaction()
             val notary = stx.notary
             checkNotary(notary)
-            val timeWindow: TimeWindow? = if (stx.isNotaryChangeTransaction())
-                null
-            else
-                stx.tx.timeWindow
-            resolveAndContractVerify(stx)
             verifySignatures(stx)
+            resolveAndContractVerify(stx)
+            val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {
