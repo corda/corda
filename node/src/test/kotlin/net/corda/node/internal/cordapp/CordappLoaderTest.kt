@@ -79,10 +79,11 @@ class CordappLoaderTest {
         // cannot happen. In gradle it will also pick up the node jar. 
         assertThat(actual.size == 4 || actual.size == 5).isTrue()
 
-        val actualCordapp = actual.single { !it.initiatedFlows.isEmpty() }
-        assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
-        assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
-        assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
+        actual.filter { !it.initiatedFlows.isEmpty() }.forEach { cordapp ->
+            assertThat(cordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
+            assertThat(cordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
+            assertThat(cordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
+        }
     }
 
     // This test exists because the appClassLoader is used by serialisation and we need to ensure it is the classloader

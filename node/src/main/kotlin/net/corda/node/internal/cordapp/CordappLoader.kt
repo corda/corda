@@ -118,11 +118,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     .asSequence()
                     .map { path ->
                         if (path.protocol == "jar") {
-                            // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
                             RestrictedURL((path.openConnection() as JarURLConnection).jarFileURL, scanPackage)
                         } else {
-                            // No need to restrict as createDevCordappJar has already done that:
-                            RestrictedURL(createDevCordappJar(scanPackage, path, resource).toURL(), null)
+                            RestrictedURL(createDevCordappJar(scanPackage, path, resource).toURL(), scanPackage)
                         }
                     }
                     .toList()
@@ -191,18 +189,23 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     private fun loadCordapps(): List<Cordapp> {
-        return cordappJarPaths.map {
-            val scanResult = scanCordapp(it)
-            CordappImpl(findContractClassNames(scanResult),
-                    findInitiatedFlows(scanResult),
-                    findRPCFlows(scanResult),
-                    findServiceFlows(scanResult),
-                    findSchedulableFlows(scanResult),
-                    findServices(scanResult),
-                    findPlugins(it),
-                    findSerializers(scanResult),
-                    findCustomSchemas(scanResult),
-                    it.url)
+        return if (cordappJarPaths.isEmpty()) {
+            emptyList()
+        } else {
+            val scanResult = FastClasspathScanner().overrideClasspath(cordappJarPaths.map { it.url }).scan()
+            return cordappJarPaths.map {
+                val restrictedScanResult = scanCordapp(scanResult, it)
+                CordappImpl(findContractClassNames(restrictedScanResult),
+                        findInitiatedFlows(restrictedScanResult),
+                        findRPCFlows(restrictedScanResult),
+                        findServiceFlows(restrictedScanResult),
+                        findSchedulableFlows(restrictedScanResult),
+                        findServices(restrictedScanResult),
+                        findPlugins(it),
+                        findSerializers(restrictedScanResult),
+                        findCustomSchemas(restrictedScanResult),
+                        it.url)
+            }
         }
     }
 
@@ -265,12 +268,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         return scanResult.getClassesWithSuperclass(MappedSchema::class).toSet()
     }
 
-    private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
-    private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
+    private fun scanCordapp(scanResult: ScanResult, cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in $cordappJarPath")
-        return cachedScanResult.computeIfAbsent(cordappJarPath, {
-            RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
-        })
+        return RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
     }
 
     private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
