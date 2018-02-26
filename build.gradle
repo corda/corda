@@ -173,6 +173,10 @@ allprojects {
         if (System.getProperty("test.maxParallelForks") != null) {
             maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
         }
+
+        if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
+            enabled = false
+        }
     }
 
     group 'net.corda'
