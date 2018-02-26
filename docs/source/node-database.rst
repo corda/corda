@@ -48,11 +48,11 @@ Here is an example node configuration for PostgreSQL:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
 
 Note that:
 
 * The ``database.schema`` property is optional
-* The value of ``database.schema`` is automatically wrapped in double quotes to preserve case-sensitivity (e.g. ``AliceCorp`` becomes ``"AliceCorp"``)
+* The value of ``database.schema`` is not wrapped in double quotes and Postgres always treats it as a lower-case value
+  (e.g. ``AliceCorp`` becomes ``alicecorp``)
 
   * Without quotes, PostgresSQL would treat the value as ``alicecorp``
