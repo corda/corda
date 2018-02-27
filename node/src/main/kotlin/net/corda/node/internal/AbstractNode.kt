@@ -175,18 +175,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initCertificate()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
-        return initialiseDatabasePersistence(schemaService, makeIdentityService(identity.certificate)) { database ->
-            // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like
-            // a code smell.
-            val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
-            persistentNetworkMapCache.start()
-            val (keyPairs, nodeInfo) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-            val signedNodeInfo = nodeInfo.sign { publicKey, serialised ->
-                val privateKey = keyPairs.single { it.public == publicKey }.private
-                privateKey.sign(serialised.bytes)
+        return initialiseDatabasePersistence(schemaService, makeIdentityService(identity.certificate)).use {
+            it.transaction {
+                // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like a code smell.
+                val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
+                persistentNetworkMapCache.start()
+                val (keyPairs, nodeInfo) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
+                val signedNodeInfo = nodeInfo.sign { publicKey, serialised ->
+                    val privateKey = keyPairs.single { it.public == publicKey }.private
+                    privateKey.sign(serialised.bytes)
+                }
+                NodeInfoWatcher.saveToFile(configuration.baseDirectory, signedNodeInfo)
+                nodeInfo
             }
-            NodeInfoWatcher.saveToFile(configuration.baseDirectory, signedNodeInfo)
-            nodeInfo
         }
     }
 
@@ -204,7 +205,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
+        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService).transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
             val (keyPairs, nodeInfo) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
@@ -258,7 +259,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell(rpcOps)
-            Pair(StartedNodeImpl(this, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
+            Pair(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
@@ -630,19 +631,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
+    protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val props = configuration.dataSourceProperties
-        if (props.isNotEmpty()) {
-            val database = configureDatabase(props, configuration.database, identityService, schemaService)
-            // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            logVendorString(database, log)
-            runOnStop += database::close
-            return database.transaction {
-                insideTransaction(database)
-            }
-        } else {
-            throw DatabaseConfigurationException("There must be a database configured.")
-        }
+        if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
+        val database = configureDatabase(props, configuration.database, identityService, schemaService)
+        // Now log the vendor string as this will also cause a connection to be tested eagerly.
+        logVendorString(database, log)
+        runOnStop += database::close
+        return database
     }
 
     private fun makeNotaryService(tokenizableServices: MutableList<Any>, database: CordaPersistence): NotaryService? {
