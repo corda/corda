@@ -65,7 +65,9 @@ interface DriverDSL {
      * @param customOverrides A map of custom node configuration overrides.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
-     * @param maximumHeapSize The maximum JVM heap size to use for the node.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node as a [String]. By default a number is interpreted
+     *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
+     *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "200m" = 200 megabytes.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
      */
     fun startNode(

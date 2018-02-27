@@ -2,6 +2,7 @@
 
 package net.corda.testing.driver
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -94,6 +95,7 @@ interface InProcess : NodeHandle {
  * @property listenAddress The [NetworkHostAndPort] for communicating with this webserver.
  * @property process The [Process] in which the websever is running
  * */
+@Deprecated("The webserver is for testing purposes only and will be removed soon")
 data class WebserverHandle(
         val listenAddress: NetworkHostAndPort,
         val process: Process
@@ -121,7 +123,12 @@ sealed class PortAllocation {
         override fun nextPort() = portCounter.andIncrement
     }
 
-    /** An implementation of [PortAllocation] which allocates free ports randomly **/
+    /**
+     * @suppress
+     * An implementation of [PortAllocation] which allocates free ports randomly. Currently used in samples
+     * but not for use going forward.
+     */
+    @CordaInternal
     object RandomFree : PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
