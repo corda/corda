@@ -91,10 +91,7 @@ Example node configuration for PostgreSQL:
 =======
 PostgreSQL
 ----------
-Nodes also have untested support for PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
-
-.. warning:: This is an experimental community contribution, and is currently untested. We welcome pull requests to add
-   tests and additional support for this feature.
+Nodes also support PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
 
 Configuration
 ~~~~~~~~~~~~~
