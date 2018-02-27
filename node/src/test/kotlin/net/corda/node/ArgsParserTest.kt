@@ -5,15 +5,29 @@ import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.BeforeClass
 import org.junit.Test
 import org.slf4j.event.Level
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class ArgsParserTest {
     private val parser = ArgsParser()
-    private val workingDirectory = Paths.get(".").normalize().toAbsolutePath()
+
+    companion object {
+        private lateinit var workingDirectory: Path
+        private lateinit var buildDirectory: Path
+
+        @BeforeClass
+        @JvmStatic
+        fun initDirectories() {
+            workingDirectory = Paths.get(".").normalize().toAbsolutePath()
+            buildDirectory = workingDirectory.resolve("build")
+        }
+    }
 
     @Test
     fun `no command line arguments`() {
@@ -113,17 +127,21 @@ class ArgsParserTest {
 
     @Test
     fun `initial-registration`() {
-        val truststorePath = workingDirectory / "truststore" / "file.jks"
+        // Create this temporary file in the "build" directory so that "clean" can delete it.
+        val truststorePath = buildDirectory / "truststore" / "file.jks"
         assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
         }.withMessageContaining("Network root trust store path").withMessageContaining("doesn't exist")
 
         X509KeyStore.fromFile(truststorePath, "dummy_password", createNew = true)
-
-        val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
-        assertNotNull(cmdLineOptions.nodeRegistrationConfig)
-        assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePath)
-        assertEquals("password-test", cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePassword)
+        try {
+            val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
+            assertNotNull(cmdLineOptions.nodeRegistrationConfig)
+            assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePath)
+            assertEquals("password-test", cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePassword)
+        } finally {
+            Files.delete(truststorePath)
+        }
     }
 
     @Test
