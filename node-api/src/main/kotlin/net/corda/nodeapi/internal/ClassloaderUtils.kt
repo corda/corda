@@ -24,10 +24,9 @@ fun scanJarForContracts(cordappJarPath: String): List<ContractClassName> {
     val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) ).distinct()
 
     // Only keep instantiable contracts
-    val classLoader = URLClassLoader(arrayOf(File(cordappJarPath).toURL()), currentClassLoader)
-    val concreteContracts = contracts.map(classLoader::loadClass).filter { !it.isInterface && !Modifier.isAbstract(it.modifiers) }
-    classLoader.close()
-    return concreteContracts.map { it.name }
+    return URLClassLoader(arrayOf(File(cordappJarPath).toURL()), currentClassLoader).use {
+        contracts.map(it::loadClass).filter { !it.isInterface && !Modifier.isAbstract(it.modifiers) }
+    }.map { it.name }
 }
 
 fun <T> withContractsInJar(jarInputStream: InputStream, withContracts: (List<ContractClassName>, InputStream) -> T): T {
