@@ -66,8 +66,13 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
     fun run() {
         val cordappJarPaths = getCordappsInDirectory(configuration.cordappsDirectory)
         val classLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
-        if (configuration.password == null) {
-            configuration.password = String(readPassword("Password: "))
+        with(configuration) {
+            if (user.isNullOrEmpty()) {
+                user = readLine("User:")
+            }
+            if (password.isNullOrEmpty()) {
+                password = String(readPassword("Password:"))
+            }
         }
         InteractiveShell.startShell(configuration,
                 { username: String?, credentials: String? ->
@@ -75,7 +80,8 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
                     client.start(username ?: "", credentials?: "").proxy
                 }, classLoader)
         try {
-              InteractiveShell.checkConnection()
+             //connecting to node by requesting node info to fail fast
+              InteractiveShell.nodeInfo()
         } catch (e: Exception) {
             println("Cannot login to ${configuration.hostAndPort}, reason: \"${(e.cause ?: e).message}\"")
             exitProcess(1)

@@ -113,7 +113,7 @@ class CordaRPCClient private constructor(
     private val rpcClient = RPCClient<CordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
             configuration.toRpcClientConfiguration(),
-            if(classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT
+            if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT
     )
 
     /**

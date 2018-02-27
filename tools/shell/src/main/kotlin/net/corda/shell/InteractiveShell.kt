@@ -19,7 +19,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SslOptions
 import net.corda.shell.utlities.ANSIProgressRenderer
 import net.corda.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -92,16 +92,14 @@ data class SSHDConfiguration(val port: Int) {
     }
 }
 
-data class SslConfiguration(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration
-
 data class ShellConfiguration(
         val baseDirectory: Path,
-        val user: String,
+        var user: String?,
         var password: String?,
         val hostAndPort: NetworkHostAndPort,
-        val ssl: SslConfiguration?,
+        val ssl: SslOptions?,
         val sshdPort: Int?,
-        val noLocalShell: Boolean) { //TODO SzSz remove?
+        val noLocalShell: Boolean) {
     val cordappsDirectory: Path = baseDirectory / "cordapps"
 }
 
@@ -195,7 +193,7 @@ object InteractiveShell {
         }
     }
 
-    fun checkConnection() = connection.nodeInfo()
+    fun nodeInfo() = connection.nodeInfo()
 
     fun createOutputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra

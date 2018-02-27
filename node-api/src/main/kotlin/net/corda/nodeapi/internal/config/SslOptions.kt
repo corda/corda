@@ -1,6 +1,5 @@
-package net.corda.node.services.config
+package net.corda.nodeapi.internal.config
 
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import java.nio.file.Path
 import java.nio.file.Paths
 

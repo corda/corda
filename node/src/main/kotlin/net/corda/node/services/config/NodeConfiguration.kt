@@ -10,6 +10,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs

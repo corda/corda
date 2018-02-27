@@ -114,7 +114,7 @@ Where:
 
 * ``[host]`` is the Corda node's host
 * ``[port]`` is the Corda node's port, specified in the ``node.conf`` file
-* ``[user]`` is the RPC username
+* ``[user]`` is the RPC username, if not provided it will be requested at startup
 * ``[password]`` is the RPC user password, if not provided it will be requested at startup
 * ``[basePath]``  root directory containing CordApps directory
 * ``[sshdPortNumber]`` instructs the standalone shell app to start SSH server on the given port, optional

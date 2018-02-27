@@ -3,7 +3,7 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
@@ -43,6 +43,7 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.*
+import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
@@ -61,7 +62,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NodeBuildProperties
 import net.corda.nodeapi.internal.DevIdentityGenerator
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -290,24 +290,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun getRxIoScheduler(): Scheduler
 
     open fun startShell() {
-        //re-packs data to Shell specific classes
-        fun NodeConfiguration.toShellConfig(): net.corda.shell.ShellConfiguration {
+        if (configuration.shouldInitCrashShell()) {
             if (configuration.rpcOptions.address == null) {
                 throw ConfigurationException("Cannot init CrashShell because node RPC address is not set (via 'rpcSettings' option).")
             }
-            val sslConfiguration = net.corda.shell.SslConfiguration(this.rpcOptions.sslConfig.certificatesDirectory,
-                    this.rpcOptions.sslConfig.keyStorePassword, this.rpcOptions.sslConfig.trustStorePassword)
-            val localShellUser: User? = this.rpcUsers.firstOrNull { u -> u.username == "demo" }
-            return net.corda.shell.ShellConfiguration(this.baseDirectory,
-                    localShellUser?.username ?: "", localShellUser?.password,
-                    this.rpcOptions.address ?: NetworkHostAndPort("localhost", 2222),
-                    sslConfiguration, this.sshd?.port, this.noLocalShell)
-        }
-
-        if (configuration.shouldInitCrashShell()) {
             val shellConfiguration = configuration.toShellConfig()
             val rpcOps = { username: String?, credentials: String? ->
-                val client = CordaRPCClient(shellConfiguration.hostAndPort)
+                val client =
+                    createCordaRPCClientWithSsl(shellConfiguration.hostAndPort, sslConfiguration = shellConfiguration.ssl)
                 client.start(username ?: "", credentials ?: "").proxy
             }
             InteractiveShell.startShell(shellConfiguration, rpcOps)

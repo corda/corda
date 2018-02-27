@@ -1,8 +1,8 @@
-package net.corda.node.testsupport
+package net.corda.testing.common.internal
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.node.services.config.SslOptions
+import net.corda.nodeapi.internal.config.SslOptions
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
 import sun.security.tools.keytool.CertAndKeyGen

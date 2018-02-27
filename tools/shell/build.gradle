@@ -1,6 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: 'java'
 apply plugin: 'application'
+apply plugin: 'net.corda.plugins.quasar-utils'
 
 description 'Corda Shell'
 
@@ -74,7 +75,7 @@ dependencies {
     integrationTestCompile project(':node-driver')
 }
 
-mainClassName = 'net.corda.shell.RemoteShellKt'
+mainClassName = 'net.corda.shell.StandaloneShellKt'
 
 jar {
     baseName 'corda-shell'
