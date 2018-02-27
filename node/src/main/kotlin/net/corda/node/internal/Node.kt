@@ -172,6 +172,8 @@ open class Node(configuration: NodeConfiguration,
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
         rpcServerAddresses?.let {
             rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, MAX_FILE_SIZE)
+            printBasicNodeInfo("RPC connection address", it.primary.toString())
+            printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, MAX_FILE_SIZE)
