@@ -158,10 +158,10 @@ class DistributedServiceTests {
     }
 
     private fun issueCash(amount: Amount<Currency>) {
-        aliceProxy.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(0), raftNotaryIdentity).returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(0), raftNotaryIdentity)
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.singleIdentity()).returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.singleIdentity())
     }
 }
