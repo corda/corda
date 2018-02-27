@@ -143,7 +143,7 @@ class P2PMessagingTest {
         )
 
         distributedServiceNodes.forEach {
-            val nodeName = it.services.myInfo.singleIdentity().name
+            val nodeName = it.services.myInfo.legalIdentitiesAndCerts.first().name
             it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _ ->
                 crashingNodes.requestsReceived.incrementAndGet()
                 crashingNodes.firstRequestReceived.countDown()
