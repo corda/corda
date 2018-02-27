@@ -161,7 +161,7 @@ class RPCClientProxyHandler(
                 build()
     }
 
-    // Used toto buffer client requests if the server is unavailable
+    // Used to buffer client requests if the server is unavailable
     private var bufferOutgoingRequests = false
     private val outgoingRequestBuffer = ArrayList<RPCApi.ClientToServer.RpcRequest>()
 
@@ -408,7 +408,7 @@ class RPCClientProxyHandler(
 
     private fun handleConnectionFailover(session: ClientSession?) {
         session!!.addFailoverListener { event ->
-            when(event) {
+            when (event) {
                 FailoverEventType.FAILURE_DETECTED -> {
                     log.warn("RPC server unavailable. RPC calls are being buffered.")
                     bufferOutgoingRequests = true
@@ -424,8 +424,10 @@ class RPCClientProxyHandler(
                 FailoverEventType.FAILOVER_FAILED -> {
                     log.error("Could not reconnect to the RPC server. All buffered requests will be discarded and RPC calls " +
                             "will throw an RPCException.")
-                    rpcReplyMap.values.forEach { replyFuture ->
-                        replyFuture.setException(RPCException("Could not connect to RPC server."))
+                    rpcReplyMap.forEach { id, replyFuture ->
+                        replyFuture.setException(RPCException("Could not re-connect to RPC server. Failover failed."))
+                        val observable = observableContext.observableMap.getIfPresent(id)
+                        observable?.onError(RPCException("Could not re-connect to RPC server. Failover failed."))
                     }
                     rpcReplyMap.clear()
                     callSiteMap?.clear()
