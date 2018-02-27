@@ -10,6 +10,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
@@ -101,20 +102,12 @@ class ContractUpgradeFlowTest {
         val result = resultFuture.getOrThrow()
 
         fun check(node: StartedNode<MockNode>) {
-            val nodeStx = node.database.transaction {
-                node.services.validatedTransactions.getTransaction(result.ref.txhash)
+            val upgradeTx = node.database.transaction {
+                val wtx = node.services.validatedTransactions.getTransaction(result.ref.txhash)
+                wtx!!.resolveContractUpgradeTransaction(node.services)
             }
-            requireNotNull(nodeStx)
-
-            // Verify inputs.
-            val input = node.database.transaction {
-                node.services.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
-            }
-            requireNotNull(input)
-            assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
-
-            // Verify outputs.
-            assertTrue(nodeStx!!.tx.outputs.single().data is DummyContractV2.State)
+            assertTrue(upgradeTx.inputs.single().state.data is DummyContract.State)
+            assertTrue(upgradeTx.outputs.single().data is DummyContractV2.State)
         }
         check(aliceNode)
         check(bobNode)
@@ -192,16 +185,12 @@ class ContractUpgradeFlowTest {
             val result = resultFuture.getOrThrow()
             // Check results.
             listOf(aliceNode, bobNode).forEach {
-                val signedTX = aliceNode.database.transaction { aliceNode.services.validatedTransactions.getTransaction(result.ref.txhash) }
-                requireNotNull(signedTX)
-
-                // Verify inputs.
-                val input = aliceNode.database.transaction { aliceNode.services.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
-                requireNotNull(input)
-                assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
-
-                // Verify outputs.
-                assertTrue(signedTX!!.tx.outputs.single().data is DummyContractV2.State)
+                val upgradeTx = aliceNode.database.transaction {
+                    val wtx = aliceNode.services.validatedTransactions.getTransaction(result.ref.txhash)
+                    wtx!!.resolveContractUpgradeTransaction(aliceNode.services)
+                }
+                assertTrue(upgradeTx.inputs.single().state.data is DummyContract.State)
+                assertTrue(upgradeTx.outputs.single().data is DummyContractV2.State)
             }
         }
     }
@@ -222,14 +211,34 @@ class ContractUpgradeFlowTest {
         mockNet.runNetwork()
         upgradeResult.getOrThrow()
         // Get contract state from the vault.
-        val firstState = aliceNode.database.transaction { aliceNode.services.vaultService.queryBy<ContractState>().states.single() }
-        assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
-        assertEquals(Amount(1000000, USD).`issued by`(chosenIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
-        assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
+        val upgradedStateFromVault = aliceNode.database.transaction { aliceNode.services.vaultService.queryBy<CashV2.State>().states.single() }
+        assertEquals(Amount(1000000, USD).`issued by`(chosenIdentity.ref(1)), upgradedStateFromVault.state.data.amount, "Upgraded cash contain the correct amount.")
+        assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), upgradedStateFromVault.state.data.owners, "Upgraded cash belongs to the right owner.")
+        // Make sure the upgraded state can be spent
+        val movedState = upgradedStateFromVault.state.data.copy(amount = upgradedStateFromVault.state.data.amount.times(2))
+        val spendUpgradedTx = aliceNode.services.signInitialTransaction(
+                TransactionBuilder(notary)
+                        .addInputState(upgradedStateFromVault)
+                        .addOutputState(
+                                upgradedStateFromVault.state.copy(data = movedState)
+                        )
+                        .addCommand(CashV2.Move(), alice.owningKey)
+
+        )
+        aliceNode.services.startFlow(FinalityFlow(spendUpgradedTx)).apply {
+            mockNet.runNetwork()
+            get()
+        }
+        val movedStateFromVault = aliceNode.database.transaction { aliceNode.services.vaultService.queryBy<CashV2.State>().states.single() }
+        assertEquals(movedState, movedStateFromVault.state.data)
     }
 
-    class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
+    class CashV2 : UpgradedContractWithLegacyConstraint<Cash.State, CashV2.State> {
         override val legacyContract = Cash.PROGRAM_ID
+        override val legacyContractConstraint: AttachmentConstraint
+            get() = AlwaysAcceptAttachmentConstraint
+
+        class Move : TypeOnlyCommandData()
 
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()

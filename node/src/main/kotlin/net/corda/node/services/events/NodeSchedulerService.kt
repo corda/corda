@@ -16,7 +16,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.join
 import net.corda.core.internal.until
-import net.corda.core.node.StateLoader
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
@@ -58,7 +58,7 @@ import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 class NodeSchedulerService(private val clock: CordaClock,
                            private val database: CordaPersistence,
                            private val flowStarter: FlowStarter,
-                           private val stateLoader: StateLoader,
+                           private val servicesForResolution: ServicesForResolution,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val serverThread: Executor,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
@@ -311,7 +311,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     private fun getScheduledActivity(scheduledState: ScheduledStateRef): ScheduledActivity? {
-        val txState = stateLoader.loadState(scheduledState.ref)
+        val txState = servicesForResolution.loadState(scheduledState.ref)
         val state = txState.data as SchedulableState
         return try {
             // This can throw as running contract code.

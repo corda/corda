@@ -43,12 +43,19 @@ data class GeneratedLedger(
     private val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
     private val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
     private val contractAttachmentMap: Map<String, ContractAttachment> by lazy {
-        attachments.mapNotNull { it as? ContractAttachment }.associateBy { it.contract }
+        attachments.mapNotNull { it as? ContractAttachment }.flatMap { attch-> attch.allContracts.map { it to attch } }.toMap()
     }
 
     private val services = object : ServicesForResolution {
         override fun loadState(stateRef: StateRef): TransactionState<*> {
             return hashTransactionMap[stateRef.txhash]?.outputs?.get(stateRef.index) ?: throw TransactionResolutionException(stateRef.txhash)
+        }
+
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+            return stateRefs.groupBy { it.txhash }.flatMap {
+                val outputs = hashTransactionMap[it.key]?.outputs ?: throw TransactionResolutionException(it.key)
+                it.value.map { StateAndRef(outputs[it.index], it) }
+            }.toSet()
         }
         override val identityService = rigorousMock<IdentityService>().apply {
             doAnswer { identityMap[it.arguments[0]] }.whenever(this).partyFromKey(any())

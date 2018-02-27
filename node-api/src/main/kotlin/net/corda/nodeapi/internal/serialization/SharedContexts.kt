@@ -20,25 +20,29 @@ val KRYO_P2P_CONTEXT = SerializationContextImpl(kryoMagic,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
-        SerializationContext.UseCase.P2P)
+        SerializationContext.UseCase.P2P,
+        null)
 val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(kryoMagic,
         SerializationDefaults.javaClass.classLoader,
         QuasarWhitelist,
         emptyMap(),
         true,
-        SerializationContext.UseCase.Checkpoint)
+        SerializationContext.UseCase.Checkpoint,
+        null)
 val AMQP_P2P_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
-        SerializationContext.UseCase.P2P)
+        SerializationContext.UseCase.P2P,
+        null)
 
 val KRYO_CLIENT_CONTEXT = SerializationContextImpl(kryoMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
-        SerializationContext.UseCase.RPCClient)
+        SerializationContext.UseCase.RPCClient,
+        null)
 
 

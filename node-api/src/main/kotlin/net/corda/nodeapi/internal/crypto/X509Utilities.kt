@@ -259,13 +259,17 @@ object X509Utilities {
     private fun createCertificateSigningRequest(subject: X500Principal,
                                                 email: String,
                                                 keyPair: KeyPair,
-                                                signatureScheme: SignatureScheme): PKCS10CertificationRequest {
+                                                signatureScheme: SignatureScheme,
+                                                certRole: CertRole): PKCS10CertificationRequest {
         val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
+        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public)
+                .addAttribute(BCStyle.E, DERUTF8String(email))
+                .addAttribute(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), certRole)
+                .build(signer)
     }
 
-    fun createCertificateSigningRequest(subject: X500Principal, email: String, keyPair: KeyPair): PKCS10CertificationRequest {
-        return createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
+    fun createCertificateSigningRequest(subject: X500Principal, email: String, keyPair: KeyPair, certRole: CertRole = CertRole.NODE_CA): PKCS10CertificationRequest {
+        return createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME, certRole)
     }
 
     fun buildCertPath(first: X509Certificate, remaining: List<X509Certificate>): CertPath {
@@ -284,19 +288,24 @@ object X509Utilities {
     }
 }
 
+// Assuming cert type to role is 1:1
+val CertRole.certificateType: CertificateType get() = CertificateType.values().first { it.role == this }
+
 /**
  * Convert a [X509Certificate] into Bouncycastle's [X509CertificateHolder].
  *
  * NOTE: To avoid unnecessary copying use [X509Certificate] where possible.
  */
 fun X509Certificate.toBc() = X509CertificateHolder(encoded)
+
 fun X509CertificateHolder.toJca(): X509Certificate = X509CertificateFactory().generateCertificate(encoded.inputStream())
 
-val CertPath.x509Certificates: List<X509Certificate> get() {
-    require(type == "X.509") { "Not an X.509 cert path: $this" }
-    // We're not mapping the list to avoid creating a new one.
-    return uncheckedCast(certificates)
-}
+val CertPath.x509Certificates: List<X509Certificate>
+    get() {
+        require(type == "X.509") { "Not an X.509 cert path: $this" }
+        // We're not mapping the list to avoid creating a new one.
+        return uncheckedCast(certificates)
+    }
 
 val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certificate) { "Not an X.509 certificate: $this" }
 
