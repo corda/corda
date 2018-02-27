@@ -19,36 +19,11 @@ import java.sql.Connection
 import java.time.Clock
 
 /**
- * Part of [ServiceHub].
- */
-@DoNotImplement
-interface StateLoader {
-    /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    fun loadState(stateRef: StateRef): TransactionState<*>
-
-    /**
-     * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
-    // as the existing transaction store will become encrypted at some point
-    @Throws(TransactionResolutionException::class)
-    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
-    }
-}
-
-/**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
  */
-interface ServicesForResolution : StateLoader {
+@DoNotImplement
+interface ServicesForResolution {
     /**
      * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
      * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -64,6 +39,27 @@ interface ServicesForResolution : StateLoader {
 
     /** Returns the network parameters the node is operating under. */
     val networkParameters: NetworkParameters
+
+    /**
+     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * *WARNING* Do not use this method unless you really only want a single state - any batch loading should
+     * go through [loadStates] as repeatedly calling [loadState] can lead to repeat deserialsiation work and
+     * severe performance degradation.
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    @Throws(TransactionResolutionException::class)
+    fun loadState(stateRef: StateRef): TransactionState<*>
+    /**
+     * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
+    // as the existing transaction store will become encrypted at some point
+    @Throws(TransactionResolutionException::class)
+    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 }
 
 /**

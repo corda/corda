@@ -10,6 +10,7 @@ import net.corda.core.flows.NotarisationRequest
 import net.corda.core.internal.validateRequest
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.utilities.unwrap
@@ -44,6 +45,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                 val notary = tx.notary
                 TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary)
             }
+            is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
             is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
             else -> {
                 throw IllegalArgumentException("Received unexpected transaction type: ${tx::class.java.simpleName}," +
