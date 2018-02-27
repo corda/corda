@@ -3,17 +3,12 @@ Node database
 
 Default in-memory database
 --------------------------
-
-By default nodes store their data in an H2 database.
-
-You can connect directly to a running node's database to see its stored states, transactions and attachments as
-follows:
+By default, nodes store their data in an H2 database. You can connect directly to a running node's database to see its
+stored states, transactions and attachments as follows:
 
 * Download the `h2 platform-independent zip <http://www.h2database.com/html/download.html>`_, unzip the zip, and
   navigate in a terminal window to the unzipped folder
-* Change directories to the bin folder:
-
-  ``cd h2/bin``
+* Change directories to the bin folder: ``cd h2/bin``
 
 * Run the following command to open the h2 web console in a web browser tab:
 
@@ -93,6 +88,17 @@ The property ``database.schema`` is optional. The value of ``database.schema`` i
 to preserve case-sensitivity (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`).
 
 Example node configuration for PostgreSQL:
+=======
+PostgreSQL
+----------
+Nodes also have untested support for PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
+
+.. warning:: This is an experimental community contribution, and is currently untested. We welcome pull requests to add
+   tests and additional support for this feature.
+
+Configuration
+~~~~~~~~~~~~~
+Here is an example node configuration for PostgreSQL:
 
 .. sourcecode:: groovy
 
@@ -107,3 +113,9 @@ Example node configuration for PostgreSQL:
         schema = [SCHEMA]
     }
     jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
+
+Note that:
+
+* The ``database.schema`` property is optional
+* The value of ``database.schema`` is not wrapped in double quotes and Postgres always treats it as a lower-case value
+  (e.g. ``AliceCorp`` becomes ``alicecorp``)
