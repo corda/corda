@@ -311,11 +311,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
-            return super.initialiseDatabasePersistence(schemaService, identityService) { database ->
-                dbCloser = database::close
-                insideTransaction(database)
-            }
+        override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
+            return super.initialiseDatabasePersistence(schemaService, identityService).also { dbCloser = it::close }
         }
 
         fun disableDBCloseOnStop() {

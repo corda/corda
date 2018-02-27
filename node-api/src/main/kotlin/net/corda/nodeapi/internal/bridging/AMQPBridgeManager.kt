@@ -108,7 +108,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                     if (connected) {
                         log.info("Bridge Connected")
                         val sessionFactory = artemis.started!!.sessionFactory
-                        val session = sessionFactory.createSession(NODE_USER, NODE_USER, false, false, false, false, DEFAULT_ACK_BATCH_SIZE)
+                        val session = sessionFactory.createSession(NODE_USER, NODE_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                         this.session = session
                         val consumer = session.createConsumer(queueName)
                         this.consumer = consumer
@@ -146,9 +146,11 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                     lock.withLock {
                         if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
                             artemisMessage.acknowledge()
-                            session?.commit()
                         } else {
                             log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                            // We need to commit any acknowledged messages before rolling back the failed
+                            // (unacknowledged) message.
+                            session?.commit()
                             session?.rollback(false)
                         }
                     }
