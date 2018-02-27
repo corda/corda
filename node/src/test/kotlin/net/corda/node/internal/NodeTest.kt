@@ -3,7 +3,7 @@ package net.corda.node.internal
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.readAll
+import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.NetworkHostAndPort
@@ -39,7 +39,7 @@ class NodeTest {
         assertNull(nodeInfoFile())
         generateAndSaveNodeInfo()
         val path = nodeInfoFile()!!.toPath()
-        val nodeInfo = path.readAll().deserialize<SignedNodeInfo>().raw.deserialize()
+        val nodeInfo = path.readObject<SignedNodeInfo>().raw.deserialize()
         Files.delete(path)
         return nodeInfo
     }
