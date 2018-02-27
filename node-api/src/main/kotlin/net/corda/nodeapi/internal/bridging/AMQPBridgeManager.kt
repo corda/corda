@@ -148,6 +148,8 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                             artemisMessage.acknowledge()
                         } else {
                             log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                            // We need to commit any acknowledged messages before rolling back the failed
+                            // (unacknowledged) message.
                             session?.commit()
                             session?.rollback(false)
                         }
