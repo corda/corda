@@ -218,6 +218,7 @@ class Network private constructor(
                 try {
                     val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
                     Command(listOf("kill -9 $pid")).start()
+                    FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid").toFile())
                 }
                 catch (e: Exception) {
                     log.warn("Unable to locate PID file: ${e.message}")
