@@ -106,7 +106,7 @@ data class WebserverHandle(
  * the [Incremental] or [RandomFree] concrete implementations.
  */
 @DoNotImplement
-sealed class PortAllocation {
+abstract class PortAllocation {
     /** Get the next available port **/
     abstract fun nextPort(): Int
 
@@ -121,21 +121,6 @@ sealed class PortAllocation {
         val portCounter = AtomicInteger(startingPort)
 
         override fun nextPort() = portCounter.andIncrement
-    }
-
-    /**
-     * @suppress
-     * An implementation of [PortAllocation] which allocates free ports randomly. Currently used in samples
-     * but not for use going forward.
-     */
-    @CordaInternal
-    object RandomFree : PortAllocation() {
-        override fun nextPort(): Int {
-            return ServerSocket().use {
-                it.bind(InetSocketAddress(0))
-                it.localPort
-            }
-        }
     }
 }
 
