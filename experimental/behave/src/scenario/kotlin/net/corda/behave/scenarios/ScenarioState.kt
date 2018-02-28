@@ -66,7 +66,7 @@ class ScenarioState {
         }
     }
 
-    inline fun <T> withClientProxy(nodeName: String, crossinline action: (RPCProxyOps) -> T): T {
+    inline fun <T> withClientProxy(nodeName: String, crossinline action: (CordaRPCOps) -> T): T {
         withNetwork {
             return node(nodeName).http {
                 action(it)

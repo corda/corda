@@ -22,7 +22,7 @@ abstract class Substeps(protected val state: ScenarioState) {
         })
     }
 
-    protected fun <T> withClientProxy(nodeName: String, action: ScenarioState.(RPCProxyOps) -> T): T {
+    protected fun <T> withClientProxy(nodeName: String, action: ScenarioState.(CordaRPCOps) -> T): T {
         return state.withClientProxy(nodeName, {
             return@withClientProxy try {
                 action(state, it)

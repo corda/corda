@@ -13,7 +13,7 @@ import net.corda.behave.process.JarCommand
 import net.corda.behave.seconds
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
-import net.corda.behave.service.proxy.RPCProxyOps
+import net.corda.behave.service.proxy.CordaRPCProxyClient
 import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
@@ -182,21 +182,12 @@ class Node(
         return result ?: error("Failed to run RPC action")
     }
 
-    fun <T> http(action: (RPCProxyOps) -> T): T {
+    fun <T> http(action: (CordaRPCOps) -> T): T {
         val address = config.nodeInterface
         val targetHost = NetworkHostAndPort(address.host, address.rpcProxy)
-
         log.info("Establishing HTTP connection to ${targetHost.host} on port ${targetHost.port} ...")
-
         try {
-            return action(RPCProxyOps(targetHost))
-
-//            val response = doGet<String>(targetHost, "my-ip")
-//            log.info("RPC Proxy ping: $response")
-//
-//            val responseNodeInfo = doGet<NodeInfo>(targetHost, "node-info")
-//            log.info("RPC Proxy nodeInfo: $responseNodeInfo")
-
+            return action(CordaRPCProxyClient(targetHost))
         }
         catch (e: Exception) {
             log.warn("Failed to invoke http endpoint: ", e)
