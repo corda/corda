@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.core.*
+import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before

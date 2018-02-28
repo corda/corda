@@ -16,6 +16,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
@@ -35,7 +36,7 @@ class NetworkMapTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val cacheTimeout = 1.seconds
-    private val portAllocation = PortAllocation.RandomFree
+    private val portAllocation = RandomFree
 
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
