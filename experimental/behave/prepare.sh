@@ -1,6 +1,10 @@
 #!/bin/bash
 
-VERSION=3.0.0
+# Please ensure you run this script using source code (eg. GitHub master, branch or TAG) that reflects the version label defined below
+# For example:
+#   corda-master   => git clone https://github.com/corda/corda
+#   r3corda-master => git clone https://github.com/corda/enterprise
+VERSION=corda-master
 
 # Set up directories
 mkdir -p deps/corda/${VERSION}/apps
@@ -22,3 +26,8 @@ cd ../..
 cd experimental/behave
 cp -v $(ls ../../tools/bootstrapper/build/libs/*.jar | tail -n1) deps/corda/${VERSION}/network-bootstrapper.jar
 cp -v $(ls ../../finance/build/libs/corda-finance-*.jar | tail -n1) deps/corda/${VERSION}/apps/corda-finance.jar
+
+# Build rpcProxy (required for by Driver to call Corda 3.0 which continues to use Kryo for RPC)
+./gradlew rpcProxyJar
+cp -v $(ls build/libs/corda-rpcProxy*.jar | tail -n1) deps/corda/${VERSION}/corda-rpcProxy.jar
+

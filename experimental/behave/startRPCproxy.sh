@@ -24,13 +24,11 @@ if [ ! -d "$DISTRO_DIR/proxy" ]; then
 fi
 
 # launch proxy
-#    $(ls $DISTRO_DIR/proxy/*.jar | tr '\n' ':'):\
-#    $(ls $DISTRO_DIR/apps/*.jar | tr '\n' ':'):\
 echo "Launching RPC proxy ..."
 echo "/usr/bin/java -cp $DISTRO_DIR/corda-rpcProxy.jar:\
-      $(ls $DISTRO_DIR/proxy/*.jar | tr '\n' ':'):\
-      $(ls $DISTRO_DIR/apps/*.jar | tr '\n' ':') \
-      net.corda.behave.service.proxy.RPCProxyServerKt
+\n\t$(ls $DISTRO_DIR/proxy/*.jar | tr '\n' ':'):\
+\n\t$(ls $DISTRO_DIR/apps/*.jar | tr '\n' ':') \
+\n\tnet.corda.behave.service.proxy.RPCProxyServerKt
 "
 
 /usr/bin/java -cp $DISTRO_DIR/corda-rpcProxy.jar:\

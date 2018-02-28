@@ -1,9 +1,12 @@
 package net.corda.behave.process
 
 import net.corda.behave.node.Distribution
+import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import rx.observers.TestSubscriber
+import java.nio.file.Files
+import java.nio.file.Paths
 
 class CommandTests {
 
@@ -16,8 +19,14 @@ class CommandTests {
     @Test
     fun `successful launch rpc proxy`() {
         val cordaDistribution = Distribution.LATEST_MASTER.path
-        val exitCode = Command(listOf("$cordaDistribution/startRPCproxy.sh", "$cordaDistribution")).run()
+        val command = Command(listOf("./startRPCproxy.sh", "$cordaDistribution"))
+        val exitCode = command.run()
         assertThat(exitCode).isEqualTo(0)
+
+        val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
+        println("Killing RPCProxyServer with pid: $pid")
+        Command(listOf("/bin/sh kill -9 $pid")).start()
+        FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid").toFile())
     }
 
     @Test
