@@ -13,6 +13,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
@@ -48,9 +49,22 @@ class ExplorerSimulation(private val options: OptionSet) {
     private lateinit var issuerNodeUSD: NodeHandle
     private lateinit var notary: Party
 
-    private val RPCConnections = ArrayList<CordaRPCConnection>()
+    private val rpcConnections = ArrayList<CordaRPCConnection>()
     private val issuers = HashMap<Currency, CordaRPCOps>()
     private val parties = ArrayList<Pair<Party, CordaRPCOps>>()
+
+    private val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
+    private val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
+    private val notaryName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH")
+
+    // Allocate starting-port for each node.
+    private val portMap = mapOf(
+            ALICE_NAME to 20000,
+            BOB_NAME to 20004,
+            ukBankName to 20008,
+            usaBankName to 20012,
+            notaryName to 20016
+    )
 
     init {
         startDemoNodes()
@@ -58,17 +72,15 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun onEnd() {
         println("Closing RPC connections")
-        RPCConnections.forEach { it.close() }
+        rpcConnections.forEach { it.close() }
     }
 
     private fun startDemoNodes() {
-        val portAllocation = PortAllocation.Incremental(20000)
+        val portAllocation = ExplorerPortAllocation(portMap)
         driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
-            val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
-            val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
             val issuerGBP = startNode(providedName = ukBankName, rpcUsers = listOf(manager),
                     customOverrides = mapOf("issuableCurrencies" to listOf("GBP")))
             val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
@@ -83,7 +95,6 @@ class ExplorerSimulation(private val options: OptionSet) {
             arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
                 println("${it.nodeInfo.legalIdentities.first()} started on ${it.rpcAddress}")
             }
-
             when {
                 options.has("S") -> startNormalSimulation()
                 options.has("F") -> startErrorFlowsSimulation()
@@ -109,7 +120,7 @@ class ExplorerSimulation(private val options: OptionSet) {
         val issuerUSDConnection = issuerClientUSD.start(manager.username, manager.password)
         val issuerRPCUSD = issuerUSDConnection.proxy
 
-        RPCConnections.addAll(listOf(aliceConnection, bobConnection, issuerGBPConnection, issuerUSDConnection))
+        rpcConnections.addAll(listOf(aliceConnection, bobConnection, issuerGBPConnection, issuerUSDConnection))
         issuers.putAll(mapOf(USD to issuerRPCUSD, GBP to issuerRPCGBP))
 
         parties.addAll(listOf(aliceNode.nodeInfo.legalIdentities.first() to aliceRPC,
@@ -190,5 +201,32 @@ class ExplorerSimulation(private val options: OptionSet) {
         val maxIterations = 10_000
         startSimulation(eventGenerator, maxIterations)
         onEnd()
+    }
+
+    /**
+     * Implementation of [PortAllocation] that maps each [Pair] of [CordaX500Name] and service [String] (eg "rpc") to a
+     * predetermined port.
+     */
+    class ExplorerPortAllocation(private val params: Map<CordaX500Name, Int>) : PortAllocation() {
+
+        override fun nextPort(): Int {
+            TODO("not implemented")
+        }
+
+        override fun <T : Any> nextHostAndPort(input: T): NetworkHostAndPort {
+            if (input is Pair<*, *>) {
+                val start = params[input.first as CordaX500Name]!!
+                val offset = when (input.second as String) {
+                    "p2p" -> 0
+                    "rpc" -> 1
+                    "rpcAdmin" -> 2
+                    "web" -> 3
+                    else -> throw IllegalArgumentException("Service is not recognised ${input.second}")
+                }
+                return NetworkHostAndPort("localhost", start + offset)
+            } else {
+                throw ClassCastException("Cannot cast input to Pair")
+            }
+        }
     }
 }

@@ -34,11 +34,11 @@ The Participant nodes are only able to spend cash (eg. move cash).
 
 **These Corda nodes will be created on the following port on localhost.**
 
-   * Notary -> 20005            (Does not accept logins)
-   * UK Bank Plc -> 20011       (*Issuer node*)
-   * USA Bank Corp -> 20008     (*Issuer node*)
-   * Alice -> 20017
-   * Bob -> 20014
+   * Alice -> 20001
+   * Bob -> 20005
+   * UK Bank Plc -> 20009       (*Issuer node*)
+   * USA Bank Corp -> 20013     (*Issuer node*)
+   * Notary -> 20017            (Does not accept logins)
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
 Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.

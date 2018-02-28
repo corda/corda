@@ -63,11 +63,11 @@ The Demo Nodes can be started in one of two modes:
 
 .. note:: 5 Corda nodes will be created on the following port on localhost by default.
 
-   * Notary -> 20003            (Does not accept logins)
-   * Alice -> 20006
-   * Bob -> 20009
-   * UK Bank Plc -> 20012       (*Issuer node*)
-   * USA Bank Corp -> 20015     (*Issuer node*)
+   * Alice -> 20001
+   * Bob -> 20005
+   * UK Bank Plc -> 20009       (*Issuer node*)
+   * USA Bank Corp -> 20013     (*Issuer node*)
+   * Notary -> 20017            (Does not accept logins)
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
 Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
