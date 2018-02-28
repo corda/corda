@@ -17,7 +17,6 @@ import static java.util.Collections.emptyList;
 import static net.corda.testing.core.TestUtils.singleIdentity;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
-import static net.corda.testing.node.NodeTestUtils.startFlow;
 
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork(emptyList());
@@ -40,7 +39,7 @@ public class FlowsInJavaTest {
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
         bobNode.registerInitiatedFlow(SendHelloAndThenReceive.class);
-        Future<String> result = startFlow(aliceNode.getServices(), new SendInUnwrapFlow(bob));
+        Future<String> result = aliceNode.startFlow(new SendInUnwrapFlow(bob));
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
@@ -56,7 +55,7 @@ public class FlowsInJavaTest {
 
     private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
         PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(bob, receiveType);
-        Future<?> result = startFlow(aliceNode.getServices(), flow);
+        Future<?> result = aliceNode.startFlow(flow);
         mockNet.runNetwork();
         try {
             result.get();
