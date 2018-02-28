@@ -127,6 +127,10 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */
     fun <F : FlowLogic<*>> findStateMachines(flowClass: Class<F>): List<Pair<F, CordaFuture<*>>> = node.smm.findStateMachines(flowClass)
 
+    /**
+     * Executes given statement in the scope of a transaction.
+     * @param statement to be executed in the scope of this transaction.
+     */
     fun <T> transaction(statement: () -> T): T {
         return node.database.transaction {
             statement()
