@@ -203,3 +203,11 @@ We can now restart the network management server with both doorman and network m
 ```
 java -jar doorman-<version>.jar --update-network-parameters network-parameters.conf
 ```
+
+### 7. Logs
+In order to set the desired logging level the system properties need to be used.
+Appropriate system properties can be set at the execution time.
+Example:
+```
+java -DdefaultLogLevel=TRACE -DconsoleLogLevel=TRACE -jar doorman-<version>.jar
+```
