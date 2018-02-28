@@ -15,7 +15,6 @@ import java.util.concurrent.Future;
 
 import static java.util.Collections.emptyList;
 import static net.corda.testing.core.TestUtils.singleIdentity;
-import static net.corda.testing.node.NodeTestUtils.startFlow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 

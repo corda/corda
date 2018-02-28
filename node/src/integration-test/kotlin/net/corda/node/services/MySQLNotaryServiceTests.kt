@@ -20,15 +20,15 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.chooseIdentity
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.inMemoryH2DataSourceConfig
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.ClassRule
@@ -77,22 +77,22 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
         val firstTxBuilder = TransactionBuilder(notaryParty)
                 .addInputState(inputState)
-                .addCommand(dummyCommand(node.services.myInfo.chooseIdentity().owningKey))
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
         val firstSpendTx = node.services.signInitialTransaction(firstTxBuilder)
 
-        val firstSpend = node.services.startFlow(NotaryFlow.Client(firstSpendTx))
+        val firstSpend = node.services.startFlow(NotaryFlow.Client(firstSpendTx)).resultFuture
         mockNet.runNetwork()
 
         firstSpend.getOrThrow()
 
         val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
-            val dummyState = DummyContract.SingleOwnerState(0, node.info.chooseIdentity())
+            val dummyState = DummyContract.SingleOwnerState(0, node.info.singleIdentity())
             addOutputState(dummyState, DummyContract.PROGRAM_ID)
-            addCommand(dummyCommand(node.services.myInfo.chooseIdentity().owningKey))
+            addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
             this
         }
         val secondSpendTx = node.services.signInitialTransaction(secondSpendBuilder)
-        val secondSpend = node.services.startFlow(NotaryFlow.Client(secondSpendTx))
+        val secondSpend = node.services.startFlow(NotaryFlow.Client(secondSpendTx)).resultFuture
 
         mockNet.runNetwork()
 
@@ -107,14 +107,14 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
         val txBuilder = TransactionBuilder(notaryParty)
                 .addInputState(inputState)
-                .addCommand(dummyCommand(node.services.myInfo.chooseIdentity().owningKey))
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
         val spendTx = node.services.signInitialTransaction(txBuilder)
 
-        val notarise = node.services.startFlow(NotaryFlow.Client(spendTx))
+        val notarise = node.services.startFlow(NotaryFlow.Client(spendTx)).resultFuture
         mockNet.runNetwork()
         val signature = notarise.get().single()
 
-        val notariseRetry = node.services.startFlow(NotaryFlow.Client(spendTx))
+        val notariseRetry = node.services.startFlow(NotaryFlow.Client(spendTx)).resultFuture
         mockNet.runNetwork()
         val signatureRetry = notariseRetry.get().single()
 
@@ -132,7 +132,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
             setProperty("autoCommit", "false")
         }
         return mockNet.createUnstartedNode(
-                MockNodeParameters(
+                InternalMockNodeParameters(
                         legalName = notaryName,
                         entropyRoot = BigInteger.valueOf(60L),
                         configOverrides = {
@@ -145,7 +145,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
     private fun issueState(node: StartedNode<InternalMockNetwork.MockNode>, notary: Party): StateAndRef<*> {
         return node.database.transaction {
-            val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
+            val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.singleIdentity().ref(0))
             val stx = node.services.signInitialTransaction(builder)
             node.services.recordTransactions(stx)
             StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))

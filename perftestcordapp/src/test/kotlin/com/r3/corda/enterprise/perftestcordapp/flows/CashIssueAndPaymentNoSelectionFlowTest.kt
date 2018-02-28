@@ -15,7 +15,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStra
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -44,7 +44,7 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
                 cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        bankOfCorda = bankOfCordaNode.info.chooseIdentity()
+        bankOfCorda = bankOfCordaNode.info.singleIdentity()
         mockNet.runNetwork()
         notary = mockNet.defaultNotaryIdentity
     }
@@ -56,7 +56,7 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
 
     @Test
     fun `issue and pay some cash`() {
-        val payTo = aliceNode.info.chooseIdentity()
+        val payTo = aliceNode.info.singleIdentity()
         val expectedPayment = 500.DOLLARS
 
         bankOfCordaNode.database.transaction {
@@ -68,7 +68,7 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
                     = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentNoSelection(
-                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary))
+                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary)).resultFuture
             mockNet.runNetwork()
             future.getOrThrow()
 

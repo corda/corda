@@ -10,7 +10,6 @@ import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
-import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -32,7 +31,7 @@ class CashExitFlowTests {
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity
-        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary))
+        val future = bankOfCordaNode.startFlow(CashIssueFlow(initialBalance, ref, notary))
         mockNet.runNetwork()
         future.getOrThrow()
     }
@@ -45,7 +44,7 @@ class CashExitFlowTests {
     @Test
     fun `exit some cash`() {
         val exitAmount = 500.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(CashExitFlow(exitAmount, ref))
+        val future = bankOfCordaNode.startFlow(CashExitFlow(exitAmount, ref))
         mockNet.runNetwork()
         val exitTx = future.getOrThrow().stx.tx
         val expected = (initialBalance - exitAmount).`issued by`(bankOfCorda.ref(ref))
@@ -58,7 +57,7 @@ class CashExitFlowTests {
     @Test
     fun `exit zero cash`() {
         val expected = 0.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(CashExitFlow(expected, ref))
+        val future = bankOfCordaNode.startFlow(CashExitFlow(expected, ref))
         mockNet.runNetwork()
         assertFailsWith<CashException> {
             future.getOrThrow()
