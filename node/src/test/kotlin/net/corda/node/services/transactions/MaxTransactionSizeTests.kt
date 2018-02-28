@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -15,9 +14,9 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -26,22 +25,20 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class MaxTransactionSizeTests {
-    private lateinit var mockNet: InternalMockNetwork
-    private lateinit var notaryServices: StartedNodeServices
-    private lateinit var aliceServices: StartedNodeServices
+    private lateinit var mockNet: MockNetwork
+    private lateinit var notaryNode: StartedMockNode
+    private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(
-                listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"),
-                networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
-        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
-        notaryServices = mockNet.defaultNotaryNode.services
-        aliceServices = aliceNode.services
+        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"), networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
+        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
@@ -59,16 +56,16 @@ class MaxTransactionSizeTests {
         val bigFile2 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 1)
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 3)
-        val flow = aliceServices.database.transaction {
-            val hash1 = aliceServices.attachments.importAttachment(bigFile1.inputStream)
-            val hash2 = aliceServices.attachments.importAttachment(bigFile2.inputStream)
-            val hash3 = aliceServices.attachments.importAttachment(bigFile3.inputStream)
-            val hash4 = aliceServices.attachments.importAttachment(bigFile4.inputStream)
+        val flow = aliceNode.transaction {
+            val hash1 = aliceNode.services.attachments.importAttachment(bigFile1.inputStream)
+            val hash2 = aliceNode.services.attachments.importAttachment(bigFile2.inputStream)
+            val hash3 = aliceNode.services.attachments.importAttachment(bigFile3.inputStream)
+            val hash4 = aliceNode.services.attachments.importAttachment(bigFile4.inputStream)
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4)
         }
         val exception = assertFailsWith<IllegalArgumentException> {
-            val future = aliceServices.startFlow(flow)
+            val future = aliceNode.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }
@@ -82,16 +79,16 @@ class MaxTransactionSizeTests {
         val bigFile2 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 1)
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 3)
-        val flow = aliceServices.database.transaction {
-            val hash1 = aliceServices.attachments.importAttachment(bigFile1.inputStream)
-            val hash2 = aliceServices.attachments.importAttachment(bigFile2.inputStream)
-            val hash3 = aliceServices.attachments.importAttachment(bigFile3.inputStream)
-            val hash4 = aliceServices.attachments.importAttachment(bigFile4.inputStream)
+        val flow = aliceNode.transaction {
+            val hash1 = aliceNode.services.attachments.importAttachment(bigFile1.inputStream)
+            val hash2 = aliceNode.services.attachments.importAttachment(bigFile2.inputStream)
+            val hash3 = aliceNode.services.attachments.importAttachment(bigFile3.inputStream)
+            val hash4 = aliceNode.services.attachments.importAttachment(bigFile4.inputStream)
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4, verify = false)
         }
         val ex = assertFailsWith<UnexpectedFlowEndException> {
-            val future = aliceServices.startFlow(flow)
+            val future = aliceNode.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }
