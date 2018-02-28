@@ -66,7 +66,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
         val newNotary = newNotaryParty
         val flow = NotaryChangeFlow(state, newNotary)
-        val future = clientNodeA.services.startFlow(flow)
+        val future = clientNodeA.startFlow(flow)
 
         mockNet.runNetwork()
 
@@ -82,7 +82,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
         val newEvilNotary = getTestPartyAndCertificate(CordaX500Name(organisation = "Evil R3", locality = "London", country = "GB"), generateKeyPair().public)
         val flow = NotaryChangeFlow(state, newEvilNotary.party)
-        val future = clientNodeA.services.startFlow(flow)
+        val future = clientNodeA.startFlow(flow)
 
         mockNet.runNetwork()
 
@@ -98,7 +98,7 @@ class NotaryChangeTests {
         val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
         val newNotary = newNotaryParty
         val flow = NotaryChangeFlow(state, newNotary)
-        val future = clientNodeA.services.startFlow(flow)
+        val future = clientNodeA.startFlow(flow)
         mockNet.runNetwork()
         val newState = future.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
@@ -143,18 +143,18 @@ class NotaryChangeTests {
 
     private fun changeNotary(movedState: StateAndRef<DummyContract.SingleOwnerState>, node: StartedMockNode, newNotary: Party): StateAndRef<DummyContract.SingleOwnerState> {
         val flow = NotaryChangeFlow(movedState, newNotary)
-        val future = node.services.startFlow(flow)
+        val future = node.startFlow(flow)
         mockNet.runNetwork()
 
         return future.getOrThrow()
     }
 
     private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: StartedMockNode, toNode: StartedMockNode): StateAndRef<DummyContract.SingleOwnerState> {
-        val tx = DummyContract.move(state, toNode.info.chooseIdentity())
+        val tx = DummyContract.move(state, toNode.info.singleIdentity())
         val stx = fromNode.services.signInitialTransaction(tx)
 
         val notaryFlow = NotaryFlow.Client(stx)
-        val future = fromNode.services.startFlow(notaryFlow)
+        val future = fromNode.startFlow(notaryFlow)
         mockNet.runNetwork()
 
         val notarySignature = future.getOrThrow()
@@ -200,7 +200,7 @@ fun issueState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party)
 }
 
 fun issueMultiPartyState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryNode: StartedMockNode, notaryIdentity: Party): StateAndRef<DummyContract.MultiOwnerState> {
-    val participants = listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())
+    val participants = listOf(nodeA.info.singleIdentity(), nodeB.info.singleIdentity())
     val state = TransactionState(
             DummyContract.MultiOwnerState(0, participants),
             DummyContract.PROGRAM_ID, notaryIdentity)

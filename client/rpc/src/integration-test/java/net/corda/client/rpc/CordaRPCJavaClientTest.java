@@ -10,7 +10,7 @@ import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
-import net.corda.testing.core.TestUtils;
+import net.corda.testing.internal.InternalTestUtilsKt;
 import net.corda.testing.node.User;
 import net.corda.testing.internal.IntegrationTestKt;
 import net.corda.testing.internal.IntegrationTestSchemas;
@@ -83,7 +83,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 DOLLARS(123), OpaqueBytes.of((byte)0),
-                TestUtils.chooseIdentity(node.getInfo()));
+                InternalTestUtilsKt.chooseIdentity(node.getInfo()));
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

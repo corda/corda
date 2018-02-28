@@ -4,7 +4,7 @@ import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -14,11 +14,11 @@ import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class InMemoryMessagingTests {
-    lateinit var mockNet: MockNetwork
+    lateinit var mockNet: InternalMockNetwork
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = InternalMockNetwork(emptyList())
     }
 
     @After

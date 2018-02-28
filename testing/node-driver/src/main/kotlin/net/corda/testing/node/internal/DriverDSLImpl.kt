@@ -44,12 +44,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.driver.VerifierType
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT

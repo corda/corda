@@ -62,7 +62,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
                                     ownedBy: AbstractParty? = null,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
-    val myKey = ownedBy?.owningKey ?: myInfo.chooseIdentity().owningKey
+    val myKey = ownedBy?.owningKey ?: myInfo.singleIdentity().owningKey
     val anonParty = AnonymousParty(myKey)
 
     // We will allocate one state to one transaction, for simplicities sake.

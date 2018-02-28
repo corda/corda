@@ -28,7 +28,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/** @param inheritable whether new threads inherit the environment, use sparingly. */
+/**
+ * A test serialization rule implementation for use in tests
+ *
+ * @param inheritable whether new threads inherit the environment, use sparingly.
+ */
 class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
     companion object {
         init {
@@ -71,10 +75,3 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 }
-
-@DoNotImplement
-interface GlobalSerializationEnvironment : SerializationEnvironment {
-    /** Unset this environment. */
-    fun unset()
-}
-

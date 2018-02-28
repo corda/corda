@@ -12,8 +12,8 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.chooseIdentity
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
@@ -22,7 +22,6 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.startFlow
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
@@ -49,20 +48,20 @@ class RaftNotaryServiceTests : IntegrationTest() {
 
             val firstTxBuilder = TransactionBuilder(defaultNotaryIdentity)
                     .addInputState(inputState)
-                    .addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(bankA.services.myInfo.singleIdentity().owningKey))
             val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
-            val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
+            val firstSpend = bankA.startFlow(NotaryFlow.Client(firstSpendTx))
             firstSpend.getOrThrow()
 
             val secondSpendBuilder = TransactionBuilder(defaultNotaryIdentity).withItems(inputState).run {
-                val dummyState = DummyContract.SingleOwnerState(0, bankA.services.myInfo.chooseIdentity())
+                val dummyState = DummyContract.SingleOwnerState(0, bankA.services.myInfo.singleIdentity())
                 addOutputState(dummyState, DummyContract.PROGRAM_ID)
-                addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
+                addCommand(dummyCommand(bankA.services.myInfo.singleIdentity().owningKey))
                 this
             }
             val secondSpendTx = bankA.services.signInitialTransaction(secondSpendBuilder)
-            val secondSpend = bankA.services.startFlow(NotaryFlow.Client(secondSpendTx))
+            val secondSpend = bankA.startFlow(NotaryFlow.Client(secondSpendTx))
 
             val ex = assertFailsWith(NotaryException::class) { secondSpend.getOrThrow() }
             val error = ex.error as NotaryError.Conflict
@@ -73,7 +72,7 @@ class RaftNotaryServiceTests : IntegrationTest() {
     private fun issueState(nodeHandle: InProcessImpl, notary: Party): StateAndRef<*> {
         return nodeHandle.database.transaction {
 
-            val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.chooseIdentity().ref(0))
+            val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.singleIdentity().ref(0))
             val stx = nodeHandle.services.signInitialTransaction(builder)
             nodeHandle.services.recordTransactions(stx)
             StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))

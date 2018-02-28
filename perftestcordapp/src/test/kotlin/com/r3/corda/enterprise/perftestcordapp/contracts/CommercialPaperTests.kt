@@ -20,6 +20,7 @@ import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
+import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger

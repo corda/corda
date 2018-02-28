@@ -9,6 +9,10 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
@@ -63,8 +67,8 @@ class TraderDemoTest : IntegrationTest() {
             val expectedBCash = clientB.cashCount + 1
             val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-            clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.services.myInfo.chooseIdentity().name, sellerName = nodeB.services.myInfo.chooseIdentity().name)
-            clientB.runSeller(buyerName = nodeA.services.myInfo.chooseIdentity().name, amount = 5.DOLLARS)
+            clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.services.myInfo.singleIdentity().name, sellerName = nodeB.services.myInfo.singleIdentity().name)
+            clientB.runSeller(buyerName = nodeA.services.myInfo.singleIdentity().name, amount = 5.DOLLARS)
 
             assertThat(clientA.cashCount).isGreaterThan(originalACash)
             assertThat(clientB.cashCount).isEqualTo(expectedBCash)

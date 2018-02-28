@@ -19,6 +19,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.performance.div
@@ -92,7 +93,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
             a as InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.internalServices.monitoringService.metrics)
             CordaRPCClient(a.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
@@ -112,7 +113,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(DriverParameters( startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<CashIssueFlow>())))).get()
             a as InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, a.internalServices.monitoringService.metrics)
             CordaRPCClient(a.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
@@ -137,7 +138,7 @@ class NodePerformanceTests : IntegrationTest() {
                 portAllocation = PortAllocation.Incremental(20000)
         )) {
             val notary = defaultNotaryNode.getOrThrow() as InProcess
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.internalServices.monitoringService.metrics)
             CordaRPCClient(notary.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,
@@ -163,7 +164,7 @@ class NodePerformanceTests : IntegrationTest() {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val alice = aliceFuture.getOrThrow() as InProcess
             defaultNotaryNode.getOrThrow()
-            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, alice.services.monitoringService.metrics)
+            val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, alice.internalServices.monitoringService.metrics)
             CordaRPCClient(alice.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
                         metricRegistry = metricRegistry,

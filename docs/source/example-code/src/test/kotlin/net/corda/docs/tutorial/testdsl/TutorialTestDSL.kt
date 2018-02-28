@@ -22,6 +22,7 @@ import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
+import java.time.Instant
 
 class CommercialPaperTest {
     private companion object {
@@ -30,6 +31,7 @@ class CommercialPaperTest {
         val bigCorp = TestIdentity((CordaX500Name("BigCorp", "New York", "GB")))
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val TEST_TX_TIME: Instant = Instant.parse("2015-04-17T12:00:00.00Z")
     }
 
     @Rule

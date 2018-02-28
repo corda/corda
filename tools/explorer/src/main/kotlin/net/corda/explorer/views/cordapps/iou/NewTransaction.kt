@@ -32,7 +32,7 @@ import net.corda.explorer.model.MembershipListModel
 import net.corda.explorer.views.bigDecimalFormatter
 import net.corda.explorer.views.stringConverter
 import net.corda.sample.businessnetwork.iou.IOUFlow
-import net.corda.testing.core.chooseIdentityAndCert
+import net.corda.testing.core.singleIdentityAndCert
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 
@@ -60,7 +60,7 @@ class NewTransaction : Fragment() {
         }
 
         partyBChoiceBox.apply {
-            items = FXCollections.observableList(parties.map { it.chooseIdentityAndCert() }).filtered { elementsFromServer.contains(it.party) }.sorted()
+            items = FXCollections.observableList(parties.map { it.singleIdentityAndCert() }).filtered { elementsFromServer.contains(it.party) }.sorted()
         }
 
         newTransactionDialog(window).showAndWait().ifPresent { request ->

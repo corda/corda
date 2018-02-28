@@ -16,13 +16,14 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.chooseIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -57,7 +58,7 @@ class P2PMessagingTest : IntegrationTest() {
             val alice = startAlice()
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
-                alice.services.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
+                alice.internalServices.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
 
             val responseMessage = "response"
@@ -83,7 +84,7 @@ class P2PMessagingTest : IntegrationTest() {
             val alice = startAlice()
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
-                alice.services.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
+                alice.internalServices.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
 
             val responseMessage = "response"
@@ -106,7 +107,7 @@ class P2PMessagingTest : IntegrationTest() {
             val aliceRestarted = startAlice()
 
             val responseFuture = openFuture<Any>()
-            aliceRestarted.services.networkService.runOnNextMessage("test.response") {
+            aliceRestarted.internalServices.networkService.runOnNextMessage("test.response") {
                 responseFuture.set(it.data.deserialize())
             }
             val response = responseFuture.getOrThrow()
@@ -153,7 +154,7 @@ class P2PMessagingTest : IntegrationTest() {
 
         distributedServiceNodes.forEach {
             val nodeName = it.services.myInfo.chooseIdentity().name
-            it.services.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
+            it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
                 crashingNodes.requestsReceived.incrementAndGet()
                 crashingNodes.firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -165,8 +166,8 @@ class P2PMessagingTest : IntegrationTest() {
                 } else {
                     println("sending response")
                     val request = netMessage.data.deserialize<TestRequest>()
-                    val response = it.services.networkService.createMessage("test.response", responseMessage.serialize().bytes)
-                    it.services.networkService.send(response, request.replyTo)
+                    val response = it.internalServices.networkService.createMessage("test.response", responseMessage.serialize().bytes)
+                    it.internalServices.networkService.send(response, request.replyTo)
                 }
                 handler.acknowledge()
             }
@@ -180,7 +181,7 @@ class P2PMessagingTest : IntegrationTest() {
             node.respondWith(node.services.myInfo)
         }
         val serviceAddress = originatingNode.services.networkMapCache.run {
-            originatingNode.services.networkService.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
+            originatingNode.internalServices.networkService.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
         }
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection
@@ -196,20 +197,20 @@ class P2PMessagingTest : IntegrationTest() {
     }
 
     private fun InProcess.respondWith(message: Any) {
-        services.networkService.addMessageHandler("test.request") { netMessage, _, handle ->
+        internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handle ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = services.networkService.createMessage("test.response", message.serialize().bytes)
-            services.networkService.send(response, request.replyTo)
+            val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
+            internalServices.networkService.send(response, request.replyTo)
             handle.acknowledge()
         }
     }
 
     private fun InProcess.receiveFrom(target: MessageRecipients, retryId: Long? = null): CordaFuture<Any> {
         val response = openFuture<Any>()
-        services.networkService.runOnNextMessage("test.response") { netMessage ->
+        internalServices.networkService.runOnNextMessage("test.response") { netMessage ->
             response.set(netMessage.data.deserialize())
         }
-        services.networkService.send("test.request", TestRequest(replyTo = services.networkService.myAddress), target, retryId = retryId)
+        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target, retryId = retryId)
         return response
     }
 
