@@ -24,7 +24,14 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort,
 
     override fun startService(): Boolean {
         log.info("Starting RPC Proxy web services...")
-        server.start()
+        try {
+            server.start()
+        }
+        catch(e: Exception) {
+            log.info("Failed to start RPC Proxy server: ${e.message}")
+            stopService()
+            return false
+        }
         log.info("RPC Proxy web services started on $hostAndPort with ${webService.javaClass.simpleName}}")
 
         return true

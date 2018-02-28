@@ -9,11 +9,14 @@ import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
+import net.corda.behave.process.Command
 import net.corda.behave.process.JarCommand
-import net.corda.behave.process.JarCommandWithMain
 import org.apache.commons.io.FileUtils
 import java.io.Closeable
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -36,6 +39,10 @@ class Network private constructor(
     private var isStopped = false
 
     private var hasError = false
+
+    private var isRpcProxyRunning = false
+
+    private lateinit var rpcProxyCommand: Command
 
     init {
         FileUtils.forceMkdir(targetDirectory)
@@ -168,29 +175,27 @@ class Network private constructor(
 
     private fun bootstrapRPCProxy() {
 
-        val rpcProxyMain = "net.corda.behave.service.proxy.RPCProxyServerKt"
-        val cordaJar = nodes.values
-                .sortedByDescending { it.config.distribution.version }
-                .first()
-                .config.distribution.jarFile
+        val cordaDistribution = nodes.values.first().config.distribution.path
+
+        val fromPath = Paths.get(currentDirectory.toString()+"/startRPCproxy.sh")
+        val toPath = Paths.get(cordaDistribution.toString()+"/startRPCproxy.sh")
+        Files.copy(fromPath, toPath, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
 
         log.info("Bootstrapping RPC proxy, please wait ...")
-        val command = JarCommandWithMain(
-                cordaJar,
-                rpcProxyMain,
-                arrayOf("$targetDirectory"),
-                targetDirectory,
+        rpcProxyCommand = Command(listOf("./startRPCproxy.sh", "$cordaDistribution", ">>startRPCproxy.log","2>&1"),
+                cordaDistribution,
                 timeout
         )
-        log.info("Running command: {}", command)
-        command.output.subscribe {
+
+        log.info("Running command: {}", rpcProxyCommand)
+        rpcProxyCommand.output.subscribe {
             if (it.contains("Exception")) {
-                log.warn("Found error in output; interrupting bootstrapping action ...\n{}", it)
-                command.interrupt()
+                log.warn("Found error in output; interrupting RPC proxy bootstrapping action ...\n{}", it)
+                rpcProxyCommand.interrupt()
             }
         }
-        command.start()
-        if (!command.waitFor()) {
+        rpcProxyCommand.start()
+        if (!rpcProxyCommand.waitFor()) {
             hasError = true
             error("Failed to bootstrap RPC proxy") {
                 val matches = LogSource(targetDirectory)
@@ -202,11 +207,22 @@ class Network private constructor(
             }
         } else {
             log.info("RPC Proxy set-up completed")
+            isRpcProxyRunning = true
         }
     }
 
     private fun cleanup() {
         try {
+            if (isRpcProxyRunning) {
+                rpcProxyCommand.kill()
+                try {
+                    val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
+                    Command(listOf("kill -9 $pid")).start()
+                }
+                catch (e: Exception) {
+                    log.warn("Unable to locate PID file: ${e.message}")
+                }
+            }
             if (!hasError || CLEANUP_ON_ERROR) {
                 log.info("Cleaning up runtime ...")
                 FileUtils.deleteDirectory(targetDirectory)
@@ -256,8 +272,8 @@ class Network private constructor(
         isRunning = true
         for (node in nodes.values) {
             node.start()
-//            if (node.rpcProxy)
-//                bootstrapRPCProxy()
+            if (node.rpcProxy)
+                bootstrapRPCProxy()
         }
     }
 
