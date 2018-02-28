@@ -513,3 +513,34 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
             || type.interfaces.any { hasAnnotationInHierarchy(it) }
             || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
 }
+
+/**
+ * We can't use clazz.kotlin.getObjectInstance as that doesn't play nicely with nested private objects. Even
+ * setting the accessibility override (setAccessible) still causes an IllegalAccess Exception when attempting
+ * to retrieve the value of the INSTANCE field.
+ *
+ * Whichever reference to the class Kotlin reflection uses, override (set from setAccessible) on that field
+ * isn't set even when it was explicitly set as acceissible before calling into the kotlin reflection routines.
+ *
+ * For example
+ *
+ * clazz.getDeclaredField("INSTANCE")?.apply {
+ *     isAccessible = true
+ *     kotlin.objectInstance // This throws as the INSTANCE field isn't accessible
+ * }
+ *
+ * Therefore default back to good old java reflection and simply look for the INSTANCE field as we are never going
+ * to serialize a companion object
+ */
+fun Class<*>.objectInstance() =
+    try {
+        this.getDeclaredField("INSTANCE")?.let { field ->
+            val accessibility = field.isAccessible
+            field.isAccessible = true
+            val obj = field.get(null)
+            field.isAccessible = accessibility
+            obj
+        }
+    } catch (e: NoSuchFieldException) {
+        null
+    }

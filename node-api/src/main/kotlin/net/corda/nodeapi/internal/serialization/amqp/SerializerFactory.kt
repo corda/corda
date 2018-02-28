@@ -267,12 +267,16 @@ open class SerializerFactory(
                     // Don't need to check the whitelist since each element will come back through the whitelisting process.
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
-                } else if (clazz.kotlin.objectInstance != null) {
-                    whitelist.requireWhitelisted(clazz)
-                    SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
                 } else {
-                    whitelist.requireWhitelisted(type)
-                    ObjectSerializer(type, this)
+                   val singleton = clazz.objectInstance()
+
+                    if (singleton != null) {
+                       whitelist.requireWhitelisted(clazz)
+                       SingletonSerializer(clazz, singleton, this)
+                   } else {
+                       whitelist.requireWhitelisted(type)
+                       ObjectSerializer(type, this)
+                   }
                 }
             }
         }
