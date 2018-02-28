@@ -17,7 +17,7 @@ authority.
 
 Certificate hierarchy
 ---------------------
-A Corda network has three types of certificate authorities (CAs):
+A Corda network has four types of certificate authorities (CAs):
 
 * The **root network CA**
 * The **doorman CA**
@@ -29,6 +29,10 @@ A Corda network has three types of certificate authorities (CAs):
 
   * Each node serves as its own CA in issuing the child certificates that it uses to sign its identity
     keys and TLS certificates
+
+* The **legal identity** CAs
+
+   * Node's legal identity apart from signing transactions can also issue certificates for confidential legal identities
 
 The following constraints are also imposed:
 
