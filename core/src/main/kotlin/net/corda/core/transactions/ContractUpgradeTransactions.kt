@@ -1,14 +1,18 @@
 package net.corda.core.transactions
 
+import com.google.common.io.ByteStreams
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.serializedHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.deserialize
+import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.*
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
 
@@ -18,13 +22,20 @@ import java.security.PublicKey
 /** A special transaction for upgrading the contract of a state. */
 @CordaSerializable
 data class ContractUpgradeWireTransaction(
-        override val inputs: List<StateRef>,
-        override val notary: Party,
-        val legacyContractAttachmentId: SecureHash,
-        val upgradeContractClassName: ContractClassName,
-        val upgradedContractAttachmentId: SecureHash,
+        /**
+         * Contains all of the transaction components in serialized form.
+         * This is used for calculating the transaction id in a deterministic fashion, since re-serializing properties
+         * may result in a different byte sequence depending on the serialization context.
+         */
+        val serializedComponents: List<OpaqueBytes>,
+        /** Required for hiding components in [ContractUpgradeFilteredTransaction]. */
         val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction() {
+    override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
+    override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
+    val legacyContractAttachmentId: SecureHash by lazy { serializedComponents[LEGACY_ATTACHMENT.ordinal].deserialize<SecureHash>() }
+    val upgradedContractClassName: ContractClassName by lazy { serializedComponents[UPGRADED_CONTRACT.ordinal].deserialize<ContractClassName>() }
+    val upgradedContractAttachmentId: SecureHash by lazy { serializedComponents[UPGRADED_ATTACHMENT.ordinal].deserialize<SecureHash>() }
 
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
@@ -39,11 +50,21 @@ data class ContractUpgradeWireTransaction(
         get() = throw UnsupportedOperationException("ContractUpgradeWireTransaction does not contain output states, " +
                 "outputs can only be obtained from a resolved ContractUpgradeLedgerTransaction")
 
+    override val id: SecureHash by lazy {
+        (serializedComponents[INPUTS.ordinal].bytes + serializedComponents[NOTARY.ordinal].bytes).sha256()
+                .hashConcat(hiddenComponentHash)
+    }
+
     /** Hash of the list of components that are hidden in the [ContractUpgradeFilteredTransaction]. */
     private val hiddenComponentHash: SecureHash
-        get() = serializedHash(listOf(legacyContractAttachmentId, upgradeContractClassName, privacySalt))
-
-    override val id: SecureHash by lazy { serializedHash(inputs + notary).hashConcat(hiddenComponentHash) }
+        get() {
+            val combinedBytes = ByteStreams.newDataOutput()
+            // First two elements are always visible - inputs and notary
+            for (i in (2 until serializedComponents.size)) {
+                combinedBytes.write(serializedComponents[i].bytes)
+            }
+            return combinedBytes.toByteArray().sha256().hashConcat(privacySalt.bytes.sha256())
+        }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
@@ -56,7 +77,7 @@ data class ContractUpgradeWireTransaction(
                 resolvedInputs,
                 notary,
                 legacyContractAttachment,
-                upgradeContractClassName,
+                upgradedContractClassName,
                 upgradedContractAttachment,
                 id,
                 privacySalt,
@@ -65,8 +86,13 @@ data class ContractUpgradeWireTransaction(
         )
     }
 
+    /** Constructs a filtered transaction: the inputs and the notary party are always visible, while the rest are hidden. */
     fun buildFilteredTransaction(): ContractUpgradeFilteredTransaction {
-        return ContractUpgradeFilteredTransaction(inputs, notary, hiddenComponentHash)
+        return ContractUpgradeFilteredTransaction(serializedComponents.take(2), hiddenComponentHash)
+    }
+
+    enum class Component {
+        INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT
     }
 }
 
@@ -77,15 +103,18 @@ data class ContractUpgradeWireTransaction(
  *
  * @property inputs The inputs of this transaction.
  * @property notary The notary for this transaction.
- * @property rest Hash of the hidden components of the [ContractUpgradeWireTransaction].
+ * @property hiddenComponentHash Hash of the hidden components of the [ContractUpgradeWireTransaction].
  */
 @CordaSerializable
 data class ContractUpgradeFilteredTransaction(
-        override val inputs: List<StateRef>,
-        override val notary: Party,
-        val rest: SecureHash
+        val serializedComponents: List<OpaqueBytes>,
+        val hiddenComponentHash: SecureHash
 ) : CoreTransaction() {
-    override val id: SecureHash get() = serializedHash(inputs + notary).hashConcat(rest)
+    override val inputs: List<StateRef> by lazy { serializedComponents[INPUTS.ordinal].deserialize<List<StateRef>>() }
+    override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
+    override val id: SecureHash by lazy {
+        (serializedComponents[INPUTS.ordinal].bytes + serializedComponents[NOTARY.ordinal].bytes).sha256().hashConcat(hiddenComponentHash)
+    }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
 }
 
@@ -103,7 +132,7 @@ data class ContractUpgradeLedgerTransaction(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val legacyContractAttachment: Attachment,
-        val upgradeContractClassName: ContractClassName,
+        val upgradedContractClassName: ContractClassName,
         val upgradedContractAttachment: Attachment,
         override val id: SecureHash,
         val privacySalt: PrivacySalt,
@@ -165,7 +194,7 @@ data class ContractUpgradeLedgerTransaction(
         // TODO: re-map encumbrance pointers
         input.state.copy(
                 data = upgradedState,
-                contract = upgradeContractClassName,
+                contract = upgradedContractClassName,
                 constraint = outputConstraint
         )
     }
@@ -182,7 +211,7 @@ data class ContractUpgradeLedgerTransaction(
     private fun loadUpgradedContract(): UpgradedContract<ContractState, *> {
         @Suppress("UNCHECKED_CAST")
         return this::class.java.classLoader
-                .loadClass(upgradeContractClassName)
+                .loadClass(upgradedContractClassName)
                 .asSubclass(Contract::class.java)
                 .getConstructor()
                 .newInstance() as UpgradedContract<ContractState, *>
