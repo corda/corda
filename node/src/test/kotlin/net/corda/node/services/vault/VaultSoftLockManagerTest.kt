@@ -26,11 +26,11 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
 import java.util.*
@@ -50,7 +50,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
 
     @InitiatingFlow
     abstract class AbstractClientLogic<out T>(nodePair: NodePair) : FlowLogic<T>() {
-        protected val server = nodePair.server.info.chooseIdentity()
+        protected val server = nodePair.server.info.singleIdentity()
         protected abstract fun callImpl(): T
         @Suspendable
         override fun call() = callImpl().also {
@@ -71,7 +71,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
             client.dispose()
-            client = mockNet.createNode(MockNodeParameters(client.internals.id))
+            client = mockNet.createNode(InternalMockNodeParameters(client.internals.id))
         }
         return uncheckedCast(client.smm.allStateMachines.single().stateMachine)
     }
@@ -115,11 +115,11 @@ class VaultSoftLockManagerTest {
     private abstract class ParticipantState(override val participants: List<AbstractParty>) : ContractState
 
     private class PlainOldState(participants: List<AbstractParty>) : ParticipantState(participants) {
-        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.chooseIdentity()))
+        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.singleIdentity()))
     }
 
     private class FungibleAssetImpl(participants: List<AbstractParty>) : ParticipantState(participants), FungibleAsset<Unit> {
-        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.chooseIdentity()))
+        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.singleIdentity()))
 
         override val owner get() = participants[0]
         override fun withNewOwner(newOwner: AbstractParty) = throw UnsupportedOperationException()

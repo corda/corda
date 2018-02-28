@@ -34,6 +34,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import org.junit.ClassRule
 import org.junit.Test

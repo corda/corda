@@ -12,24 +12,26 @@ import net.corda.testing.node.MockServices;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import static java.util.Collections.singletonList;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
-import static net.corda.testing.core.TestConstants.*;
+import static net.corda.testing.core.TestConstants.ALICE_NAME;
+import static net.corda.testing.core.TestConstants.BOB_NAME;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static net.corda.testing.node.NodeTestUtils.ledger;
 import static net.corda.testing.node.NodeTestUtils.transaction;
 
 public class CommercialPaperTest {
-
     private static final TestIdentity alice = new TestIdentity(ALICE_NAME, 70L);
     private static final TestIdentity bigCorp = new TestIdentity(new CordaX500Name("BigCorp", "New York", "GB"));
     private static final TestIdentity bob = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity megaCorp = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};
+    private static final Instant TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z");
     private MockServices ledgerServices;
 
     @Before

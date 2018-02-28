@@ -79,8 +79,9 @@ class DistributedServiceTests : IntegrationTest() {
             }
             aliceProxy = connectRpc(alice)
             val rpcClientsToNotaries = notaryNodes.map(::connectRpc)
+
             notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
-                proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeInfo().chooseIdentity(), it) }
+                proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeInfo().legalIdentitiesAndCerts.first().party, it) }
             }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
 
             testBlock()
@@ -171,6 +172,6 @@ class DistributedServiceTests : IntegrationTest() {
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.chooseIdentity()).returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.singleIdentity()).returnValue.getOrThrow()
     }
 }

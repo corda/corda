@@ -12,9 +12,12 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.*
+import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
@@ -44,7 +47,7 @@ class RpcSslTest : IntegrationTest() {
 
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
                 var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
+                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
                         createCordaRPCClientWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
                             connection.proxy.apply {
@@ -63,7 +66,7 @@ class RpcSslTest : IntegrationTest() {
     fun rpc_client_not_using_ssl() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
             startNode(rpcUsers = listOf(user)).getOrThrow().use { node ->
                 CordaRPCClient(node.rpcAddress).start(user.username, user.password).use { connection ->
                     connection.proxy.apply {

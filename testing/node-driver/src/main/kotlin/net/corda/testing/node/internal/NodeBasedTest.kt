@@ -20,7 +20,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
 import org.junit.After

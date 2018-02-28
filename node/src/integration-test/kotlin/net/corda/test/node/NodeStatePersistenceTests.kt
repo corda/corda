@@ -28,6 +28,12 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import net.corda.testing.node.User
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.RandomFree
 import org.junit.Assume.assumeFalse
 import org.junit.ClassRule
 import org.junit.Test
@@ -52,10 +58,10 @@ class NodeStatePersistenceTests : IntegrationTest() {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = PortAllocation.RandomFree)) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
@@ -86,10 +92,10 @@ class NodeStatePersistenceTests : IntegrationTest() {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = PortAllocation.RandomFree)) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
