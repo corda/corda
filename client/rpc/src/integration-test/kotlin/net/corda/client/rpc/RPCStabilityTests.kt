@@ -316,6 +316,57 @@ class RPCStabilityTests {
         }
     }
 
+    interface ThreadOps : RPCOps {
+        fun sendMessage(id: Int, msgNo: Int): String
+    }
+
+    @Test
+    fun `multiple threads with 1000 messages for each thread`() {
+        val messageNo = 1000
+        val threadNo = 8
+        val ops = object : ThreadOps {
+            override val protocolVersion = 0
+            override fun sendMessage(id: Int, msgNo: Int): String {
+                return "($id-$msgNo)"
+            }
+        }
+
+        rpcDriver(startNodesInProcess = false) {
+            val serverFollower = shutdownManager.follower()
+            val serverPort = startRpcServer<ThreadOps>(rpcUser = User("alice", "alice", setOf("ALL")),
+                    ops = ops).getOrThrow().broker.hostAndPort!!
+
+            serverFollower.unfollow()
+            val proxy = RPCClient<ThreadOps>(serverPort).start(ThreadOps::class.java, "alice", "alice").proxy
+            val expectedMap = mutableMapOf<Int, String>()
+            val resultsMap = mutableMapOf<Int, String>()
+
+            (1 until threadNo).forEach { nr ->
+                (1 until messageNo).forEach { msgNo ->
+                    expectedMap[nr] = expectedMap.getOrDefault(nr, "").plus("($nr-$msgNo)")
+                }
+            }
+
+            val threads = mutableMapOf<Int, Thread>()
+            (1 until threadNo).forEach { nr ->
+                val thread = thread {
+                    (1 until messageNo).forEach { msgNo ->
+                        resultsMap[nr] = resultsMap.getOrDefault(nr, "").plus(proxy.sendMessage(nr, msgNo))
+                    }
+                }
+                threads[nr] = thread
+            }
+            // give the threads a chance to start sending some messages
+            Thread.sleep(1000)
+            serverFollower.shutdown()
+            startRpcServer<ThreadOps>(rpcUser = User("alice", "alice", setOf("ALL")),
+                    ops = ops, customPort = serverPort).getOrThrow()
+            threads.values.forEach { it.join() }
+            (1 until threadNo).forEach { assertEquals(expectedMap[it], resultsMap[it]) }
+        }
+
+    }
+
     interface TrackSubscriberOps : RPCOps {
         fun subscribe(): Observable<Unit>
     }

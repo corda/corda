@@ -162,8 +162,7 @@ class RPCClientProxyHandler(
     }
 
     // Used to buffer client requests if the server is unavailable
-    private var bufferOutgoingRequests = false
-    private val outgoingRequestBuffer = ArrayList<RPCApi.ClientToServer.RpcRequest>()
+    private val outgoingRequestBuffer = ConcurrentHashMap<InvocationId, RPCApi.ClientToServer>()
 
     private var sessionFactory: ClientSessionFactory? = null
     private var producerSession: ClientSession? = null
@@ -234,14 +233,13 @@ class RPCClientProxyHandler(
                 "Generated several RPC requests with same ID $replyId"
             }
 
-            if (bufferOutgoingRequests) {
-                log.info("Buffering request ${method.name}")
-                outgoingRequestBuffer.add(request)
-            } else {
-                sendMessage(request)
-            }
-
-            return replyFuture.getOrThrow()
+            outgoingRequestBuffer[replyId] = request
+            // try and send the request
+            sendMessage(request)
+            val result = replyFuture.getOrThrow()
+            // at this point the server responded, remove the buffered request
+            outgoingRequestBuffer.remove(replyId)
+            return result
         } catch (e: RuntimeException) {
             // Already an unchecked exception, so just rethrow it
             throw e
@@ -411,14 +409,13 @@ class RPCClientProxyHandler(
             when (event) {
                 FailoverEventType.FAILURE_DETECTED -> {
                     log.warn("RPC server unavailable. RPC calls are being buffered.")
-                    bufferOutgoingRequests = true
                 }
 
                 FailoverEventType.FAILOVER_COMPLETED -> {
                     log.info("RPC server available. Draining request buffer.")
-                    bufferOutgoingRequests = false
-                    outgoingRequestBuffer.forEach { request -> sendMessage(request) }
-                    outgoingRequestBuffer.clear()
+                    outgoingRequestBuffer.keys.forEach { replyId ->
+                        outgoingRequestBuffer[replyId]?.let {sendMessage(it)}
+                    }
                 }
 
                 FailoverEventType.FAILOVER_FAILED -> {
@@ -429,6 +426,7 @@ class RPCClientProxyHandler(
                         val observable = observableContext.observableMap.getIfPresent(id)
                         observable?.onError(RPCException("Could not re-connect to RPC server. Failover failed."))
                     }
+                    outgoingRequestBuffer.clear()
                     rpcReplyMap.clear()
                     callSiteMap?.clear()
                 }
