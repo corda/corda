@@ -1,10 +1,8 @@
 package net.corda.behave.service.proxy
 
-import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.Amount
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.POUNDS
@@ -12,7 +10,6 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.*
 
 class RPCProxyWebServiceTest {
 
@@ -21,7 +18,7 @@ class RPCProxyWebServiceTest {
 //    val testSerialization = SerializationEnvironmentRule(true)
 
     private val hostAndPort = NetworkHostAndPort("localhost", 13002)
-    private val rpcProxyClient = RPCProxyOps(hostAndPort)
+    private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
 
     @Test
     fun myIp() {
