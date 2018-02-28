@@ -3918,6 +3918,7 @@ public final class net.corda.testing.driver.NotaryHandle extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract Process getProcess()
 ##
 @net.corda.core.DoNotImplement public abstract class net.corda.testing.driver.PortAllocation extends java.lang.Object
+  public <init>()
   @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort nextHostAndPort()
   public abstract int nextPort()
 ##
@@ -3925,10 +3926,6 @@ public static final class net.corda.testing.driver.PortAllocation$Incremental ex
   public <init>(int)
   @org.jetbrains.annotations.NotNull public final concurrent.atomic.AtomicInteger getPortCounter()
   public int nextPort()
-##
-public static final class net.corda.testing.driver.PortAllocation$RandomFree extends net.corda.testing.driver.PortAllocation
-  public int nextPort()
-  public static final net.corda.testing.driver.PortAllocation$RandomFree INSTANCE
 ##
 public final class net.corda.testing.driver.VerifierType extends java.lang.Enum
   protected <init>(String, int)
