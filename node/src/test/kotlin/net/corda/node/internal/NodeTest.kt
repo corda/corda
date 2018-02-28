@@ -52,6 +52,7 @@ class NodeTest {
         val dataSourceProperties = makeTestDataSourceProperties()
         val databaseConfig = DatabaseConfig()
         val configuration = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(null).whenever(it).relay
             doReturn(nodeAddress).whenever(it).p2pAddress
             doReturn(nodeName).whenever(it).myLegalName
             doReturn(null).whenever(it).notary // Don't add notary identity.
