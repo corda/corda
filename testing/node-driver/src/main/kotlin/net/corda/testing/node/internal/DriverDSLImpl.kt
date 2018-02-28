@@ -184,7 +184,7 @@ class DriverDSLImpl(
             startInSameProcess: Boolean?,
             maximumHeapSize: String
     ): CordaFuture<NodeHandle> {
-        val p2pAddress = portAllocation.nextHostAndPort()
+        val p2pAddress = portAllocation.nextHostAndPort(Pair(providedName, "p2p"))
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
         synchronized(nodeNames) {
@@ -215,10 +215,10 @@ class DriverDSLImpl(
                                     customOverrides: Map<String, Any?>,
                                     startInSameProcess: Boolean? = null,
                                     maximumHeapSize: String = "200m",
-                                    p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()): CordaFuture<NodeHandle> {
-        val rpcAddress = portAllocation.nextHostAndPort()
-        val rpcAdminAddress = portAllocation.nextHostAndPort()
-        val webAddress = portAllocation.nextHostAndPort()
+                                    p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(Pair(name, "p2p"))): CordaFuture<NodeHandle> {
+        val rpcAddress = portAllocation.nextHostAndPort(Pair(name, "rpc"))
+        val rpcAdminAddress = portAllocation.nextHostAndPort(Pair(name, "rpcAdmin"))
+        val webAddress = portAllocation.nextHostAndPort(Pair(name, "web"))
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
         val config = NodeConfig(ConfigHelper.loadConfig(

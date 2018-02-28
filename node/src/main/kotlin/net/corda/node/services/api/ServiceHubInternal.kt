@@ -126,6 +126,7 @@ interface FlowStarter {
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * @param logic the [FlowLogic] to start.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
     fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>

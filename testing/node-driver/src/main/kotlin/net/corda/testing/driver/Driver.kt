@@ -2,7 +2,6 @@
 
 package net.corda.testing.driver
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -17,6 +16,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.PortAllocation.Incremental
+import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -25,8 +26,6 @@ import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -37,24 +36,24 @@ import java.util.concurrent.atomic.AtomicInteger
 data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHandles: CordaFuture<List<NodeHandle>>)
 
 /**
- * A base interface which represents a node as part of the [driver] dsl, extended by [InProcess] and [OutOfProcess]
+ * A base interface which represents a node as part of the [driver] dsl, extended by [InProcess] and [OutOfProcess].
  */
 @DoNotImplement
 interface NodeHandle : AutoCloseable {
-    /** Get the [NodeInfo] for this node */
+    /** Get the [NodeInfo] for this node. */
     val nodeInfo: NodeInfo
     /**
      * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one
      * will be added and that will be used.
      */
     val rpc: CordaRPCOps
-    /** Get the p2p address for this node **/
+    /** Get the p2p address for this node. */
     val p2pAddress: NetworkHostAndPort
-    /** Get the rpc address for this node **/
+    /** Get the rpc address for this node. */
     val rpcAddress: NetworkHostAndPort
-    /** Get a [List] of [User]'s for this node **/
+    /** Get a [List] of [User]'s for this node. */
     val rpcUsers: List<User>
-    /** The location of the node's base directory **/
+    /** The location of the node's base directory. */
     val baseDirectory: Path
 
     /**
@@ -64,27 +63,27 @@ interface NodeHandle : AutoCloseable {
 }
 
 
-/** Interface which represents an out of process node and exposes its process handle. **/
+/** Interface which represents an out of process node and exposes its process handle. */
 @DoNotImplement
 interface OutOfProcess : NodeHandle {
-    /** The process in which this node is running **/
+    /** The process in which this node is running. */
     val process: Process
 }
 
-/** Interface which represents an in process node and exposes available services. **/
+/** Interface which represents an in process node and exposes available services. */
 @DoNotImplement
 interface InProcess : NodeHandle {
-    /** Services which are available to this node **/
+    /** Services which are available to this node. */
     val services: ServiceHub
 
     /**
-     * Register a flow that is initiated by another flow
+     * Register a flow that is initiated by another flow.
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
-     * @param context indicates who started the flow, see: [InvocationContext].
+     * @param logic the [FlowLogic] to start.
      */
     fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(logic, internalServices.newContext()).getOrThrow().resultFuture
 }
@@ -93,7 +92,7 @@ interface InProcess : NodeHandle {
  * Class which represents a handle to a webserver process and its [NetworkHostAndPort] for testing purposes.
  *
  * @property listenAddress The [NetworkHostAndPort] for communicating with this webserver.
- * @property process The [Process] in which the websever is running
+ * @property process The [Process] in which the websever is running.
  * */
 @Deprecated("The webserver is for testing purposes only and will be removed soon")
 data class WebserverHandle(
@@ -107,18 +106,24 @@ data class WebserverHandle(
  */
 @DoNotImplement
 abstract class PortAllocation {
-    /** Get the next available port **/
+    /** Get the next available port. */
     abstract fun nextPort(): Int
 
-    /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort] **/
+    /** Get the next available port via [nextPort] and then return a [NetworkHostAndPort]. */
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
 
     /**
-     * An implementation of [PortAllocation] which allocates ports sequentially
+     * This method is required from custom [PortAllocation] implementations in which port allocation policy
+     * is based on the [input] object. Default implementation calls [nextHostAndPort].
+     */
+    open fun <T : Any> nextHostAndPort(input: T) = nextHostAndPort()
+
+    /**
+     * An implementation of [PortAllocation] which allocates ports sequentially.
      */
     class Incremental(startingPort: Int) : PortAllocation() {
-        /** The backing [AtomicInteger] used to keep track of the currently allocated port */
-        val portCounter = AtomicInteger(startingPort)
+        /** The backing [AtomicInteger] used to keep track of the currently allocated port. */
+        private val portCounter = AtomicInteger(startingPort)
 
         override fun nextPort() = portCounter.andIncrement
     }
@@ -131,7 +136,7 @@ abstract class PortAllocation {
  *     random. Note that this must be unique as the driver uses it as a primary key!
  * @property rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
  *     all permissions.
- * @property verifierType The type of transaction verifier to use. See: [VerifierType]
+ * @property verifierType The type of transaction verifier to use. See: [VerifierType].
  * @property customOverrides A map of custom node configuration overrides.
  * @property startInSameProcess Determines if the node should be started inside the same process the Driver is running
  *     in. If null the Driver-level value will be used.
@@ -155,10 +160,10 @@ data class NodeParameters(
 }
 
 /**
- * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver]
+ * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver].
  *
  * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
- * JMX monitoring using HTTP/JSON
+ * JMX monitoring using HTTP/JSON.
  * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
  * Defaults to incremental.
  */
