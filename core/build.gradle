@@ -60,6 +60,7 @@ buildscript {
 }
 
 dependencies {
+    compile project(":node-api-interfaces")
     testCompile "junit:junit:$junit_version"
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
 

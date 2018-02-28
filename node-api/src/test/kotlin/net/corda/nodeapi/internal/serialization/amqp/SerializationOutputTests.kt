@@ -47,6 +47,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+
+
 @RunWith(Parameterized::class)
 class SerializationOutputTests(private val compression: CordaSerializationEncoding?) {
     private companion object {

@@ -275,7 +275,11 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities']
+    publications = [
+            'corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node',
+            'corda-node-api', 'corda-node-interfaces', 'corda-test-common', 'corda-test-utils', 'corda-jackson',
+            'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver',
+            'corda-confidential-identities' ]
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -301,6 +305,7 @@ task buildCordappDependenciesZip(type: Zip) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+/*
 artifactory {
     publish {
         contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
@@ -318,6 +323,7 @@ artifactory {
         }
     }
 }
+*/
 
 task generateApi(type: net.corda.plugins.GenerateApi){
     baseName = "api-corda"

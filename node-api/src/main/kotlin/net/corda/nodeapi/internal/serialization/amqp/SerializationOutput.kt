@@ -23,7 +23,9 @@ data class BytesAndSchemas<T : Any>(
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-open class SerializationOutput @JvmOverloads constructor(internal val serializerFactory: SerializerFactory, private val encoding: SerializationEncoding? = null) {
+open class SerializationOutput @JvmOverloads constructor(
+        internal val serializerFactory: SerializerFactory,
+        private val encoding: SerializationEncoding? = null) {
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
     internal val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()

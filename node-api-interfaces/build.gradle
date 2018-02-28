@@ -1,0 +1,26 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda node API external interfaces and annotatins'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+
+    // Unit testing helpers.
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile project(':node-driver')
+}
+
+jar {
+    baseName 'corda-node-api-interfaces'
+}
+
+publish {
+    name jar.baseName
+}
