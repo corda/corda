@@ -44,7 +44,7 @@ UNRELEASED
   only ever by issued by network services and therefore issuance constraints are not relevant to end users.
   The ``TLS``, ``WELL_KNOWN_LEGAL_IDENTITY`` roles must be issued by the ``NODE_CA`` certificate issued by the
   Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
-  For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
+  For a detailed specification of the extension please see :doc:`permissioning`.
 
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
