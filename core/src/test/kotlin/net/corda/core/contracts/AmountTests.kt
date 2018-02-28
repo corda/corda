@@ -6,10 +6,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * Tests of the [Amount] class.
@@ -19,6 +16,13 @@ class AmountTests {
     fun `make sure Amount has decimal places`() {
         val x = Amount(1, Currency.getInstance("USD"))
         assertTrue("0.01" in x.toString())
+    }
+
+    @Test
+    fun `make sure Amount cannot have a negative quantity`() {
+        assertFailsWith<IllegalArgumentException>("Negative amounts are not allows: -100") {
+            Amount(-100, Currency.getInstance("USD"))
+        }
     }
 
     @Test
