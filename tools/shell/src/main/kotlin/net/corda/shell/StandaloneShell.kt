@@ -31,7 +31,12 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         return
     }
-    val config = cmdlineOptions.toConfig()
+    val config = try {
+        cmdlineOptions.toConfig()
+    } catch(e: Exception) {
+        println("Configuration exception: ${e.message}")
+        exitProcess(1)
+    }
     StandaloneShell(config).run()
 }
 

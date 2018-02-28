@@ -91,7 +91,7 @@ When accessing the shell via SSH, some additional RPC permissions are required:
 
 The standalone shell
 ------------------------------
-The standalone shell is a standalone app interacting with a Corda node via RPC calls.
+The standalone shell is a standalone application interacting with a Corda node via RPC calls.
 RPC node permissions are necessary for authentication and authorisation.
 Certain operations, such as starting flows, require access to CordApps jars. To achieve this, ``base-directory`` option needs to
 point at the directory containing cordapps root directory. This means
@@ -107,11 +107,12 @@ Run the following command from the terminal:
 
 .. code:: bash
 
-    ./shell --host [host] --port [portNumber] --user [user] --password [password] --base-directory [basePath]
+    ./shell --config-file [configFile] --host [host] --port [portNumber] --user [user] --password [password] --base-directory [basePath]
      --sshd-port [sshdPortNumber] --keystore-password [keyStorePassword] --truststore-password [trustStorePassword]
 
 Where:
 
+* ``[configFile]`` is the path to config file, used instead of providing the rest of command line options
 * ``[host]`` is the Corda node's host
 * ``[port]`` is the Corda node's port, specified in the ``node.conf`` file
 * ``[user]`` is the RPC username, if not provided it will be requested at startup

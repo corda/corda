@@ -12,6 +12,7 @@ import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
@@ -154,6 +155,9 @@ open class NodeStartup(val args: Array<String>) {
                         logger.error("Shell failed to start", e)
                     }
                 }
+            }
+            if (conf.shouldStartSSHDaemon()) {
+                Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
             }
         },
                 { th ->

@@ -392,7 +392,7 @@ open class Node(configuration: NodeConfiguration,
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
-                rpcClientContext =  KRYO_CLIENT_CONTEXT.withClassLoader(classloader))
+                rpcClientContext =  KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classloader))
     }
 
     private var rpcMessagingClient: RPCMessagingClient? = null

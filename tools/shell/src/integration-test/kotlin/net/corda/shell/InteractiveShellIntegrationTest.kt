@@ -9,7 +9,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.nodeapi.internal.config.SslOptions
 import net.corda.testing.common.internal.withCertificates
 import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.ALICE_NAME
@@ -19,8 +18,10 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
+import java.lang.reflect.UndeclaredThrowableException
 import kotlin.test.assertTrue
 
 
@@ -33,20 +34,18 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = net.corda.shell.ShellConfiguration(Files.createTempDir().toPath(),
+            val conf = ShellConfiguration(Files.createTempDir().toPath(),
                     "fake", "fake",
                     node.rpcAddress,
                     null, null, false)
-            try {
-                InteractiveShell.startShell(conf,
-                        { username: String?, credentials: String? ->
-                            val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort)
-                            client.start(username ?: "", credentials ?: "").proxy
-                        })
-                InteractiveShell.nodeInfo()
-                kotlin.test.fail("Should have failed at checkConnection")
-            } catch (e: Exception) {
-            }
+            InteractiveShell.startShell(conf,
+                    { username: String?, credentials: String? ->
+                        val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort)
+                        client.start(username ?: "", credentials ?: "").proxy
+                    })
+            assertThatThrownBy {
+                    InteractiveShell.nodeInfo()
+            }.isInstanceOf(UndeclaredThrowableException::class.java)
         }
     }
 
@@ -57,7 +56,7 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = net.corda.shell.ShellConfiguration(Files.createTempDir().toPath(),
+            val conf = ShellConfiguration(Files.createTempDir().toPath(),
                     user.username, user.password,
                     node.rpcAddress,
                     null, null, false)
@@ -91,7 +90,7 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = SslOptions(clientSslOptions.certificatesDirectory,
+                        val sslConfiguration = ShellSslOptions(clientSslOptions.certificatesDirectory,
                                 clientSslOptions.keyStorePassword, clientSslOptions.trustStorePassword)
                         val conf = ShellConfiguration(Files.createTempDir().toPath(),
                                 user.username, user.password,
@@ -133,7 +132,7 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = SslOptions(clientSslOptions.certificatesDirectory,
+                        val sslConfiguration = ShellSslOptions(clientSslOptions.certificatesDirectory,
                                 clientSslOptions.keyStorePassword, clientSslOptions.trustStorePassword)
 
                         val conf = net.corda.shell.ShellConfiguration(Files.createTempDir().toPath(),
@@ -228,7 +227,7 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = SslOptions(clientSslOptions.certificatesDirectory,
+                        val sslConfiguration = ShellSslOptions(clientSslOptions.certificatesDirectory,
                                 clientSslOptions.keyStorePassword, clientSslOptions.trustStorePassword)
                         val conf = ShellConfiguration(Files.createTempDir().toPath(),
                                 user.username, user.password,
@@ -260,7 +259,7 @@ class InteractiveShellIntegrationTest {
                         val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
 
                         channel.disconnect()
-                        session.disconnect()
+                        session.disconnect() // TODO Simon make sure to close them
 
                         // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
                         assertThat(linesWithDoneCount).hasSize(1)

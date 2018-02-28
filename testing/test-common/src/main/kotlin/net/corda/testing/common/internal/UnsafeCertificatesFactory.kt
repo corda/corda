@@ -2,7 +2,7 @@ package net.corda.testing.common.internal
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.nodeapi.internal.config.SslOptions
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
 import sun.security.tools.keytool.CertAndKeyGen
@@ -74,12 +74,13 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
             }
         }
     }
+    data class TestSslOptions(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration
 
-    private fun sslConfiguration(directory: Path) = SslOptions(directory, keyStore.password, trustStore.password)
+    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password)
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {
-    val value: SslOptions
+    val value: SSLConfiguration
 }
 
 typealias KeyStoreEntry = Pair<String, UnsafeCertificate>
@@ -182,7 +183,7 @@ private fun newKeyStore(type: String, password: String): KeyStore {
     return keyStore
 }
 
-fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: SslOptions, clientSslOptions: SslOptions) -> Unit) {
+fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: SSLConfiguration, clientSslOptions: SSLConfiguration) -> Unit) {
     val serverDir = Files.createTempDirectory(null)
     FileUtils.forceDeleteOnExit(serverDir.toFile())
 

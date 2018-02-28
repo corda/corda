@@ -19,7 +19,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.SslOptions
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.shell.utlities.ANSIProgressRenderer
 import net.corda.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -92,12 +92,14 @@ data class SSHDConfiguration(val port: Int) {
     }
 }
 
+data class ShellSslOptions(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration
+
 data class ShellConfiguration(
         val baseDirectory: Path,
         var user: String?,
         var password: String?,
         val hostAndPort: NetworkHostAndPort,
-        val ssl: SslOptions?,
+        val ssl: ShellSslOptions?,
         val sshdPort: Int?,
         val noLocalShell: Boolean) {
     val cordappsDirectory: Path = baseDirectory / "cordapps"

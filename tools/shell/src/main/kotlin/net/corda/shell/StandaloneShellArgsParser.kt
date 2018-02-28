@@ -6,7 +6,6 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.SslOptions
 import net.corda.nodeapi.internal.config.parseAs
 import org.slf4j.event.Level
 import java.io.PrintStream
@@ -90,7 +89,7 @@ class RemoteShellArgsParser {
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
 }
-
+// TODO Simon restructure format of config file
 data class CmdLineOptions(val configFile: String?,
                           val host: String?,
                           val port: String?,
@@ -137,7 +136,7 @@ data class CmdLineOptions(val configFile: String?,
                 val ssl: SslConfigurationFile?,
                 val sshdPort: Int?) {
             fun toShellOptions() : ShellConfiguration {
-                val ssl = SslOptions(baseDirectory / "certificates",
+                val ssl = ShellSslOptions(baseDirectory / "certificates",
                         ssl?.keyStorePassword ?:"", ssl?.trustStorePassword ?: "")
                 return ShellConfiguration(baseDirectory, user, password, hostAndPort, ssl, sshdPort, noLocalShell = false)
             }
