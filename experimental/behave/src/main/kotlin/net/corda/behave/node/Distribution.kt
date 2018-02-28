@@ -36,6 +36,11 @@ class Distribution private constructor(
     /**
      * The path to the distribution fat JAR.
      */
+    val path: File = file ?: nodePrefix / "$version"
+
+    /**
+     * The path to the distribution fat JAR.
+     */
     val jarFile: File = file ?: nodePrefix / "$version/corda.jar"
 
     /**
@@ -47,6 +52,11 @@ class Distribution private constructor(
      * The path to network bootstrapping tool.
      */
     val networkBootstrapper: File = nodePrefix / "$version/network-bootstrapper.jar"
+
+    /**
+     * The path to the RPC proxy tool.
+     */
+    val rpcProxyJar: File = nodePrefix / "$version/corda-rpcProxy.jar"
 
     /**
      * Ensure that the distribution is available on disk.
@@ -95,7 +105,7 @@ class Distribution private constructor(
          * Corda Open Source, version 3.0.0
          */
         val V3 = fromJarFile("corda-3.0")
-        val V3_SNAPSHOT = fromJarFile("3.0-snapshot")
+        val V3_SNAPSHOT = fromJarFile("corda-3.0-snapshot")
 
         val R3_V3 = fromJarFile("r3corda-3.0")
         val R3_V3_SNAPSHOT = fromJarFile("r3corda-3.0-snapshot")

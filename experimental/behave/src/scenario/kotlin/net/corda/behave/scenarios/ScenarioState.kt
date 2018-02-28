@@ -50,8 +50,7 @@ class ScenarioState {
         }
         network = networkBuilder.generate()
         network?.start()
-        // TODO switch back
-        assertThat(network?.waitUntilRunning(Duration.ofMinutes(10))).isTrue()
+        assertThat(network?.waitUntilRunning()).isTrue()
     }
 
     inline fun <T> withNetwork(action: ScenarioState.() -> T): T {

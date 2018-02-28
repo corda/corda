@@ -58,6 +58,7 @@ open class Command(
                 while (true) {
                     try {
                         val line = input.readLine()?.trimEnd() ?: break
+                        println(">>> $line")
                         outputListener.onNewLine(line)
                     } catch (_: IOException) {
                         break

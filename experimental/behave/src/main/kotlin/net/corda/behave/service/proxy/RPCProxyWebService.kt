@@ -8,26 +8,19 @@ import net.corda.behave.service.proxy.RPCProxyWebService.Companion.RPC_PROXY_PAT
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
-import net.corda.core.contracts.Amount
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.nodeapi.internal.SignedNodeInfo
 import java.io.InputStream
-import java.time.Duration
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
@@ -36,7 +29,6 @@ import javax.ws.rs.Path
 import javax.ws.rs.core.Context
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
 @Path(RPC_PROXY_PATH)
@@ -147,48 +139,33 @@ class RPCProxyWebService {
     @Path("start-flow")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun startFlow(input: InputStream): Response {
-
+        log.info("startFlow")
         try {
-            println("Before clazz")
-            val clazzName = input.readBytes().deserialize<String>()
-            println("clazzName: $clazzName")
-//            Class.forName(clazzName)
-//            input.readBytes().deserialize<Class<*>>()
-
-//            println("Before notary")
-//            val notary = input.readBytes().deserialize<Party>()
-//            println("notary: $notary")
-
-            val amount = POUNDS(1000)
-        val ref = OpaqueBytes.of(1)
-
-        val targetHost = NetworkHostAndPort("localhost", 12002)
-        val config = CordaRPCClientConfiguration(
-                connectionMaxRetryInterval = 10.seconds
-        )
-        log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
-        return try {
-            CordaRPCClient(targetHost, config).use("corda", Configuration.DEFAULT_PASSWORD) {
-                log.info("RPC connection to ${targetHost.host}:${targetHost.port} established")
-                val client = it.proxy
-                val notary = client.notaryIdentities()[0]
-                println("Issuing")
-                client.startFlow(::CashIssueFlow, amount, ref, notary).returnValue.getOrThrow().stx
-                println("Transfering")
-                val x500Name = CordaX500Name("EntityB", "London", "GB")
-                val sendToParty = client.wellKnownPartyFromX500Name(x500Name)
-                val response = client.startFlow(::CashPaymentFlow, amount, sendToParty!!).returnValue.getOrThrow().stx
-//                val response = client.startFlowDynamic(clazz as Class<FlowLogic<*>>, amount, ref).returnValue.getOrThrow()
-                println("Response: $response")
-                return createResponse(response)
-            }
-        } catch (e: Exception) {
-            println("startFlow failed: ${e.message}")
-            log.warn("startFlow failed: ", e)
-            e.printStackTrace()
-            status(Response.Status.NOT_FOUND)
-        }.build()
-
+            val targetHost = NetworkHostAndPort("localhost", 12002)
+            val config = CordaRPCClientConfiguration(connectionMaxRetryInterval = 10.seconds)
+            log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
+            return try {
+                CordaRPCClient(targetHost, config).use("corda", Configuration.DEFAULT_PASSWORD) {
+                    log.info("RPC connection to ${targetHost.host}:${targetHost.port} established")
+                    val client = it.proxy
+                    val notary = client.notaryIdentities()[0]
+                    val amount = POUNDS(1000)
+                    val ref = OpaqueBytes.of(1)
+                    println("Issuing")
+                    client.startFlow(::CashIssueFlow, amount, ref, notary).returnValue.getOrThrow().stx
+                    println("Transferring")
+                    val x500Name = CordaX500Name("EntityB", "London", "GB")
+                    val sendToParty = client.wellKnownPartyFromX500Name(x500Name)
+                    val response = client.startFlow(::CashPaymentFlow, amount, sendToParty!!).returnValue.getOrThrow().stx
+                    println("Response: $response")
+                    return createResponse(response)
+                }
+            } catch (e: Exception) {
+                println("startFlow failed: ${e.message}")
+                log.warn("startFlow failed: ", e)
+                e.printStackTrace()
+                status(Response.Status.NOT_FOUND)
+            }.build()
         }
         catch (e: RuntimeException) {
             println("RuntimeException ${e.message}")

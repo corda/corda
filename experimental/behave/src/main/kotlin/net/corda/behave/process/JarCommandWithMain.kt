@@ -4,7 +4,7 @@ import java.io.File
 import java.time.Duration
 
 class JarCommandWithMain(
-        jarFile: File,
+        jarFiles: List<File>,
         mainClass: String,
         arguments: Array<String>,
         directory: File,
@@ -14,7 +14,7 @@ class JarCommandWithMain(
         command = listOf(
                 "/usr/bin/java",
                 *extraArguments(enableRemoteDebugging),
-                "-cp", "/Users/josecoll/IdeaProjects/corda-reviews/experimental/behave/build/libs/behave-3.0-SNAPSHOT.jar;$jarFile",
+                "-cp", "${jarFiles.joinToString(":")}",
                 mainClass,
                 *arguments
         ),
