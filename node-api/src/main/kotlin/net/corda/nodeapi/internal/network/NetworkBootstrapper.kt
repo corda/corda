@@ -228,13 +228,13 @@ class NetworkBootstrapper {
         SecureHash.SHA256(hs.hash().asBytes())
     }
 
-    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.toFile().readLines()
+    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.readAllLines()
             .map { line -> line.split(":") }
             .map { (contract, attachmentIds) ->
                 contract to (attachmentIds.split(",").map(::parse))
             }.toMap()
 
-    private fun readExcludeWhitelist(file: Path): List<String> = file.toFile().readLines().map(String::trim)
+    private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
 
