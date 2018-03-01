@@ -124,9 +124,9 @@ alteration to your current implementation.
 Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-H2 database instance (persistence.mv.db file) working against Corda 2.0 can not be reused for Corda 3.0.
-The release of Corda 3.0 introduces a stable database schema resulting in changes to tables and columns.
-For example, ``NODE_INFO_PARTY_CERT`` now stores the hash of the public key instead of the key.
+An H2 database instance (represented on the filesystem as a file called `persistence.mv.db`) used in Corda 1.0 or 2.0
+cannot be directly reused with Corda 3.0 due to minor improvements and additions to stabilise the underlying schemas.
+These guidelines relate to vault tables and common contract schemas changes that may directly impact your CorDapp application data, and thus, require upgrading:
 
 Changes to Vault related tables:
 
@@ -170,14 +170,14 @@ Changes to tables from Finance module:
      * table renamed to ``cp_states``, column changes as for ``contract_cash_states``
 
   .. note:: We advise not to migrate your schema, but to use a fresh database.
-    However, Vault related tables could be migrate for historical reporting purposes.
-    The example guideline of migration inside the same database instance:
+    However, Vault related tables could be migrated for historical reporting purposes.
+    Please follow these migration instructions to move data to the latest schemas:
 
-    1. In the existing database create temporary schema and copy Vault tables.
+    1. In the existing database create a temporary schema and copy Vault tables.
 
-    2. Delete tables in the existing schema - the new version of schema will be recreate at a node startup.
+    2. Delete tables in the existing schema - the new version of schema will be recreated at node startup.
 
-    3. Start the Corda 3.0 node connecting to the existing database (may require copy the persistence.mv.db file to the installation directory of the new node).
+    3. Start the Corda 3.0 node connecting to the existing database (may require copy the `persistence.mv.db` file to the installation directory of the new node).
 
     4. Copy data from the temporary schema to the new one following changes in table names, column names and types.
        Use ``INTO NEW_SCHEMA.MY_TABLE(columns...) SELECT (columns...) FROM TEMP_SCHEMA.MY_TABLE`` statement, for example SQL statement for ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"`` table:
@@ -186,7 +186,7 @@ Changes to tables from Finance module:
 
         INSERT INTO NEW_SCHEMA.VAULT_FUNGIBLE_STATES_PARTS(OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) select (OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) FROM TEMP_SCHEMA."VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"
 
-    5. Delete temporary schema.
+    5. Delete the temporary schema created in step 1).
 
 Configuration
 ^^^^^^^^^^^^^
