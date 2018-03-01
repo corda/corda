@@ -82,6 +82,51 @@ For example running the command on a directory containing these files :
 
 Would generate directories containing three nodes: notary, partya and partyb.
 
+
+Whitelisting Contracts
+~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to create a *Zone whitelist* (see :doc:`api-contract-constraints`), you can pass in a list of CorDapp jars:
+
+``java -jar network-bootstrapper.jar <nodes-root-dir> <path-to-first-corDapp> <path-to-second-corDapp> ..``
+
+The CorDapp jars will be hashed and scanned for ``Contract`` classes.
+By default the tool would generate a file named ``whitelist.txt`` containing an entry for each contract with the hash of the jar.
+
+For example:
+
+.. sourcecode:: none
+
+    net.corda.finance.contracts.asset.Obligation:decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de8
+    net.corda.finance.contracts.asset.Cash:decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9
+
+These will be added to the ``NetworkParameters.whitelistedContractImplementations``. See :doc:`network-map`.
+
+This means that by default the Network bootstrapper tool will whitelist all contracts found in all passed CorDapps.
+
+In case there is a ``whitelist.txt`` file in the root dir already, the tool will append the new jar hashes or contracts to it.
+
+The zone operator will maintain this whitelist file, and, using the tool, will append new versions of CorDapps to it.
+
+.. warning::
+    - The zone operator must ensure that this file is *append only*.
+    - If the operator removes hashes from the list, all transactions pointing to that version will suddenly fail the constraint verification, and the entire chain is compromised.
+    - If a contract is removed from the whitelist, then all states created from that moment on will be constrained by the HashAttachmentConstraint.
+
+    Note: In future releases, we will provider a tamper-proof way of maintaining the contract whitelist.
+
+For fine-grained control of constraints, in case multiple contracts live in the same jar, the tool reads from another file:
+``exclude_whitelist.txt``, which contains a list of contracts that should not be whitelisted, and thus default to the very restrictive:
+``HashAttachmentConstraint``
+
+For example:
+
+.. sourcecode:: none
+
+    net.corda.finance.contracts.asset.Cash
+    net.corda.finance.contracts.asset.CommercialPaper
+
+
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~
 
