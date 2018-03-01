@@ -78,6 +78,10 @@ dependencies {
 jar {
     from sourceSets.test.output
     dependsOn clientInstall
+
+    from("src/main/resources/static/js/bower_components") {
+        into "static/js/bower_components"
+    }
 }
 
 def docker_dir = file("$project.buildDir/docker")
