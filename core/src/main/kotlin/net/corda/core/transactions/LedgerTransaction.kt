@@ -50,13 +50,16 @@ data class LedgerTransaction @JvmOverloads constructor(
         checkEncumbrancesValid()
     }
 
-    private fun createContractFor(className: ContractClassName, classLoader: ClassLoader?): Try<Contract> {
-        return Try.on {
-            (classLoader ?: this::class.java.classLoader)
-                .loadClass(className)
-                .asSubclass(Contract::class.java)
-                .getConstructor()
-                .newInstance()
+    private companion object {
+        @JvmStatic
+        private fun createContractFor(className: ContractClassName, classLoader: ClassLoader?): Try<Contract> {
+            return Try.on {
+                (classLoader ?: this::class.java.classLoader)
+                        .loadClass(className)
+                        .asSubclass(Contract::class.java)
+                        .getConstructor()
+                        .newInstance()
+            }
         }
     }
 
