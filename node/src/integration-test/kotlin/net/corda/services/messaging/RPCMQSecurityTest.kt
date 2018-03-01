@@ -7,7 +7,7 @@ import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import org.junit.Test
 
 /**
@@ -17,7 +17,7 @@ import org.junit.Test
 abstract class RPCMQSecurityTest : MQSecurityTest() {
     @Test
     fun `consume message from P2P queue`() {
-        assertConsumeAttackFailsNonexistent("$P2P_PREFIX${alice.info.chooseIdentity().owningKey.toStringShort()}")
+        assertConsumeAttackFailsNonexistent("$P2P_PREFIX${alice.info.singleIdentity().owningKey.toStringShort()}")
     }
 
     @Test
@@ -35,7 +35,7 @@ abstract class RPCMQSecurityTest : MQSecurityTest() {
     @Test
     fun `create queue for peer which has not been communicated with`() {
         val bob = startNode(BOB_NAME)
-        assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
+        assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bob.info.singleIdentity().owningKey.toBase58String()}")
     }
 
     @Test

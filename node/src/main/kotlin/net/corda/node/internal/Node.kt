@@ -313,7 +313,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
+    override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -330,7 +330,7 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(schemaService, identityService, insideTransaction)
+        return super.initialiseDatabasePersistence(schemaService, identityService)
     }
 
     private val _startupComplete = openFuture<Unit>()

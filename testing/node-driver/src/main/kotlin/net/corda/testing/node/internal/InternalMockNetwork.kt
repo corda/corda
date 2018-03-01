@@ -51,7 +51,6 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
@@ -64,8 +63,10 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+
 fun StartedNode<InternalMockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-    return (network as InMemoryMessagingNetwork.TestMessagingService).pumpReceive(block)
+    return (network as InternalMockMessagingService).pumpReceive(block)
 }
 
 data class MockNodeArgs(
@@ -75,6 +76,19 @@ data class MockNodeArgs(
         val entropyRoot: BigInteger,
         val version: VersionInfo = MOCK_VERSION_INFO
 )
+
+data class InternalMockNodeParameters(
+        val forcedID: Int? = null,
+        val legalName: CordaX500Name? = null,
+        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val version: VersionInfo = MOCK_VERSION_INFO) {
+    constructor(mockNodeParameters: MockNodeParameters) : this(
+            mockNodeParameters.forcedID,
+            mockNodeParameters.legalName,
+            mockNodeParameters.entropyRoot,
+            mockNodeParameters.configOverrides)
+}
 
 open class InternalMockNetwork(private val cordappPackages: List<String>,
                                defaultParameters: MockNetworkParameters = MockNetworkParameters(),
@@ -194,7 +208,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     @VisibleForTesting
     internal open fun createNotaries(): List<StartedNode<MockNode>> {
         return notarySpecs.map { (name, validating) ->
-            createNode(MockNodeParameters(legalName = name, configOverrides = {
+            createNode(InternalMockNodeParameters(legalName = name, configOverrides = {
                 doReturn(NotaryConfig(validating)).whenever(it).notary
             }))
         }
@@ -297,11 +311,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
-            return super.initialiseDatabasePersistence(schemaService, identityService) { database ->
-                dbCloser = database::close
-                insideTransaction(database)
-            }
+        override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
+            return super.initialiseDatabasePersistence(schemaService, identityService).also { dbCloser = it::close }
         }
 
         fun disableDBCloseOnStop() {
@@ -332,24 +343,24 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         }
     }
 
-    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): MockNode {
+    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
         return createUnstartedNode(parameters, defaultFactory)
     }
 
-    fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
+    fun <N : MockNode> createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> {
+    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): StartedNode<MockNode> {
         return createNode(parameters, defaultFactory)
     }
 
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
+    fun <N : MockNode> createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
         return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
-    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
+    private fun <N : MockNode> createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
         val config = mockNodeConfiguration().also {
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
@@ -389,16 +400,15 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     }
 
     @JvmOverloads
-
     fun createPartyNode(legalName: CordaX500Name? = null): StartedNode<MockNode> {
-        return createNode(MockNodeParameters(legalName = legalName))
+        return createNode(InternalMockNodeParameters(legalName = legalName))
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.
     fun addressToNode(msgRecipient: MessageRecipients): MockNode {
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.started!!.network.myAddress == msgRecipient }
-            is InMemoryMessagingNetwork.ServiceHandle -> {
+            is InMemoryMessagingNetwork.DistributedServiceHandle -> {
                 nodes.firstOrNull { it.started!!.info.isLegalIdentity(msgRecipient.party) }
                         ?: throw IllegalArgumentException("Couldn't find node advertising service with owning party name: ${msgRecipient.party.name} ")
             }
@@ -427,6 +437,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     }
 
 }
+
+open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
 
 /**
  * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing interception and modification of messages.

@@ -76,6 +76,9 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun _attachment(contractClassName: ContractClassName)
 }
 
+/**
+ * Underlying class for the transaction DSL. Do not instantiate directly, instead use the [transaction] function.
+ * */
 class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private val notary: Party) : TransactionDSLInterpreter by interpreter {
     /**
      * Looks up the output label and adds the found state as an input.

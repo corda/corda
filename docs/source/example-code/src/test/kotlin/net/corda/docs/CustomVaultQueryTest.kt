@@ -7,10 +7,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
-import net.corda.testing.node.startFlow
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -56,20 +55,17 @@ class CustomVaultQueryTest {
 
     private fun issueCashForCurrency(amountToIssue: Amount<Currency>) {
         // Use NodeA as issuer and create some dollars
-        val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(amountToIssue,
+        nodeA.startFlow(CashIssueFlow(amountToIssue,
                 OpaqueBytes.of(0x01),
-                notary))
-        // Wait for the flow to stop and print
-        flowHandle1.getOrThrow()
+                notary)).getOrThrow()
     }
 
     private fun topUpCurrencies() {
-        val flowHandle1 = nodeA.services.startFlow(TopupIssuerFlow.TopupIssuanceRequester(
-                nodeA.info.chooseIdentity(),
+        nodeA.startFlow(TopupIssuerFlow.TopupIssuanceRequester(
+                nodeA.info.singleIdentity(),
                 OpaqueBytes.of(0x01),
-                nodeA.info.chooseIdentity(),
-                notary))
-        flowHandle1.getOrThrow()
+                nodeA.info.singleIdentity(),
+                notary)).getOrThrow()
     }
 
     private fun getBalances(): Pair<Map<Currency, Amount<Currency>>, Map<Currency, Amount<Currency>>> {
