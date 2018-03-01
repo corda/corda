@@ -105,10 +105,15 @@ These will be added to the ``NetworkParameters.whitelistedContractImplementation
 This means that by default the Network bootstrapper tool will whitelist all contracts found in all passed CorDapps.
 
 In case there is a ``whitelist.txt`` file in the root dir already, the tool will append the new jar hashes or contracts to it.
-The zone operator will maintain this whitelist file, and using the tool will append new versions of CorDapps to it.
-The zone operator must ensure that this file is *append only*. If the operator removes hashes from the list, all transactions pointing
-to that version will suddenly fail the constraint verification, and the entire chain is compromised.
-If a contract is removed from the whitelist, then all states created from that moment on will be constrained by the HashAttachmentConstraint.
+
+The zone operator will maintain this whitelist file, and, using the tool, will append new versions of CorDapps to it.
+
+.. warning::
+    - The zone operator must ensure that this file is *append only*.
+    - If the operator removes hashes from the list, all transactions pointing to that version will suddenly fail the constraint verification, and the entire chain is compromised.
+    - If a contract is removed from the whitelist, then all states created from that moment on will be constrained by the HashAttachmentConstraint.
+
+    Note: In future releases, we will provider a tamper-proof way of maintaining the contract whitelist.
 
 For fine-grained control of constraints, in case multiple contracts live in the same jar, the tool reads from another file:
 ``exclude_whitelist.txt``, which contains a list of contracts that should not be whitelisted, and thus default to the very restrictive:
