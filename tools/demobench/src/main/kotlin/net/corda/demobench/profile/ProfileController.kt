@@ -58,7 +58,7 @@ class ProfileController : Controller() {
                 configs.forEach { config ->
                     // Write the configuration file.
                     val nodeDir = fs.getPath(config.key).createDirectories()
-                    val file = Files.write(nodeDir / "node.conf", config.nodeConfig.toText().toByteArray(UTF_8))
+                    val file = Files.write(nodeDir / "node.conf", config.nodeConfig.serialiseAsString().toByteArray(UTF_8))
                     log.info("Wrote: $file")
 
                     // Write all of the non-built-in cordapps.

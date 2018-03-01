@@ -7,6 +7,12 @@ from previous releases. Please refer to :doc:`upgrade-notes` for detailed instru
 UNRELEASED
 ----------
 
+* Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
+
+* The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
+
+* Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
+
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.
@@ -57,7 +63,7 @@ R3 Corda 3.0 Developer Preview
   only ever be issued by network services and therefore issuance constraints are not relevant to end users.
   The ``TLS`` and ``WELL_KNOWN_LEGAL_IDENTITY`` roles must be issued by the ``NODE_CA`` certificate issued by the
   Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
-  For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
+  For a detailed specification of the extension please see :doc:`permissioning`.
 
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 

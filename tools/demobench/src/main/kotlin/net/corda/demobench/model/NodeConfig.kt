@@ -46,17 +46,49 @@ data class NodeConfig(
     @Suppress("unused")
     private val useTestClock = true
 
-    private fun asConfig(): Config {
+    fun nodeConf(): Config {
 
-        val config = toConfig()
+        val basic = NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp).toConfig()
         val rpcSettings = empty()
                 .withValue("address", ConfigValueFactory.fromAnyRef(rpcAddress.toString()))
                 .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcAdminAddress.toString()))
                 .root()
-        return config.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
+        return basic.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
     }
 
-    fun toText(): String = asConfig().root().render(renderOptions)
+    fun webServerConf() = WebServerConfigurationData(myLegalName, rpcAddress, webAddress, rpcUsers).asConfig()
+
+    fun toNodeConfText() = nodeConf().render()
+
+    fun toWebServerConfText() = webServerConf().render()
+
+    fun serialiseAsString(): String {
+
+        return toConfig().render()
+    }
+
+    private fun Config.render(): String = root().render(renderOptions)
+}
+
+private data class NodeConfigurationData(
+        val myLegalName: CordaX500Name,
+        val p2pAddress: NetworkHostAndPort,
+        val rpcAddress: NetworkHostAndPort,
+        val notary: NotaryService?,
+        val h2port: Int,
+        val rpcUsers: List<User> = listOf(NodeConfig.defaultUser),
+        val useTestClock: Boolean,
+        val detectPublicIp: Boolean
+)
+
+private data class WebServerConfigurationData(
+        val myLegalName: CordaX500Name,
+        val rpcAddress: NetworkHostAndPort,
+        val webAddress: NetworkHostAndPort,
+        val rpcUsers: List<User>
+) {
+
+   fun asConfig() = toConfig()
 }
 
 /**
