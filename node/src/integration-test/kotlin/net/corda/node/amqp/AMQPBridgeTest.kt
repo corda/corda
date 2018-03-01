@@ -71,8 +71,8 @@ class AMQPBridgeTest {
         val receivedSequence = mutableListOf<Int>()
 
         fun formatMessage(expected: String, actual: Int, received: List<Int>): String {
-            return "Expected message with id $expected, got $actual, previous message receive sequence: "
-            "${received.joinToString(",  ", "[", "]")}."
+            return "Expected message with id $expected, got $actual, previous message receive sequence: " +
+                    "${received.joinToString(",  ", "[", "]")}."
         }
 
         val received1 = receive.next()
@@ -109,7 +109,7 @@ class AMQPBridgeTest {
             assertArrayEquals("Test$messageID4".toByteArray(), received4.payload)
             receivedSequence.add(messageID4)
             if (messageID4 != 1) { // we may get a duplicate of the rejected message, in which case skip
-                assertEquals(2, messageID4) // next message should be in order though
+                assertEquals(2, messageID4, formatMessage("2", messageID4, receivedSequence)) // next message should be in order though
                 break
             }
             received4.complete(true)
