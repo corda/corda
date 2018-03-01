@@ -8,6 +8,15 @@ repositories {
     mavenCentral()
 }
 
+gradlePlugin {
+    plugins {
+        canonicalizerPlugin {
+            id = 'net.corda.plugins.canonicalizer'
+            implementationClass = 'CanonicalizerPlugin'
+        }
+    }
+}
+
 dependencies {
     compile "com.google.guava:guava:$guava_version"
 }
