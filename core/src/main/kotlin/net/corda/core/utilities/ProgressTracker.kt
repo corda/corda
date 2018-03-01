@@ -1,6 +1,6 @@
 package net.corda.core.utilities
 
-import net.corda.core.internal.STRUCTURAL_STEP_TEXT
+import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
@@ -42,7 +42,7 @@ class ProgressTracker(vararg steps: Step) {
         }
 
         data class Structural(val tracker: ProgressTracker, val parent: Step) : Change(tracker) {
-            override fun toString() = STRUCTURAL_STEP_TEXT + parent.label
+            override fun toString() = STRUCTURAL_STEP_PREFIX + parent.label
         }
     }
 
