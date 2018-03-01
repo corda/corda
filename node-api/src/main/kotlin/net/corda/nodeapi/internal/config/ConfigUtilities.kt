@@ -36,25 +36,27 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
     return getValueInternal(metadata.name, metadata.returnType)
 }
 
-fun <T : Any> Config.parseAs(clazz: KClass<T>): T {
+fun <T : Any> Config.parseAs(clazz: KClass<T>, strict: Boolean = true): T {
     require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
     val parameters = constructor.parameters
-    val parameterNames = parameters.flatMap { param ->
-        mutableSetOf<String>().apply {
-            param.name?.let(this::add)
-            clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
-                matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
+    if (strict) {
+        val parameterNames = parameters.flatMap { param ->
+            mutableSetOf<String>().apply {
+                param.name?.let(this::add)
+                clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
+                    matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
+                }
             }
         }
-    }
-    val unknownConfigurationKeys = this.entrySet()
-            .mapNotNull { it.key.split(".").firstOrNull() }
-            .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
-            .filterNot(parameterNames::contains)
-            .toSortedSet()
-    if (unknownConfigurationKeys.isNotEmpty()) {
-        throw UnknownConfigurationKeysException.of(unknownConfigurationKeys)
+        val unknownConfigurationKeys = this.entrySet()
+                .mapNotNull { it.key.split(".").firstOrNull() }
+                .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
+                .filterNot(parameterNames::contains)
+                .toSortedSet()
+        if (unknownConfigurationKeys.isNotEmpty()) {
+            throw UnknownConfigurationKeysException.of(unknownConfigurationKeys)
+        }
     }
     val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
                 // Get the matching property for this parameter
@@ -79,7 +81,7 @@ class UnknownConfigurationKeysException private constructor(val unknownKeys: Set
     }
 }
 
-inline fun <reified T : Any> Config.parseAs(): T = parseAs(T::class)
+inline fun <reified T : Any> Config.parseAs(strict: Boolean = true): T = parseAs(T::class, strict)
 
 fun Config.toProperties(): Properties {
     return entrySet().associateByTo(

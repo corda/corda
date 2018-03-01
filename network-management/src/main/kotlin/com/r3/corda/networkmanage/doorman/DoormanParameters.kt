@@ -102,7 +102,7 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
 
     val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
             .resolve()
-            .parseAs<NetworkManagementServerParameters>()
+            .parseAs<NetworkManagementServerParameters>(false)
 
     // Make sure trust store password is only specified in root keygen mode.
     if (config.mode != Mode.ROOT_KEYGEN) {
