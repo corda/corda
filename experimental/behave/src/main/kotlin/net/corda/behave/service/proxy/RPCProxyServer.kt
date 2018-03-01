@@ -74,7 +74,8 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort,
 }
 
 fun main(args: Array<String>) {
-    val hostAndPort = NetworkHostAndPort("localhost", 13002)
+    val portNo = args.singleOrNull() ?: throw IllegalArgumentException("Please specify a port number")
+    val hostAndPort = NetworkHostAndPort("localhost", portNo.toIntOrNull() ?: 13000)
     println("Starting RPC Proxy Server on [$hostAndPort] ...")
-    RPCProxyServer(hostAndPort, webService = RPCProxyWebService()).start()
+    RPCProxyServer(hostAndPort, webService = RPCProxyWebService(hostAndPort)).start()
 }

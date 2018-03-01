@@ -13,9 +13,10 @@ class NetworkTests {
     @Ignore
     @Test
     fun `network of single node with RPC proxy can be spun up`() {
+        val distribution = Distribution.fromVersionString("corda-3.0-pre-release-V3")
         val network = Network
                 .new()
-                .addNode(name = "Foo", withRPCProxy = true)
+                .addNode(name = "Foo", distribution = distribution!!, withRPCProxy = true)
                 .generate()
         network.use {
             it.waitUntilRunning(30.seconds)
@@ -31,12 +32,12 @@ class NetworkTests {
         val network = Network
                 .new()
                 .addNode(name = "EntityA", distribution = distribution!!, withRPCProxy = true)
-                .addNode(name = "EntityB", distribution = distribution!!)
-//                .addNode(name = "EntityB", distribution = Distribution.LATEST_R3_MASTER)
-                .addNode(name = "Notary", distribution = distribution!!, notaryType = NotaryType.NON_VALIDATING)
+//                .addNode(name = "EntityB", distribution = distribution)
+                .addNode(name = "EntityB", distribution = Distribution.LATEST_R3_MASTER)
+                .addNode(name = "Notary", distribution = distribution, notaryType = NotaryType.NON_VALIDATING)
                 .generate()
         network.use {
-            it.waitUntilRunning(30.seconds)
+            it.waitUntilRunning(Duration.ofDays(1))
             it.keepAlive(Duration.ofDays(1))
         }
     }
