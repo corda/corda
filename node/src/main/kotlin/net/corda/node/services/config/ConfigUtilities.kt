@@ -2,6 +2,8 @@ package net.corda.node.services.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigFactory.systemEnvironment
+import com.typesafe.config.ConfigFactory.systemProperties
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.identity.CordaX500Name
@@ -10,6 +12,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
@@ -20,6 +23,9 @@ fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
+
+    const val CORDA_PROPERTY_PREFIX = "corda."
+
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
@@ -30,10 +36,13 @@ object ConfigHelper {
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider")+".conf", parseOptions.setAllowMissing(true))
 
+        val systemOverrides = systemProperties().cordaEntriesOnly()
+        val environmentOverrides = systemEnvironment().cordaEntriesOnly()
         val finalConfig = configOverrides
                 // Add substitution values here
-                .withFallback(configOf("nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName.toString()))) //for database integration tests
-                .withFallback(ConfigFactory.systemProperties()) //for database integration tests
+                .withFallback(configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName.toString()))) //for database integration tests
+                .withFallback(systemOverrides) //for database integration tests
+                .withFallback(environmentOverrides) //for database integration tests
                 .withFallback(configOf("baseDirectory" to baseDirectory.toString()))
                 .withFallback(databaseConfig) //for database integration tests
                 .withFallback(appConfig)
@@ -41,6 +50,11 @@ object ConfigHelper {
                 .resolve()
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
         return finalConfig
+    }
+
+    private fun Config.cordaEntriesOnly(): Config {
+
+        return ConfigFactory.parseMap(toProperties().filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }.mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) })
     }
 }
 
