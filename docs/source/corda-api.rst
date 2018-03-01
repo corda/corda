@@ -24,20 +24,14 @@ Before reading this page, you should be familiar with the :doc:`key concepts of 
 Internal APIs and stability guarantees
 --------------------------------------
 
-.. warning:: For Corda 1.0 we do not currently provide a stable wire protocol or support for database upgrades.
-   Additionally, the JSON format produced by the client-jackson module may change in future.
-   Therefore, you should not expect to be able to migrate persisted data from 1.0 to future versions.
+Corda 3.0 provides a stable wire protocol and support for database upgrades therefore you should expect to be able to migrate persisted data from 3.0 to future versions. However, it will be necessary to recompile applications against future versions of the API until we begin offering ABI stability as well.
 
-   Additionally, it may be necessary to recompile applications against future versions of the API until we begin offering
-   ABI stability as well. We plan to do this soon after the release of Corda 1.0.
-
-   Finally, please note that the 1.0 release has not yet been security audited. You should not run it in situations
-   where security is required.
+Additionally, please note Corda 3.0 release has been security audited at a rudimentary level therefore you should not run it in situations where security is required.
 
 Corda artifacts can be required from Java 9 Jigsaw modules.
 From within a ``module-info.java``, you can reference one of the modules e.g., ``requires net.corda.core;``.
 
-.. warning:: while Corda artifacts can be required from ``module-info.java`` files, they are still not proper Jigsaw modules,
+.. warning:: While Corda artifacts can be required from ``module-info.java`` files, they are still not proper Jigsaw modules,
    because they rely on the automatic module mechanism and declare no module descriptors themselves. We plan to integrate Jigsaw more thoroughly in the future.
 
 Corda stable modules
