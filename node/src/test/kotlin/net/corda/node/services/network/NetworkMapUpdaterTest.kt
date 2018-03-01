@@ -18,6 +18,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -68,33 +69,33 @@ class NetworkMapUpdaterTest {
     fun `publish node info`() {
         nodeInfoBuilder.addIdentity(ALICE_NAME)
 
-        val (nodeInfo1, signedNodeInfo1) = nodeInfoBuilder.buildWithSigned()
-        val (sameNodeInfoDifferentTime, signedSameNodeInfoDifferentTime) = nodeInfoBuilder.buildWithSigned(serial = System.currentTimeMillis())
+        val nodeInfo1AndSigned = nodeInfoBuilder.buildWithSigned()
+        val sameNodeInfoDifferentTimeAndSigned = nodeInfoBuilder.buildWithSigned(serial = System.currentTimeMillis())
 
         // Publish node info for the first time.
-        updater.updateNodeInfo(nodeInfo1) { signedNodeInfo1 }
+        updater.updateNodeInfo(nodeInfo1AndSigned)
         // Sleep as publish is asynchronous.
         // TODO: Remove sleep in unit test
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapClient, times(1)).publish(any())
 
-        networkMapCache.addNode(nodeInfo1)
+        networkMapCache.addNode(nodeInfo1AndSigned.nodeInfo)
 
         // Publish the same node info, but with different serial.
-        updater.updateNodeInfo(sameNodeInfoDifferentTime) { signedSameNodeInfoDifferentTime }
+        updater.updateNodeInfo(sameNodeInfoDifferentTimeAndSigned)
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
         // Same node info should not publish twice
-        verify(networkMapClient, times(0)).publish(signedSameNodeInfoDifferentTime)
+        verify(networkMapClient, times(0)).publish(sameNodeInfoDifferentTimeAndSigned.signed)
 
-        val (differentNodeInfo, signedDifferentNodeInfo) = createNodeInfoAndSigned("Bob")
+        val differentNodeInfoAndSigned = createNodeInfoAndSigned("Bob")
 
         // Publish different node info.
-        updater.updateNodeInfo(differentNodeInfo) { signedDifferentNodeInfo }
+        updater.updateNodeInfo(differentNodeInfoAndSigned)
         // TODO: Remove sleep in unit test.
         Thread.sleep(200)
-        verify(networkMapClient, times(1)).publish(signedDifferentNodeInfo)
+        verify(networkMapClient, times(1)).publish(differentNodeInfoAndSigned.signed)
     }
 
     @Test
@@ -103,7 +104,7 @@ class NetworkMapUpdaterTest {
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
         val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("Info 3")
         val (nodeInfo4, signedNodeInfo4) = createNodeInfoAndSigned("Info 4")
-        val (fileNodeInfo, signedFileNodeInfo) = createNodeInfoAndSigned("Info from file")
+        val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
 
         // Test adding new node.
         networkMapClient.publish(signedNodeInfo1)
@@ -119,7 +120,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addNode(nodeInfo1)
         verify(networkMapCache, times(1)).addNode(nodeInfo2)
 
-        NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, signedFileNodeInfo)
+        NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, fileNodeInfoAndSigned)
         networkMapClient.publish(signedNodeInfo3)
         networkMapClient.publish(signedNodeInfo4)
 
@@ -131,7 +132,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(5)).addNode(any())
         verify(networkMapCache, times(1)).addNode(nodeInfo3)
         verify(networkMapCache, times(1)).addNode(nodeInfo4)
-        verify(networkMapCache, times(1)).addNode(fileNodeInfo)
+        verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
     }
 
     @Test
@@ -140,10 +141,10 @@ class NetworkMapUpdaterTest {
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
         val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("Info 3")
         val (nodeInfo4, signedNodeInfo4) = createNodeInfoAndSigned("Info 4")
-        val (fileNodeInfo, signedFileNodeInfo) = createNodeInfoAndSigned("Info from file")
+        val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
 
         // Add all nodes.
-        NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, signedFileNodeInfo)
+        NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, fileNodeInfoAndSigned)
         networkMapClient.publish(signedNodeInfo1)
         networkMapClient.publish(signedNodeInfo2)
         networkMapClient.publish(signedNodeInfo3)
@@ -157,7 +158,7 @@ class NetworkMapUpdaterTest {
         // 4 node info from network map, and 1 from file.
         assertThat(nodeInfoMap).hasSize(4)
         verify(networkMapCache, times(5)).addNode(any())
-        verify(networkMapCache, times(1)).addNode(fileNodeInfo)
+        verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
 
         // Test remove node.
         nodeInfoMap.clear()
@@ -170,25 +171,25 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).removeNode(nodeInfo4)
 
         // Node info from file should not be deleted
-        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfo.serialize().hash)
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }
 
     @Test
     fun `receive node infos from directory, without a network map`() {
-        val (fileNodeInfo, signedFileNodeInfo) = createNodeInfoAndSigned("Info from file")
+        val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
 
         // Not subscribed yet.
         verify(networkMapCache, times(0)).addNode(any())
 
         updater.subscribeToNetworkMap()
 
-        NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, signedFileNodeInfo)
+        NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, fileNodeInfoAndSigned)
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
 
         verify(networkMapCache, times(1)).addNode(any())
-        verify(networkMapCache, times(1)).addNode(fileNodeInfo)
+        verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
 
-        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfo.serialize().hash)
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }
 
     @Test
@@ -275,7 +276,7 @@ class NetworkMapUpdaterTest {
         }
     }
 
-    private fun createNodeInfoAndSigned(org: String): Pair<NodeInfo, SignedNodeInfo> {
+    private fun createNodeInfoAndSigned(org: String): NodeInfoAndSigned {
         return createNodeInfoAndSigned(CordaX500Name(org, "London", "GB"))
     }
 }
