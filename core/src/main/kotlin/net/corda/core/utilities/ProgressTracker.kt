@@ -41,7 +41,7 @@ class ProgressTracker(vararg steps: Step) {
         }
 
         data class Structural(val tracker: ProgressTracker, val parent: Step) : Change(tracker) {
-            override fun toString() = "Structural step change in child of ${parent.label}"
+            override fun toString() = "Stepping into child progress tracker."
         }
     }
 
