@@ -268,8 +268,7 @@ open class SerializerFactory(
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else {
-                   val singleton = clazz.objectInstance()
-
+                    val singleton = clazz.objectInstance()
                     if (singleton != null) {
                        whitelist.requireWhitelisted(clazz)
                        SingletonSerializer(clazz, singleton, this)

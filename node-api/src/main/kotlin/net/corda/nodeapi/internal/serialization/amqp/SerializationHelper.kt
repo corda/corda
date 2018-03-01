@@ -516,11 +516,11 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
 
 /**
  * We can't use clazz.kotlin.getObjectInstance as that doesn't play nicely with nested private objects. Even
- * setting the accessibility override (setAccessible) still causes an IllegalAccess Exception when attempting
+ * setting the accessibility override (setAccessible) still causes an [IllegalAccessException] when attempting
  * to retrieve the value of the INSTANCE field.
  *
  * Whichever reference to the class Kotlin reflection uses, override (set from setAccessible) on that field
- * isn't set even when it was explicitly set as acceissible before calling into the kotlin reflection routines.
+ * isn't set even when it was explicitly set as accessible before calling into the kotlin reflection routines.
  *
  * For example
  *
@@ -530,7 +530,7 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
  * }
  *
  * Therefore default back to good old java reflection and simply look for the INSTANCE field as we are never going
- * to serialize a companion object
+ * to serialize a companion object.
  */
 fun Class<*>.objectInstance() =
     try {
