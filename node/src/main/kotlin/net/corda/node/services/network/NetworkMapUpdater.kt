@@ -7,12 +7,12 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.ParametersUpdate
@@ -54,18 +54,19 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         return DataFeed(currentUpdateInfo, parametersUpdatesTrack)
     }
 
-    fun updateNodeInfo(newInfo: NodeInfo, signer: (NodeInfo) -> SignedNodeInfo) {
-        val oldInfo = networkMapCache.getNodeByLegalIdentity(newInfo.legalIdentities.first())
+    fun updateNodeInfo(nodeInfoAndSigned: NodeInfoAndSigned) {
+        // TODO We've already done this lookup and check in AbstractNode.initNodeInfo
+        val oldNodeInfo = networkMapCache.getNodeByLegalIdentity(nodeInfoAndSigned.nodeInfo.legalIdentities[0])
         // Compare node info without timestamp.
-        if (newInfo.copy(serial = 0L) == oldInfo?.copy(serial = 0L)) return
+        if (nodeInfoAndSigned.nodeInfo.copy(serial = 0L) == oldNodeInfo?.copy(serial = 0L)) return
 
+        logger.info("Node-info has changed so submitting update. Old node-info was $oldNodeInfo")
         // Only publish and write to disk if there are changes to the node info.
-        val signedNodeInfo = signer(newInfo)
-        networkMapCache.addNode(newInfo)
-        fileWatcher.saveToFile(signedNodeInfo)
+        networkMapCache.addNode(nodeInfoAndSigned.nodeInfo)
+        fileWatcher.saveToFile(nodeInfoAndSigned)
 
         if (networkMapClient != null) {
-            tryPublishNodeInfoAsync(signedNodeInfo, networkMapClient)
+            tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
         }
     }
 
