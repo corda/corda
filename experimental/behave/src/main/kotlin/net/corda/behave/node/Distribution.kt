@@ -157,6 +157,7 @@ class Distribution private constructor(
             "corda-3.0" -> V3
             "corda-3.0-HC02" -> fromArtifactory(version, DistributionType.CORDA)
             "corda-3.0-RC01" -> fromArtifactory(version, DistributionType.CORDA)
+            "corda-3.0-pre-release-V3" -> fromJarFile("corda-3.0-pre-release-V3")
             "r3corda-3.0" -> R3_V3
 //            "r3corda-3.0-DP2" -> fromArtifactory("R3.CORDA-3.0.0-DEV-PREVIEW-2", DistributionType.R3_CORDA)
             "r3corda-3.0-DP2" -> fromJarFile("R3.CORDA-3.0.0-DEV-PREVIEW-2")

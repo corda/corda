@@ -28,6 +28,6 @@ cp -v $(ls ../../tools/bootstrapper/build/libs/*.jar | tail -n1) deps/corda/${VE
 cp -v $(ls ../../finance/build/libs/corda-finance-*.jar | tail -n1) deps/corda/${VERSION}/apps/corda-finance.jar
 
 # Build rpcProxy (required for by Driver to call Corda 3.0 which continues to use Kryo for RPC)
-./gradlew rpcProxyJar
+../../gradlew rpcProxyJar
 cp -v $(ls build/libs/corda-rpcProxy*.jar | tail -n1) deps/corda/${VERSION}/corda-rpcProxy.jar
 

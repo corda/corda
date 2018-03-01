@@ -75,4 +75,4 @@ Feature: Compatibility - Node versions
 #      | corda-3.0-HC02        | corda-3.0-HC02         | GBP      |
 #      | corda-3.0-RC01        | corda-3.0-RC01         | GBP      |
 #      | corda-3.0-HC02        | r3-master         | GBP      |
-      | corda-3.0-RC01        | r3-master         | GBP      |
+      | corda-3.0-RC01        | corda-3.0-RC01         | GBP      |

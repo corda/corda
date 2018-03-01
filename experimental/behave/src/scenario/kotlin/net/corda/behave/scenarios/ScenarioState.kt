@@ -3,11 +3,8 @@ package net.corda.behave.scenarios
 import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
 import net.corda.behave.node.Node
-import net.corda.behave.scenarios.helpers.Substeps
-import net.corda.behave.service.proxy.RPCProxyOps
 import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat
-import java.time.Duration
 
 class ScenarioState {
 
