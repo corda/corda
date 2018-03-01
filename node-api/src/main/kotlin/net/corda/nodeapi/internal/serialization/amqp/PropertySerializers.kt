@@ -85,7 +85,7 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
 /**
  * For internal use by the Serializer only
  *
- * Used to specifically and purposefully remove a property from the serialised form
+ * Used to specifically and purposefully remove a property from the serialised fornm/pre
  */
 class UnusedSerialisationPropertyReader : PropertyReader() {
     override fun read(obj: Any?) = null
@@ -119,7 +119,13 @@ abstract class PropertyAccessor(
         open val getter: PropertySerializer) {
     companion object : Comparator<PropertyAccessor> {
         override fun compare(p0: PropertyAccessor?, p1: PropertyAccessor?): Int {
-            return p0?.getter?.name?.compareTo(p1?.getter?.name ?: "") ?: 0
+            return if (p0?.getter?.propertyReader is UnusedSerialisationPropertyReader) {
+                1
+            } else if (p1?.getter?.propertyReader is UnusedSerialisationPropertyReader) {
+                -1
+            } else {
+                p0?.getter?.name?.compareTo(p1?.getter?.name ?: "") ?: 0
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
+import net.corda.nodeapiinterfaces.serialization.ConstructorForDeserialization
 import net.corda.nodeapiinterfaces.serialization.UnusedConstructorParameter
 import net.corda.nodeapiinterfaces.serialization.SerializationOnlyParameter
 import java.security.PublicKey
@@ -30,7 +31,7 @@ sealed class TransactionVerificationException : FlowException {
                 this(txId, "Contract verification failed: ${cause.message}, contract: $contract", cause, null)
     }
 
-    class ContractConstraintRejection(
+    class ContractConstraintRejection @ConstructorForDeserialization constructor (
             override val txId: SecureHash, message: String, @UnusedConstructorParameter p: SerializationOnlyParameter?)
         : TransactionVerificationException(message, null) {
 

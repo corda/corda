@@ -95,8 +95,20 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             input: DeserializationInput) : Any = ifThrowsAppend({ clazz.typeName }){
         logger.trace { "Calling construction based construction for ${clazz.typeName}" }
 
+        //
+        // So this only happens when we've added non serialized properties to a class
+        // via the UnusedConstructorParameter annotation. If we don't pad the list
+        // with nulls the zip below will shrink to the size of the actually
+        // serialized elements and cut of those we need to construct the object
+        //
+        val paddedObj = obj.toMutableList().apply {
+            while (size != propertySerializers.serializationOrder.size) {
+                add(null)
+            }
+        }
+
         return construct (propertySerializers.serializationOrder
-                .zip(obj)
+                .zip(paddedObj)
                 .map { Pair(it.first.initialPosition, it.first.getter.readProperty(it.second, schemas, input)) }
                 .sortedWith(compareBy({it.first}))
                 .map { it.second })

@@ -305,7 +305,6 @@ task buildCordappDependenciesZip(type: Zip) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-/*
 artifactory {
     publish {
         contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
@@ -323,7 +322,6 @@ artifactory {
         }
     }
 }
-*/
 
 task generateApi(type: net.corda.plugins.GenerateApi){
     baseName = "api-corda"
