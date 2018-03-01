@@ -18,7 +18,7 @@ import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.withoutTestSerialization
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
@@ -56,7 +56,7 @@ class NodeInterestRatesTest {
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
     private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
-    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
     // This is safe because MockServices only ever have a single identity
     private val identity = services.myInfo.singleIdentity()
 
@@ -227,7 +227,7 @@ class NodeInterestRatesTest {
         val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
         LogHelper.setLevel("rates")
         mockNet.runNetwork()
-        val future = aliceNode.services.startFlow(flow).resultFuture
+        val future = aliceNode.startFlow(flow)
         mockNet.runNetwork()
         future.getOrThrow()
         // We should now have a valid fix of our tx from the oracle.

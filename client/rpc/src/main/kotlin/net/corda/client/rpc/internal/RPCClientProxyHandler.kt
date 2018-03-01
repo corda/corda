@@ -15,7 +15,6 @@ import net.corda.client.rpc.RPCSinceVersion
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
-import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.ThreadBox
@@ -26,14 +25,12 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.ArtemisConsumer
-import net.corda.nodeapi.ArtemisProducer
 import net.corda.nodeapi.RPCApi
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
+import net.corda.nodeapi.internal.DeduplicationChecker
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
@@ -43,6 +40,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -111,6 +109,8 @@ class RPCClientProxyHandler(
 
     // Used for reaping
     private var reaperExecutor: ScheduledExecutorService? = null
+    // Used for sending
+    private var sendExecutor: ExecutorService? = null
 
     // A sticky pool for running Observable.onNext()s. We need the stickiness to preserve the observation ordering.
     private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").setDaemon(true).build()
@@ -161,22 +161,14 @@ class RPCClientProxyHandler(
                 build()
     }
 
-    // We cannot pool consumers as we need to preserve the original muxed message order.
-    // TODO We may need to pool these somehow anyway, otherwise if the server sends many big messages in parallel a
-    // single consumer may be starved for flow control credits. Recheck this once Artemis's large message streaming is
-    // integrated properly.
-    private var sessionAndConsumer: ArtemisConsumer? = null
-    // Pool producers to reduce contention on the client side.
-    private val sessionAndProducerPool = LazyPool(bound = rpcConfiguration.producerPoolBound) {
-        // Note how we create new sessions *and* session factories per producer.
-        // We cannot simply pool producers on one session because sessions are single threaded.
-        // We cannot simply pool sessions on one session factory because flow control credits are tied to factories, so
-        // sessions tend to starve each other when used concurrently.
-        val sessionFactory = serverLocator.createSessionFactory()
-        val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-        session.start()
-        ArtemisProducer(sessionFactory, session, session.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME))
-    }
+    private var sessionFactory: ClientSessionFactory? = null
+    private var producerSession: ClientSession? = null
+    private var consumerSession: ClientSession? = null
+    private var rpcProducer: ClientProducer? = null
+    private var rpcConsumer: ClientConsumer? = null
+
+    private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
+    private val deduplicationSequenceNumber = AtomicLong(0)
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
@@ -187,22 +179,25 @@ class RPCClientProxyHandler(
                 1,
                 ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").setDaemon(true).build()
         )
+        sendExecutor = Executors.newSingleThreadExecutor(
+                ThreadFactoryBuilder().setNameFormat("rpc-client-sender-%d").build()
+        )
         reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
                 this::reapObservablesAndNotify,
                 rpcConfiguration.reapInterval.toMillis(),
                 rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
         )
-        sessionAndProducerPool.run {
-            it.session.createTemporaryQueue(clientAddress, ActiveMQDefaultConfiguration.getDefaultRoutingType(), clientAddress)
-        }
-        val sessionFactory = serverLocator.createSessionFactory()
-        val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-        val consumer = session.createConsumer(clientAddress)
-        consumer.setMessageHandler(this@RPCClientProxyHandler::artemisMessageHandler)
-        sessionAndConsumer = ArtemisConsumer(sessionFactory, session, consumer)
+        sessionFactory = serverLocator.createSessionFactory()
+        producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+        rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
+        consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+        consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
+        rpcConsumer = consumerSession!!.createConsumer(clientAddress)
+        rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
-        session.start()
+        consumerSession!!.start()
+        producerSession!!.start()
     }
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
@@ -212,7 +207,7 @@ class RPCClientProxyHandler(
         if (method == toStringMethod) {
             return "Client RPC proxy for $rpcOpsClass"
         }
-        if (sessionAndConsumer!!.session.isClosed) {
+        if (consumerSession!!.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
 
@@ -220,23 +215,20 @@ class RPCClientProxyHandler(
         callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
-            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, replyId, sessionId, externalTrace, impersonatedActor)
+            val request = RPCApi.ClientToServer.RpcRequest(
+                    clientAddress,
+                    method.name,
+                    serialisedArguments,
+                    replyId,
+                    sessionId,
+                    externalTrace,
+                    impersonatedActor
+            )
             val replyFuture = SettableFuture.create<Any>()
-            sessionAndProducerPool.run {
-                val message = it.session.createMessage(false)
-                request.writeToClientMessage(message)
-
-                log.debug {
-                    val argumentsString = arguments?.joinToString() ?: ""
-                    "-> RPC(${replyId.value}) -> ${method.name}($argumentsString): ${method.returnType}"
-                }
-
-                require(rpcReplyMap.put(replyId, replyFuture) == null) {
-                    "Generated several RPC requests with same ID $replyId"
-                }
-                it.producer.send(message)
-                it.session.commit()
+            require(rpcReplyMap.put(replyId, replyFuture) == null) {
+                "Generated several RPC requests with same ID $replyId"
             }
+            sendMessage(request)
             return replyFuture.getOrThrow()
         } catch (e: RuntimeException) {
             // Already an unchecked exception, so just rethrow it
@@ -249,9 +241,24 @@ class RPCClientProxyHandler(
         }
     }
 
+    private fun sendMessage(message: RPCApi.ClientToServer) {
+        val artemisMessage = producerSession!!.createMessage(false)
+        message.writeToClientMessage(artemisMessage)
+        sendExecutor!!.submit {
+            artemisMessage.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, deduplicationSequenceNumber.getAndIncrement())
+            log.debug { "-> RPC -> $message" }
+            rpcProducer!!.send(artemisMessage)
+        }
+    }
+
     // The handler for Artemis messages.
     private fun artemisMessageHandler(message: ClientMessage) {
         val serverToClient = RPCApi.ServerToClient.fromClientMessage(serializationContextWithObservableContext, message)
+        val deduplicationSequenceNumber = message.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
+        if (deduplicationChecker.checkDuplicateMessageId(serverToClient.deduplicationIdentity, deduplicationSequenceNumber)) {
+            log.info("Message duplication detected, discarding message")
+            return
+        }
         log.debug { "Got message from RPC server $serverToClient" }
         when (serverToClient) {
             is RPCApi.ServerToClient.RpcReply -> {
@@ -325,14 +332,12 @@ class RPCClientProxyHandler(
      * @param notify whether to notify observables or not.
      */
     private fun close(notify: Boolean = true) {
-        sessionAndConsumer?.sessionFactory?.close()
+        sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables(notify)
         reaperExecutor?.shutdownNow()
-        sessionAndProducerPool.close().forEach {
-            it.sessionFactory.close()
-        }
+        sendExecutor?.shutdownNow()
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
@@ -385,11 +390,7 @@ class RPCClientProxyHandler(
         }
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
-            sessionAndProducerPool.run {
-                val message = it.session.createMessage(false)
-                RPCApi.ClientToServer.ObservablesClosed(observableIds).writeToClientMessage(message)
-                it.producer.send(message)
-            }
+            sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
         }
     }
 }

@@ -18,6 +18,7 @@ import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyStore
 import javax.net.ssl.*
+import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
 import kotlin.test.*
 
@@ -51,9 +52,9 @@ class TLSAuthenticationTests {
     val tempFolder: TemporaryFolder = TemporaryFolder()
 
     // Root CA.
-    private val ROOT_X500 = CordaX500Name(commonName = "Root_CA_1", organisation = "R3CEV", locality = "London", country = "GB")
+    private val ROOT_X500 = X500Principal("CN=Root_CA_1,O=R3CEV,L=London,C=GB")
     // Intermediate CA.
-    private val INTERMEDIATE_X500 = CordaX500Name(commonName = "Intermediate_CA_1", organisation = "R3CEV", locality = "London", country = "GB")
+    private val INTERMEDIATE_X500 = X500Principal("CN=Intermediate_CA_1,O=R3CEV,L=London,C=GB")
     // TLS server (client1).
     private val CLIENT_1_X500 = CordaX500Name(commonName = "Client_1", organisation = "R3CEV", locality = "London", country = "GB")
     // TLS client (client2).
@@ -274,7 +275,7 @@ class TLSAuthenticationTests {
                 CertificateType.NODE_CA,
                 intermediateCACert,
                 intermediateCAKeyPair,
-                CLIENT_1_X500,
+                CLIENT_1_X500.x500Principal,
                 client1CAKeyPair.public
         )
 
@@ -283,7 +284,7 @@ class TLSAuthenticationTests {
                 CertificateType.TLS,
                 client1CACert,
                 client1CAKeyPair,
-                CLIENT_1_X500,
+                CLIENT_1_X500.x500Principal,
                 client1TLSKeyPair.public
         )
 
@@ -301,7 +302,7 @@ class TLSAuthenticationTests {
                 CertificateType.NODE_CA,
                 intermediateCACert,
                 intermediateCAKeyPair,
-                CLIENT_2_X500,
+                CLIENT_2_X500.x500Principal,
                 client2CAKeyPair.public
         )
 
@@ -310,7 +311,7 @@ class TLSAuthenticationTests {
                 CertificateType.TLS,
                 client2CACert,
                 client2CAKeyPair,
-                CLIENT_2_X500,
+                CLIENT_2_X500.x500Principal,
                 client2TLSKeyPair.public
         )
 
@@ -323,8 +324,8 @@ class TLSAuthenticationTests {
         // client2TLSKeyStore.save(client2TLSKeyStorePath, PASSWORD)
 
         val trustStore = loadOrCreateKeyStore(trustStorePath, PASSWORD)
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateCACert.cert)
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert)
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateCACert)
         // trustStore.save(trustStorePath, PASSWORD)
 
         val client1SSLContext = sslContext(client1TLSKeyStore, PASSWORD, trustStore)

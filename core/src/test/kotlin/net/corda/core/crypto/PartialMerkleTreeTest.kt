@@ -13,10 +13,13 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
@@ -55,19 +58,19 @@ class PartialMerkleTreeTest {
         hashed = nodes.map { it.serialize().sha256() }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
-        testLedger = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
+        testLedger = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-        }, MEGA_CORP.name).ledger(DUMMY_NOTARY) {
+        }).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",
-                    Cash.State(
-                            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                            owner = MEGA_CORP))
+                        Cash.State(
+                                amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                                owner = MEGA_CORP))
                 output(Cash.PROGRAM_ID, "dummy cash 1",
-                    Cash.State(
-                            amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                            owner = MINI_CORP))
+                        Cash.State(
+                                amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                                owner = MINI_CORP))
             }
             transaction {
                 attachments(Cash.PROGRAM_ID)

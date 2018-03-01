@@ -147,7 +147,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
-            serviceHub.attachments.importAttachment(attachment.open())
+            serviceHub.attachments.importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
         }
     }
 

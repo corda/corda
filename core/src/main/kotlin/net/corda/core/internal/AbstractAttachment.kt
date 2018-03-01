@@ -13,6 +13,13 @@ import java.security.CodeSigner
 import java.security.cert.X509Certificate
 import java.util.jar.JarInputStream
 
+// Possible attachment uploaders
+const val DEPLOYED_CORDAPP_UPLOADER = "app"
+const val RPC_UPLOADER = "rpc"
+const val TEST_UPLOADER = "test"
+const val P2P_UPLOADER = "p2p"
+const val UNKNOWN_UPLOADER = "unknown"
+
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
@@ -27,6 +34,10 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     }
 
     protected val attachmentData: ByteArray by lazy(dataLoader)
+
+    // TODO: read file size information from metadata instead of loading the data.
+    override val size: Int get() = attachmentData.size
+
     override fun open(): InputStream = attachmentData.inputStream()
     override val signers by lazy {
         // Can't start with empty set if we're doing intersections. Logically the null means "all possible signers":

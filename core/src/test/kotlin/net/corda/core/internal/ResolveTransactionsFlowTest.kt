@@ -10,9 +10,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
 import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.singleIdentity
-import net.corda.testing.node.startFlow
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -27,17 +28,17 @@ import kotlin.test.assertNull
 
 // DOCSTART 3
 class ResolveTransactionsFlowTest {
-    private lateinit var mockNet: MockNetwork
-    private lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var megaCorpNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var miniCorpNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var notaryNode: StartedNode<MockNode>
+    private lateinit var megaCorpNode: StartedNode<MockNode>
+    private lateinit var miniCorpNode: StartedNode<MockNode>
     private lateinit var megaCorp: Party
     private lateinit var miniCorp: Party
     private lateinit var notary: Party
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         notaryNode = mockNet.defaultNotaryNode
         megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
         miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))
@@ -52,16 +53,16 @@ class ResolveTransactionsFlowTest {
     fun tearDown() {
         mockNet.stopNodes()
     }
-// DOCEND 3
+    // DOCEND 3
 
     // DOCSTART 1
     @Test
     fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
         val p = TestFlow(setOf(stx2.id), megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
-        val results = future.getOrThrow()
+        val results = future.resultFuture.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
         miniCorpNode.database.transaction {
             assertEquals(stx1, miniCorpNode.services.validatedTransactions.getTransaction(stx1.id))
@@ -74,18 +75,18 @@ class ResolveTransactionsFlowTest {
     fun `dependency with an error`() {
         val stx = makeTransactions(signFirstTX = false).second
         val p = TestFlow(setOf(stx.id), megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
-        assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
+        assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.resultFuture.getOrThrow() }
     }
 
     @Test
     fun `resolve from a signed transaction`() {
         val (stx1, stx2) = makeTransactions()
         val p = TestFlow(stx2, megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
-        future.getOrThrow()
+        future.resultFuture.getOrThrow()
         miniCorpNode.database.transaction {
             assertEquals(stx1, miniCorpNode.services.validatedTransactions.getTransaction(stx1.id))
             // But stx2 wasn't inserted, just stx1.
@@ -108,9 +109,9 @@ class ResolveTransactionsFlowTest {
             cursor = stx
         }
         val p = TestFlow(setOf(cursor.id), megaCorp, 40)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
-        assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.getOrThrow() }
+        assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.resultFuture.getOrThrow() }
     }
 
     @Test
@@ -132,9 +133,9 @@ class ResolveTransactionsFlowTest {
         }
 
         val p = TestFlow(setOf(stx3.id), megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
-        future.getOrThrow()
+        future.resultFuture.getOrThrow()
     }
 
     @Test
@@ -154,9 +155,9 @@ class ResolveTransactionsFlowTest {
         }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = TestFlow(stx2, megaCorp)
-        val future = miniCorpNode.services.startFlow(p).resultFuture
+        val future = miniCorpNode.services.startFlow(p)
         mockNet.runNetwork()
-        future.getOrThrow()
+        future.resultFuture.getOrThrow()
 
         // TODO: this operation should not require an explicit transaction
         miniCorpNode.database.transaction {

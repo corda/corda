@@ -1,12 +1,15 @@
 package net.corda.docs
 
 import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.verifier.Verifier
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.reflect.KVisibility
 import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
 class ExampleConfigTest {
 
@@ -17,14 +20,16 @@ class ExampleConfigTest {
             val config = loadConfig(Paths.get(configFileResource.toURI()))
             // Force the config fields as they are resolved lazily
             config.javaClass.kotlin.declaredMemberProperties.forEach { member ->
-                member.get(config)
+                if (member.visibility == KVisibility.PUBLIC) {
+                    member.get(config)
+                }
             }
         }
     }
 
     @Test
     fun `example node_confs parses fine`() {
-        readAndCheckConfigurations(
+        readAndCheckConfigurations<NodeConfiguration>(
                 "example-node.conf",
                 "example-out-of-process-verifier-node.conf",
                 "example-network-map-node.conf"

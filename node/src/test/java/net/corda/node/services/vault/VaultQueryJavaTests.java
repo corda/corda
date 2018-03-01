@@ -9,6 +9,7 @@ import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultQueryException;
 import net.corda.core.node.services.VaultService;
@@ -22,8 +23,8 @@ import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
-import net.corda.testing.SerializationEnvironmentRule;
-import net.corda.testing.TestIdentity;
+import net.corda.testing.core.SerializationEnvironmentRule;
+import net.corda.testing.core.TestIdentity;
 import net.corda.testing.internal.vault.DummyLinearContract;
 import net.corda.testing.internal.vault.VaultFiller;
 import net.corda.testing.node.MockServices;
@@ -46,9 +47,9 @@ import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
-import static net.corda.testing.TestConstants.BOC_NAME;
-import static net.corda.testing.TestConstants.CHARLIE_NAME;
-import static net.corda.testing.TestConstants.DUMMY_NOTARY_NAME;
+import static net.corda.testing.core.TestConstants.BOC_NAME;
+import static net.corda.testing.core.TestConstants.CHARLIE_NAME;
+import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,13 +71,13 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityServiceInternal identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
+        IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
                 identitySvc,
                 MEGA_CORP,
                 DUMMY_NOTARY.getKeyPair());
-        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), DUMMY_CASH_ISSUER_INFO, BOC.getKeyPair());
+        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, rigorousMock(IdentityServiceInternal.class), BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);

@@ -15,12 +15,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation
-import net.corda.node.services.statemachine.SessionConfirm
-import net.corda.node.services.statemachine.SessionEnd
-import net.corda.node.services.statemachine.SessionInit
-import net.corda.testing.chooseIdentity
+import net.corda.node.services.statemachine.*
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.time.format.DateTimeFormatter
@@ -107,8 +105,8 @@ class NetworkMapVisualiser : Application() {
         }
         // Fire the message bullets between nodes.
         simulation.mockNet.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
-            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
+            val senderNode: InternalMockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
+            val destNode: InternalMockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
 
             if (transferIsInteresting(msg)) {
                 viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()
@@ -116,7 +114,7 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Pulse all parties in a trade when the trade completes
-        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<MockNetwork.MockNode> ->
+        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<InternalMockNetwork.MockNode> ->
             nodes.forEach { viewModel.nodesToWidgets[it]!!.longPulseAnim.play() }
         }
 
@@ -223,7 +221,7 @@ class NetworkMapVisualiser : Application() {
                         // Flow done; schedule it for removal in a few seconds. We batch them up to make nicer
                         // animations.
                         updateProgressTrackerWidget(change)
-                        println("Flow done for ${node.started!!.info.chooseIdentity().name}")
+                        println("Flow done for ${node.started!!.info.singleIdentity().name}")
                         viewModel.doneTrackers += tracker
                     } else {
                         // Subflow is done; ignore it.
@@ -231,7 +229,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = node.started!!.info.chooseIdentity().name.organisation.let { if (extraLabel != null) "$it: $extraLabel" else it }
+                    val label = node.started!!.info.singleIdentity().name.organisation.let { if (extraLabel != null) "$it: $extraLabel" else it }
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget
@@ -342,12 +340,16 @@ class NetworkMapVisualiser : Application() {
     private fun transferIsInteresting(transfer: InMemoryMessagingNetwork.MessageTransfer): Boolean {
         // Loopback messages are boring.
         if (transfer.sender == transfer.recipients) return false
-        val message = transfer.message.data.deserialize<Any>()
+        val message = transfer.messageData.deserialize<SessionMessage>()
         return when (message) {
-            is SessionEnd -> false
-            is SessionConfirm -> false
-            is SessionInit -> message.firstPayload != null
-            else -> true
+            is InitialSessionMessage -> message.firstPayload != null
+            is ExistingSessionMessage -> when (message.payload) {
+                is ConfirmSessionMessage -> false
+                is DataSessionMessage -> true
+                is ErrorSessionMessage -> true
+                is RejectSessionMessage -> true
+                is EndSessionMessage -> false
+            }
         }
     }
 }

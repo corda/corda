@@ -540,11 +540,20 @@ public class FlowCookbookJava {
                 // DOCEND 35
 
                 // If the transaction is only partially signed, we have to pass in
-                // a list of the public keys corresponding to the missing
+                // a vararg of the public keys corresponding to the missing
                 // signatures, explicitly telling the system not to check them.
                 // DOCSTART 36
                 onceSignedTx.verifySignaturesExcept(counterpartyPubKey);
                 // DOCEND 36
+
+                // There is also an overload of ``verifySignaturesExcept`` which accepts
+                // a ``Collection`` of the public keys corresponding to the missing
+                // signatures. In the example below, we could also use
+                // ``Arrays.asList(counterpartyPubKey)`` instead of
+                // ``Collections.singletonList(counterpartyPubKey)``.
+                // DOCSTART 54
+                onceSignedTx.verifySignaturesExcept(Collections.singletonList(counterpartyPubKey));
+                // DOCEND 54
 
                 // We can also choose to only check the signatures that are
                 // present. BE VERY CAREFUL - this function provides no guarantees

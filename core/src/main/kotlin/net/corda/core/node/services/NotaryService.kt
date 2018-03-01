@@ -12,10 +12,13 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import java.security.PublicKey
+import java.time.Clock
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
+        @Deprecated("No longer used")
         const val ID_PREFIX = "corda.notary."
+        @Deprecated("No longer used")
         fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false, custom: Boolean = false): String {
             require(Booleans.countTrue(raft, bft, custom) <= 1) { "At most one of raft, bft or custom may be true" }
             return StringBuffer(ID_PREFIX).apply {
@@ -24,6 +27,24 @@ abstract class NotaryService : SingletonSerializeAsToken() {
                 if (bft) append(".bft")
                 if (custom) append(".custom")
             }.toString()
+        }
+
+        /**
+         * Checks if the current instant provided by the clock falls within the specified time window.
+         *
+         * @throws NotaryException if current time is outside the specified time window. The exception contains
+         *                         the [NotaryError.TimeWindowInvalid] error.
+         */
+        @JvmStatic
+        @Throws(NotaryException::class)
+        fun validateTimeWindow(clock: Clock, timeWindow: TimeWindow?) {
+            if (timeWindow == null) return
+            val currentTime = clock.instant()
+            if (currentTime !in timeWindow) {
+                throw NotaryException(
+                        NotaryError.TimeWindowInvalid(currentTime, timeWindow)
+                )
+            }
         }
     }
 
@@ -50,14 +71,9 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     }
 
     protected open val log: Logger get() = staticLog
-    // TODO: specify the valid time window in config, and convert TimeWindowChecker to a utility method
-    protected abstract val timeWindowChecker: TimeWindowChecker
     protected abstract val uniquenessProvider: UniquenessProvider
 
-    fun validateTimeWindow(t: TimeWindow?) {
-        if (t != null && !timeWindowChecker.isValid(t))
-            throw NotaryException(NotaryError.TimeWindowInvalid)
-    }
+    fun validateTimeWindow(t: TimeWindow?) = NotaryService.validateTimeWindow(services.clock, t)
 
     /**
      * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
@@ -76,6 +92,9 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
                 log.warn("Notary conflicts for $txId: $conflicts")
                 throw notaryException(txId, e)
             }
+        } catch (e: Exception) {
+            log.error("Internal error", e)
+            throw NotaryException(NotaryError.General(Exception("Service unavailable, please try again later")))
         }
     }
 
@@ -85,12 +104,19 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
         return NotaryException(NotaryError.Conflict(txId, signedConflict))
     }
 
+    /** Sign a [ByteArray] input. */
     fun sign(bits: ByteArray): DigitalSignature.WithKey {
         return services.keyManagementService.sign(bits, notaryIdentityKey)
     }
 
+    /** Sign a single transaction. */
     fun sign(txId: SecureHash): TransactionSignature {
         val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
+
+    // TODO: Sign multiple transactions at once by building their Merkle tree and then signing over its root.
+
+    @Deprecated("This property is no longer used") @Suppress("DEPRECATION")
+    protected open val timeWindowChecker: TimeWindowChecker get() = throw UnsupportedOperationException("No default implementation, need to override")
 }

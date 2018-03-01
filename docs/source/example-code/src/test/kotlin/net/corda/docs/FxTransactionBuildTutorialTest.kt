@@ -7,19 +7,19 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.StartedNode
-import net.corda.testing.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeA: StartedMockNode
+    private lateinit var nodeB: StartedMockNode
     private lateinit var notary: Party
 
     @Before
@@ -38,43 +38,39 @@ class FxTransactionBuildTutorialTest {
 
     @Test
     fun `Run ForeignExchangeFlow to completion`() {
-        // Use NodeA as issuer and create some dollars
-        val flowHandle1 = nodeA.services.startFlow(CashIssueFlow(DOLLARS(1000),
+        // Use NodeA as issuer and create some dollars and wait for the flow to stop
+        nodeA.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),
-                notary))
-        // Wait for the flow to stop and print
-        flowHandle1.resultFuture.getOrThrow()
+                notary)).getOrThrow()
         printBalances()
 
-        // Using NodeB as Issuer create some pounds.
-        val flowHandle2 = nodeB.services.startFlow(CashIssueFlow(POUNDS(1000),
+        // Using NodeB as Issuer create some pounds and wait for the flow to stop
+        nodeB.startFlow(CashIssueFlow(POUNDS(1000),
                 OpaqueBytes.of(0x01),
-                notary))
-        // Wait for flow to come to an end and print
-        flowHandle2.resultFuture.getOrThrow()
+                notary)).getOrThrow()
         printBalances()
 
         // Setup some futures on the vaults to await the arrival of the exchanged funds at both nodes
         val nodeAVaultUpdate = nodeA.services.vaultService.updates.toFuture()
         val nodeBVaultUpdate = nodeB.services.vaultService.updates.toFuture()
 
-        // Now run the actual Fx exchange
-        val doIt = nodeA.services.startFlow(ForeignExchangeFlow("trade1",
-                POUNDS(100).issuedBy(nodeB.info.chooseIdentity().ref(0x01)),
-                DOLLARS(200).issuedBy(nodeA.info.chooseIdentity().ref(0x01)),
-                nodeB.info.chooseIdentity(),
-                weAreBaseCurrencySeller = false))
+        // Now run the actual Fx exchange and wait for the flow to finish
+        nodeA.startFlow(ForeignExchangeFlow("trade1",
+                POUNDS(100).issuedBy(nodeB.info.singleIdentity().ref(0x01)),
+                DOLLARS(200).issuedBy(nodeA.info.singleIdentity().ref(0x01)),
+                nodeB.info.singleIdentity(),
+                weAreBaseCurrencySeller = false)).getOrThrow()
         // wait for the flow to finish and the vault updates to be done
-        doIt.resultFuture.getOrThrow()
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
-        val balancesA = nodeA.database.transaction {
+        val balancesA = nodeA.transaction {
             nodeA.services.getCashBalances()
         }
         nodeBVaultUpdate.get()
-        val balancesB = nodeB.database.transaction {
+        val balancesB = nodeB.transaction {
             nodeB.services.getCashBalances()
         }
+
         println("BalanceA\n" + balancesA)
         println("BalanceB\n" + balancesB)
         // Verify the transfers occurred as expected
@@ -86,10 +82,10 @@ class FxTransactionBuildTutorialTest {
 
     private fun printBalances() {
         // Print out the balances
-        nodeA.database.transaction {
+        nodeA.transaction {
             println("BalanceA\n" + nodeA.services.getCashBalances())
         }
-        nodeB.database.transaction {
+        nodeB.transaction {
             println("BalanceB\n" + nodeB.services.getCashBalances())
         }
     }

@@ -2,6 +2,7 @@
 
 package net.corda.docs
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -17,8 +18,9 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
@@ -48,12 +50,12 @@ fun main(args: Array<String>) {
             startFlow<CashExitFlow>(),
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
-    driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true) {
+    driver(DriverParameters(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true)) {
         val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2
-        val client = node.rpcClientToNode()
+        val client = CordaRPCClient(node.rpcAddress)
         val proxy = client.start("user", "password").proxy
 
         thread {

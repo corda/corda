@@ -1,5 +1,6 @@
 package net.corda.testing.dsl
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
@@ -14,6 +15,7 @@ import java.io.InputStream
  * This interface defines output state lookup by label. It is split from the interpreter interfaces so that outputs may
  * be looked up both in ledger{..} and transaction{..} blocks.
  */
+@DoNotImplement
 interface OutputStateLookup {
     /**
      * Retrieves an output previously defined by [TransactionDSLInterpreter.output] with a label passed in.
@@ -27,6 +29,7 @@ interface OutputStateLookup {
 /**
  * This interface asserts that the DSL at hand is capable of verifying its underlying construct(ledger/transaction).
  */
+@DoNotImplement
 interface Verifies {
     /**
      * Verifies the ledger/transaction, throws if the verification fails.
@@ -83,6 +86,7 @@ interface Verifies {
  *
  * TODO (Kotlin 1.1): Use type synonyms to make the type params less unwieldy
  */
+@DoNotImplement
 interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, OutputStateLookup {
     /**
      * Creates and adds a transaction to the ledger.

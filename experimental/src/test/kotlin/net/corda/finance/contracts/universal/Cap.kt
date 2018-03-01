@@ -8,7 +8,9 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
@@ -23,11 +25,12 @@ import java.time.LocalDate
 
 internal val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    MockServices(listOf("net.corda.finance.contracts.universal"), rigorousMock<IdentityServiceInternal>().also {
-        listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
-            doReturn(null).whenever(it).partyFromKey(party.owningKey)
-        }
-    }, CordaX500Name("MegaCorp", "London", "GB")).transaction(DUMMY_NOTARY, script)
+    MockServices(listOf("net.corda.finance.contracts.universal"), CordaX500Name("MegaCorp", "London", "GB"),
+            rigorousMock<IdentityServiceInternal>().also {
+                listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
+                    doReturn(null).whenever(it).partyFromKey(party.owningKey)
+                }
+            }).transaction(DUMMY_NOTARY, script)
 }
 
 class Cap {
@@ -310,14 +313,15 @@ class Cap {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Ignore
     fun `pretty print`() {
-        println ( prettyPrint(contractInitial) )
+        println(prettyPrint(contractInitial))
 
-        println ( prettyPrint(contractAfterFixingFirst) )
+        println(prettyPrint(contractAfterFixingFirst))
 
-        println ( prettyPrint(contractAfterExecutionFirst) )
+        println(prettyPrint(contractAfterExecutionFirst))
 
-        println ( prettyPrint(contractAfterFixingFinal) )
+        println(prettyPrint(contractAfterFixingFinal))
     }
 }

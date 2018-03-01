@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
@@ -21,7 +20,7 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
@@ -30,6 +29,10 @@ interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
     val allNodeHashes: List<SecureHash>
 
     fun getNodeByHash(nodeHash: SecureHash): NodeInfo?
+
+    /** Find nodes from the [PublicKey] toShortString representation.
+     * This is used for Artemis bridge lookup process. */
+    fun getNodesByOwningKeyIndex(identityKeyIndex: String): List<NodeInfo>
 
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
@@ -62,6 +65,8 @@ interface ServiceHubInternal : ServiceHub {
     val networkService: MessagingService
     val database: CordaPersistence
     val configuration: NodeConfiguration
+    val nodeProperties: NodePropertiesStore
+    val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }
@@ -76,7 +81,6 @@ interface ServiceHubInternal : ServiceHub {
         }
 
         if (statesToRecord != StatesToRecord.NONE) {
-            val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
             // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
             // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
             // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
@@ -111,7 +115,7 @@ interface ServiceHubInternal : ServiceHub {
             //
             // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
             // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-            vaultService.notifyAll(statesToRecord, toNotify)
+            vaultService.notifyAll(statesToRecord, txs.map { it.coreTransaction })
         }
     }
 
@@ -137,11 +141,7 @@ interface FlowStarter {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
-        val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
-        val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
-        return startFlow(logic, context)
-    }
+            vararg args: Any?): CordaFuture<FlowStateMachine<T>>
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter

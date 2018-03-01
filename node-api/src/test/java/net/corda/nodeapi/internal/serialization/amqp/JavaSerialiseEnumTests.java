@@ -29,7 +29,9 @@ public class JavaSerialiseEnumTests {
     public void testJavaConstructorAnnotations() throws NotSerializableException {
         Bra bra = new Bra(Bras.UNDERWIRE);
 
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
+        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
+                new EvolutionSerializerGetter(),
+                new SerializerFingerPrinter());
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(bra);
     }

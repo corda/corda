@@ -77,7 +77,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @CollectionTable(name = "vault_linear_states_parts",
                     joinColumns = arrayOf(
                             JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")),
+                    foreignKey = ForeignKey(name = "FK__lin_stat_parts__lin_stat"))
             @Column(name = "participants")
             var participants: MutableSet<AbstractParty>? = null,
             // Reason for not using Set is described here:
@@ -109,7 +110,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @CollectionTable(name = "vault_fungible_states_parts",
                     joinColumns = arrayOf(
                             JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")),
+                    foreignKey = ForeignKey(name = "FK__fung_st_parts__fung_st"))
             @Column(name = "participants")
             var participants: MutableSet<AbstractParty>? = null,
 
@@ -149,7 +151,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
     @Entity
     @Table(name = "vault_transaction_notes",
-            indexes = arrayOf(Index(name = "transaction_id_index", columnList = "transaction_id")))
+            indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
+                    Index(name = "transaction_id_index", columnList = "transaction_id")))
     class VaultTxnNote(
             @Id
             @GeneratedValue

@@ -16,12 +16,12 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.singleIdentity
-import net.corda.testing.node.startFlow
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -63,16 +63,16 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
 }
 
 class AttachmentSerializationTest {
-    private lateinit var mockNet: MockNetwork
-    private lateinit var server: StartedNode<MockNetwork.MockNode>
-    private lateinit var client: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var server: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var client: StartedNode<InternalMockNetwork.MockNode>
     private lateinit var serverIdentity: Party
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(emptyList())
-        server = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        client = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        mockNet = InternalMockNetwork(emptyList())
+        server = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        client = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
         serverIdentity = server.info.singleIdentity()
@@ -114,6 +114,7 @@ class AttachmentSerializationTest {
     private class CustomAttachment(override val id: SecureHash, internal val customContent: String) : Attachment {
         override fun open() = throw UnsupportedOperationException("Not implemented.")
         override val signers get() = throw UnsupportedOperationException()
+        override val size get() = throw UnsupportedOperationException()
     }
 
     private class CustomAttachmentLogic(serverIdentity: Party, private val attachmentId: SecureHash, private val customContent: String) : ClientLogic(serverIdentity) {
@@ -159,8 +160,8 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(MockNodeParameters(client.internals.id), { args ->
-            object : MockNetwork.MockNode(args) {
+        client = mockNet.createNode(InternalMockNodeParameters(client.internals.id, client.internals.configuration.myLegalName), nodeFactory = { args ->
+            object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }
         })

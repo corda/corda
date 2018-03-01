@@ -31,8 +31,7 @@ if [ $removalCount -gt 0 ]; then
 fi
 
 # Adding new abstract methods could also break the API.
-# However, first exclude anything with the @DoNotImplement annotation.
-
+# However, first exclude classes marked with the @DoNotImplement annotation
 function forUserImpl() {
     awk '/DoNotImplement/,/^##/{ next }{ print }' $1
 }
@@ -45,13 +44,32 @@ $newAbstracts
 EOF
 `
 
+#Get a list of any methods that expose classes in .internal. namespaces, and any classes which extend/implement
+#an internal class
+#TODO: check that only classes in a whitelist are part of the API rather than look for specific invalid cases going forward
+newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "\.internal\." )
+newNodeExposures=$(echo "$userDiffContents" | grep "^+" | grep "net.corda.node" )
+
+internalCount=`grep -v "^$" <<EOF | wc -l
+$newInternalExposures
+$newNodeExposures
+EOF
+`
+
+echo "Number of new internal class exposures: "$internalCount
+if [ $internalCount -gt 0 ]; then
+    echo "$newInternalExposures"
+	echo "$newNodeExposures"
+    echo
+fi
+
 echo "Number of new abstract APIs: "$abstractCount
 if [ $abstractCount -gt 0 ]; then
     echo "$newAbstracts"
     echo
 fi
 
-badChanges=$(($removalCount + $abstractCount))
+badChanges=$(($removalCount + $abstractCount + $internalCount))
 if [ $badChanges -gt 255 ]; then
     echo "OVERFLOW! Number of bad API changes: $badChanges"
     badChanges=255

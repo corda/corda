@@ -1,5 +1,6 @@
 package net.corda.testing.dsl
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
@@ -13,8 +14,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.services.MockCordappProvider
-import net.corda.testing.dummyCommand
+import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.core.dummyCommand
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
@@ -50,6 +51,7 @@ import kotlin.collections.set
  * will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
  * the triggered diagnostic.
  */
+@DoNotImplement
 sealed class EnforceVerifyOrFail {
     internal object Token : EnforceVerifyOrFail()
 }
@@ -75,6 +77,9 @@ data class TestTransactionDSLInterpreter private constructor(
 
     val services = object : ServicesForResolution by ledgerInterpreter.services {
         override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+            return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
+        }
         override val cordappProvider: CordappProvider = ledgerInterpreter.services.cordappProvider
     }
 
@@ -231,7 +236,11 @@ data class TestLedgerDSLInterpreter private constructor(
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
         if (fillTransaction) fillTransaction(transactionBuilder)
         // Create the WireTransaction
-        val wireTransaction = transactionInterpreter.toWireTransaction()
+        val wireTransaction = try {
+            transactionInterpreter.toWireTransaction()
+        } catch (e: IllegalStateException) {
+            throw IllegalStateException("A transaction-DSL block that is part of a test ledger must return a valid transaction.", e)
+        }
         // Record the output states
         transactionInterpreter.labelToIndexMap.forEach { label, index ->
             if (label in labelToOutputStateAndRefs) {

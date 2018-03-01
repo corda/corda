@@ -4,7 +4,7 @@ import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.nodeapi.internal.serialization.kryo.CordaClosureSerializer;
 import net.corda.nodeapi.internal.serialization.kryo.KryoSerializationSchemeKt;
 import org.junit.Before;
@@ -25,8 +25,8 @@ public final class LambdaCheckpointSerializationTest {
 
     @Before
     public void setup() {
-        factory = testSerialization.getEnv().getSerializationFactory();
-        context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
+        factory = testSerialization.getSerializationFactory();
+        context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoMagic(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint, null);
     }
 
     @Test

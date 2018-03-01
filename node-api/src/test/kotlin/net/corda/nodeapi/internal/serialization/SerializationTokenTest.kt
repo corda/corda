@@ -7,9 +7,9 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -25,8 +25,8 @@ class SerializationTokenTest {
 
     @Before
     fun setup() {
-        factory = testSerialization.env.serializationFactory
-        context = testSerialization.env.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
+        factory = testSerialization.serializationFactory
+        context = testSerialization.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
@@ -98,7 +98,8 @@ class SerializationTokenTest {
         val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(this.context)))
         val stream = ByteArrayOutputStream()
         Output(stream).use {
-            it.write(KryoHeaderV0_1.bytes)
+            kryoMagic.writeTo(it)
+            SectionId.ALT_DATA_AND_STOP.writeTo(it)
             kryo.writeClass(it, SingletonSerializeAsToken::class.java)
             kryo.writeObject(it, emptyList<Any>())
         }

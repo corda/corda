@@ -528,7 +528,7 @@ object InteractiveShell {
                 return UniqueIdentifier(ids[0], uuid)
             }
             //Any other string used as externalId.
-            return UniqueIdentifier(p.text)
+            return UniqueIdentifier.fromString(p.text)
         }
     }
 

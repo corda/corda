@@ -18,7 +18,7 @@ class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase(AllWhitelist) {
         //
         // Setup the test
         //
-        val setupFactory = testDefaultFactory()
+        val setupFactory = testDefaultFactoryNoEvolution()
 
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF",
                 "GGG", "HHH", "III", "JJJ").associateBy({ it }, { EnumField() })
@@ -57,7 +57,7 @@ class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase(AllWhitelist) {
         //
         // Setup the test
         //
-        val setupFactory = testDefaultFactory()
+        val setupFactory = testDefaultFactoryNoEvolution()
 
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF",
                 "GGG", "HHH", "III", "JJJ").associateBy({ it }, { EnumField() })

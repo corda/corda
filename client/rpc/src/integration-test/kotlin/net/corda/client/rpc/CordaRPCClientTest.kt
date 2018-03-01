@@ -20,8 +20,8 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
+import net.corda.testing.core.*
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
@@ -53,7 +53,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 
@@ -154,11 +154,11 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                     },
                     expect { update: StateMachineUpdate.Added ->
                         checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
-                        sessionId = update.stateMachineInfo.context().trace.sessionId
+                        sessionId = update.stateMachineInfo.invocationContext.trace.sessionId
                     },
                     expect { update: StateMachineUpdate.Added ->
                         checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
-                        assertThat(update.stateMachineInfo.context().trace.sessionId).isEqualTo(sessionId)
+                        assertThat(update.stateMachineInfo.invocationContext.trace.sessionId).isEqualTo(sessionId)
                     }
             )
         }
@@ -166,15 +166,13 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 }
 
 private fun checkShellNotification(info: StateMachineInfo) {
-
-    val context = info.context()
-    assertThat(context.origin).isInstanceOf(Origin.Shell::class.java)
+    val context = info.invocationContext
+    assertThat(context.origin).isInstanceOf(InvocationOrigin.Shell::class.java)
 }
 
 private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, historicalIds: MutableSet<Trace.InvocationId>, externalTrace: Trace?, impersonatedActor: Actor?) {
-
-    val context = info.context()
-    assertThat(context.origin).isInstanceOf(Origin.RPC::class.java)
+    val context = info.invocationContext
+    assertThat(context.origin).isInstanceOf(InvocationOrigin.RPC::class.java)
     assertThat(context.externalTrace).isEqualTo(externalTrace)
     assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
     assertThat(context.actor?.id?.value).isEqualTo(rpcUsername)

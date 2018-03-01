@@ -14,7 +14,7 @@ class SecureCordaRPCOps(services: ServiceHubInternal,
                         smm: StateMachineManager,
                         database: CordaPersistence,
                         flowStarter: FlowStarter,
-                        val unsafe: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter)) : CordaRPCOps by RpcAuthorisationProxy(unsafe, ::rpcContext, DefaultCordaRpcPermissions::permissionsAllowing) {
+                        val unsafe: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter)) : CordaRPCOps by RpcAuthorisationProxy(unsafe, ::rpcContext) {
 
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed

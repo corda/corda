@@ -2,8 +2,8 @@ package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
@@ -12,7 +12,9 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
@@ -20,13 +22,18 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.testing.*
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.withoutTestSerialization
-import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.internal.MockCordappConfigProvider
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -39,7 +46,7 @@ class AttachmentLoadingTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
+    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), MockCordappConfigProvider(), attachments, testNetworkParameters().whitelistedContractImplementations)
     private val cordapp get() = provider.cordapps.first()
     private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = provider.getAppContext(cordapp)
@@ -75,12 +82,15 @@ class AttachmentLoadingTests {
         }
     }
 
-    private val services = rigorousMock<ServicesForResolution>().also {
-        doReturn(attachments).whenever(it).attachments
-        doReturn(provider).whenever(it).cordappProvider
-        doReturn(rigorousMock<IdentityService>().also {
-            doReturn(null).whenever(it).partyFromKey(DUMMY_BANK_A.owningKey)
-        }).whenever(it).identityService
+    private val services = object : ServicesForResolution {
+        override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
+        override val identityService = rigorousMock<IdentityService>().apply {
+            doReturn(null).whenever(this).partyFromKey(DUMMY_BANK_A.owningKey)
+        }
+        override val attachments: AttachmentStorage get() = this@AttachmentLoadingTests.attachments
+        override val cordappProvider: CordappProvider get() = this@AttachmentLoadingTests.provider
+        override val networkParameters: NetworkParameters = testNetworkParameters()
     }
 
     @Test

@@ -3,23 +3,29 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.node.services.messaging.CertificateChainCheckPolicy
+import net.corda.node.internal.artemis.CertificateChainCheckPolicy
+import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
+import java.time.Duration
 import java.util.*
 
+
+val Int.MB: Long get() = this * 1024L * 1024L
+
 interface NodeConfiguration : NodeSSLConfiguration {
-    // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
-    // TODO: Remove this so we don't accidentally use this identity in the code?
     val myLegalName: CordaX500Name
     val emailAddress: String
-    val exportJMXto: String
+    val jmxMonitoringHttpPort: Int?
     val dataSourceProperties: Properties
     val rpcUsers: List<User>
     val security: SecurityConfiguration?
@@ -32,17 +38,35 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
-    // TODO Remove as this is only used by the driver
-    val useHTTPS: Boolean
     val p2pAddress: NetworkHostAndPort
-    val rpcAddress: NetworkHostAndPort?
+    val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
-    val useAMQPBridges: Boolean get() = true
+    val noLocalShell: Boolean get() = false
+    val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
+    val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
+    val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
+    // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
+    val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
+
+    fun validate(): List<String>
+
+    companion object {
+        // default to at least 8MB and a bit extra for larger heap sizes
+        val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
+
+        // add 5% of any heapsize over 300MB to the default transaction cache size
+        private fun getAdditionalCacheMemory(): Long {
+            return Math.max((Runtime.getRuntime().maxMemory() - 300.MB) / 20, 0)
+        }
+
+        val defaultAttachmentContentCacheSize: Long = 10.MB
+        val defaultAttachmentCacheBound = 1024L
+    }
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
@@ -50,6 +74,10 @@ data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
+
+fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
+fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
+fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
@@ -84,12 +112,13 @@ data class BridgeConfiguration(val retryIntervalMs: Long,
 
 data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
-fun Config.parseAsNodeConfiguration(): NodeConfiguration = this.parseAs<NodeConfigurationImpl>()
+fun Config.parseAsNodeConfiguration(): NodeConfiguration = parseAs<NodeConfigurationImpl>()
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
         override val baseDirectory: Path,
         override val myLegalName: CordaX500Name,
+        override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
@@ -101,15 +130,16 @@ data class NodeConfigurationImpl(
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
         override val messageRedeliveryDelaySeconds: Int = 30,
-        override val useHTTPS: Boolean,
         override val p2pAddress: NetworkHostAndPort,
-        override val rpcAddress: NetworkHostAndPort?,
+        private val rpcAddress: NetworkHostAndPort? = null,
+        private val rpcSettings: NodeRpcSettings,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
+        override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
@@ -118,10 +148,50 @@ data class NodeConfigurationImpl(
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
-        override val useAMQPBridges: Boolean = true
-        ) : NodeConfiguration {
+        private val transactionCacheSizeMegaBytes: Int? = null,
+        private val attachmentContentCacheSizeMegaBytes: Int? = null,
+        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
+        // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
+        private val h2port: Int  = 0
+    ) : NodeConfiguration {
+    companion object {
+        private val logger = loggerFor<NodeConfigurationImpl>()
+    }
 
-    override val exportJMXto: String get() = "http"
+    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+
+    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+        return when {
+            explicitAddress != null -> {
+                require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
+                logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
+                settings.copy(address = explicitAddress)
+            }
+            else -> settings
+        }.asOptions(fallbackSslOptions)
+    }
+
+    override fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+        errors += validateRpcOptions(rpcOptions)
+        return errors
+    }
+
+    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+        val errors = mutableListOf<String>()
+        if (options.address != null) {
+            if (!options.useSsl && options.adminAddress == null) {
+                errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+            }
+        }
+        return errors
+    }
+
+    override val transactionCacheSizeBytes: Long
+        get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
+    override val attachmentContentCacheSizeBytes: Long
+        get() = attachmentContentCacheSizeMegaBytes?.MB ?: super.attachmentContentCacheSizeBytes
+
 
     init {
         // This is a sanity feature do not remove.
@@ -129,6 +199,28 @@ data class NodeConfigurationImpl(
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
+        }
+    }
+}
+
+data class NodeRpcSettings(
+        val address: NetworkHostAndPort?,
+        val adminAddress: NetworkHostAndPort?,
+        val standAloneBroker: Boolean = false,
+        val useSsl: Boolean = false,
+        val ssl: SslOptions?
+) {
+    fun asOptions(fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+        return object : NodeRpcOptions {
+            override val address = this@NodeRpcSettings.address
+            override val adminAddress = this@NodeRpcSettings.adminAddress
+            override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
+            override val useSsl = this@NodeRpcSettings.useSsl
+            override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+
+            override fun toString(): String {
+                return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
+            }
         }
     }
 }
@@ -142,7 +234,8 @@ enum class CertChainPolicyType {
     Any,
     RootMustMatch,
     LeafMustMatch,
-    MustContainOneOf
+    MustContainOneOf,
+    UsernameMustMatch
 }
 
 data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
@@ -153,6 +246,7 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
                 CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
                 CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
                 CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
+                CertChainPolicyType.UsernameMustMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
             }
         }
 }
@@ -198,8 +292,16 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         data class Options(val cache: Options.Cache?) {
 
             // Cache parameters
-            data class Cache(val expireAfterSecs: Long, val maxEntries: Long)
-
+            data class Cache(val expireAfterSecs: Long, val maxEntries: Long) {
+                init {
+                    require(expireAfterSecs >= 0) {
+                        "Expected positive value for 'cache.expireAfterSecs'"
+                    }
+                    require(maxEntries > 0) {
+                        "Expected positive value for 'cache.maxEntries'"
+                    }
+                }
+            }
         }
 
         // Provider of users credentials and permissions data
@@ -223,12 +325,13 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                 AuthDataSourceType.DB -> AuthServiceId("REMOTE_DATABASE")
             }
 
-            fun fromUsers(users: List<User>) = AuthService(
-                    dataSource = DataSource(
-                            type = AuthDataSourceType.INMEMORY,
-                            users = users,
-                            passwordEncryption = PasswordEncryption.NONE),
-                    id = AuthServiceId("NODE_CONFIG"))
+            fun fromUsers(users: List<User>, encryption: PasswordEncryption = PasswordEncryption.NONE) =
+                    AuthService(
+                            dataSource = DataSource(
+                                    type = AuthDataSourceType.INMEMORY,
+                                    users = users,
+                                    passwordEncryption = encryption),
+                            id = AuthServiceId("NODE_CONFIG"))
         }
     }
 }

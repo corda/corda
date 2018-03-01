@@ -6,28 +6,25 @@ import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.protonwrapper.messages.MessageStatus
-import net.corda.node.internal.protonwrapper.netty.AMQPClient
-import net.corda.node.internal.protonwrapper.netty.AMQPServer
-import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.messaging.ArtemisMessagingClient
 import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.crypto.loadKeyStore
-import net.corda.testing.*
+import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import rx.Observable.never
 import kotlin.test.assertEquals
 
 class ProtonWrapperTests {
@@ -48,7 +45,7 @@ class ProtonWrapperTests {
             amqpServer.start()
             val receiveSubs = amqpServer.onReceive.subscribe {
                 assertEquals(BOB_NAME.toString(), it.sourceLegalName)
-                assertEquals("p2p.inbound", it.topic)
+                assertEquals(P2P_PREFIX + "Test", it.topic)
                 assertEquals("Test", String(it.payload))
                 it.complete(true)
             }
@@ -59,12 +56,12 @@ class ProtonWrapperTests {
                 amqpClient.start()
                 val serverConnect = serverConnected.get()
                 assertEquals(true, serverConnect.connected)
-                assertEquals(BOB_NAME, CordaX500Name.parse(serverConnect.remoteCert!!.subject.toString()))
+                assertEquals(BOB_NAME, CordaX500Name.build(serverConnect.remoteCert!!.subjectX500Principal))
                 val clientConnect = clientConnected.get()
                 assertEquals(true, clientConnect.connected)
-                assertEquals(ALICE_NAME, CordaX500Name.parse(clientConnect.remoteCert!!.subject.toString()))
+                assertEquals(ALICE_NAME, CordaX500Name.build(clientConnect.remoteCert!!.subjectX500Principal))
                 val msg = amqpClient.createMessage("Test".toByteArray(),
-                        "p2p.inbound",
+                        P2P_PREFIX + "Test",
                         ALICE_NAME.toString(),
                         emptyMap())
                 amqpClient.write(msg)
@@ -102,10 +99,10 @@ class ProtonWrapperTests {
             amqpClient.start()
             val serverConn1 = serverConnected.get()
             assertEquals(true, serverConn1.connected)
-            assertEquals(BOB_NAME, CordaX500Name.parse(serverConn1.remoteCert!!.subject.toString()))
+            assertEquals(BOB_NAME, CordaX500Name.build(serverConn1.remoteCert!!.subjectX500Principal))
             val connState1 = clientConnected.next()
             assertEquals(true, connState1.connected)
-            assertEquals(ALICE_NAME, CordaX500Name.parse(connState1.remoteCert!!.subject.toString()))
+            assertEquals(ALICE_NAME, CordaX500Name.build(connState1.remoteCert!!.subjectX500Principal))
             assertEquals(serverPort, connState1.remoteAddress.port)
 
             // Fail over
@@ -116,10 +113,10 @@ class ProtonWrapperTests {
             assertEquals(serverPort, connState2.remoteAddress.port)
             val serverConn2 = serverConnected2.get()
             assertEquals(true, serverConn2.connected)
-            assertEquals(BOB_NAME, CordaX500Name.parse(serverConn2.remoteCert!!.subject.toString()))
+            assertEquals(BOB_NAME, CordaX500Name.build(serverConn2.remoteCert!!.subjectX500Principal))
             val connState3 = clientConnected.next()
             assertEquals(true, connState3.connected)
-            assertEquals(ALICE_NAME, CordaX500Name.parse(connState3.remoteCert!!.subject.toString()))
+            assertEquals(ALICE_NAME, CordaX500Name.build(connState3.remoteCert!!.subjectX500Principal))
             assertEquals(serverPort2, connState3.remoteAddress.port)
 
             // Fail back
@@ -130,10 +127,10 @@ class ProtonWrapperTests {
             assertEquals(serverPort2, connState4.remoteAddress.port)
             val serverConn3 = serverConnected.get()
             assertEquals(true, serverConn3.connected)
-            assertEquals(BOB_NAME, CordaX500Name.parse(serverConn3.remoteCert!!.subject.toString()))
+            assertEquals(BOB_NAME, CordaX500Name.build(serverConn3.remoteCert!!.subjectX500Principal))
             val connState5 = clientConnected.next()
             assertEquals(true, connState5.connected)
-            assertEquals(ALICE_NAME, CordaX500Name.parse(connState5.remoteCert!!.subject.toString()))
+            assertEquals(ALICE_NAME, CordaX500Name.build(connState5.remoteCert!!.subjectX500Principal))
             assertEquals(serverPort, connState5.remoteAddress.port)
         } finally {
             amqpClient.close()
@@ -149,10 +146,10 @@ class ProtonWrapperTests {
         val clientConnected = amqpClient.onConnection.toFuture()
         amqpClient.start()
         assertEquals(true, clientConnected.get().connected)
-        assertEquals(CHARLIE_NAME, CordaX500Name.parse(clientConnected.get().remoteCert!!.subject.toString()))
+        assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
-        val sendAddress = "p2p.inbound"
-        artemis.session.createQueue(sendAddress, RoutingType.MULTICAST, "queue", true)
+        val sendAddress = P2P_PREFIX + "Test"
+        artemis.session.createQueue(sendAddress, RoutingType.ANYCAST, "queue", true)
         val consumer = artemis.session.createConsumer("queue")
         val testData = "Test".toByteArray()
         val testProperty = mutableMapOf<Any?, Any?>()
@@ -180,13 +177,13 @@ class ProtonWrapperTests {
             amqpClient1.start()
             val connection1 = connectionEvents.next()
             assertEquals(true, connection1.connected)
-            val connection1ID = CordaX500Name.parse(connection1.remoteCert!!.subject.toString())
+            val connection1ID = CordaX500Name.build(connection1.remoteCert!!.subjectX500Principal)
             assertEquals("client 0", connection1ID.organisationUnit)
             val source1 = connection1.remoteAddress
             amqpClient2.start()
             val connection2 = connectionEvents.next()
             assertEquals(true, connection2.connected)
-            val connection2ID = CordaX500Name.parse(connection2.remoteCert!!.subject.toString())
+            val connection2ID = CordaX500Name.build(connection2.remoteCert!!.subjectX500Principal)
             assertEquals("client 1", connection2ID.organisationUnit)
             val source2 = connection2.remoteAddress
             // Stopping one shouldn't disconnect the other
@@ -207,7 +204,7 @@ class ProtonWrapperTests {
             amqpClient1.start()
             val connection5 = connectionEvents.next()
             assertEquals(true, connection5.connected)
-            val connection5ID = CordaX500Name.parse(connection5.remoteCert!!.subject.toString())
+            val connection5ID = CordaX500Name.build(connection5.remoteCert!!.subjectX500Principal)
             assertEquals("client 0", connection5ID.organisationUnit)
             assertEquals(true, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
@@ -224,17 +221,13 @@ class ProtonWrapperTests {
             doReturn(CHARLIE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-            doReturn("").whenever(it).exportJMXto
+            doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
-            doReturn(true).whenever(it).useAMQPBridges
         }
         artemisConfig.configureWithDevSSLCertificate()
 
-        val networkMap = rigorousMock<NetworkMapCache>().also {
-            doReturn(never<NetworkMapCache.MapChange>()).whenever(it).changed
-        }
-        val userService = rigorousMock<RPCSecurityManager>()
-        val server = ArtemisMessagingServer(artemisConfig, artemisPort, null, networkMap, userService, MAX_MESSAGE_SIZE)
+        val server = ArtemisMessagingServer(artemisConfig, artemisPort, MAX_MESSAGE_SIZE)
         val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), MAX_MESSAGE_SIZE)
         server.start()
         client.start()
@@ -250,9 +243,10 @@ class ProtonWrapperTests {
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = loadKeyStore(clientConfig.trustStoreFile, clientConfig.trustStorePassword)
-        val clientKeystore = loadKeyStore(clientConfig.sslKeystore, clientConfig.keyStorePassword)
-        val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort),
+        val clientTruststore = clientConfig.loadTrustStore().internal
+        val clientKeystore = clientConfig.loadSslKeyStore().internal
+        return AMQPClient(
+                listOf(NetworkHostAndPort("localhost", serverPort),
                 NetworkHostAndPort("localhost", serverPort2),
                 NetworkHostAndPort("localhost", artemisPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
@@ -261,7 +255,6 @@ class ProtonWrapperTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore, true)
-        return amqpClient
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -273,16 +266,16 @@ class ProtonWrapperTests {
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = loadKeyStore(clientConfig.trustStoreFile, clientConfig.trustStorePassword)
-        val clientKeystore = loadKeyStore(clientConfig.sslKeystore, clientConfig.keyStorePassword)
-        val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)),
+        val clientTruststore = clientConfig.loadTrustStore().internal
+        val clientKeystore = clientConfig.loadSslKeyStore().internal
+        return AMQPClient(
+                listOf(NetworkHostAndPort("localhost", serverPort)),
                 setOf(ALICE_NAME),
                 PEER_USER,
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore, true, sharedEventGroup)
-        return amqpClient
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME): AMQPServer {
@@ -294,16 +287,15 @@ class ProtonWrapperTests {
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val serverTruststore = loadKeyStore(serverConfig.trustStoreFile, serverConfig.trustStorePassword)
-        val serverKeystore = loadKeyStore(serverConfig.sslKeystore, serverConfig.keyStorePassword)
-        val amqpServer = AMQPServer("0.0.0.0",
+        val serverTruststore = serverConfig.loadTrustStore().internal
+        val serverKeystore = serverConfig.loadSslKeyStore().internal
+        return AMQPServer(
+                "0.0.0.0",
                 port,
                 PEER_USER,
                 PEER_USER,
                 serverKeystore,
                 serverConfig.keyStorePassword,
                 serverTruststore)
-        return amqpServer
     }
-
 }

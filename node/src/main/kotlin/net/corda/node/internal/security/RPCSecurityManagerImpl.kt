@@ -3,10 +3,9 @@ package net.corda.node.internal.security
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.Cache
 import com.google.common.primitives.Ints
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.context.AuthServiceId
 import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.AuthDataSourceType
@@ -25,6 +24,7 @@ import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
+import java.io.Closeable
 import javax.security.auth.login.FailedLoginException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -41,10 +41,6 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
 
     init {
         manager = buildImpl(config)
-    }
-
-    override fun close() {
-        manager.destroy()
     }
 
     @Throws(FailedLoginException::class)
@@ -67,6 +63,10 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                     subjectId = SimplePrincipalCollection(principal, id.value),
                     manager = manager)
 
+    override fun close() {
+        manager.realms?.filterIsInstance<Closeable>()?.forEach { it.close() }
+        manager.destroy()
+    }
 
     companion object {
 
@@ -103,7 +103,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
     }
 }
 
-/**
+/*
  * Provide a representation of RPC permissions based on Apache Shiro permissions framework.
  * A permission represents a set of actions: for example, the set of all RPC invocations, or the set
  * of RPC invocations acting on a given class of Flows in input. A permission `implies` another one if
@@ -128,7 +128,7 @@ private class RPCPermission : DomainPermission {
     constructor() : super()
 }
 
-/**
+/*
  * A [org.apache.shiro.authz.permission.PermissionResolver] implementation for RPC permissions.
  * Provides a method to construct an [RPCPermission] instance from its string representation
  * in the form used by a Node admin.
@@ -141,7 +141,6 @@ private class RPCPermission : DomainPermission {
  *
  *   - `StartFlow.$FlowClassName`: allowing to call a `startFlow*` RPC method targeting a Flow instance
  *     of a given class
- *
  */
 private object RPCPermissionResolver : PermissionResolver {
 
@@ -181,7 +180,7 @@ private object RPCPermissionResolver : PermissionResolver {
                 // Leaving empty set of targets and actions to match everything
                 return RPCPermission()
             }
-            else -> throw IllegalArgumentException("Unkwnow permission action specifier: $action")
+            else -> throw IllegalArgumentException("Unknown permission action specifier: $action")
         }
     }
 }
@@ -241,19 +240,23 @@ private class InMemoryRealm(users: List<User>,
             authorizationInfoByUser[principals.primaryPrincipal as String]
 }
 
-private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm() {
+private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm(), Closeable {
 
     init {
         credentialsMatcher = buildCredentialMatcher(config.passwordEncryption)
         setPermissionsLookupEnabled(true)
-        dataSource = HikariDataSource(HikariConfig(config.connection!!))
+        dataSource = DataSourceFactory.createDataSource(config.connection!!)
         permissionResolver = RPCPermissionResolver
+    }
+
+    override fun close() {
+        (dataSource as? Closeable)?.close()
     }
 }
 
 private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
 
-/**
+/*
  * Adapts a [com.google.common.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
  */
 private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
@@ -285,7 +288,7 @@ private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<
     override fun toString() = "Guava cache adapter [$impl]"
 }
 
-/**
+/*
  * Implementation of [org.apache.shiro.cache.CacheManager] based on
  * cache implementation in [com.google.common.cache]
  */

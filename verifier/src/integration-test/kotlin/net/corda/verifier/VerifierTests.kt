@@ -11,9 +11,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.config.VerifierType
-import net.corda.testing.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.VerifierType
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.NotarySpec
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.util.*
@@ -130,6 +134,7 @@ class VerifierTests {
         }
     }
 
+    @Ignore("CORDA-1022")
     @Test
     fun `single verifier works with a node`() {
         verifierDriver(
@@ -137,7 +142,7 @@ class VerifierTests {
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, verifierType = VerifierType.OutOfProcess))
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()
-            val notaryNode = defaultNotaryNode.getOrThrow()
+            val notaryNode = defaultNotaryNode.getOrThrow() as NodeHandleInternal
             val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
             startVerifier(notaryNode)
             aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()

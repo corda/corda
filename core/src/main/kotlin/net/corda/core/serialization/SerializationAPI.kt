@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.serialization.internal.effectiveSerializationEnv
@@ -98,17 +99,23 @@ abstract class SerializationFactory {
         val currentFactory: SerializationFactory? get() = _currentFactory.get()
     }
 }
-
-typealias VersionHeader = ByteSequence
+typealias SerializationMagic = ByteSequence
+@DoNotImplement
+interface SerializationEncoding
 
 /**
  * Parameters to serialization and deserialization.
  */
+@DoNotImplement
 interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
-    val preferredSerializationVersion: VersionHeader
+    val preferredSerializationVersion: SerializationMagic
+    /**
+     * If non-null, apply this encoding (typically compression) when serializing.
+     */
+    val encoding: SerializationEncoding?
     /**
      * The class loader to use for deserialization.
      */
@@ -117,6 +124,10 @@ interface SerializationContext {
      * A whitelist that contains (mostly for security purposes) which classes can be serialized and deserialized.
      */
     val whitelist: ClassWhitelist
+    /**
+     * A whitelist that determines (mostly for security purposes) whether a particular encoding may be used when deserializing.
+     */
+    val encodingWhitelist: EncodingWhitelist
     /**
      * A map of any addition properties specific to the particular use case.
      */
@@ -161,7 +172,12 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.
      */
-    fun withPreferredSerializationVersion(versionHeader: VersionHeader): SerializationContext
+    fun withPreferredSerializationVersion(magic: SerializationMagic): SerializationContext
+
+    /**
+     * A shallow copy of this context but with the given (possibly null) encoding.
+     */
+    fun withEncoding(encoding: SerializationEncoding?): SerializationContext
 
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
@@ -225,6 +241,7 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
+@Suppress("unused")
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
@@ -232,4 +249,9 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
 
 interface ClassWhitelist {
     fun hasListed(type: Class<*>): Boolean
+}
+
+@DoNotImplement
+interface EncodingWhitelist {
+    fun acceptEncoding(encoding: SerializationEncoding): Boolean
 }

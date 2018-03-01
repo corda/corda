@@ -10,9 +10,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -171,9 +172,22 @@ class DBTransactionStorageTests {
         assertEquals(expected, actual)
     }
 
-    private fun newTransactionStorage() {
+    @Test
+    fun `duplicates are detected when transaction is evicted from cache`() {
+        newTransactionStorage(cacheSizeBytesOverride = 0)
+        val transaction = newTransaction()
         database.transaction {
-            transactionStorage = DBTransactionStorage()
+            val firstInserted = transactionStorage.addTransaction(transaction)
+            val secondInserted = transactionStorage.addTransaction(transaction)
+            require(firstInserted) { "We inserted a fresh transaction" }
+            require(!secondInserted) { "Second time should be redundant" }
+            println("$firstInserted $secondInserted")
+        }
+    }
+
+    private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {
+        database.transaction {
+            transactionStorage = DBTransactionStorage(cacheSizeBytesOverride ?: NodeConfiguration.defaultTransactionCacheSize)
         }
     }
 

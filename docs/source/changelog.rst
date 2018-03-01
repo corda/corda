@@ -7,13 +7,52 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
+
+* The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
+
+* Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
+
+* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+  one node with the legal name is found.
+
+* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
+  at CorDapp context creation time from a file source during runtime.
+
+* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
+  In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
+  This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
+
+* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
+
+* Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
+
+* Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
+
+* Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
+
+* Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, defaulted to ``null``.
+
+* Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce username == CN condition on RPC SSL certificates.
+
+* Modified ``DriverDSL`` and sub-types to allow specifying RPC settings for the Node.
+
+* Modified the ``DriverDSL`` to start Cordformation nodes allowing automatic generation of "rpcSettings.adminAddress" in case "rcpSettings.useSsl" is ``false`` (the default).
+
+* Introduced ``UnsafeCertificatesFactory`` allowing programmatic generation of X509 certificates for test purposes.
+
+* JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
+  `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
+  See: DummyDealStateSchemaV1.PersistentDummyDealState
+
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
   until final documentation is prepared. Certificates at ``NODE_CA``, ``WELL_KNOWN_SERVICE_IDENTITY`` and above must
   only ever by issued by network services and therefore issuance constraints are not relevant to end users.
   The ``TLS``, ``WELL_KNOWN_LEGAL_IDENTITY`` roles must be issued by the ``NODE_CA`` certificate issued by the
   Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
-  For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
+  For a detailed specification of the extension please see :doc:`permissioning`.
 
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
@@ -43,7 +82,10 @@ UNRELEASED
      :doc:`corda-configuration-file` for more details.
 
    * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
-     to correctly interop.
+     to correctly interop. These can be retrieved from ``ServiceHub.networkParameters``.
+
+   * One of these parameters, ``maxTransactionSize``, limits the size of a transaction, including its attachments, so that
+     all nodes have sufficient memory to validate transactions.
 
    * The set of valid notaries has been moved to the network parameters. Notaries are no longer identified by the CN in
      their X500 name.
@@ -137,6 +179,39 @@ UNRELEASED
 
 * Peer-to-peer communications is now via AMQP 1.0 as default.
   Although the legacy Artemis CORE bridging can still be used by setting the ``useAMQPBridges`` configuration property to false.
+
+* The Artemis topics used for peer-to-peer communication have been changed to be more consistent with future cryptographic
+  agility and to open up the future possibility of sharing brokers between nodes. This is a breaking wire level change
+  as it means that nodes after this change will not be able to communicate correctly with nodes running the previous version.
+  Also, any pending enqueued messages in the Artemis message store will not be delivered correctly to their original target.
+  However, assuming a clean reset of the artemis data and that the nodes are consistent versions,
+  data persisted via the AMQP serializer will be forward compatible.
+
+* The ability for CordaServices to register callbacks so they can be notified of shutdown and clean up resource such as
+  open ports.
+
+* Move to a message based control of peer to peer bridge formation to allow for future out of process bridging components.
+  This removes the legacy Artemis bridges completely, so the ``useAMQPBridges`` configuration property has been removed.
+
+* A ``CordaInternal`` attribute has been added to identify properties that are not intended to form part of the
+  public api and as such are not intended for public use. This is alongside the existing ``DoNotImplement`` attribute for classes which
+  provide Corda functionality to user applications, but should not be implemented by consumers, and any classes which
+  are defined in ``.internal`` packages, which are also not for public use.
+
+* Marked ``stateMachine`` on ``FlowLogic`` as ``CordaInternal`` to make clear that is it not part of the public api and is
+  only for internal use
+
+* Provided experimental support for specifying your own webserver to be used instead of the default development
+  webserver in ``Cordform`` using the ``webserverJar`` argument
+
+* Created new ``StartedMockNode`` and ``UnstartedMockNode`` classes which  are wrappers around our MockNode implementation
+  that expose relevant methods for testing without exposing internals, create these using a ``MockNetwork``.
+
+* The test utils in ``Expect.kt``, ``SerializationTestHelpers.kt``, ``TestConstants.kt`` and ``TestUtils.kt`` have moved
+  from the ``net.corda.testing`` package to the ``net.corda.testing.core`` package, and ``FlowStackSnapshot.kt`` has moved to the
+  ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
+  will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
+  process for existing projects in the ``tools\scripts`` directory of the Corda repo.
 
 .. _changelog_v1:
 

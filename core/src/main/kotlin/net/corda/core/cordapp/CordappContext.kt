@@ -2,8 +2,6 @@ package net.corda.core.cordapp
 
 import net.corda.core.crypto.SecureHash
 
-// TODO: Add per app config
-
 /**
  * An app context provides information about where an app was loaded from, access to its classloader,
  * and (in the included [Cordapp] object) lists of annotated classes discovered via scanning the JAR.
@@ -15,5 +13,11 @@ import net.corda.core.crypto.SecureHash
  * @property attachmentId For CorDapps containing [Contract] or [UpgradedContract] implementations this will be populated
  * with the attachment containing those class files
  * @property classLoader the classloader used to load this cordapp's classes
+ * @property config Configuration for this CorDapp
  */
-class CordappContext(val cordapp: Cordapp, val attachmentId: SecureHash?, val classLoader: ClassLoader)
+class CordappContext internal constructor(
+        val cordapp: Cordapp,
+        val attachmentId: SecureHash?,
+        val classLoader: ClassLoader,
+        val config: CordappConfig
+)

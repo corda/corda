@@ -1,6 +1,7 @@
 package net.corda.test.node
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -19,9 +20,12 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.chooseIdentity
+import net.corda.testing.node.User
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.RandomFree
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.lang.management.ManagementFactory
@@ -40,13 +44,13 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
-                nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
                 nodeHandle.stop()
@@ -54,7 +58,7 @@ class NodeStatePersistenceTests {
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            val result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
                 page.states.singleOrNull()
             }
@@ -74,13 +78,13 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
-                nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
                 nodeHandle.stop()
@@ -88,7 +92,7 @@ class NodeStatePersistenceTests {
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to "false")).getOrThrow()
-            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            val result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
                 page.states.singleOrNull()
             }

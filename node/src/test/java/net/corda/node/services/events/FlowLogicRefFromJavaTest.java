@@ -48,13 +48,15 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
+    private final FlowLogicRefFactoryImpl flowLogicRefFactory = new FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl.class.getClassLoader());
+
     @Test
     public void test() {
-        FlowLogicRefFactoryImpl.INSTANCE.createForRPC(JavaFlowLogic.class, new ParamType1(1), new ParamType2("Hello Jack"));
+        flowLogicRefFactory.createForRPC(JavaFlowLogic.class, new ParamType1(1), new ParamType2("Hello Jack"));
     }
 
     @Test
     public void testNoArg() {
-        FlowLogicRefFactoryImpl.INSTANCE.createForRPC(JavaNoArgFlowLogic.class);
+        flowLogicRefFactory.createForRPC(JavaNoArgFlowLogic.class);
     }
 }

@@ -55,23 +55,32 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        rpcPort 10006
         cordapps = ["$project.group:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10007"
+        }
     }
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
-        rpcPort 10009
         cordapps = ["$project.group:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
+        rpcSettings {
+            address "localhost:10009"
+            adminAddress "localhost:10010"
+        }
     }
     node {
         name "O=BankOfCorda,L=New York,C=US"
         p2pPort 10011
-        rpcPort 10012
         cordapps = ["$project.group:finance:$corda_release_version"]
         rpcUsers = ext.rpcUsers
+        rpcSettings {
+            address "localhost:10012"
+            adminAddress "localhost:10013"
+        }
     }
 }
 

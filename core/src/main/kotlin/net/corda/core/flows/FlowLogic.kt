@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -42,7 +43,7 @@ import java.time.Instant
  * also has a version property to allow you to version your flow and enables a node to restrict support for the flow to
  * that particular version.
  *
- * Functions that suspend the flow (including all functions on [FlowSession]) accept a [maySkipCheckpoint] parameter
+ * Functions that suspend the flow (including all functions on [FlowSession]) accept a maySkipCheckpoint parameter
  * defaulting to false, false meaning a checkpoint should always be created on suspend. This parameter may be set to
  * true which allows the implementation to potentially optimise away the checkpoint, saving a roundtrip to the database.
  *
@@ -52,6 +53,7 @@ import java.time.Instant
  * parameter the flow must be prepared for scenarios where a previous running of the flow *already committed its
  * relevant database transactions*. Only set this option to true if you know what you're doing.
  */
+@Suppress("DEPRECATION", "DeprecatedCallableAddReplaceWith")
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
@@ -60,14 +62,14 @@ abstract class FlowLogic<out T> {
         /**
          * Return the outermost [FlowLogic] instance, or null if not in a flow.
          */
-        @JvmStatic
+        @Suppress("unused") @JvmStatic
         val currentTopLevel: FlowLogic<*>? get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
 
         /**
          * If on a flow, suspends the flow and only wakes it up after at least [duration] time has passed.  Otherwise,
          * just sleep for [duration].  This sleep function is not designed to aid scheduling, for which you should
-         * consider using [SchedulableState].  It is designed to aid with managing contention for which you have not
-         * managed via another means.
+         * consider using [net.corda.core.contracts.SchedulableState].  It is designed to aid with managing contention
+         * for which you have not managed via another means.
          *
          * Warning: long sleeps and in general long running flows are highly discouraged, as there is currently no
          * support for flow migration! This method will throw an exception if you attempt to sleep for longer than
@@ -77,7 +79,7 @@ abstract class FlowLogic<out T> {
         @JvmStatic
         @Throws(FlowException::class)
         fun sleep(duration: Duration) {
-            if (duration.compareTo(Duration.ofMinutes(5)) > 0) {
+            if (duration > Duration.ofMinutes(5)) {
                 throw FlowException("Attempt to sleep for longer than 5 minutes is not supported.  Consider using SchedulableState.")
             }
             (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
@@ -230,7 +232,7 @@ abstract class FlowLogic<out T> {
      * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
      */
     @Suspendable
-    open fun receiveAll(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
+    open fun receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
         return stateMachine.receiveAll(sessions, this)
     }
 
@@ -248,7 +250,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
         enforceNoDuplicates(sessions)
-        return castMapValuesToKnownType(receiveAll(associateSessionsToReceiveType(receiveType, sessions)))
+        return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
     }
 
     /**
@@ -418,13 +420,16 @@ abstract class FlowLogic<out T> {
      * is public only because it must be accessed across module boundaries.
      */
     var stateMachine: FlowStateMachine<*>
+        @CordaInternal
         get() = _stateMachine ?: throw IllegalStateException("This can only be done after the flow has been started.")
+        @CordaInternal
         set(value) {
             _stateMachine = value
         }
 
     // This is the flow used for managing sessions. It defaults to the current flow but if this is an inlined sub-flow
     // then it will point to the flow it's been inlined to.
+    @Suppress("LeakingThis")
     private var flowUsedForSessions: FlowLogic<*> = this
 
     private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {

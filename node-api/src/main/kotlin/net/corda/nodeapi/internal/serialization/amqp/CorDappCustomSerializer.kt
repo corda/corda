@@ -64,14 +64,14 @@ class CorDappCustomSerializer(
 
     override fun writeClassInfo(output: SerializationOutput) {}
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         val proxy = uncheckedCast<SerializationCustomSerializer<*, *>,
                 SerializationCustomSerializer<Any?, Any?>>(serializer).toProxy(obj)
 
         data.withDescribed(descriptor) {
             data.withList {
-                for (property in proxySerializer.propertySerializers) {
-                    property.writeProperty(proxy, this, output)
+                proxySerializer.propertySerializers.serializationOrder.forEach  {
+                    it.getter.writeProperty(proxy, this, output)
                 }
             }
         }

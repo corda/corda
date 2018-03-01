@@ -31,10 +31,8 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  * measure we might want the ability for the node admin to blacklist a flow such that it moves immediately to the "Flow Hospital"
  * in response to a potential malicious use or buggy update to an app etc.
  */
-object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactory {
-    // TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
-    var classloader: ClassLoader = javaClass.classLoader
-
+// TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
+class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonSerializeAsToken(), FlowLogicRefFactory {
     override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
             throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
@@ -42,7 +40,19 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
         return createForRPC(flowClass, *args)
     }
 
-    fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
+    override fun create(flowClassName: String, vararg args: Any?): FlowLogicRef {
+        val flowClass = Class.forName(flowClassName, true, classloader).asSubclass(FlowLogic::class.java)
+        if (flowClass == null) {
+            throw IllegalArgumentException("The class $flowClassName is not a subclass of FlowLogic.")
+        } else {
+            if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
+                throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
+            }
+            return createForRPC(flowClass, *args)
+        }
+    }
+
+    override fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         // TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly
         // to avoid requiring only a single constructor.
         val argTypes = args.map { it?.javaClass }
@@ -81,7 +91,7 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
         return FlowLogicRefImpl(type.name, args)
     }
 
-    fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
+    override fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
         if (ref !is FlowLogicRefImpl) throw IllegalFlowLogicException(ref.javaClass, "FlowLogicRef was not created via correct FlowLogicRefFactory interface")
         val klass = Class.forName(ref.flowLogicClassName, true, classloader).asSubclass(FlowLogic::class.java)
         return createConstructor(klass, ref.args)()

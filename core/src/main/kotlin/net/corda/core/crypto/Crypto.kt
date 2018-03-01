@@ -30,6 +30,7 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.jce.spec.ECParameterSpec
 import org.bouncycastle.jce.spec.ECPrivateKeySpec
 import org.bouncycastle.jce.spec.ECPublicKeySpec
@@ -54,7 +55,7 @@ import javax.crypto.spec.SecretKeySpec
  * However, only the schemes returned by {@link #listSupportedSignatureSchemes()} are supported.
  * Note that Corda currently supports the following signature schemes by their code names:
  * <p><ul>
- * <li>RSA_SHA256 (RSA using SHA256 as hash algorithm and MGF1 (with SHA256) as mask generation function).
+ * <li>RSA_SHA256 (RSA PKCS#1 using SHA256 as hash algorithm).
  * <li>ECDSA_SECP256K1_SHA256 (ECDSA using the secp256k1 Koblitz curve and SHA256 as hash algorithm).
  * <li>ECDSA_SECP256R1_SHA256 (ECDSA using the secp256r1 (NIST P-256) curve and SHA256 as hash algorithm).
  * <li>EDDSA_ED25519_SHA512 (EdDSA using the ed255519 twisted Edwards curve and SHA512 as hash algorithm).
@@ -63,7 +64,8 @@ import javax.crypto.spec.SecretKeySpec
  */
 object Crypto {
     /**
-     * RSA signature scheme using SHA256 for message hashing.
+     * RSA PKCS#1 signature scheme using SHA256 for message hashing.
+     * The actual algorithm id is 1.2.840.113549.1.1.1
      * Note: Recommended key size >= 3072 bits.
      */
     @JvmField
@@ -74,7 +76,7 @@ object Crypto {
             listOf(AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null)),
             BouncyCastleProvider.PROVIDER_NAME,
             "RSA",
-            "SHA256WITHRSAEncryption",
+            "SHA256WITHRSA",
             null,
             3072,
             "RSA_SHA256 signature scheme using SHA256 as hash algorithm."
@@ -110,7 +112,11 @@ object Crypto {
             "ECDSA signature scheme using the secp256r1 (NIST P-256) curve."
     )
 
-    /** EdDSA signature scheme using the ed25519 twisted Edwards curve and SHA512 for message hashing. */
+    /**
+     * EdDSA signature scheme using the ed25519 twisted Edwards curve and SHA512 for message hashing.
+     * The actual algorithm is PureEdDSA Ed25519 as defined in https://tools.ietf.org/html/rfc8032
+     * Not to be confused with the EdDSA variants, Ed25519ctx and Ed25519ph.
+     */
     @JvmField
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
@@ -402,7 +408,7 @@ object Crypto {
      */
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(privateKey), privateKey, clearData)
+    fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray = doSign(findSignatureScheme(privateKey), privateKey, clearData)
 
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known schemeCodeName [String].
@@ -492,6 +498,7 @@ object Crypto {
      * It returns true if it succeeds, but it always throws an exception if verification fails.
      * Strategy on identifying the actual signing scheme is based on the [PublicKey] type, but if the schemeCodeName is known,
      * then better use doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray).
+     *
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
      * @param clearData the clear data/message that was signed (usually the Merkle root).
@@ -541,7 +548,7 @@ object Crypto {
     /**
      * Utility to simplify the act of verifying a [TransactionSignature].
      * It returns true if it succeeds, but it always throws an exception if verification fails.
-     * @param txId transaction's id (Merkle root).
+     * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @return true if verification passes or throw exception if verification fails.
      * @throws InvalidKeyException if the key is invalid.
@@ -553,7 +560,7 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
@@ -563,7 +570,7 @@ object Crypto {
      * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
      * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
      * as it avoids the risk of failing to test the result.
-     * @param txId transaction's id (Merkle root).
+     * @param txId transaction's id.
      * @param transactionSignature the signature on the transaction.
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -572,7 +579,7 @@ object Crypto {
     @JvmStatic
     @Throws(SignatureException::class)
     fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return isValid(
                 findSignatureScheme(transactionSignature.by),
                 transactionSignature.by,
@@ -804,7 +811,7 @@ object Crypto {
     /**
      * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
      * and other cases where you want hard-coded private keys.
-     * Currently, [EDDSA_ED25519_SHA512] is the sole scheme supported for this operation.
+     * Currently, the following schemes are supported: [EDDSA_ED25519_SHA512], [ECDSA_SECP256R1_SHA256] and [ECDSA_SECP256K1_SHA256].
      * @param signatureScheme a supported [SignatureScheme], see [Crypto].
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
@@ -814,6 +821,7 @@ object Crypto {
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
             EDDSA_ED25519_SHA512 -> deriveEdDSAKeyPairFromEntropy(entropy)
+            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> deriveECDSAKeyPairFromEntropy(signatureScheme, entropy)
             else -> throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair " +
                     "generation: ${signatureScheme.schemeCodeName}")
         }
@@ -828,12 +836,41 @@ object Crypto {
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // Custom key pair generator from entropy.
+    // The BigIntenger.toByteArray() uses the two's-complement representation.
+    // The entropy is transformed to a byte array in big-endian byte-order and
+    // only the first ed25519.field.getb() / 8 bytes are used.
     private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
         val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val priv = EdDSAPrivateKeySpec(bytes, params)
         val pub = EdDSAPublicKeySpec(priv.a, params)
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+    }
+
+    // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
+    // but the accepted range of the input entropy is more relaxed:
+    // 2 <= entropy < N, where N is the order of base-point G.
+    private fun deriveECDSAKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+        val parameterSpec = signatureScheme.algSpec as ECNamedCurveParameterSpec
+
+        // The entropy might be a negative number and/or out of range (e.g. PRNG output).
+        // In such cases we retry with hash(currentEntropy).
+        while (entropy < ECConstants.TWO || entropy >= parameterSpec.n) {
+            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
+        }
+
+        val privateKeySpec = ECPrivateKeySpec(entropy, parameterSpec)
+        val priv = BCECPrivateKey("EC", privateKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, entropy)
+        while (pointQ.isInfinity) {
+            // Instead of throwing an exception, we retry with hash(entropy).
+            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
+        }
+        val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
+        val pub = BCECPublicKey("EC", publicKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        return KeyPair(pub, priv)
     }
 
     // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
@@ -975,4 +1012,21 @@ object Crypto {
             else -> decodePrivateKey(key.encoded)
         }
     }
+
+    /**
+     *  Get the hash value that is actually signed.
+     *  The txId is returned when [partialMerkleTree] is null,
+     *  else the root of the tree is computed and returned.
+     *  Note that the hash of the txId should be a leaf in the tree, not the txId itself.
+     */
+    private fun originalSignedHash(txId: SecureHash, partialMerkleTree: PartialMerkleTree?): SecureHash {
+        return if (partialMerkleTree != null) {
+            val usedHashes = mutableListOf<SecureHash>()
+            val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)
+            require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
+            root
+        } else {
+            txId
+        }
+     }
 }

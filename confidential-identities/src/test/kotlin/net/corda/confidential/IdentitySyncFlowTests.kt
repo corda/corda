@@ -14,9 +14,12 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.testing.*
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -25,15 +28,15 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class IdentitySyncFlowTests {
-    private lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: InternalMockNetwork
 
     @Before
     fun before() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(
+        mockNet = InternalMockNetwork(
+                cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 networkSendManuallyPumped = false,
-                threadPerNode = true,
-                cordappPackages = listOf("net.corda.finance.contracts.asset")
+                threadPerNode = true
         )
     }
 
@@ -54,8 +57,8 @@ class IdentitySyncFlowTests {
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
-        val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary))
-        val issueTx = issueFlow.resultFuture.getOrThrow().stx
+        val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary)).resultFuture
+        val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 

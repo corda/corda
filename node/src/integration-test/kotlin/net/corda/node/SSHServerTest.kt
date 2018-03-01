@@ -4,22 +4,25 @@ import co.paralleluniverse.fibers.Suspendable
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.internal.config.User
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.node.User
 import net.corda.testing.driver.driver
+import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
-import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.ALICE_NAME
 import java.net.ConnectException
+import java.util.regex.Pattern
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import org.assertj.core.api.Assertions.assertThat
-import java.util.regex.Pattern
 
 class SSHServerTest {
 
@@ -63,7 +66,6 @@ class SSHServerTest {
         }
     }
 
-
     @Test
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
@@ -91,7 +93,7 @@ class SSHServerTest {
     fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(DriverParameters(isDebug = true)) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -121,7 +123,7 @@ class SSHServerTest {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(isDebug = true) {
+        driver(DriverParameters(isDebug = true)) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -139,8 +141,9 @@ class SSHServerTest {
 
             val response = String(Streams.readAll(channel.inputStream))
 
+            val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
             // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-            assertThat(response.lines()).filteredOn( { it.contains("Done")}).hasSize(1)
+            assertThat(linesWithDoneCount).hasSize(1)
         }
     }
 

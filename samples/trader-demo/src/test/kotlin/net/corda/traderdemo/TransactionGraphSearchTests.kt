@@ -6,12 +6,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.MockTransactionStorage
+import net.corda.testing.node.internal.MockTransactionStorage
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -43,8 +46,8 @@ class TransactionGraphSearchTests {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData): GraphTransactionStorage {
-        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), megaCorp)
-        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), rigorousMock(), dummyNotary)
+        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), megaCorp, rigorousMock())
+        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), dummyNotary, rigorousMock())
         val originBuilder = TransactionBuilder(dummyNotary.party)
                 .addOutputState(DummyState(random31BitValue()), DummyContract.PROGRAM_ID)
                 .addCommand(command, megaCorp.publicKey)

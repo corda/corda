@@ -1,6 +1,7 @@
 package net.corda.notarydemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
@@ -10,7 +11,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.testing.BOB_NAME
+import net.corda.testing.core.BOB_NAME
 import java.util.concurrent.Future
 
 fun main(args: Array<String>) {
@@ -38,7 +39,8 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
 
     /** Makes calls to the node rpc to start transaction notarisation. */
     fun notarise(count: Int) {
-        println("Notary: \"${notary.name}\", with composite key: ${notary.owningKey.toStringShort()}")
+        val keyType = if (notary.owningKey is CompositeKey) "composite" else "public"
+        println("Notary: \"${notary.name}\", with $keyType key: ${notary.owningKey.toStringShort()}")
         val transactions = buildTransactions(count)
         println("Notarised ${transactions.size} transactions:")
         transactions.zip(notariseTransactions(transactions)).forEach { (tx, signersFuture) ->

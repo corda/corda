@@ -20,55 +20,76 @@ JAR will contain:
 Build tools
 -----------
 In the instructions that follow, we assume you are using ``gradle`` and the ``cordformation`` plugin to build your
-CorDapp. See the `example build file <https://github.com/corda/cordapp-template-kotlin/blob/release-V1/build.gradle>`_
-from the CorDapp template.
+CorDapp. You can find examples of building a CorDapp using these tools in the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
 Setting your dependencies
 -------------------------
 
-Choosing your Corda version
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The following two lines of the ``build.gradle`` file define the Corda version used to build your CorDapp:
+Choosing your Corda, Quasar and Kotlin versions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to define which versions are used to build your CorDapp:
 
-.. sourcecode:: groovy
-
-    ext.corda_release_version = '1.0.0'
-    ext.corda_gradle_plugins_version = '1.0.0'
-
-In this case, our CorDapp will use:
-
-* Version 1.0 of Corda
-* Version 1.0 of the Corda gradle plugins
-
-You can find the latest published version of both here: https://bintray.com/r3/corda.
+* ``ext.corda_release_version`` defines the version of Corda
+* ``ext.corda_gradle_plugins_version`` defines the version of the Corda Gradle Plugins
+* ``ext.quasar_version`` defines the version of Quasar
+* ``ext.kotlin_version`` defines the version of Kotlin (if using Kotlin to write your CorDapp)
 
 ``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
 ``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordapp.
+versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version numbers used in the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+
+For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and version 1.1.60 of Kotlin, you'd write:
+
+.. sourcecode:: groovy
+
+    ext.corda_release_version = 'corda-3.0'
+    ext.corda_gradle_plugins_version = '3.0.8'
+    ext.quasar_version = '0.7.9'
+    ext.kotlin_version = '1.1.60'
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
 Corda dependencies
 ^^^^^^^^^^^^^^^^^^
-The ``cordformation`` plugin adds:
+The ``cordformation`` plugin adds two new gradle configurations:
 
-* ``cordaCompile`` as a new configuration that ``compile`` extends from
-* ``cordaRuntime`` which ``runtime`` extends from
+* ``cordaCompile``, which extends ``compile``
+* ``cordaRuntime``, which extends ``runtime``
 
-To build against Corda you must add the following to your ``build.gradle`` file;
+``cordaCompile`` and ``cordaRuntime`` indicate dependencies that should not be included in the CorDapp JAR. These
+configurations should be used for any Corda dependency (e.g. ``corda-core``, ``corda-node``) in order to prevent a
+dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs).
 
-* The ``net.corda:corda:<version>`` JAR as a ``cordaRuntime`` dependency
-* Each compile dependency (eg ``corda-core``) as a ``cordaCompile`` dependency
+To build against Corda, you must add the following to your ``build.gradle`` file:
 
-To use Corda's test facilities you must add ``net.corda:corda-test-utils:<version>`` as a ``testCompile`` dependency
-(i.e. a default Java/Kotlin test compile task).
+* ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
+* Each Corda compile dependency (eg ``net.corda:corda-core:$corda_release_version``) as a ``cordaCompile`` dependency
+
+You may also want to add:
+
+* ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile`` dependency, in order to use Corda's test
+  frameworks
+* ``net.corda:corda-webserver:$corda_release_version`` as a ``cordaRuntime`` dependency, in order to use Corda's
+  built-in development webserver
 
 .. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
 
 Dependencies on other CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sometimes, a CorDapp you build will depend on states, contracts or flows defined in another CorDapp. You must include
-the CorDapp your CorDapp depends upon as a ``cordapp`` dependency in your ``build.gradle`` file.
+You CorDapp may also depend on classes defined in another CorDapp, such as states, contracts and flows. There are two
+ways to add another CorDapp as a dependency in your CorDapp's ``build.gradle`` file:
+
+* ``cordapp project(":another-cordapp")`` (use this if the other CorDapp is defined in a module in the same project)
+* ``cordapp "net.corda:another-cordapp:1.0"`` (use this otherwise)
+
+The ``cordapp`` gradle configuration serves two purposes:
+
+* When using the ``cordformation`` Gradle plugin, the ``cordapp`` configuration indicates that this JAR should be
+  included on your node as a CorDapp
+* When using the ``cordapp`` Gradle plugin, the ``cordapp`` configuration prevents the dependency from being included
+  in the CorDapp JAR
+
+Note that the ``cordformation`` and ``cordapp`` Gradle plugins can be used together.
 
 Other dependencies
 ^^^^^^^^^^^^^^^^^^
@@ -80,8 +101,7 @@ For further information about managing dependencies, see
 
 Example
 ^^^^^^^
-The following is a sample of what a gradle dependencies block for a CorDapp could look like. The CorDapp template
-is already correctly configured and this is for reference only;
+Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should base yourself on the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
 .. container:: codeset
 
@@ -141,3 +161,20 @@ Installing the CorDapp JAR
 At runtime, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore in order to install a CorDapp on
 a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder, where ``node_dir`` is the folder in which
 the node's JAR and configuration files are stored.
+
+CorDapp configuration files
+---------------------------
+
+CorDapp configuration files should be placed in ``<node_dir>/cordapps/config``. The name of the file should match the
+name of the JAR of the CorDapp (eg; if your CorDapp is called ``hello-0.1.jar`` the config should be ``config/hello-0.1.conf``).
+
+Config files are currently only available in the `Typesafe/Lightbend <https://github.com/lightbend/config>`_ config format.
+These files are loaded when a CorDapp context is created and so can change during runtime.
+
+CorDapp configuration can be accessed from ``CordappContext::config`` whenever a ``CordappContext`` is available.
+
+There is an example project that demonstrates in ``samples` called ``cordapp-configuration`` and API documentation in
+<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
+
+
+

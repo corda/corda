@@ -2,12 +2,21 @@ package net.corda.testing.node.internal
 
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
+import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.times
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
+import net.corda.node.services.api.StartedNodeServices
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.messaging.MessagingService
+import net.corda.testing.internal.chooseIdentity
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
 import java.net.Socket
 import java.net.SocketException
@@ -91,3 +100,17 @@ fun <A> poll(
 
 class ListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenProcess: Process) :
         CordaException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
+
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
+
+fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
+
+fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message
+
+internal interface InternalMockMessagingService : MessagingService {
+    fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
+
+    fun stop()
+}
+
+

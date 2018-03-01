@@ -26,7 +26,9 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
 ) {
     // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
     init {
-        require(legalIdentitiesAndCerts.isNotEmpty()) { "Node should have at least one legal identity" }
+        require(addresses.isNotEmpty()) { "Node must have at least one address" }
+        require(legalIdentitiesAndCerts.isNotEmpty()) { "Node must have at least one legal identity" }
+        require(platformVersion > 0) { "Platform version must be at least 1" }
     }
 
     @Transient private var _legalIdentities: List<Party>? = null

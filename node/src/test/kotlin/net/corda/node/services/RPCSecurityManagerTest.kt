@@ -6,6 +6,8 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -26,16 +28,16 @@ class RPCSecurityManagerTest {
 
     @Test
     fun `Generic RPC call authorization`() {
-        checkUserPermissions(
+        checkUserActions(
                 permitted = setOf(arrayListOf("nodeInfo"), arrayListOf("notaryIdentities")),
                 permissions = setOf(
-                        Permissions.invokeRpc(CordaRPCOps::nodeInfo),
-                        Permissions.invokeRpc(CordaRPCOps::notaryIdentities)))
+                        invokeRpc(CordaRPCOps::nodeInfo),
+                        invokeRpc(CordaRPCOps::notaryIdentities)))
     }
 
     @Test
     fun `Flow invocation authorization`() {
-        checkUserPermissions(
+        checkUserActions(
             permissions = setOf(Permissions.startFlow<DummyFlow>()),
             permitted = setOf(
                 arrayListOf("startTrackedFlowDynamic", "net.corda.node.services.RPCSecurityManagerTest\$DummyFlow"),
@@ -44,23 +46,35 @@ class RPCSecurityManagerTest {
 
     @Test
     fun `Check startFlow RPC permission implies startFlowDynamic`() {
-        checkUserPermissions(
-                permissions = setOf(Permissions.invokeRpc("startFlow")),
+        checkUserActions(
+                permissions = setOf(invokeRpc("startFlow")),
                 permitted = setOf(arrayListOf("startFlow"), arrayListOf("startFlowDynamic")))
     }
 
     @Test
     fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
-        checkUserPermissions(
+        checkUserActions(
                 permitted = setOf(arrayListOf("startTrackedFlow"), arrayListOf("startTrackedFlowDynamic")),
-                permissions = setOf(Permissions.invokeRpc("startTrackedFlow")))
+                permissions = setOf(invokeRpc("startTrackedFlow")))
     }
 
     @Test
     fun `Admin authorization`() {
-        checkUserPermissions(
+        checkUserActions(
             permissions = setOf("all"),
             permitted = allActions.map { arrayListOf(it) }.toSet())
+    }
+
+    @Test
+    fun `flows draining mode permissions`() {
+        checkUserActions(
+                permitted = setOf(arrayListOf("setFlowsDrainingModeEnabled")),
+                permissions = setOf(invokeRpc(CordaRPCOps::setFlowsDrainingModeEnabled))
+        )
+        checkUserActions(
+                permitted = setOf(arrayListOf("isFlowsDrainingModeEnabled")),
+                permissions = setOf(invokeRpc(CordaRPCOps::isFlowsDrainingModeEnabled))
+        )
     }
 
     @Test
@@ -118,9 +132,9 @@ class RPCSecurityManagerTest {
                 users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
     }
 
-    private fun checkUserPermissions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
+    private fun checkUserActions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
         val user = User(username = "user", password = "password", permissions = permissions)
-        val userRealms = RPCSecurityManagerImpl.fromUserList(users = listOf(user), id = AuthServiceId("TEST"))
+        val userRealms = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(listOf(user)))
         val disabled = allActions.filter { !permitted.contains(listOf(it)) }
         for (subject in listOf(
                 userRealms.authenticate("user", Password("password")),
@@ -130,11 +144,11 @@ class RPCSecurityManagerTest {
                 val call = request.first()
                 val args = request.drop(1).toTypedArray()
                 assert(subject.isPermitted(request.first(), *args)) {
-                    "User ${subject.principal} should be permitted ${call} with target '${request.toList()}'"
+                    "User ${subject.principal} should be permitted $call with target '${request.toList()}'"
                 }
                 if (args.isEmpty()) {
                     assert(subject.isPermitted(request.first(), "XXX")) {
-                        "User ${subject.principal} should be permitted ${call} with any target"
+                        "User ${subject.principal} should be permitted $call with any target"
                     }
                 }
             }

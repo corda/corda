@@ -12,14 +12,19 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
 import net.corda.core.node.services.NotaryService
-import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FilteredTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -34,12 +39,13 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
-                                    override val notaryIdentityKey: PublicKey,
-                                    private val bftSMaRtConfig: BFTSMaRtConfiguration,
-                                    cluster: BFTSMaRt.Cluster) : NotaryService() {
+class BFTNonValidatingNotaryService(
+        override val services: ServiceHubInternal,
+        override val notaryIdentityKey: PublicKey,
+        private val bftSMaRtConfig: BFTSMaRtConfiguration,
+        cluster: BFTSMaRt.Cluster
+) : NotaryService() {
     companion object {
-        val id = constructId(validating = false, bft = true)
         private val log = contextLogger()
     }
 
@@ -53,8 +59,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
                 configHandle.use {
-                    val timeWindowChecker = TimeWindowChecker(services.clock)
-                    val replica = Replica(it, replicaId, { createMap() }, services, notaryIdentityKey, timeWindowChecker)
+                    val replica = Replica(it, replicaId, { createMap() }, services, notaryIdentityKey)
                     replicaHolder.set(replica)
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
@@ -68,25 +73,25 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
         replicaHolder.getOrThrow() // It's enough to wait for the ServiceReplica constructor to return.
     }
 
-    fun commitTransaction(tx: Any, otherSide: Party) = client.commitTransaction(tx, otherSide)
+    fun commitTransaction(payload: NotarisationPayload, otherSide: Party) = client.commitTransaction(payload, otherSide)
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ServiceFlow(otherPartySession, this)
 
     private class ServiceFlow(val otherSideSession: FlowSession, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
-            val stx = otherSideSession.receive<FilteredTransaction>().unwrap { it }
-            val signatures = commit(stx)
+            val payload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
+            val signatures = commit(payload)
             otherSideSession.send(signatures)
             return null
         }
 
-        private fun commit(stx: FilteredTransaction): List<DigitalSignature> {
-            val response = service.commitTransaction(stx, otherSideSession.counterparty)
+        private fun commit(payload: NotarisationPayload): List<DigitalSignature> {
+            val response = service.commitTransaction(payload, otherSideSession.counterparty)
             when (response) {
                 is BFTSMaRt.ClusterResponse.Error -> throw NotaryException(response.error)
                 is BFTSMaRt.ClusterResponse.Signatures -> {
-                    log.debug("All input states of transaction ${stx.id} have been committed")
+                    log.debug("All input states of transaction ${payload.coreTransaction.id} have been committed")
                     return response.txSignatures
                 }
             }
@@ -130,32 +135,37 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                           replicaId: Int,
                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
-                          notaryIdentityKey: PublicKey,
-                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey, timeWindowChecker) {
+                          notaryIdentityKey: PublicKey) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
-            val request = command.deserialize<BFTSMaRt.CommitRequest>()
-            val ftx = request.tx as FilteredTransaction
-            val response = verifyAndCommitTx(ftx, request.callerIdentity)
+            val commitRequest = command.deserialize<BFTSMaRt.CommitRequest>()
+            verifyRequest(commitRequest)
+            val response = verifyAndCommitTx(commitRequest.payload.coreTransaction, commitRequest.callerIdentity)
             return response.serialize().bytes
         }
 
-        fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
+        private fun verifyAndCommitTx(transaction: CoreTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
             return try {
-                val id = ftx.id
-                val inputs = ftx.inputs
-                val notary = ftx.notary
-                validateTimeWindow(ftx.timeWindow)
+                val id = transaction.id
+                val inputs = transaction.inputs
+                val notary = transaction.notary
+                if (transaction is FilteredTransaction) NotaryService.validateTimeWindow(services.clock, transaction.timeWindow)
                 if (notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity)
                 log.debug { "Inputs committed successfully, signing $id" }
-                BFTSMaRt.ReplicaResponse.Signature(sign(ftx))
+                BFTSMaRt.ReplicaResponse.Signature(sign(id))
             } catch (e: NotaryException) {
                 log.debug { "Error processing transaction: ${e.error}" }
                 BFTSMaRt.ReplicaResponse.Error(e.error)
             }
         }
 
+        private fun verifyRequest(commitRequest: BFTSMaRt.CommitRequest) {
+            val transaction = commitRequest.payload.coreTransaction
+            val notarisationRequest = NotarisationRequest(transaction.inputs, transaction.id)
+            notarisationRequest.verifySignature(commitRequest.payload.requestSignature, commitRequest.callerIdentity)
+            // TODO: persist the signature for traceability.
+        }
     }
 
     override fun start() {

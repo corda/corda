@@ -4,10 +4,11 @@ import net.corda.core.internal.div
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.BOC_NAME
-import net.corda.testing.DUMMY_BANK_A_NAME
-import net.corda.testing.DUMMY_BANK_B_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.node.User
 import net.corda.testing.driver.driver
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -22,7 +23,7 @@ fun main(args: Array<String>) {
             startFlow<SellerFlow>(),
             all())
     val demoUser = listOf(User("demo", "demo", permissions))
-    driver(driverDirectory = "build" / "trader-demo-nodes", isDebug = true, waitForAllNodesToFinish = true) {
+    driver(DriverParameters(driverDirectory = "build" / "trader-demo-nodes", isDebug = true, waitForAllNodesToFinish = true)) {
         val user = User("user1", "test", permissions = setOf(startFlow<CashIssueFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 startFlow<SellerFlow>()))

@@ -7,9 +7,12 @@ CorDapps
    cordapp-overview
    writing-a-cordapp
    upgrade-notes
+   upgrading-cordapps
    cordapp-build-systems
    building-against-master
    corda-api
+   serialization
+   secure-coding-guidelines
    flow-cookbook
    cheat-sheet
    building-a-cordapp-samples

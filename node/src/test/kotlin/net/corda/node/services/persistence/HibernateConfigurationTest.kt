@@ -28,15 +28,18 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
+import net.corda.node.internal.configureDatabase
+import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
@@ -48,6 +51,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
 import org.junit.*
 import java.math.BigDecimal
+import java.time.Clock
 import java.time.Instant
 import java.util.*
 import javax.persistence.EntityManager
@@ -94,9 +98,9 @@ class HibernateConfigurationTest {
     @Before
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
-        bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)
+        bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
@@ -110,14 +114,15 @@ class HibernateConfigurationTest {
         database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
+
             // `consumeCash` expects we can self-notarise transactions
-            services = object : MockServices(cordappPackages, rigorousMock<IdentityServiceInternal>().also {
+            services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
-            }, BOB_NAME, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = makeVaultService(database.hibernateConfig, schemaService)
+            }, generateKeyPair(), dummyNotary.keyPair) {
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
+                        (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(statesToRecord, txs.map { it.tx })
@@ -126,7 +131,7 @@ class HibernateConfigurationTest {
                 override fun jdbcSession() = database.createSession()
             }
             vaultFiller = VaultFiller(services, dummyNotary, notary, ::Random)
-            hibernatePersister = services.hibernatePersister
+            hibernatePersister = HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
         }
 
         identity = services.myInfo.singleIdentity()
@@ -503,11 +508,12 @@ class HibernateConfigurationTest {
     fun `count CashStates in V2`() {
         database.transaction {
             // persist cash states explicitly with V2 schema
-            cashStates.forEach {
+            val stateAndRefs = cashStates.map {
                 val cashState = it.state.data
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV2)
+                ContractStateAndRef(dummyFungibleState, it.ref)
             }
+            hibernatePersister.persistStatesWithSchema(stateAndRefs, SampleCashSchemaV2)
         }
 
         // structure query
@@ -525,11 +531,12 @@ class HibernateConfigurationTest {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(5)
             // persist cash states explicitly with V2 schema
-            cashStates.forEach {
+            val stateAndRefs = cashStates.map {
                 val cashState = it.state.data
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV2)
+                ContractStateAndRef(dummyFungibleState, it.ref)
             }
+            hibernatePersister.persistStatesWithSchema(stateAndRefs, SampleCashSchemaV2)
         }
 
         // structure query
@@ -620,11 +627,12 @@ class HibernateConfigurationTest {
     fun `select fungible states by owner party`() {
         database.transaction {
             // persist original cash states explicitly with V3 schema
-            cashStates.forEach {
+            val stateAndRefs = cashStates.map {
                 val cashState = it.state.data
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
+                ContractStateAndRef(dummyFungibleState, it.ref)
             }
+            hibernatePersister.persistStatesWithSchema(stateAndRefs, SampleCashSchemaV3)
         }
 
         // structure query
@@ -643,19 +651,20 @@ class HibernateConfigurationTest {
     fun `query fungible states by owner party`() {
         database.transaction {
             // persist original cash states explicitly with V3 schema
-            cashStates.forEach {
+            val stateAndRefs: MutableList<ContractStateAndRef> = cashStates.map {
                 val cashState = it.state.data
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-            }
+                ContractStateAndRef(dummyFungibleState, it.ref)
+            }.toMutableList()
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 2, issuer.ref(1), ALICE, Random(0L))
             val cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, 2, identity.ref(0)).states
             // persist additional cash states explicitly with V3 schema
-            cashStates.forEach {
+            stateAndRefs.addAll(cashStates.map {
                 val cashState = it.state.data
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-            }
+                ContractStateAndRef(dummyFungibleState, it.ref)
+            })
+            hibernatePersister.persistStatesWithSchema(stateAndRefs, SampleCashSchemaV3)
         }
         val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, CommonSchemaV1, SampleCashSchemaV3)
         val criteriaBuilder = sessionFactory.criteriaBuilder
@@ -694,12 +703,13 @@ class HibernateConfigurationTest {
     @Test
     fun `select fungible states by participants`() {
         database.transaction {
-            // persist cash states explicitly with V2 schema
-            cashStates.forEach {
+            // persist cash states explicitly with V3 schema
+            val stateAndRefs = cashStates.map {
                 val cashState = it.state.data
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
+                ContractStateAndRef(dummyFungibleState, it.ref)
             }
+            hibernatePersister.persistStatesWithSchema(stateAndRefs, SampleCashSchemaV3)
         }
 
         // structure query
@@ -720,25 +730,27 @@ class HibernateConfigurationTest {
         val firstCashState =
                 database.transaction {
                     // persist original cash states explicitly with V3 schema
-                    cashStates.forEach {
+                    val stateAndRefs: MutableList<ContractStateAndRef> = cashStates.map {
                         val cashState = it.state.data
                         val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                        hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-                    }
+                        ContractStateAndRef(dummyFungibleState, it.ref)
+                    }.toMutableList()
+
                     val moreCash = vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, 2, identity.ref(0), identity, Random(0L)).states
                     // persist additional cash states explicitly with V3 schema
-                    moreCash.forEach {
+                    stateAndRefs.addAll(moreCash.map {
                         val cashState = it.state.data
                         val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                        hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-                    }
+                        ContractStateAndRef(dummyFungibleState, it.ref)
+                    })
                     val cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 2, issuer.ref(1), ALICE, Random(0L)).states
                     // persist additional cash states explicitly with V3 schema
-                    cashStates.forEach {
+                    stateAndRefs.addAll(cashStates.map {
                         val cashState = it.state.data
                         val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                        hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-                    }
+                        ContractStateAndRef(dummyFungibleState, it.ref)
+                    })
+                    hibernatePersister.persistStatesWithSchema(stateAndRefs, SampleCashSchemaV3)
                     cashStates.first()
                 }
 

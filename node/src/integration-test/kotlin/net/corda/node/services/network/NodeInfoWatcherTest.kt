@@ -9,10 +9,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.contentOf

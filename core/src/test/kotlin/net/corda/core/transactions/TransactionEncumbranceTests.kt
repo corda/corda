@@ -11,7 +11,9 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.testing.*
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
@@ -49,7 +51,8 @@ class TransactionEncumbranceTests {
     class DummyTimeLock : Contract {
         override fun verify(tx: LedgerTransaction) {
             val timeLockInput = tx.inputsOfType<State>().singleOrNull() ?: return
-            val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
+            val time = tx.timeWindow?.untilTime
+                    ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
             requireThat {
                 "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)
             }
@@ -62,9 +65,10 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(emptyList(), rigorousMock<IdentityServiceInternal>().also {
-        doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-    }, MEGA_CORP.name)
+    private val ledgerServices = MockServices(listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"), MEGA_CORP.name,
+            rigorousMock<IdentityServiceInternal>().also {
+                doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+            })
 
     @Test
     fun `state can be encumbered`() {

@@ -1,6 +1,9 @@
 package net.corda.node.services.vault
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -20,7 +23,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.*
+import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.*
@@ -74,12 +77,12 @@ class VaultWithCashTest {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
-                dummyNotary.keyPair)
+                moreKeys = dummyNotary.keyPair)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
-        issuerServices = MockServices(cordappPackages, rigorousMock(), dummyCashIssuer, MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, rigorousMock(), dummyNotary)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
@@ -109,7 +112,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(cordappPackages, rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =

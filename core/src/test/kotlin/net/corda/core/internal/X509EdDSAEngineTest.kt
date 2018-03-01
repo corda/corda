@@ -114,4 +114,12 @@ class X509EdDSAEngineTest {
             engine.verify(signature)
         }
     }
+
+    /** Verify will fail if the input public key cannot be converted to EdDSA public key. */
+    @Test
+    fun `verify with non-supported key type fails`() {
+        val engine = EdDSAEngine()
+        val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger.valueOf(SEED))
+        assertFailsWith<InvalidKeyException> { engine.initVerify(keyPair.public) }
+    }
 }

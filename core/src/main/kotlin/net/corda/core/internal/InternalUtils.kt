@@ -2,15 +2,27 @@
 
 package net.corda.core.internal
 
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappConfig
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.*
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import net.corda.core.utilities.OpaqueBytes
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -21,11 +33,13 @@ import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
-import java.security.cert.Certificate
+import java.security.KeyPair
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
@@ -118,6 +132,8 @@ fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(th
 inline val Path.size: Long get() = Files.size(this)
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
+fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
+fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
 fun Path.readAll(): ByteArray = Files.readAllBytes(this)
 inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
 inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
@@ -130,6 +146,8 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
 fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
+
+inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
@@ -182,9 +200,6 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
             println("$label took $elapsed msec")
     }
 }
-
-fun Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
-val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
@@ -250,13 +265,12 @@ fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(thi
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
 
-/** @suppress Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
- * @suppress
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
@@ -291,28 +305,101 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
-/**
- * Provide access to internal method for AttachmentClassLoaderTests
- * @suppress
- */
-fun TransactionBuilder.toWireTransaction(cordappProvider: CordappProvider, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(cordappProvider, serializationContext)
+/** Provide access to internal method for AttachmentClassLoaderTests */
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
 }
 
-/**
- * Provide access to internal method for AttachmentClassLoaderTests
- * @suppress
- */
+/** Provide access to internal method for AttachmentClassLoaderTests */
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
+
+fun URL.post(serializedData: OpaqueBytes) {
+    openHttpConnection().apply {
+        doOutput = true
+        requestMethod = "POST"
+        setRequestProperty("Content-Type", "application/octet-stream")
+        outputStream.use { serializedData.open().copyTo(it) }
+        checkOkResponse()
+    }
+}
+
+fun HttpURLConnection.checkOkResponse() {
+    if (responseCode != 200) {
+        val message = errorStream.use { it.reader().readText() }
+        throw IOException("Response Code $responseCode: $message")
+    }
+}
+
+inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
+    checkOkResponse()
+    return inputStream.use { it.readBytes() }.deserialize()
+}
+
 /** Analogous to [Thread.join]. */
 fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {
         // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
     }
+}
+
+/**
+ * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
+ * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
+ */
+val CordaX500Name.x500Name: X500Name
+    get() {
+        return X500NameBuilder(BCStyle.INSTANCE).apply {
+            addRDN(BCStyle.C, country)
+            state?.let { addRDN(BCStyle.ST, it) }
+            addRDN(BCStyle.L, locality)
+            addRDN(BCStyle.O, organisation)
+            organisationUnit?.let { addRDN(BCStyle.OU, it) }
+            commonName?.let { addRDN(BCStyle.CN, it) }
+        }.build()
+    }
+
+@Suppress("unused")
+@VisibleForTesting
+val CordaX500Name.Companion.unspecifiedCountry
+    get() = "ZZ"
+
+fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
+    val serialised = serialize()
+    val signature = Crypto.doSign(privateKey, serialised.bytes)
+    return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
+}
+
+inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
+    return SignedData(this, signer(this))
+}
+
+fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedData(this, keyPair.sign(this.bytes))
+
+fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
+
+fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
+    return CordappContext(cordapp, attachmentId, classLoader, config)
+}
+
+/** Verifies that the correct notarisation request was signed by the counterparty. */
+fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+    val requestingParty = otherSideSession.counterparty
+    request.verifySignature(signature, requestingParty)
+    // TODO: persist the signature for traceability. Do we need to persist the request as well?
+}
+
+/** Creates a signature over the notarisation request using the legal identity key. */
+fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
+    val serializedRequest = this.serialize().bytes
+    val signature = with(serviceHub) {
+        val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
+        keyManagementService.sign(serializedRequest, myLegalIdentity)
+    }
+    return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
 }

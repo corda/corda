@@ -1,19 +1,23 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
-import com.typesafe.config.ConfigException
 import joptsimple.OptionException
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -39,7 +43,11 @@ open class NodeStartup(val args: Array<String>) {
      */
     open fun run(): Boolean {
         val startTime = System.currentTimeMillis()
-        assertCanNormalizeEmptyPath()
+        if (!canNormalizeEmptyPath()) {
+            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            println("Corda will now exit...")
+            return false
+        }
         val (argsParser, cmdlineOptions) = parseArguments()
 
         // We do the single node check before we initialise logging so that in case of a double-node start it
@@ -79,38 +87,48 @@ open class NodeStartup(val args: Array<String>) {
             } else {
                 conf0
             }
+        } catch (e: UnknownConfigurationKeysException) {
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             logger.error("Exception during node configuration", e)
+            return false
+        }
+        val errors = conf.validate()
+        if (errors.isNotEmpty()) {
+            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return false
         }
 
         try {
             banJavaSerialisation(conf)
             preNetworkRegistration(conf)
-            if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
-                registerWithNetwork(cmdlineOptions, conf)
+            if (cmdlineOptions.nodeRegistrationConfig != null) {
+                // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationConfig)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
-
-            try {
-                cmdlineOptions.baseDirectory.createDirectories()
-                startNode(conf, versionInfo, startTime, cmdlineOptions)
-            } catch (e: Exception) {
-                if (e.message?.startsWith("Unknown named curve:") == true) {
-                    logger.error("Exception during node startup - ${e.message}. " +
-                            "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-                } else {
-                    logger.error("Exception during node startup", e)
-                }
-                return false
-            }
-
-            logger.info("Node exiting successfully")
-            return true
         } catch (e: Exception) {
+            logger.error("Exception during node registration", e)
             return false
         }
+
+        try {
+            cmdlineOptions.baseDirectory.createDirectories()
+            startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: Exception) {
+            if (e.message?.startsWith("Unknown named curve:") == true) {
+                logger.error("Exception during node startup - ${e.message}. " +
+                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            } else {
+                logger.error("Exception during node startup", e)
+            }
+            return false
+        }
+
+        logger.info("Node exiting successfully")
+        return true
     }
 
     open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
@@ -121,7 +139,7 @@ open class NodeStartup(val args: Array<String>) {
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
-            node.generateNodeInfo()
+            node.generateAndSaveNodeInfo()
             return
         }
         val startedNode = node.start()
@@ -132,7 +150,7 @@ open class NodeStartup(val args: Array<String>) {
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
-            if (!cmdlineOptions.noLocalShell && System.console() != null && conf.devMode) {
+            if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(startedNode)
@@ -170,12 +188,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    private fun shouldRegisterWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration): Boolean {
-        val compatibilityZoneURL = conf.compatibilityZoneURL
-        return !(!cmdlineOptions.isRegistration || compatibilityZoneURL == null)
-    }
-
-    open protected fun registerWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.compatibilityZoneURL!!
         println()
         println("******************************************************************")
@@ -183,17 +196,10 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration {
-        try {
-            return cmdlineOptions.loadConfig()
-        } catch (configException: ConfigException) {
-            println("Unable to load the configuration file: ${configException.rootCause.message}")
-            throw configException
-        }
-    }
+    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
     open protected fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
@@ -285,12 +291,13 @@ open class NodeStartup(val args: Array<String>) {
         return hostName
     }
 
-    private fun assertCanNormalizeEmptyPath() {
+    private fun canNormalizeEmptyPath(): Boolean {
         // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
-        try {
+        return try {
             Paths.get("").normalize()
+            true
         } catch (e: ArrayIndexOutOfBoundsException) {
-            Node.failStartUp("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            false
         }
     }
 

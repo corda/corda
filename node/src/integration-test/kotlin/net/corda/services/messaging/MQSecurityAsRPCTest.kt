@@ -1,14 +1,14 @@
 package net.corda.services.messaging
 
-import net.corda.nodeapi.internal.config.User
+import net.corda.testing.node.User
 import org.junit.Test
 
 /**
  * Runs the security tests with the attacker being a valid RPC user of Alice.
  */
-class MQSecurityAsRPCTest : MQSecurityTest() {
+class MQSecurityAsRPCTest : RPCMQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
-        return clientTo(alice.internals.configuration.rpcAddress!!)
+        return clientTo(alice.internals.configuration.rpcOptions.address!!)
     }
 
     @Test

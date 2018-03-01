@@ -1,9 +1,8 @@
 Node administration
 ===================
 
-When a node is running, it exposes an RPC interface that lets you monitor it,
-you can upload and download attachments, access a REST API and so on. A bundled
-Jetty web server exposes the same interface over HTTP.
+When a node is running, it exposes an RPC interface that lets you monitor it, upload and download attachments, and so
+on.
 
 Logging
 -------
@@ -107,7 +106,7 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
   It can bridge any data input to any output using their plugin system, for example, Telegraf can
   be configured to collect data from Jolokia and write to DataDog web api.
 
-The Node configuration parameter `exportJMXTo` should be set to ``http`` to ensure a Jolokia agent is instrumented with
+The Node configuration parameter `jmxMonitoringHttpPort` has to be present in order to ensure a Jolokia agent is instrumented with
 the JVM run-time.
 
 The following JMX statistics are exported:

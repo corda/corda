@@ -2,12 +2,18 @@ package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.exists
+import net.corda.core.internal.x500Name
+import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -22,7 +28,7 @@ import java.nio.file.Files
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
  */
-class MQSecurityAsNodeTest : MQSecurityTest() {
+class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
         return clientTo(alice.internals.configuration.p2pAddress)
     }
@@ -62,7 +68,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a node user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcAddress!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_USER, NODE_USER, enableSSL = false)
         }
@@ -70,7 +76,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a peer user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcAddress!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }
@@ -90,37 +96,39 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                     javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").copyTo(trustStoreFile)
                 }
 
-                val caKeyStore = loadKeyStore(
-                        javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"),
-                        "cordacadevpass")
-
-                val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).toX509CertHolder()
-                val intermediateCA = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-                val clientKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-
+                val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 // Set name constrain to the legal name.
                 val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
-                val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCA.certificate,
-                        intermediateCA.keyPair, legalName, clientKey.public, nameConstraints = nameConstraints)
-                val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                // Using different x500 name in the TLS cert which is not allowed in the name constraints.
-                val clientTLSCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientKey, CordaX500Name("MiniCorp", "London", "GB"), tlsKey.public)
-                val keyPass = keyStorePassword.toCharArray()
-                val clientCAKeystore = loadOrCreateKeyStore(nodeKeystore, keyStorePassword)
-                clientCAKeystore.addOrReplaceKey(
-                        X509Utilities.CORDA_CLIENT_CA,
-                        clientKey.private,
-                        keyPass,
-                        arrayOf(clientCACert, intermediateCA.certificate, rootCACert))
-                clientCAKeystore.save(nodeKeystore, keyStorePassword)
+                val clientCACert = X509Utilities.createCertificate(
+                        CertificateType.INTERMEDIATE_CA,
+                        DEV_INTERMEDIATE_CA.certificate,
+                        DEV_INTERMEDIATE_CA.keyPair,
+                        legalName.x500Principal,
+                        clientKeyPair.public,
+                        nameConstraints = nameConstraints)
 
-                val tlsKeystore = loadOrCreateKeyStore(sslKeystore, keyStorePassword)
-                tlsKeystore.addOrReplaceKey(
-                        X509Utilities.CORDA_CLIENT_TLS,
-                        tlsKey.private,
-                        keyPass,
-                        arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert))
-                tlsKeystore.save(sslKeystore, keyStorePassword)
+                val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+                // Using different x500 name in the TLS cert which is not allowed in the name constraints.
+                val clientTLSCert = X509Utilities.createCertificate(
+                        CertificateType.TLS,
+                        clientCACert,
+                        clientKeyPair,
+                        CordaX500Name("MiniCorp", "London", "GB").x500Principal,
+                        tlsKeyPair.public)
+
+                loadNodeKeyStore(createNew = true).update {
+                    setPrivateKey(
+                            X509Utilities.CORDA_CLIENT_CA,
+                            clientKeyPair.private,
+                            listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
+                }
+
+                loadSslKeyStore(createNew = true).update {
+                    setPrivateKey(
+                            X509Utilities.CORDA_CLIENT_TLS,
+                            tlsKeyPair.private,
+                            listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
+                }
             }
         }
 

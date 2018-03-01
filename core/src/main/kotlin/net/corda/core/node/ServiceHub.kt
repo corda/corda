@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
@@ -18,36 +19,11 @@ import java.sql.Connection
 import java.time.Clock
 
 /**
- * Part of [ServiceHub].
- */
-@DoNotImplement
-interface StateLoader {
-    /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    fun loadState(stateRef: StateRef): TransactionState<*>
-
-    /**
-     * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
-    // as the existing transaction store will become encrypted at some point
-    @Throws(TransactionResolutionException::class)
-    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
-    }
-}
-
-/**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
  */
-interface ServicesForResolution : StateLoader {
+@DoNotImplement
+interface ServicesForResolution {
     /**
      * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
      * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -60,6 +36,30 @@ interface ServicesForResolution : StateLoader {
 
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
+
+    /** Returns the network parameters the node is operating under. */
+    val networkParameters: NetworkParameters
+
+    /**
+     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * *WARNING* Do not use this method unless you really only want a single state - any batch loading should
+     * go through [loadStates] as repeatedly calling [loadState] can lead to repeat deserialsiation work and
+     * severe performance degradation.
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    @Throws(TransactionResolutionException::class)
+    fun loadState(stateRef: StateRef): TransactionState<*>
+    /**
+     * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
+    // as the existing transaction store will become encrypted at some point
+    @Throws(TransactionResolutionException::class)
+    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 }
 
 /**
@@ -354,4 +354,24 @@ interface ServiceHub : ServicesForResolution {
      * @return A new [Connection]
      */
     fun jdbcSession(): Connection
+
+    /**
+     * Allows the registration of a callback that may inform services when the app is shutting down.
+     *
+     * The intent is to allow the cleaning up of resources - e.g. releasing ports.
+     *
+     * You should not rely on this to clean up executing flows - that's what quasar is for.
+     *
+     * Please note that the shutdown handler is not guaranteed to be called. In production the node process may crash,
+     * be killed by the operating system and other forms of fatal termination may occur that result in this code never
+     * running. So you should use this functionality only for unit/integration testing or for code that can optimise
+     * this shutdown e.g. by cleaning up things that would otherwise trigger a slow recovery process next time the
+     * node starts.
+     */
+    fun registerUnloadHandler(runOnStop: () -> Unit)
+
+    /**
+     * See [CordappProvider.getAppContext]
+     */
+    fun getAppContext(): CordappContext = cordappProvider.getAppContext()
 }

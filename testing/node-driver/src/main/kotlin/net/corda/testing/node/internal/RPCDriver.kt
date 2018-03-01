@@ -15,6 +15,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.RPCServer
@@ -22,12 +23,13 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
-import net.corda.testing.MAX_MESSAGE_SIZE
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -52,6 +54,7 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import net.corda.nodeapi.internal.config.User as InternalUser
 
 inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
         username: String = rpcTestUser.username,
@@ -105,8 +108,9 @@ fun <A> rpcDriver(
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
+        networkParameters: NetworkParameters = testNetworkParameters(),
         dsl: RPCDriverDSL.() -> A
-) : A {
+): A {
     return genericDriver(
             driverDsl = RPCDriverDSL(
                     DriverDSLImpl(
@@ -117,11 +121,12 @@ fun <A> rpcDriver(
                             useTestClock = useTestClock,
                             isDebug = isDebug,
                             startNodesInProcess = startNodesInProcess,
-                            waitForNodesToFinish = waitForNodesToFinish,
+                            waitForAllNodesToFinish = waitForNodesToFinish,
                             extraCordappPackagesToScan = extraCordappPackagesToScan,
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
-                            compatibilityZone = null
+                            compatibilityZone = null,
+                            networkParameters = networkParameters
                     ), externalTrace
             ),
             coerce = { it },
@@ -154,7 +159,7 @@ data class RPCDriverDSL(
         private val driverDSL: DriverDSLImpl, private val externalTrace: Trace?
 ) : InternalDriverDSL by driverDSL {
     private companion object {
-        val notificationAddress = "notifications"
+        const val notificationAddress = "notifications"
 
         private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
             managementNotificationAddress = SimpleString(notificationAddress)
@@ -433,7 +438,7 @@ data class RPCDriverDSL(
             minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
-        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,

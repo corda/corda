@@ -1,1 +1,1 @@
-net.corda.testing.FlowStackSnapshotFactoryImpl
+net.corda.testing.internal.FlowStackSnapshotFactoryImpl

@@ -2,6 +2,7 @@ package net.corda.client.jfx
 
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.isFulfilledBy
@@ -10,7 +11,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.context.Origin
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -28,9 +28,11 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
+import net.corda.testing.core.*
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.chooseIdentity
+import net.corda.testing.node.User
 import org.junit.Test
 import rx.Observable
 
@@ -51,7 +53,7 @@ class NodeMonitorModelTest {
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     private fun setup(runTest: () -> Unit) {
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val cashUser = User("user1", "test", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),
@@ -75,7 +77,7 @@ class NodeMonitorModelTest {
             vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
             networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-            monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+            monitor.register(aliceNodeHandle.rpcAddress, cashUser.username, cashUser.password)
             rpc = monitor.proxyObservable.value!!
             notaryParty = defaultNotaryIdentity
 
@@ -83,7 +85,7 @@ class NodeMonitorModelTest {
             bobNode = bobNodeHandle.nodeInfo
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-            monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+            monitorBob.register(bobNodeHandle.rpcAddress, cashUser.username, cashUser.password)
             rpcBob = monitorBob.proxyObservable.value!!
             runTest()
         }
@@ -148,8 +150,8 @@ class NodeMonitorModelTest {
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
-                        val context = add.stateMachineInfo.context()
-                        require(context.origin is Origin.RPC && context.principal().name == "user1")
+                        val context = add.stateMachineInfo.invocationContext
+                        require(context.origin is InvocationOrigin.RPC && context.principal().name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -157,8 +159,8 @@ class NodeMonitorModelTest {
                     // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
                     expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
-                        val context = add.stateMachineInfo.context()
-                        require(context.origin is Origin.RPC && context.principal().name == "user1")
+                        val context = add.stateMachineInfo.invocationContext
+                        require(context.origin is InvocationOrigin.RPC && context.principal().name == "user1")
                     },
                     expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
                     }
@@ -169,8 +171,8 @@ class NodeMonitorModelTest {
             sequence(
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
-                        val context = add.stateMachineInfo.context()
-                        require(context.origin is Origin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as Origin.Peer).party)))
+                        val context = add.stateMachineInfo.invocationContext
+                        require(context.origin is InvocationOrigin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as InvocationOrigin.Peer).party)))
                     }
             )
         }

@@ -1,5 +1,6 @@
 package net.corda.docs
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -13,9 +14,10 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.config.User
-import net.corda.testing.*
+import net.corda.testing.core.*
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -23,8 +25,8 @@ class IntegrationTestingTutorial {
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
-        driver(startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
+        driver(DriverParameters(startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"))) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),
@@ -45,10 +47,10 @@ class IntegrationTestingTutorial {
             // END 1
 
             // START 2
-            val aliceClient = alice.rpcClientToNode()
+            val aliceClient = CordaRPCClient(alice.rpcAddress)
             val aliceProxy = aliceClient.start("aliceUser", "testPassword1").proxy
 
-            val bobClient = bob.rpcClientToNode()
+            val bobClient = CordaRPCClient(bob.rpcAddress)
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
             // END 2
 
@@ -71,7 +73,7 @@ class IntegrationTestingTutorial {
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashPaymentFlow,
                         i.DOLLARS,
-                        bob.nodeInfo.chooseIdentity(),
+                        bob.nodeInfo.singleIdentity(),
                         true
                 ).returnValue
             }.transpose().getOrThrow()
@@ -93,7 +95,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.chooseIdentity()).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.singleIdentity()).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

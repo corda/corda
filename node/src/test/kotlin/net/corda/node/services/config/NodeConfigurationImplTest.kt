@@ -1,11 +1,13 @@
 package net.corda.node.services.config
 
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.ALICE_NAME
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Paths
+import java.util.*
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -27,25 +29,55 @@ class NodeConfigurationImplTest {
         assertFalse { configDebugOptions(true, DevModeOptions(true)).shouldCheckCheckpoints() }
     }
 
-    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?) : NodeConfiguration {
+    @Test
+    fun `check crashShell flags helper`() {
+        assertFalse { testConfiguration.copy(sshd = null).shouldStartSSHDaemon() }
+        assertTrue { testConfiguration.copy(sshd = SSHDConfiguration(1234)).shouldStartSSHDaemon() }
+        assertFalse { testConfiguration.copy(noLocalShell = true).shouldStartLocalShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = false, devMode = false).shouldStartLocalShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = false, devMode = true).shouldStartLocalShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = true).shouldInitCrashShell() }
+        assertFalse { testConfiguration.copy(sshd = null).shouldInitCrashShell() }
+        assertFalse { testConfiguration.copy(noLocalShell = true, sshd = null).shouldInitCrashShell() }
+    }
+
+    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private val testConfiguration = NodeConfigurationImpl(
-            baseDirectory = Paths.get("."),
-            myLegalName = ALICE_NAME,
-            emailAddress = "",
-            keyStorePassword = "cordacadevpass",
-            trustStorePassword = "trustpass",
-            dataSourceProperties = makeTestDataSourceProperties(ALICE_NAME.organisation),
-            rpcUsers = emptyList(),
-            verifierType = VerifierType.InMemory,
-            useHTTPS = false,
-            p2pAddress = NetworkHostAndPort("localhost", 0),
-            rpcAddress = NetworkHostAndPort("localhost", 1),
-            messagingServerAddress = null,
-            notary = null,
-            certificateChainCheckPolicies = emptyList(),
-            devMode = true,
-            activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)))
+    private fun testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
+        return testConfiguration.copy(dataSourceProperties = dataSourceProperties)
+    }
+
+    private val testConfiguration = testNodeConfiguration()
+
+    private fun testNodeConfiguration(): NodeConfigurationImpl {
+        val baseDirectory = Paths.get(".")
+        val keyStorePassword = "cordacadevpass"
+        val trustStorePassword = "trustpass"
+        val rpcSettings = NodeRpcSettings(
+                address = NetworkHostAndPort("localhost", 1),
+                adminAddress = NetworkHostAndPort("localhost", 2),
+                standAloneBroker = false,
+                useSsl = false,
+                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+        return NodeConfigurationImpl(
+                baseDirectory = baseDirectory,
+                myLegalName = ALICE_NAME,
+                emailAddress = "",
+                keyStorePassword = keyStorePassword,
+                trustStorePassword = trustStorePassword,
+                dataSourceProperties = makeTestDataSourceProperties(ALICE_NAME.organisation),
+                rpcUsers = emptyList(),
+                verifierType = VerifierType.InMemory,
+                p2pAddress = NetworkHostAndPort("localhost", 0),
+                messagingServerAddress = null,
+                notary = null,
+                certificateChainCheckPolicies = emptyList(),
+                devMode = true,
+                noLocalShell = false,
+                activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
+                rpcSettings = rpcSettings
+        )
+    }
 }

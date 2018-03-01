@@ -6,6 +6,7 @@ tags
 .DS_Store
 *.log
 *.orig
+corda-docs-only-build
 
 # Created by .ignore support plugin (hsz.mobi)
 
@@ -37,6 +38,7 @@ lib/quasar.jar
 .idea/markdown-navigator
 .idea/runConfigurations
 .idea/dictionaries
+.idea/codeStyles/
 /gradle-plugins/.idea/
 
 # Include the -parameters compiler option by default in IntelliJ required for serialization.
@@ -88,6 +90,7 @@ crashlytics-build.properties
 
 # docs related
 docs/virtualenv/
+virtualenv/
 
 # bft-smart
 **/config/currentView

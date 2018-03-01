@@ -7,6 +7,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import java.security.PublicKey
 import java.security.SignatureException
 
 /**
@@ -19,6 +21,7 @@ import java.security.SignatureException
 // public keys.
 @CordaSerializable
 class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<DigitalSignature>) {
+    // TODO Add root cert param (or TrustAnchor) to make sure all the identities belong to the same root
     fun verified(): NodeInfo {
         val nodeInfo = raw.deserialize()
         val identities = nodeInfo.legalIdentities.filterNot { it.owningKey is CompositeKey }
@@ -41,4 +44,12 @@ class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<Di
 
         return nodeInfo
     }
+}
+
+inline fun NodeInfo.sign(signer: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature): SignedNodeInfo {
+    // For now we exclude any composite identities, see [SignedNodeInfo]
+    val owningKeys = legalIdentities.map { it.owningKey }.filter { it !is CompositeKey }
+    val serialised = serialize()
+    val signatures = owningKeys.map { signer(it, serialised) }
+    return SignedNodeInfo(serialised, signatures)
 }

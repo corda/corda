@@ -1,6 +1,6 @@
 'use strict';
 
-define([], () => {
+define([], function () {
     return {
         baseCurrency: "USD",
         effectiveDate: new Date(2016, 2, 11),
@@ -31,7 +31,7 @@ define([], () => {
         },
         addressForTransfers: "",
         exposure: {},
-        localBusinessDay: [ "London" , "NewYork" ],
+        localBusinessDay: ["London", "NewYork"],
         dailyInterestAmount: "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
         hashLegalDocs: "put hash here"
     };

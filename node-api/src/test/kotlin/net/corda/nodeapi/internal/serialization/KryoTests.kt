@@ -1,10 +1,13 @@
 package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.internal.FetchDataFlow
@@ -13,44 +16,50 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.TestIdentity
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.rigorousMock
+import org.assertj.core.api.Assertions.*
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
-class KryoTests {
+@RunWith(Parameterized::class)
+class KryoTests(private val compression: CordaSerializationEncoding?) {
     companion object {
         private val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
+        @Parameters(name = "{0}")
+        @JvmStatic
+        fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
     }
 
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
         factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        context = SerializationContextImpl(KryoHeaderV0_1,
+        context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.Storage)
+                SerializationContext.UseCase.Storage,
+                compression,
+                rigorousMock<EncodingWhitelist>().also {
+                    if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
+                })
     }
 
     @Test
@@ -148,6 +157,14 @@ class KryoTests {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())
+    }
+
+    @Test
+    fun `InputStream serialisation does not write trailing garbage`() {
+        val byteArrays = listOf("123", "456").map { it.toByteArray() }
+        val streams = byteArrays.map { it.inputStream() }.serialize(factory, context).deserialize(factory, context).iterator()
+        byteArrays.forEach { assertArrayEquals(it, streams.next().readBytes()) }
+        assertFalse(streams.hasNext())
     }
 
     @Test
@@ -249,12 +266,13 @@ class KryoTests {
         }
         Tmp()
         val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(KryoHeaderV0_1,
+        val context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.P2P,
+                null)
         pt.serialize(factory, context)
     }
 
@@ -294,5 +312,25 @@ class KryoTests {
         val exception = FetchDataFlow.HashNotFound(randomHash)
         val exception2 = exception.serialize(factory, context).deserialize(factory, context)
         assertEquals(randomHash, exception2.requested)
+    }
+
+    @Test
+    fun `compression has the desired effect`() {
+        compression ?: return
+        val data = ByteArray(12345).also { Random(0).nextBytes(it) }.let { it + it }
+        val compressed = data.serialize(factory, context)
+        assertEquals(.5, compressed.size.toDouble() / data.size, .03)
+        assertArrayEquals(data, compressed.deserialize(factory, context))
+    }
+
+    @Test
+    fun `a particular encoding can be banned for deserialization`() {
+        compression ?: return
+        doReturn(false).whenever(context.encodingWhitelist).acceptEncoding(compression)
+        val compressed = "whatever".serialize(factory, context)
+        catchThrowable { compressed.deserialize(factory, context) }.run {
+            assertSame<Any>(KryoException::class.java, javaClass)
+            assertEquals(encodingNotPermittedFormat.format(compression), message)
+        }
     }
 }

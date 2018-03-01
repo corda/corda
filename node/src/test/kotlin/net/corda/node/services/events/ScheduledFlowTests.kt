@@ -2,7 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -20,16 +20,21 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.startFlow
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
@@ -38,9 +43,9 @@ class ScheduledFlowTests {
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
 
-    private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var bobNode: StartedNode<MockNode>
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
@@ -52,7 +57,7 @@ class ScheduledFlowTests {
                               override val linearId: UniqueIdentifier = UniqueIdentifier()) : SchedulableState, LinearState {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             return if (!processed) {
-                val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.java, thisStateRef)
+                val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.jvmName, thisStateRef)
                 ScheduledActivity(logicRef, creationTime)
             } else {
                 null
@@ -98,9 +103,9 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
-        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"), threadPerNode = true)
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
@@ -117,7 +122,7 @@ class ScheduledFlowTests {
         aliceNode.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
                 val context = it.logic.stateMachine.context
-                if (context.origin is Origin.Scheduled)
+                if (context.origin is InvocationOrigin.Scheduled)
                     countScheduledFlows++
             }
         }

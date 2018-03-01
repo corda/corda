@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -15,6 +15,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.cordapp.DummyRPCFlow
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -45,7 +46,7 @@ class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsTo
     fun startServiceFlow() {
         val handle = appServiceHub.startFlow(DummyServiceFlow())
         val context = handle.returnValue.get()
-        assertEquals(this.javaClass.name, (context.origin as Origin.Service).serviceClassName)
+        assertEquals(this.javaClass.name, (context.origin as InvocationOrigin.Service).serviceClassName)
     }
 
     fun startServiceFlowAndTrack() {
@@ -75,7 +76,7 @@ class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: Service
 
 class CordaServiceTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeA: StartedMockNode
 
     @Before
     fun start() {

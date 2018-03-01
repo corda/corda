@@ -17,6 +17,7 @@ The following are the core APIs that are used in the development of CorDapps:
    api-service-hub
    api-rpc
    api-core-types
+   api-testing
 
 Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
 
@@ -47,6 +48,12 @@ The following modules have a stable API we commit not to break in following rele
 * **Core (net.corda.core)**: core Corda libraries such as crypto functions, types for Corda's building blocks: states, contracts, transactions, attachments, etc. and some interfaces for nodes and protocols
 * **Client RPC (net.corda.client.rpc)**: client RPC
 * **Client Jackson (net.corda.client.jackson)**: JSON support for client applications
+* **Test Utils (net.corda.testing.core)**: generic test utilities
+* **Test Node Driver (net.corda.testing.node, net.corda.testing.driver)**: test utilities to run nodes programmatically
+* **Http Test Utils (net.corda.testing.http)**: a small set of utilities for making HttpCalls, aimed at demos and tests.
+* **DSL Test Utils (net.corda.testing.dsl)**: a simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
+* **Dummy Contracts (net.corda.testing.contracts)**: dummy state and contracts for testing purposes
+* **Mock Services (net.corda.testing.services)**: mock service implementations for testing purposes
 
 Corda incubating modules
 ------------------------
@@ -54,9 +61,7 @@ Corda incubating modules
 The following modules don't yet have a completely stable API, but we will do our best to minimise disruption to
 developers using them until we are able to graduate them into the public API:
 
-* **net.corda.node.driver**: test utilities to run nodes programmatically
 * **net.corda.confidential.identities**: experimental support for confidential identities on the ledger
-* **net.corda.node.test.utils**: generic test utilities
 * **net.corda.finance**: a range of elementary contracts (and associated schemas) and protocols, such as abstract fungible assets, cash, obligation and commercial paper
 * **net.corda.client.jfx**: support for Java FX UI
 * **net.corda.client.mock**: client mock utilities

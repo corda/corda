@@ -23,9 +23,8 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
             // Try and find a constructor
             try {
                 val constructor = constructorForDeserialization(obj.javaClass)
-                val props = propertiesForSerialization(constructor, obj.javaClass, factory)
-                for (prop in props) {
-                    extraProperties[prop.name] = prop.readMethod!!.invoke(obj)
+                propertiesForSerializationFromConstructor(constructor!!, obj.javaClass, factory).forEach { property ->
+                    extraProperties[property.getter.name] = property.getter.propertyReader.read(obj)
                 }
             } catch (e: NotSerializableException) {
                 logger.warn("Unexpected exception", e)

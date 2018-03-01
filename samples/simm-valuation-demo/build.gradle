@@ -68,31 +68,60 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
-        cordapps = ["$project.group:finance:$corda_release_version"]
+        cordapp project(':finance')
+        extraConfig = [
+                custom: [
+                        jvmArgs: ["-Xmx1g"]
+                ]
+        ]
     }
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10004
         webPort 10005
-        rpcPort 10006
-        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcSettings {
+            address("localhost:10016")
+            adminAddress("localhost:10017")
+        }
+        cordapp project(':finance')
         rpcUsers = ext.rpcUsers
+        extraConfig = [
+                custom: [
+                        jvmArgs: ["-Xmx1g"]
+                ]
+        ]
     }
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10007
         webPort 10008
-        rpcPort 10009
-        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcSettings {
+            address("localhost:10026")
+            adminAddress("localhost:10027")
+        }
+        cordapp project(':finance')
         rpcUsers = ext.rpcUsers
+        extraConfig = [
+                custom: [
+                        jvmArgs: ["-Xmx1g"]
+                ]
+        ]
     }
     node {
         name "O=Bank C,L=Tokyo,C=JP"
         p2pPort 10010
         webPort 10011
-        rpcPort 10012
-        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcSettings {
+            address("localhost:10036")
+            adminAddress("localhost:10037")
+        }
+        cordapp project(':finance')
         rpcUsers = ext.rpcUsers
+        extraConfig = [
+                custom: [
+                        jvmArgs: ["-Xmx1g"]
+                ]
+        ]
     }
 }
 

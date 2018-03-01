@@ -19,7 +19,8 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
-    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
+    override val typeDescriptor: Symbol = Symbol.valueOf(
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end
@@ -73,7 +74,12 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
+    override fun writeObject(
+            obj: Any,
+            data: Data,
+            type: Type,
+            output: SerializationOutput,
+            debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
         obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
@@ -81,8 +87,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             data.putMap()
             data.enter()
             for ((key, value) in obj as Map<*, *>) {
-                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0])
-                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1])
+                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], debugIndent)
+                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], debugIndent)
             }
             data.exit() // exit map
         }
