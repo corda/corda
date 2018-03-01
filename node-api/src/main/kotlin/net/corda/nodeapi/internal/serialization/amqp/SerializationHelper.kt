@@ -162,12 +162,11 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
             if (func.name == "getClass") return@map
 
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
-                // take into account those constructor properties that don't directly map to a named
-                // property which are, by default, already added to the map
-
                 val properties =
                         classProperties[groups[2]!!.value] ?:
                         classProperties[groups[2]!!.value.decapitalize()] ?:
+                        // take into account those constructor properties that don't directly map to a named
+                        // property which are, by default, already added to the map
                         classProperties.computeIfAbsent(groups[2]!!.value) { PropertyDescriptor() }
 
                 properties.apply {
