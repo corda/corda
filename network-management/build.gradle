@@ -79,6 +79,9 @@ dependencies {
     // Hibernate audit plugin
     compile "org.hibernate:hibernate-envers:5.2.11.Final"
 
+    // Manifests: for reading stuff from the manifest file
+    compile "com.jcabi:jcabi-manifests:1.1"
+
     testCompile project(':test-utils')
     testCompile project(':node-driver')
 
@@ -108,4 +111,11 @@ dependencies {
     // Bouncy Castle for HSM signing
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
+}
+
+jar {
+    classifier "ignore"
+    manifest {
+        attributes('Network-Management-Version': version)
+    }
 }

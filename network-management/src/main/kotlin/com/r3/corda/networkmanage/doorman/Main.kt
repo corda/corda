@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.time.Instant
 import kotlin.concurrent.thread
+import com.jcabi.manifests.Manifests
 
 data class NetworkMapStartParams(val signer: LocalSigner?, val updateNetworkParameters: NetworkParameters?, val config: NetworkMapConfig)
 
@@ -41,10 +42,17 @@ class ApproveAllCertificateRequestStorage(private val delegate: CertificationReq
     }
 }
 
+private fun logNetworkManagementVersion() {
+    if (Manifests.exists("Network-Management-Version")) {
+        println("Network Management Version: ${Manifests.read("Network-Management-Version")}")
+    }
+}
+
 fun main(args: Array<String>) {
     try {
         parseParameters(*args).run {
             println("Starting in $mode mode")
+            logNetworkManagementVersion()
             when (mode) {
                 Mode.ROOT_KEYGEN -> generateRootKeyPair(
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
