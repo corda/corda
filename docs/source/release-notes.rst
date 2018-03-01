@@ -10,6 +10,10 @@ Unreleased
   That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
   annotations applied, have older and newer instances of that enumeration be understood.
 
+* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
+  hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
+  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
+  found at :doc:`permissioning`.
 
 R3 Corda 3.0 Developer Preview
 ------------------------------
