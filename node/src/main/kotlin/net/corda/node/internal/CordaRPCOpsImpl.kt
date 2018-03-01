@@ -14,6 +14,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.STRUCTURAL_STEP_TEXT
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
@@ -154,7 +155,7 @@ internal class CordaRPCOpsImpl(
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.updates ?: Observable.empty(),
+                progress = stateMachine.logic.track()?.updates?.filter { !(it.contains(STRUCTURAL_STEP_TEXT)) } ?: Observable.empty(),
                 stepsTreeIndexFeed = stateMachine.logic.trackStepsTreeIndex(),
                 stepsTreeFeed = stateMachine.logic.trackStepsTree()
         )
