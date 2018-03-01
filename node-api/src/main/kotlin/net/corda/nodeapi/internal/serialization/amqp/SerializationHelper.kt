@@ -136,7 +136,16 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
                 this.field = property
             }
         }
+        clazz = clazz.superclass
+    } while (clazz != null)
 
+    //
+    // Running as two loops rather than one as we need to ensure we have captured all of the properties
+    // before looking for interacting methods and need to cope with the class hierarchy introducing
+    // new  properties / methods
+    //
+    clazz = this
+    do {
         // Note: It is possible for a class to have multiple instances of a function where the types
         // differ. For example:
         //      interface I<out T> { val a: T }
@@ -148,14 +157,20 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         //
         // In addition, only getters that take zero parameters and setters that take a single
         // parameter will be considered
-        clazz.declaredMethods?.map { func ->
+        clazz!!.declaredMethods?.map { func ->
             if (!Modifier.isPublic(func.modifiers)) return@map
             if (func.name == "getClass") return@map
 
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
                 // take into account those constructor properties that don't directly map to a named
                 // property which are, by default, already added to the map
-                classProperties.computeIfAbsent(groups[2]!!.value.decapitalize()) { PropertyDescriptor() }.apply {
+
+                val properties =
+                        classProperties[groups[2]!!.value] ?:
+                        classProperties[groups[2]!!.value.decapitalize()] ?:
+                        classProperties.computeIfAbsent(groups[2]!!.value) { PropertyDescriptor() }
+
+                properties.apply {
                     when (groups[1]!!.value) {
                         "set" -> {
                             if (func.parameterCount == 1) {
@@ -222,9 +237,14 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             val name = param.value.name ?: return@forEach
 
             val propertyReader = if (name in classProperties) {
-                if (classProperties[name]!!.getter != null) {
+                //
+                // property a will (should) have getA, setA, isA etc
+                // property A will equally have getA, setA so deal with case difference
+                //
+                val functionName = name
+                if (classProperties[functionName]!!.getter != null) {
                     // it's a publicly accessible property
-                    val matchingProperty = classProperties[name]!!
+                    val matchingProperty = classProperties[functionName]!!
 
                     // Check that the method has a getter in java.
                     val getter = matchingProperty.getter ?: throw NotSerializableException(

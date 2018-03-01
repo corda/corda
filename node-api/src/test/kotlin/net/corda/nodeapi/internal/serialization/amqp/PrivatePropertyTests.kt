@@ -196,4 +196,32 @@ class PrivatePropertyTests {
 
         assertEquals(c1, c2)
     }
+
+    //
+    // Reproduces CORDA-1134
+    //
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    fun allCapsProprtyNotPrivate() {
+        data class C (val CCC: String)
+
+        val output = SerializationOutput(factory).serializeAndReturnSchema(C("this is nice"))
+
+        val serializersByDescriptor = fields["serializersByDesc"]!!.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
+
+        val schemaDescriptor = output.schema.types.first().descriptor.name
+        serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
+            assertEquals(1, size)
+
+            assertTrue(this.first() is ObjectSerializer)
+            val propertySerializers = (this.first() as ObjectSerializer).propertySerializers.serializationOrder.map { it.getter }
+
+            // CCC is the only property to be serialised
+            assertEquals(1, propertySerializers.size)
+
+            // and despite being all caps it should still be a public getter
+            assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
+        }
+    }
+
 }
