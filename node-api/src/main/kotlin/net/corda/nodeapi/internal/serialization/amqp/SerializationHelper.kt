@@ -162,6 +162,10 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
             if (func.name == "getClass") return@map
 
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
+                // matching means we have an func getX where the property could be x or X
+                // so having pre-loaded all of the properties we try to match to either case. If that
+                // fails the getter doesn't refer to a property directly, but may to a cosntructor
+                // parameter that shadows a property
                 val properties =
                         classProperties[groups[2]!!.value] ?:
                         classProperties[groups[2]!!.value.decapitalize()] ?:
@@ -235,43 +239,38 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             // it so just ignore it as it'll be supplied at runtime anyway on invocation
             val name = param.value.name ?: return@forEach
 
-            val propertyReader = if (name in classProperties) {
-                //
-                // property a will (should) have getA, setA, isA etc
-                // property A will equally have getA, setA so deal with case difference
-                //
-                val functionName = name
-                if (classProperties[functionName]!!.getter != null) {
-                    // it's a publicly accessible property
-                    val matchingProperty = classProperties[functionName]!!
+            // We will already have disambiguated getA for property A or a but we still need to cope
+            // with the case we don't know the case of A when the parameter doesn't match a property
+            // but has a getter
+            val matchingProperty = classProperties[name] ?: classProperties[name.capitalize()] ?:
+                    throw NotSerializableException(
+                            "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
 
-                    // Check that the method has a getter in java.
-                    val getter = matchingProperty.getter ?: throw NotSerializableException(
-                            "Property has no getter method for - \"$name\" - of \"$clazz\". If using Java and the parameter name"
-                                    + "looks anonymous, check that you have the -parameters option specified in the "
-                                    + "Java compiler. Alternately, provide a proxy serializer "
-                                    + "(SerializationCustomSerializer) if recompiling isn't an option.")
+            // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
+            // *for *know* we switch to a reflection based method
+            val propertyReader = if (matchingProperty.getter != null) {
+                val getter = matchingProperty.getter ?: throw NotSerializableException(
+                        "Property has no getter method for - \"$name\" - of \"$clazz\". If using Java and the parameter name"
+                                + "looks anonymous, check that you have the -parameters option specified in the "
+                                + "Java compiler. Alternately, provide a proxy serializer "
+                                + "(SerializationCustomSerializer) if recompiling isn't an option.")
 
-                    val returnType = resolveTypeVariables(getter.genericReturnType, type)
-                    if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
-                        throw NotSerializableException(
-                                "Property - \"$name\" - has type \"$returnType\" on \"$clazz\" but differs from constructor " +
-                                "parameter type \"${param.value.type.javaType}\"")
-                    }
+                val returnType = resolveTypeVariables(getter.genericReturnType, type)
+                if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
+                    throw NotSerializableException(
+                            "Property - \"$name\" - has type \"$returnType\" on \"$clazz\" but differs from constructor " +
+                                    "parameter type \"${param.value.type.javaType}\"")
+                }
 
-                    Pair(PublicPropertyReader(getter), returnType)
-                } else {
-                    val field = classProperties[name]!!.field ?:
+                Pair(PublicPropertyReader(getter), returnType)
+            } else {
+                val field = classProperties[name]!!.field ?:
                         throw NotSerializableException("No property matching constructor parameter named - \"$name\" - " +
                                 "of \"$clazz\". If using Java, check that you have the -parameters option specified " +
                                 "in the Java compiler. Alternately, provide a proxy serializer " +
                                 "(SerializationCustomSerializer) if recompiling isn't an option")
 
-                    Pair(PrivatePropertyReader(field, type), field.genericType)
-                }
-            } else {
-                throw NotSerializableException(
-                        "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
+                Pair(PrivatePropertyReader(field, type), field.genericType)
             }
 
             this += PropertyAccessorConstructor(
