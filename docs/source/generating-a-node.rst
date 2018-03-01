@@ -21,7 +21,7 @@ into the ``cordapps`` folder.
 
 In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file` for more information), the ``certificates``
 directory is filled with pre-configured keystores if the required keystores do not exist. This ensures that developers
-can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure, to learn more see :doc:`permissioning`.
+can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure. To learn more see :doc:`permissioning`.
 
 Node naming
 -----------
@@ -35,11 +35,6 @@ supported set for X.509 certificates (specified in RFC 3280), plus the locality 
 * Country (C)
 * Organizational-unit (OU)
 * Common name (CN)
-
-Note that the serial number is intentionally excluded in order to minimise scope for uncertainty in the distinguished name format.
-The distinguished name qualifier has been removed due to technical issues; consideration was given to "Corda" as qualifier,
-however the qualifier needs to reflect the compatibility zone, not the technology involved. There may be many Corda namespaces,
-but only one R3 namespace on Corda. The ordering of attributes is important.
 
 ``State`` should be avoided unless required to differentiate from other ``localities`` with the same or similar names at the
 country level. For example, London (GB) would not need a ``state``, but St Ives would (there are two, one in Cornwall, one
@@ -81,7 +76,7 @@ The name must also obey the following constraints:
 
 External identifiers
 ^^^^^^^^^^^^^^^^^^^^
-Mappings to external identifiers such as Companies House nos., LEI, BIC, etc. should be stored in custom X.509
+Mappings to external identifiers such as company registration numbers, LEI, BIC, etc. should be stored in custom X.509
 certificate extensions. These values may change for operational reasons, without the identity they're associated with
 necessarily changing, and their inclusion in the distinguished name would cause significant logistical complications.
 The OID and format for these extensions will be described in a further specification.
