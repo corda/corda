@@ -7,6 +7,12 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
+
+* The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
+
+* Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
+
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.

@@ -29,6 +29,8 @@ import kotlin.reflect.jvm.jvmErasure
 @Target(AnnotationTarget.PROPERTY)
 annotation class OldConfig(val value: String)
 
+const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
+
 // TODO Move other config parsing to use parseAs and remove this
 operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
     return getValueInternal(metadata.name, metadata.returnType)
@@ -37,15 +39,44 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
 fun <T : Any> Config.parseAs(clazz: KClass<T>): T {
     require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
-    val args = constructor.parameters
-            .filterNot { it.isOptional && !hasPath(it.name!!) }
-            .associateBy({ it }) { param ->
+    val parameters = constructor.parameters
+    val parameterNames = parameters.flatMap { param ->
+        mutableSetOf<String>().apply {
+            param.name?.let(this::add)
+            clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
+                matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
+            }
+        }
+    }
+    val unknownConfigurationKeys = this.entrySet()
+            .mapNotNull { it.key.split(".").firstOrNull() }
+            .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
+            .filterNot(parameterNames::contains)
+            .toSortedSet()
+    if (unknownConfigurationKeys.isNotEmpty()) {
+        throw UnknownConfigurationKeysException.of(unknownConfigurationKeys)
+    }
+    val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
                 // Get the matching property for this parameter
                 val property = clazz.memberProperties.first { it.name == param.name }
                 val path = defaultToOldPath(property)
                 getValueInternal<Any>(path, param.type)
             }
     return constructor.callBy(args)
+}
+
+class UnknownConfigurationKeysException private constructor(val unknownKeys: Set<String>) : IllegalArgumentException(message(unknownKeys)) {
+
+    init {
+        require(unknownKeys.isNotEmpty()) { "Absence of unknown keys should not raise UnknownConfigurationKeysException." }
+    }
+
+    companion object {
+
+        fun of(offendingKeys: Set<String>): UnknownConfigurationKeysException = UnknownConfigurationKeysException(offendingKeys)
+
+        private fun message(offendingKeys: Set<String>) = "Unknown configuration keys: ${offendingKeys.joinToString(", ", "[", "]")}."
+    }
 }
 
 inline fun <reified T : Any> Config.parseAs(): T = parseAs(T::class)
