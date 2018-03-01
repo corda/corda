@@ -108,8 +108,7 @@ The current set of network parameters:
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
         parameters change.
 :whitelistedContractImplementations: List of whitelisted versions of contract code.
-        For each contract class, the zone operator will provide a list of hashes of the approved fat jar versions containing that contract.
-        This will be used by ``net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint``.
+        For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
         Read more about *Zone constraints* here :doc:`api-contract-constraints`
 
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be

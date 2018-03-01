@@ -56,7 +56,7 @@ in its local network map cache. The node generates its own node-info file on sta
 
 In addition to the network map, all the nodes on a network must use the same set of network parameters. These are a set
 of constants which guarantee interoperability between nodes. The HTTP network map distributes the network parameters
-which the node downloads automatically. In the absence of this, the network parameters must be generated locally. This can
+which the node downloads automatically. In the absence of this the network parameters must be generated locally. This can
 be done with the network bootstrapper. This a tool that scans all the node configurations from a common directory to
 generate the network parameters file which is copied to the nodes' directories. It also copies each node's node-info file
 to every other node.
@@ -69,7 +69,7 @@ The resulting jar can be found in ``tools/bootstrapper/build/libs/``.
 
 To use it, create a directory containing a ``node.conf`` file for each node you want to create. Then run the following command:
 
-``java -jar network-bootstrapper.jar <nodes-root-dir> <path-to-first-corDapp> <path-to-second-corDapp> ..``
+``java -jar network-bootstrapper.jar <nodes-root-dir>``
 
 For example running the command on a directory containing these files :
 
@@ -82,9 +82,18 @@ For example running the command on a directory containing these files :
 
 Would generate directories containing three nodes: notary, partya and partyb.
 
-The passed CorDapp jars will be hashed and scanned for ``Contract`` classes.
+
+Whitelisting Contracts
+~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to create a *Zone whitelist* (see :doc:`api-contract-constraints`), you can pass in a list of CorDapp jars:
+
+``java -jar network-bootstrapper.jar <nodes-root-dir> <path-to-first-corDapp> <path-to-second-corDapp> ..``
+
+The CorDapp jars will be hashed and scanned for ``Contract`` classes.
 By default the tool would generate a file named ``whitelist.txt`` containing an entry for each contract with the hash of the jar.
-For ex:
+
+For example:
 
 .. sourcecode:: none
 
@@ -94,17 +103,18 @@ For ex:
 These will be added to the ``NetworkParameters.whitelistedContractImplementations``. See :doc:`network-map`.
 
 This means that by default the Network bootstrapper tool will whitelist all contracts found in all passed CorDapps.
-Read more about the *Whitelist constraint* here :doc:`api-contract-constraints`
 
-In case there is a ``whitelist.txt`` file in the root dir, the tool will append the new jar hashes or contracts to it.
+In case there is a ``whitelist.txt`` file in the root dir already, the tool will append the new jar hashes or contracts to it.
 The zone operator will maintain this whitelist file, and using the tool will append new versions of CorDapps to it.
-This file should be append only.
+The zone operator must ensure that this file is *append only*. If the operator removes hashes from the list, all transactions pointing
+to that version will suddenly fail the constraint verification, and the entire chain is compromised.
+If a contract is removed from the whitelist, then all states created from that moment on will be constrained by the HashAttachmentConstraint.
 
 For fine-grained control of constraints, in case multiple contracts live in the same jar, the tool reads from another file:
 ``exclude_whitelist.txt``, which contains a list of contracts that should not be whitelisted, and thus default to the very restrictive:
 ``HashAttachmentConstraint``
 
-For ex:
+For example:
 
 .. sourcecode:: none
 
