@@ -3,6 +3,8 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -24,8 +26,10 @@ import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Assert
 import org.junit.Test
+import java.util.*
 import java.util.concurrent.*
 import kotlin.streams.toList
+import kotlin.test.assertEquals
 
 class DriverTests {
     private companion object {
@@ -156,28 +160,27 @@ class DriverTests {
 
     @Test
     fun `driver waits for nodes to finish`() {
-        val nodeQueue = LinkedBlockingDeque<Pair<NodeHandle, List<NotaryHandle>>>(1)
-        val driverThread = Thread(Runnable {
-            driver(DriverParameters(startNodesInProcess = true, waitForAllNodesToFinish = true)) {
-                val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
-                notaryHandles.forEach { it.nodeHandles.toCompletableFuture().get() }
-                nodeQueue.put(Pair(nodeA, notaryHandles))
-            }
-        })
-        driverThread.start();
-        val (node, notaries) = nodeQueue.take()
-        Assert.assertTrue(driverThread.isAlive)
-        node.stop()
-        notaries.forEach {
-            it.nodeHandles.toCompletableFuture().get().forEach {
-                try {
-                    it.stop()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+        fun NodeHandle.stopQuietly() = try {
+            stop()
+        } catch (t: Throwable) {
+            t.printStackTrace()
         }
-        driverThread.join()
+
+        val handlesFuture = openFuture<List<NodeHandle>>()
+        val driverExit = CountDownLatch(1)
+        val testFuture = ForkJoinPool.commonPool().fork {
+            val handles = LinkedList(handlesFuture.getOrThrow())
+            val last = handles.removeLast()
+            handles.forEach { it.stopQuietly() }
+            assertEquals(1, driverExit.count)
+            last.stopQuietly()
+        }
+        driver(DriverParameters(startNodesInProcess = true, waitForAllNodesToFinish = true)) {
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+            handlesFuture.set(listOf(nodeA) + notaryHandles.map { it.nodeHandles.getOrThrow() }.flatten())
+        }
+        driverExit.countDown()
+        testFuture.getOrThrow()
     }
 
     private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
