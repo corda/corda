@@ -7,8 +7,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
-import net.corda.cordform.CordformContext
-import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
@@ -111,10 +109,9 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
-
     interface Waitable {
         @Throws(InterruptedException::class)
-        fun waitFor(): Int
+        fun waitFor(): Unit
     }
 
     class State {
@@ -681,9 +678,8 @@ class DriverDSLImpl(
             }
             state.locked {
                 processes += object : Waitable {
-                    override fun waitFor(): Int {
-                        nodeAndThreadFuture.toCompletableFuture().join().second.join()
-                        return 1;
+                    override fun waitFor() {
+                        nodeAndThreadFuture.getOrThrow().second.join()
                     }
                 }
             }
@@ -695,8 +691,8 @@ class DriverDSLImpl(
             if (waitForAllNodesToFinish) {
                 state.locked {
                     processes += object : Waitable {
-                        override fun waitFor(): Int {
-                            return process.waitFor()
+                        override fun waitFor() {
+                            process.waitFor()
                         }
                     }
                 }
@@ -798,8 +794,8 @@ class DriverDSLImpl(
                 }
                 node to nodeThread
             }.flatMap { nodeAndThread ->
-                        addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
-                    }
+              addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
+            }
         }
 
         private fun startOutOfProcessNode(
@@ -890,8 +886,8 @@ class DriverDSLImpl(
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package`
-                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
+                   throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 
