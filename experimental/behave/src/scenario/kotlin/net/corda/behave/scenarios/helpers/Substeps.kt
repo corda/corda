@@ -2,7 +2,6 @@ package net.corda.behave.scenarios.helpers
 
 import net.corda.behave.logging.getLogger
 import net.corda.behave.scenarios.ScenarioState
-import net.corda.behave.service.proxy.RPCProxyOps
 import net.corda.core.messaging.CordaRPCOps
 
 abstract class Substeps(protected val state: ScenarioState) {

@@ -196,10 +196,6 @@ class Node(
         }
     }
 
-    private inline fun <reified T : Any> doGet(hostAndPort: HostAndPort, path: String): T {
-        return java.net.URL("http://$hostAndPort/rpc/$path").openHttpConnection().responseAs()
-    }
-
     override fun toString(): String {
         return "Node(name = ${config.name}, version = ${config.distribution.version})"
     }

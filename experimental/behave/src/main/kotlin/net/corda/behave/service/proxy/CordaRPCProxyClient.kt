@@ -5,10 +5,11 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.checkOkResponse
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
 import net.corda.core.messaging.*
@@ -21,6 +22,7 @@ import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.finance.flows.AbstractCashFlow
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
@@ -53,7 +55,7 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return  doPost(targetHostAndPort, "vault-query", contractStateType.name.serialize().bytes)
     }
 
     override fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
@@ -105,7 +107,7 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun networkMapSnapshot(): List<NodeInfo> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return doGet(targetHostAndPort, "network-map-snapshot")
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
@@ -121,12 +123,17 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        val flowName = logicType.name.substringAfterLast('.')
-        println("Corda RPC Proxy client calling: $flowName")
-        args.asList().forEach {
-            println(it)
+        val flowName = logicType.name
+        val argList = listOf(flowName, *args).map {
+            if (it is Party)
+                it.name
+            else it
         }
-        return doPost(targetHostAndPort, "start-flow", args.toList().serialize().bytes) as FlowHandle<T>
+
+        println("Corda RPC Proxy client calling: $flowName with values: $argList")
+        val response = doPost<AbstractCashFlow.Result>(targetHostAndPort, "start-flow", argList.serialize().bytes)
+        val result = doneFuture(response)
+        return FlowHandleImpl(StateMachineRunId.createRandom(), result) as FlowHandle<T>
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
@@ -194,7 +201,7 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return doPost(targetHostAndPort, "parties-from-name", query.serialize().bytes)
     }
 
     override fun registeredFlows(): List<String> {
@@ -217,15 +224,15 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    private fun doPost(hostAndPort: NetworkHostAndPort, path: String, payload: ByteArray) {
+    private inline fun <reified T : Any> doPost(hostAndPort: NetworkHostAndPort, path: String, payload: ByteArray) : T {
         val url = java.net.URL("http://$hostAndPort/rpc/$path")
-        url.openHttpConnection().apply {
+        val connection = url.openHttpConnection().apply {
             doOutput = true
             requestMethod = "POST"
             setRequestProperty("Content-Type", javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM)
             outputStream.write(payload)
-            checkOkResponse()
         }
+        return connection.responseAs()
     }
 
     private inline fun <reified T : Any> doGet(hostAndPort: NetworkHostAndPort, path: String): T {

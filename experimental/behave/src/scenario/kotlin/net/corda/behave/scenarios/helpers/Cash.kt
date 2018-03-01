@@ -1,7 +1,6 @@
 package net.corda.behave.scenarios.helpers
 
 import net.corda.behave.scenarios.ScenarioState
-import net.corda.behave.service.proxy.startFlow
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name

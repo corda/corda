@@ -217,7 +217,7 @@ class Network private constructor(
                 rpcProxyCommand.kill()
                 try {
                     val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
-                    Command(listOf("kill -9 $pid")).start()
+                    Command(listOf("kill -9 $pid")).run()
                     FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid").toFile())
                 }
                 catch (e: Exception) {

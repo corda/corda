@@ -1,10 +1,12 @@
 package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
+import net.corda.behave.node.Distribution
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.seconds
 import org.junit.Ignore
 import org.junit.Test
+import java.time.Duration
 
 class NetworkTests {
 
@@ -19,6 +21,23 @@ class NetworkTests {
             it.waitUntilRunning(30.seconds)
             it.signal()
             it.keepAlive(30.seconds)
+        }
+    }
+
+    @Ignore
+    @Test
+    fun `network of two nodes (one with RPC proxy) and a non-validating notary can be spun up`() {
+        val distribution = Distribution.fromVersionString("corda-3.0-pre-release-V3")
+        val network = Network
+                .new()
+                .addNode(name = "EntityA", distribution = distribution!!, withRPCProxy = true)
+                .addNode(name = "EntityB", distribution = distribution!!)
+//                .addNode(name = "EntityB", distribution = Distribution.LATEST_R3_MASTER)
+                .addNode(name = "Notary", distribution = distribution!!, notaryType = NotaryType.NON_VALIDATING)
+                .generate()
+        network.use {
+            it.waitUntilRunning(30.seconds)
+            it.keepAlive(Duration.ofDays(1))
         }
     }
 
