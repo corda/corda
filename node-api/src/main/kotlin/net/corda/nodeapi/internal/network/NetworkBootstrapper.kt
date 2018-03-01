@@ -53,6 +53,7 @@ class NetworkBootstrapper {
 
         private const val LOGS_DIR_NAME = "logs"
         private const val WHITELIST_FILE_NAME = "whitelist.txt"
+        private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
 
         @JvmStatic
         fun main(args: Array<String>) {
@@ -80,7 +81,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, cordapps)
+            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps)
             println("Updating whitelist.")
             overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
             installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
@@ -186,17 +187,19 @@ class NetworkBootstrapper {
         nodeDirs.forEach { copier.install(it) }
     }
 
-    private fun generateWhitelist(whitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
+    private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
-
         println("Found existing whitelist: $existingWhitelist")
+
+        val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
+        println("Exclude Contracts from whitelist: $excludeContracts")
 
         val newWhiteList = cordapps?.flatMap { cordappJarPath ->
             val jarHash = getJarHash(cordappJarPath)
             scanJarForContracts(cordappJarPath).map { contract ->
                 contract to jarHash
             }
-        }?.toMap() ?: emptyMap()
+        }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
 
         println("Calculating whitelist for current cordapps: $newWhiteList")
 
@@ -213,7 +216,7 @@ class NetworkBootstrapper {
 
     private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
         PrintStream(whitelistFile.toFile().outputStream()).use { out ->
-            mergedWhiteList.forEach { (contract, attachments )->
+            mergedWhiteList.forEach { (contract, attachments) ->
                 out.println("${contract}:${attachments.joinToString(",")}")
             }
         }
@@ -225,11 +228,13 @@ class NetworkBootstrapper {
         SecureHash.SHA256(hs.hash().asBytes())
     }
 
-    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.toFile().readLines()
+    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.readAllLines()
             .map { line -> line.split(":") }
             .map { (contract, attachmentIds) ->
                 contract to (attachmentIds.split(",").map(::parse))
             }.toMap()
+
+    private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
 
