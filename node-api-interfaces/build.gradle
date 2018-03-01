@@ -6,7 +6,6 @@ description 'Corda node API external interfaces and annotatins'
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 }
 
 jar {
