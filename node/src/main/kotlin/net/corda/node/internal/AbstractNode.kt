@@ -631,9 +631,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService,
-                                                         insideTransaction: (CordaPersistence) -> T): T {
-
+    protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val props = configuration.dataSourceProperties
         if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
         val database = configureDatabase(props, configuration.database, identityService, schemaService)
