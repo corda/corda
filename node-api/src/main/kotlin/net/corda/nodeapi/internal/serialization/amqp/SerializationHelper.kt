@@ -535,11 +535,15 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
 fun Class<*>.objectInstance() =
     try {
         this.getDeclaredField("INSTANCE")?.let { field ->
-            val accessibility = field.isAccessible
-            field.isAccessible = true
-            val obj = field.get(null)
-            field.isAccessible = accessibility
-            obj
+            if (modifiers and Modifier.STATIC == 0) {
+                null
+            } else {
+                val accessibility = field.isAccessible
+                field.isAccessible = true
+                val obj = field.get(null)
+                field.isAccessible = accessibility
+                obj
+            }
         }
     } catch (e: NoSuchFieldException) {
         null
