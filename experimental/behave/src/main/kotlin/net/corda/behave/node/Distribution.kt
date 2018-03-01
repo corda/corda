@@ -105,13 +105,13 @@ class Distribution private constructor(
          * Corda Open Source, version 3.0.0
          */
         val V3 = fromJarFile("corda-3.0")
-        val V3_SNAPSHOT = fromJarFile("corda-3.0-snapshot")
+        val MASTER = fromJarFile("corda-master")
 
         val R3_V3 = fromJarFile("r3corda-3.0")
-        val R3_V3_SNAPSHOT = fromJarFile("r3corda-3.0-snapshot")
+        val R3_MASTER = fromJarFile("r3corda-master")
 
-        val LATEST_MASTER = V3_SNAPSHOT
-        val LATEST_R3_MASTER = R3_V3_SNAPSHOT
+        val LATEST_MASTER = MASTER
+        val LATEST_R3_MASTER = R3_MASTER
 
         /**
          * Get representation of a Corda distribution from Artifactory based on its version string.

@@ -25,7 +25,7 @@ class CommandTests {
 
         val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
         println("Killing RPCProxyServer with pid: $pid")
-        Command(listOf("/bin/sh kill -9 $pid")).start()
+        Command(listOf("kill", "-9", "$pid")).run()
         FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid").toFile())
     }
 

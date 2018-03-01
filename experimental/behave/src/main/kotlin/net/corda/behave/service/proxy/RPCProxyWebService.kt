@@ -29,7 +29,10 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.status
 
 @Path(RPC_PROXY_PATH)
-class RPCProxyWebService {
+class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
+
+    // see "NetworkInterface" port allocation definitions
+    private val targetPort = targetHostAndPort.port - 1000
 
     init {
         try {
@@ -136,7 +139,7 @@ class RPCProxyWebService {
     }
 
     private fun <T> use(action: (CordaRPCOps) -> T): Response {
-        val targetHost = NetworkHostAndPort("localhost", 12002)
+        val targetHost = NetworkHostAndPort("localhost", targetPort)
         val config = CordaRPCClientConfiguration(connectionMaxRetryInterval = 10.seconds)
         log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
         return try {
@@ -150,7 +153,7 @@ class RPCProxyWebService {
         } catch (e: Exception) {
             log.warn("RPC Proxy request failed: ", e)
             e.printStackTrace()
-            status(Response.Status.NOT_FOUND)
+            status(Response.Status.INTERNAL_SERVER_ERROR).encoding(e.message)
         }.build()
     }
 

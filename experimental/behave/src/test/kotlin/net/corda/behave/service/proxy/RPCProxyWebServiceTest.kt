@@ -23,6 +23,9 @@ class RPCProxyWebServiceTest {
     private val hostAndPort = NetworkHostAndPort("localhost", 13002)
     private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
 
+    private val hostAndPortB = NetworkHostAndPort("localhost", 13007)
+    private val rpcProxyClientB = CordaRPCProxyClient(hostAndPortB)
+
     @Test
     fun myIp() {
 //        RPCProxyServer(hostAndPort, webService = RPCProxyWebService()).use {
@@ -91,9 +94,19 @@ class RPCProxyWebServiceTest {
 
     @Test
     fun vaultQueryCash() {
-        val response = rpcProxyClient.vaultQuery(Cash.State::class.java)
-        response.states.forEach { state ->
-            println("${state.state.data.amount}")
+        try {
+            val responseA = rpcProxyClient.vaultQuery(Cash.State::class.java)
+            responseA.states.forEach { state ->
+                println("Entity A: ${state.state.data.amount}")
+            }
+
+            val responseB = rpcProxyClientB.vaultQuery(Cash.State::class.java)
+            responseB.states.forEach { state ->
+                println("Entity B: ${state.state.data.amount}")
+            }
+        }
+        catch (e: Exception) {
+            println("Vault Cash query error: ${e.message}")
         }
     }
 

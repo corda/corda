@@ -217,7 +217,7 @@ class Network private constructor(
                 rpcProxyCommand.kill()
                 try {
                     val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
-                    Command(listOf("kill -9 $pid")).run()
+                    Command(listOf("kill", "-9", "$pid")).run()
                     FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid").toFile())
                 }
                 catch (e: Exception) {
@@ -226,7 +226,7 @@ class Network private constructor(
             }
             if (!hasError || CLEANUP_ON_ERROR) {
                 log.info("Cleaning up runtime ...")
-                FileUtils.deleteDirectory(targetDirectory)
+//                FileUtils.deleteDirectory(targetDirectory)
             } else {
                 log.info("Deleting temporary files, but retaining logs and config ...")
                 for (node in nodes.values.map { it.config.name }) {
