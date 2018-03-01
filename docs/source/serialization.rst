@@ -442,6 +442,94 @@ associates it with the actual member variable.
             fun getStatesToConsume() = states
         }
 
+Constructors with Side Effects
+``````````````````````````````
+
+**The Problem**
+
+Given the Corda AMQP library uses constructors to instantiate objects it is advised to avoid using
+constructors that have side effects, especially the constructor that will be used to deserialise an object.
+
+What do we mean by side efects?, consider the following example
+
+.. sourcecode:: kotlin
+
+    // Some example class
+    class Example {
+            var property = 0
+
+            constructor(property: Int) {
+                this.property = property + 1
+            }
+        }
+    }
+
+    val eg1 = Example(99)
+    println (eg1.property)
+
+    // round trip the object in and out of its serialized form
+    val eg2 = eg1.serialize().deserialize()
+    println (eg2.property)
+
+In this example the following is printed:
+
+.. sourcecode:: bash
+
+    100
+    101
+
+    // Note that the input to the class was initially 99
+
+Clearly this is not what was intended as one would expect the two copies to match. Of course, this is
+a highly contrived example to illustrate a point. Where this is more common is in exception handling
+where the input is modified to complete some template message to allow the user of the class to
+not worry about filling that in.
+
+.. sourcecode:: kotlin
+
+    class CatException(name: String) : Exception("Cat $name was a bad girl")
+
+Without modification of the ``CatException`` class this will not behave as intended under, indeed, on
+deserialization the message would read
+
+.. sourcecode:: kotlin
+
+    throw CatException("Jane")
+
+    // After a serialization round trip the result would be
+    "Cat Cat Jane was a bad girl was a bad girl"
+
+
+**The Solution**
+
+Classes must be written such that the primary constructor is the least specialised form, i.e. that which
+takes a pure string and can be used when deserializing the object to instantiate the serialised string
+without alteration.
+
+Equally, a secondary constructor must be provided that can manipulate the input as desired. In cases where
+this can be done without signature clash this is easy. However, when that isn't possible (as in our
+CatException example) then the Corda Serialization framework provides the ``UnusedConstructorParameter`` annotation.
+Additionally, we recommend using the explicit type ``SerializationOnlyParameter`` to further reinforce this
+property is a simple place holder and should never be used outside of the serializer.
+
+This, when used on a constructor property, renders that property invisible to the serializer. It will not be
+included in the serialized form (thus saving space) and will never be instantiated with the serializer knowing
+it must append a single null argument to the construction of objects using this function.
+
+.. note:: This paramater **must** be nullable
+
+Reworking our naughty cat exception:
+
+.. sourcecode:: kotlin
+
+    class CatException(msg: String, @UnusedConstructorParameter p: SerializationOnlyParameter?) : Exception(msg) {
+        constructor(name: String) : this ("Cat $name was a bad girl", null)
+    }
+
+This still allows the exception to be thrown by users as ``throw CatException(Elaine)``, preserving the clean and
+convenient interface.
+
+
 Enums
 `````
 

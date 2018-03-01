@@ -5,46 +5,108 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
+import net.corda.nodeapiinterfaces.serialization.ConstructorForDeserialization
+import net.corda.nodeapiinterfaces.serialization.UnusedConstructorParameter
+import net.corda.nodeapiinterfaces.serialization.SerializationOnlyParameter
 import java.security.PublicKey
 
 class TransactionResolutionException(val hash: SecureHash) : FlowException("Transaction resolution failure for $hash")
 class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attachment resolution failure for $hash")
 
-sealed class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
-    : FlowException("$message, transaction: $txId", cause) {
+@Suppress("UNUSED_PARAMETER")
+sealed class TransactionVerificationException : FlowException {
+    abstract val txId: SecureHash
 
-    class ContractRejection(txId: SecureHash, contract: Contract, cause: Throwable)
-        : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contract", cause)
+    constructor (txId: SecureHash, message: String, cause: Throwable?) : super(message, txId, cause)
+    constructor (message: String, cause: Throwable?) : super(message, cause)
 
-    class ContractConstraintRejection(txId: SecureHash, contractClass: String)
-        : TransactionVerificationException(txId, "Contract constraints failed for $contractClass", null)
+    class ContractRejection(
+            override val txId: SecureHash,
+            message: String,
+            cause: Throwable?,
+            @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, cause) {
 
-    class MissingAttachmentRejection(txId: SecureHash, val contractClass: String)
-        : TransactionVerificationException(txId, "Contract constraints failed, could not find attachment for: $contractClass", null)
+        constructor(txId: SecureHash, contract: Contract, cause: Throwable) :
+                this(txId, "Contract verification failed: ${cause.message}, contract: $contract", cause, null)
+    }
 
-    class ConflictingAttachmentsRejection(txId: SecureHash, contractClass: String)
-        : TransactionVerificationException(txId, "Contract constraints failed for: $contractClass, because multiple attachments providing this contract were attached.", null)
+    class ContractConstraintRejection @ConstructorForDeserialization constructor (
+            override val txId: SecureHash, message: String, @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, null) {
 
-    class ContractCreationError(txId: SecureHash, contractClass: String, cause: Throwable)
-        : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, could not create contract class: $contractClass", cause)
+        constructor (txId: SecureHash, contractClass: String) :
+                this(txId, "Contract constraints failed for $contractClass", null)
+    }
 
-    class MoreThanOneNotary(txId: SecureHash)
-        : TransactionVerificationException(txId, "More than one notary", null)
+    class MissingAttachmentRejection(
+            override val txId: SecureHash, message: String, @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, null) {
 
-    class SignersMissing(txId: SecureHash, missing: List<PublicKey>)
-        : TransactionVerificationException(txId, "Signers missing: ${missing.joinToString()}", null)
+        constructor (txId: SecureHash, contractClass: String) :
+                this(txId, "Contract constraints failed, could not find attachment for: $contractClass", null)
+    }
 
-    class DuplicateInputStates(txId: SecureHash, val duplicates: NonEmptySet<StateRef>)
-        : TransactionVerificationException(txId, "Duplicate inputs: ${duplicates.joinToString()}", null)
+    class ConflictingAttachmentsRejection(
+            override val txId: SecureHash, message: String, @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, null) {
 
-    class InvalidNotaryChange(txId: SecureHash)
-        : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
+        constructor (txId: SecureHash, contractClass: String) :
+                this (txId, "Contract constraints failed for: $contractClass, because multiple " +
+                        "attachments providing this contract were attached.", null)
+    }
 
-    class NotaryChangeInWrongTransactionType(txId: SecureHash, txNotary: Party, outputNotary: Party)
-        : TransactionVerificationException(txId, "Found unexpected notary change in transaction. Tx notary: $txNotary, found: $outputNotary", null)
+    class ContractCreationError(
+            override val txId:
+            SecureHash,
+            message: String,
+            cause: Throwable,
+            @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, cause) {
+        constructor (txId: SecureHash, contractClass: String, cause: Throwable) :
+            this (txId, "Contract verification failed: ${cause.message}, could not create contract " +
+                    "class: $contractClass", cause, null)
+    }
 
-    class TransactionMissingEncumbranceException(txId: SecureHash, missing: Int, inOut: Direction)
-        : TransactionVerificationException(txId, "Missing required encumbrance $missing in $inOut", null)
+    class MoreThanOneNotary(override val txId: SecureHash, message: String)
+        : TransactionVerificationException(message, null) {
+        constructor(txId: SecureHash) : this (txId, "More than one notary")
+    }
+
+    class SignersMissing(override val txId: SecureHash, message: String)
+        : TransactionVerificationException(message, null) {
+        constructor(txId: SecureHash, missing: List<PublicKey>) :
+                this (txId, "Signers missing: ${missing.joinToString()}")
+    }
+
+    class DuplicateInputStates(
+            override val txId: SecureHash,
+            message: String,
+            @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, null) {
+        constructor(txId: SecureHash, duplicates: NonEmptySet<StateRef>) :
+                this (txId, "Duplicate inputs: ${duplicates.joinToString()}", null)
+    }
+
+    class InvalidNotaryChange(
+            override val txId: SecureHash, message: String, @UnusedConstructorParameter p: SerializationOnlyParameter?)
+        : TransactionVerificationException(message, null) {
+        constructor(txId: SecureHash) :
+                this (txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
+    }
+
+    class NotaryChangeInWrongTransactionType(
+            override val txId: SecureHash, message: String)
+        : TransactionVerificationException(message, null) {
+        constructor(txId: SecureHash, txNotary: Party, outputNotary: Party) :
+                this (txId, "Found unexpected notary change in transaction. Tx notary: $txNotary, found: $outputNotary")
+    }
+
+    class TransactionMissingEncumbranceException(override val txId: SecureHash, message: String)
+        : TransactionVerificationException(message, null) {
+        constructor(txId: SecureHash, missing: Int, inOut: Direction) :
+            this (txId, "Missing required encumbrance $missing in $inOut")
+    }
 
     @CordaSerializable
     enum class Direction {

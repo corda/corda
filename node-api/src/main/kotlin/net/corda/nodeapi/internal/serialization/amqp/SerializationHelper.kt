@@ -5,6 +5,8 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
+import net.corda.nodeapiinterfaces.serialization.UnusedConstructorParameter
+import net.corda.nodeapiinterfaces.serialization.ConstructorForDeserialization as ConstructorForDeserializationCore
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -17,6 +19,7 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
+
 
 /**
  * Annotation indicating a constructor to be used to reconstruct instances of a class during deserialization.
@@ -42,11 +45,17 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
         for (kotlinConstructor in kotlinConstructors) {
             if (preferredCandidate == null && kotlinConstructors.size == 1) {
                 preferredCandidate = kotlinConstructor
-            } else if (preferredCandidate == null && kotlinConstructors.size == 2 && hasDefault && kotlinConstructor.parameters.isNotEmpty()) {
+            } else if (preferredCandidate == null
+                    && kotlinConstructors.size == 2
+                    && hasDefault
+                    && kotlinConstructor.parameters.isNotEmpty()) {
                 preferredCandidate = kotlinConstructor
-            } else if (kotlinConstructor.findAnnotation<ConstructorForDeserialization>() != null) {
+            } else if (
+                    kotlinConstructor.findAnnotation<ConstructorForDeserialization>() != null ||
+                    kotlinConstructor.findAnnotation<ConstructorForDeserializationCore>() != null) {
                 if (annotatedCount++ > 0) {
-                    throw NotSerializableException("More than one constructor for $clazz is annotated with @CordaConstructor.")
+                    throw NotSerializableException(
+                            "More than one constructor for $clazz is annotated with @CordaConstructor.")
                 }
                 preferredCandidate = kotlinConstructor
             }
@@ -251,8 +260,12 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
                     Pair(PrivatePropertyReader(field, type), field.genericType)
                 }
             } else {
-                throw NotSerializableException(
-                        "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
+                if (param.value.findAnnotation<UnusedConstructorParameter>() == null) {
+                    throw NotSerializableException(
+                            "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
+                } else {
+                    Pair (UnusedSerialisationPropertyReader(), param.value.type.javaType)
+                }
             }
 
             this += PropertyAccessorConstructor(

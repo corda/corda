@@ -24,9 +24,16 @@ class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
 
     private fun Method.returnsNullable(): Boolean {
         try {
-            val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull {
-                it.javaGetter == this
-            }?.returnType?.toString() ?: "?"
+            val returnTypeString = try {
+                this.declaringClass.kotlin.memberProperties.firstOrNull {
+                    it.javaGetter == this
+                }?.returnType?.toString() ?: "?"
+            } catch (e: Error) {
+                // If we end up reflecting a kotlin internal type here, we get a really nasty stack printed out
+                // but because that exception is hidden from us, just catch the most derived version and infer
+                // the type isn't nullable
+                return true
+            }
 
             return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
         } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
@@ -76,6 +83,16 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
 }
 
 /**
+ * For internal use by the Serializer only
+ *
+ * Used to specifically and purposefully remove a property from the serialised fornm/pre
+ */
+class UnusedSerialisationPropertyReader : PropertyReader() {
+    override fun read(obj: Any?) = null
+    override fun isNullable() = true
+}
+
+/**
  * Special instance of a [PropertyReader] for use only by [EvolutionSerializer]s to make
  * it explicit that no properties are ever actually read from an object as the evolution
  * serializer should only be accessing the already serialized form.
@@ -102,7 +119,13 @@ abstract class PropertyAccessor(
         open val getter: PropertySerializer) {
     companion object : Comparator<PropertyAccessor> {
         override fun compare(p0: PropertyAccessor?, p1: PropertyAccessor?): Int {
-            return p0?.getter?.name?.compareTo(p1?.getter?.name ?: "") ?: 0
+            return if (p0?.getter?.propertyReader is UnusedSerialisationPropertyReader) {
+                1
+            } else if (p1?.getter?.propertyReader is UnusedSerialisationPropertyReader) {
+                -1
+            } else {
+                p0?.getter?.name?.compareTo(p1?.getter?.name ?: "") ?: 0
+            }
         }
     }
 

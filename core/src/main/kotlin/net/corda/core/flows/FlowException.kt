@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
+import net.corda.core.crypto.SecureHash
 
 // DOCSTART 1
 /**
@@ -14,6 +15,7 @@ import net.corda.core.CordaRuntimeException
  * It is recommended a [FlowLogic] document the [FlowException] types it can throw.
  */
 open class FlowException(message: String?, cause: Throwable?) : CordaException(message, cause) {
+    constructor(message: String?, txId: SecureHash, cause: Throwable?) : this ("$message, transaction: $txId", cause)
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)

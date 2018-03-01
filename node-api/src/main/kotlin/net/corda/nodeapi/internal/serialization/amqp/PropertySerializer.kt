@@ -45,7 +45,9 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
 
     companion object {
         fun make(name: String, readMethod: PropertyReader, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
-            return if (SerializerFactory.isPrimitive(resolvedType)) {
+            return if (readMethod is UnusedSerialisationPropertyReader) {
+                UnusedSerializationPropertySerializer(name, readMethod, resolvedType)
+            } else if (SerializerFactory.isPrimitive(resolvedType)) {
                 when (resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
                     else -> AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
@@ -127,6 +129,15 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
             val input = propertyReader.read(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }
+    }
+
+    class UnusedSerializationPropertySerializer(
+            name: String,
+            readMethod: PropertyReader,
+            resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
+        override fun writeClassInfo(output: SerializationOutput) {}
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput) = null
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int) = Unit
     }
 }
 
