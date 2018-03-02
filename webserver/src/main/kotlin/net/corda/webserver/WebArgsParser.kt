@@ -25,7 +25,7 @@ class ArgsParser {
     private val configFileArg = optionParser
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
-            .defaultsTo("node.conf")
+            .defaultsTo("web-server.conf")
     private val loggerLevel = optionParser
             .accepts("logging-level", "Enable logging at this level and higher")
             .withRequiredArg()

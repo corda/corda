@@ -18,7 +18,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -46,7 +45,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *   - The Int.DOLLARS syntax doesn't work from Java.  Use the DOLLARS(int) function instead.
  */
 
-fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
+/** Returns a fake state reference for testing purposes **/
+fun generateStateRef(): StateRef = StateRef(SecureHash.randomSHA256(), 0)
 
 private val freePortCounter = AtomicInteger(30000)
 /**
@@ -100,6 +100,10 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
     return getTestPartyAndCertificate(Party(name, publicKey))
 }
 
+/**
+ * A class that encapsulates a test identity containing a [CordaX500Name] and a [KeyPair], alongside a range
+ * of utility methods for use during testing.
+ */
 class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
     companion object {
         /**
@@ -122,16 +126,11 @@ class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
     val publicKey: PublicKey get() = keyPair.public
     val party: Party = Party(name, publicKey)
     val identity: PartyAndCertificate by lazy { getTestPartyAndCertificate(party) } // Often not needed.
+
+    /** Returns a [PartyAndReference] for this identity and the given reference */
     fun ref(vararg bytes: Byte): PartyAndReference = party.ref(*bytes)
 }
 
-/**
- * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
- * TODO: Should be removed after multiple identities are introduced.
- */
-fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
-
-fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 /**
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */

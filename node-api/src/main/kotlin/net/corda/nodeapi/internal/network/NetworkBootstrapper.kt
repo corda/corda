@@ -4,6 +4,7 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.parse
 import net.corda.core.identity.Party
@@ -77,9 +78,9 @@ class NetworkBootstrapper {
             distributeNodeInfos(nodeDirs, nodeInfoFiles)
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
-            println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
+            println("Notary identities to be used in network parameters: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
             val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, cordapps?.distinct())
-            println("Updating whitelist.")
+            println("Updating whitelist")
             overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
             installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
             println("Bootstrapping complete!")
@@ -90,15 +91,17 @@ class NetworkBootstrapper {
     }
 
     private fun generateDirectoriesIfNeeded(directory: Path) {
-        val confFiles = directory.list { it.filter { it.toString().endsWith(".conf") }.toList() }
+        val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
+        val webServerConfFiles = directory.list { it.filter { it.toString().endsWith("_web-server.conf") }.toList() }
         if (confFiles.isEmpty()) return
         println("Node config files found in the root directory - generating node directories")
         val cordaJar = extractCordaJarTo(directory)
         for (confFile in confFiles) {
-            val nodeName = confFile.fileName.toString().removeSuffix(".conf")
+            val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
             println("Generating directory for $nodeName")
             val nodeDir = (directory / nodeName).createDirectories()
             confFile.moveTo(nodeDir / "node.conf", StandardCopyOption.REPLACE_EXISTING)
+            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.moveTo(nodeDir / "web-server.conf", StandardCopyOption.REPLACE_EXISTING)
             Files.copy(cordaJar, (nodeDir / "corda.jar"), StandardCopyOption.REPLACE_EXISTING)
         }
         Files.delete(cordaJar)
@@ -187,16 +190,18 @@ class NetworkBootstrapper {
     private fun generateWhitelist(whitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
 
-        println("Found existing whitelist: $existingWhitelist")
+        println("Found existing whitelist:")
+        existingWhitelist.forEach { println(it.outputString()) }
 
-        val newWhiteList = cordapps?.flatMap { cordappJarPath ->
+        val newWhiteList: Map<ContractClassName, AttachmentId> = cordapps?.flatMap { cordappJarPath ->
             val jarHash = getJarHash(cordappJarPath)
             scanJarForContracts(cordappJarPath).map { contract ->
                 contract to jarHash
             }
         }?.toMap() ?: emptyMap()
 
-        println("Calculating whitelist for current cordapps: $newWhiteList")
+        println("Calculating whitelist for current CorDapps:")
+        newWhiteList.forEach { (contract, attachment) -> println("$contract:$attachment") }
 
         val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
             val existing = existingWhitelist[contractClassName] ?: emptyList()
@@ -204,16 +209,15 @@ class NetworkBootstrapper {
             contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
         }.toMap()
 
-        println("Final whitelist: $merged")
+        println("Final whitelist:")
+        merged.forEach { println(it.outputString()) }
 
         return merged
     }
 
     private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
         PrintStream(whitelistFile.toFile().outputStream()).use { out ->
-            mergedWhiteList.forEach { (contract, attachments )->
-                out.println("${contract}:${attachments.joinToString(",")}")
-            }
+            mergedWhiteList.forEach { out.println(it.outputString()) }
         }
     }
 
@@ -233,14 +237,16 @@ class NetworkBootstrapper {
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-        // cluster and is shared by all the other members. This is the notary identity.
+            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+            // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
     }
+
+    private fun Map.Entry<ContractClassName, List<AttachmentId>>.outputString() = "$key:${value.joinToString(",")}"
 
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     // KryoServerSerializationScheme is not accessible from nodeapi.

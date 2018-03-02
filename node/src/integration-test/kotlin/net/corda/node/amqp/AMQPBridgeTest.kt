@@ -68,23 +68,33 @@ class AMQPBridgeTest {
         val receive = amqpServer.onReceive.toBlocking().iterator
         amqpServer.start()
 
+        val receivedSequence = mutableListOf<Int>()
+
+        fun formatMessage(expected: String, actual: Int, received: List<Int>): String {
+            return "Expected message with id $expected, got $actual, previous message receive sequence: "
+            "${received.joinToString(",  ", "[", "]")}."
+        }
+
         val received1 = receive.next()
         val messageID1 = received1.applicationProperties["CountProp"] as Int
         assertArrayEquals("Test$messageID1".toByteArray(), received1.payload)
         assertEquals(0, messageID1)
         received1.complete(true) // Accept first message
+        receivedSequence.add(messageID1)
 
         val received2 = receive.next()
         val messageID2 = received2.applicationProperties["CountProp"] as Int
         assertArrayEquals("Test$messageID2".toByteArray(), received2.payload)
-        assertEquals(1, messageID2)
+        assertEquals(1, messageID2, formatMessage("1", messageID2, receivedSequence))
         received2.complete(false) // Reject message
+        receivedSequence.add(messageID2)
 
         while (true) {
             val received3 = receive.next()
             val messageID3 = received3.applicationProperties["CountProp"] as Int
             assertArrayEquals("Test$messageID3".toByteArray(), received3.payload)
-            assertNotEquals(0, messageID3)
+            assertNotEquals(0, messageID3, formatMessage("< 1", messageID3, receivedSequence))
+            receivedSequence.add(messageID3)
             if (messageID3 != 1) { // keep rejecting any batched items following rejection
                 received3.complete(false)
             } else { // beginnings of replay so accept again
@@ -97,6 +107,7 @@ class AMQPBridgeTest {
             val received4 = receive.next()
             val messageID4 = received4.applicationProperties["CountProp"] as Int
             assertArrayEquals("Test$messageID4".toByteArray(), received4.payload)
+            receivedSequence.add(messageID4)
             if (messageID4 != 1) { // we may get a duplicate of the rejected message, in which case skip
                 assertEquals(2, messageID4) // next message should be in order though
                 break
@@ -118,13 +129,16 @@ class AMQPBridgeTest {
             val received5 = receive.next()
             val messageID5 = received5.applicationProperties["CountProp"] as Int
             if (messageID5 != 2) { // we may get a duplicate of the interrupted message, in which case skip
-                assertEquals(-1, messageID5) // next message should be in order though
+                assertEquals(-1, messageID5, formatMessage("-1", messageID5, receivedSequence)) // next message should be in order though
                 assertArrayEquals("Test_end".toByteArray(), received5.payload)
+                receivedSequence.add(messageID5)
                 break
             }
+            receivedSequence.add(messageID5)
             received5.complete(true)
         }
 
+        println("Message sequence: ${receivedSequence.joinToString(", ", "[", "]")}")
         bridgeManager.stop()
         amqpServer.stop()
         artemisClient.stop()

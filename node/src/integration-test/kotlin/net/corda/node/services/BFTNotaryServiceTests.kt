@@ -28,12 +28,12 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.core.dummyCommand
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -69,7 +69,7 @@ class BFTNotaryServiceTests {
         val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
 
         val nodes = replicaIds.map { replicaId ->
-            mockNet.createUnstartedNode(MockNodeParameters(configOverrides = {
+            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
                 val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
                 doReturn(notary).whenever(it).notary
             }))
@@ -89,10 +89,10 @@ class BFTNotaryServiceTests {
         startBftClusterAndNode(minClusterSize(1), exposeRaces = true) // This true adds a sleep to expose the race.
         val f = node.run {
             val trivialTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             // Create a new consensus while the redundant replica is sleeping:
-            services.startFlow(NotaryFlow.Client(trivialTx))
+            services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
         }
         mockNet.runNetwork()
         f.getOrThrow()
@@ -113,7 +113,7 @@ class BFTNotaryServiceTests {
         startBftClusterAndNode(clusterSize)
         node.run {
             val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             database.transaction {
                 services.recordTransactions(issueTx)
@@ -127,7 +127,7 @@ class BFTNotaryServiceTests {
             val flows = spendTxs.map { NotaryFlow.Client(it) }
             val stateMachines = flows.map { services.startFlow(it) }
             mockNet.runNetwork()
-            val results = stateMachines.map { Try.on { it.getOrThrow() } }
+            val results = stateMachines.map { Try.on { it.resultFuture.getOrThrow() } }
             val successfulIndex = results.mapIndexedNotNull { index, result ->
                 if (result is Try.Success) {
                     val signers = result.value.map { it.by }
@@ -148,7 +148,7 @@ class BFTNotaryServiceTests {
                     assertEquals(StateRef(issueTx.id, 0), stateRef)
                     assertEquals(spendTxs[successfulIndex].id, consumingTx.id)
                     assertEquals(0, consumingTx.inputIndex)
-                    assertEquals(info.chooseIdentity(), consumingTx.requestingParty)
+                    assertEquals(info.singleIdentity(), consumingTx.requestingParty)
                 }
             }
         }
@@ -157,7 +157,7 @@ class BFTNotaryServiceTests {
     private fun StartedNode<MockNode>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
-                    addCommand(dummyCommand(services.myInfo.chooseIdentity().owningKey))
+                    addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))
                     block()
                 }
         )
