@@ -1,14 +1,11 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.Permissions
-import net.corda.nodeapi.internal.config.User
 import org.junit.Test
 import org.slf4j.event.Level
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import java.io.File
-
 
 class StandaloneShellArgsParserTest {
 
@@ -17,20 +14,20 @@ class StandaloneShellArgsParserTest {
     @Test
     fun args_to_cmd_options() {
 
-        val args = arrayOf("-config-file", "/x/y/z/config.conf",
-                "-shell-directory", "/x/y/shell",
-                "-cordpass-directory", "/x/y/cordapps",
-                "-host", "alocalhost",
-                "-port", "1234",
-                "-user", "demo",
-                "-password", "abcd1234",
-                "-logging-level", "DEBUG",
-                "-sshd-port", "2223",
-                "-help",
-                "-keystore-password", "pass1",
-                "-truststore-password", "pass2",
-                "-keystore-file", "/x/y/keystore.jks",
-                "-truststore-file", "/x/y/truststore.jks")
+        val args = arrayOf("--config-file", "/x/y/z/config.conf",
+                "--shell-directory", "/x/y/shell",
+                "--cordpass-directory", "/x/y/cordapps",
+                "--host", "alocalhost",
+                "--port", "1234",
+                "--user", "demo",
+                "--password", "abcd1234",
+                "--logging-level", "DEBUG",
+                "--sshd-port", "2223",
+                "--help",
+                "--keystore-password", "pass1",
+                "--truststore-password", "pass2",
+                "--keystore-file", "/x/y/keystore.jks",
+                "--truststore-file", "/x/y/truststore.jks")
 
         val expectedOptions = CommandLineOptions(configFile = "/x/y/z/config.conf",
                 shellDirectory = Paths.get("/x/y/shell"),

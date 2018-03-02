@@ -1,11 +1,11 @@
-package net.corda.shell;
+package net.corda.tools.shell;
 
 // See the comments at the top of run.java
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.corda.core.messaging.CordaRPCOps;
-import net.corda.shell.utlities.ANSIProgressRenderer;
-import net.corda.shell.utlities.CRaSHANSIProgressRenderer;
+import net.corda.tools.shell.utlities.ANSIProgressRenderer;
+import net.corda.tools.shell.utlities.CRaSHANSIProgressRenderer;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 import org.crsh.text.*;
@@ -13,8 +13,8 @@ import org.crsh.text.ui.TableElement;
 
 import java.util.*;
 
-import static net.corda.shell.InteractiveShell.runFlowByNameFragment;
-import static net.corda.shell.InteractiveShell.runStateMachinesView;
+import static net.corda.tools.shell.InteractiveShell.runFlowByNameFragment;
+import static net.corda.tools.shell.InteractiveShell.runStateMachinesView;
 
 @Man(
         "Allows you to start flows, list the ones available and to watch flows currently running on the node.\n\n" +

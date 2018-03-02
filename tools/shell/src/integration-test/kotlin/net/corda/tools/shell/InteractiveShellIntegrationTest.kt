@@ -1,9 +1,8 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
@@ -24,7 +23,6 @@ import org.junit.Test
 import java.lang.reflect.UndeclaredThrowableException
 import kotlin.test.assertTrue
 
-
 class InteractiveShellIntegrationTest {
 
     @Test
@@ -34,18 +32,12 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = ShellConfiguration(Files.createTempDir().toPath(),
-                    "fake", "fake",
-                    node.rpcAddress,
-                    null, null, false)
-            InteractiveShell.startShell(conf,
-                    { username: String?, credentials: String? ->
-                        val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort)
-                        client.start(username ?: "", credentials ?: "").proxy
-                    })
-            assertThatThrownBy {
-                    InteractiveShell.nodeInfo()
-            }.isInstanceOf(UndeclaredThrowableException::class.java)
+            val conf = ShellConfiguration(shellDirectory = Files.createTempDir().toPath(),
+                    user = "fake", password = "fake",
+                    hostAndPort = node.rpcAddress)
+            InteractiveShell.startShell(conf)
+
+            assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(UndeclaredThrowableException::class.java)
         }
     }
 
@@ -56,16 +48,11 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = ShellConfiguration(Files.createTempDir().toPath(),
-                    user.username, user.password,
-                    node.rpcAddress,
-                    null, null, false)
+            val conf = ShellConfiguration(shellDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress)
 
-            InteractiveShell.startShell(conf,
-                    { username: String?, credentials: String? ->
-                        val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort)
-                        client.start(username ?: "", credentials ?: "").proxy
-                    })
+            InteractiveShell.startShell(conf)
             InteractiveShell.nodeInfo()
         }
     }
@@ -90,18 +77,15 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.certificatesDirectory,
-                                clientSslOptions.keyStorePassword, clientSslOptions.trustStorePassword)
+                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
                         val conf = ShellConfiguration(Files.createTempDir().toPath(),
-                                user.username, user.password,
-                                node.rpcAddress,
-                                sslConfiguration, null, false)
+                                user = user.username, password = user.password,
+                                hostAndPort = node.rpcAddress,
+                                ssl = sslConfiguration)
 
-                        InteractiveShell.startShell(conf,
-                                { username: String?, credentials: String? ->
-                                    val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort, sslConfiguration = sslConfiguration)
-                                    client.start(username ?: "", credentials ?: "").proxy
-                                })
+                        InteractiveShell.startShell(conf)
+
                         InteractiveShell.nodeInfo()
                         successful = true
 
@@ -132,19 +116,14 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.certificatesDirectory,
-                                clientSslOptions.keyStorePassword, clientSslOptions.trustStorePassword)
+                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
+                        val conf = ShellConfiguration(Files.createTempDir().toPath(),
+                                user = user.username, password = user.password,
+                                hostAndPort = node.rpcAddress,
+                                ssl = sslConfiguration)
 
-                        val conf = net.corda.shell.ShellConfiguration(Files.createTempDir().toPath(),
-                                user.username, user.password,
-                                node.rpcAddress,
-                                sslConfiguration, null, false)
-
-                        InteractiveShell.startShell(conf,
-                                { username: String?, credentials: String? ->
-                                    val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort, sslConfiguration = sslConfiguration)
-                                    client.start(username ?: "", credentials ?: "").proxy
-                                })
+                        InteractiveShell.startShell(conf)
 
                         try {
                             InteractiveShell.nodeInfo()
@@ -168,16 +147,12 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = net.corda.shell.ShellConfiguration(Files.createTempDir().toPath(),
-                    user.username, user.password,
-                    node.rpcAddress,
-                    null, 2224, false)
+            val conf = ShellConfiguration(Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress,
+                    sshdPort = 2224)
 
-            InteractiveShell.startShell(conf,
-                    { username: String?, credentials: String? ->
-                        val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort)
-                        client.start(username ?: "", credentials ?: "").proxy
-                    })
+            InteractiveShell.startShell(conf)
             InteractiveShell.nodeInfo()
 
             val session = JSch().getSession("u", "localhost", 2224)
@@ -227,18 +202,15 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.certificatesDirectory,
-                                clientSslOptions.keyStorePassword, clientSslOptions.trustStorePassword)
+                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
                         val conf = ShellConfiguration(Files.createTempDir().toPath(),
-                                user.username, user.password,
-                                node.rpcAddress,
-                                sslConfiguration, 2223, false)
+                                user = user.username, password = user.password,
+                                hostAndPort = node.rpcAddress,
+                                ssl = sslConfiguration,
+                                sshdPort = 2223)
 
-                        InteractiveShell.startShell(conf,
-                                { username: String?, credentials: String? ->
-                                    val client = createCordaRPCClientWithSslAndClassLoader(conf.hostAndPort, sslConfiguration = sslConfiguration)
-                                    client.start(username ?: "", credentials ?: "").proxy
-                                })
+                        InteractiveShell.startShell(conf)
                         InteractiveShell.nodeInfo()
 
                         val session = JSch().getSession("mark", "localhost", 2223)

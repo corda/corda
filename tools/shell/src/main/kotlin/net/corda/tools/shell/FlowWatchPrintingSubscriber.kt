@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture

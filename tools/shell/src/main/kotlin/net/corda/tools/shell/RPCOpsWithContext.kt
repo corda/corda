@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
@@ -7,7 +7,7 @@ import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-fun makeRPCOps(getCordaRPCOps: (username: String?, credential: String?) -> CordaRPCOps, username: String?, credential: String?): CordaRPCOps {
+fun makeRPCOps(getCordaRPCOps: (username: String, credential: String) -> CordaRPCOps, username: String, credential: String): CordaRPCOps {
     val cordaRPCOps: CordaRPCOps by lazy {
         getCordaRPCOps(username, credential)
     }

@@ -68,7 +68,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.sign
 import net.corda.nodeapi.internal.storeLegalIdentity
-import net.corda.shell.InteractiveShell
+import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
@@ -301,13 +301,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             if (configuration.rpcOptions.address == null) {
                 throw ConfigurationException("Cannot init CrashShell because node RPC address is not set (via 'rpcSettings' option).")
             }
-            val shellConfiguration = configuration.toShellConfig()
-            val rpcOps = { username: String?, credentials: String? ->
-                val client =
-                    createCordaRPCClientWithSsl(shellConfiguration.hostAndPort, sslConfiguration = shellConfiguration.ssl)
-                client.start(username ?: "", credentials ?: "").proxy
-            }
-            InteractiveShell.startShell(shellConfiguration, rpcOps)
+            InteractiveShell.startShell(configuration.toShellConfig())
         }
     }
 

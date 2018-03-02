@@ -74,7 +74,7 @@ dependencies {
     integrationTestCompile project(':node-driver')
 }
 
-mainClassName = 'net.corda.shell.StandaloneShellKt'
+mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
 
 jar {
     baseName 'corda-shell'

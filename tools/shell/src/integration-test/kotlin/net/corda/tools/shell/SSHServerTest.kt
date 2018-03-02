@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import co.paralleluniverse.fibers.Suspendable
 import com.jcraft.jsch.ChannelExec

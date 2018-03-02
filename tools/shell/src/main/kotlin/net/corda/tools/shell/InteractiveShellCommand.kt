@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import org.crsh.command.BaseCommand
 import org.crsh.shell.impl.command.CRaSHSession

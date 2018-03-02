@@ -5,8 +5,8 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.nodeapi.internal.config.User
-import net.corda.shell.ShellConfiguration
-import net.corda.shell.ShellSslOptions
+import net.corda.tools.shell.ShellConfiguration
+import net.corda.tools.shell.ShellSslOptions
 import java.nio.file.Paths
 
 private const val SSH_PORT = 2222

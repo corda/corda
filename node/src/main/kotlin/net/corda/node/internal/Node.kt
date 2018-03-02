@@ -154,9 +154,9 @@ open class Node(configuration: NodeConfiguration,
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService ?:
-        SecurityConfiguration.AuthService.fromUsers( if (configuration.shouldInitCrashShell()) configuration.rpcUsers + configuration.shellUser() else configuration.rpcUsers)
+        SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-        securityManager = RPCSecurityManagerImpl(securityManagerConfig)
+        securityManager = RPCSecurityManagerImpl(if (configuration.shouldInitCrashShell()) securityManagerConfig.copyWithAdditionalUser(configuration.shellUser()) else securityManagerConfig)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker(networkParameters)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
@@ -391,7 +391,7 @@ open class Node(configuration: NodeConfiguration,
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
-                rpcClientContext =  KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classloader))
+                rpcClientContext = if (configuration.shouldInitCrashShell()) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
     }
 
     private var rpcMessagingClient: RPCMessagingClient? = null

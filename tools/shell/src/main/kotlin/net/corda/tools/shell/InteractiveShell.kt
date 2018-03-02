@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
@@ -10,6 +10,7 @@ import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -20,8 +21,8 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.shell.utlities.ANSIProgressRenderer
-import net.corda.shell.utlities.StdoutANSIProgressRenderer
+import net.corda.tools.shell.utlities.ANSIProgressRenderer
+import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
@@ -98,26 +99,30 @@ data class ShellSslOptions(override val sslKeystore: Path, override val keyStore
 
 data class ShellConfiguration(
         val shellDirectory: Path,
-        val cordappsDirectory: Path?,
-        var user: String?,
-        var password: String?,
+        val cordappsDirectory: Path? = null,
+        var user: String = "",
+        var password: String = "",
         val hostAndPort: NetworkHostAndPort,
-        val ssl: ShellSslOptions?,
-        val sshdPort: Int?,
+        val ssl: ShellSslOptions? = null,
+        val sshdPort: Int? = null,
         val noLocalShell: Boolean = false)
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String?, credentials: String?) -> CordaRPCOps
+    private lateinit var rpcOps: (username: String, credentials: String) -> CordaRPCOps
     private lateinit var connection: CordaRPCOps
     private var shell: Shell? = null
-    private var classLoader : ClassLoader? = null
+    private var classLoader: ClassLoader? = null
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration: ShellConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, classLoader: ClassLoader? = null) {
-        rpcOps = cordaRPCOps
+    fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+        rpcOps = { username: String, credentials: String ->
+            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+                    sslConfiguration = configuration.ssl, classLoader = classLoader)
+            client.start(username, credentials).proxy
+        }
         InteractiveShell.classLoader = classLoader
         val dir = configuration.shellDirectory
         val runSshDaemon = configuration.sshdPort != null
@@ -160,7 +165,7 @@ object InteractiveShell {
     }
 
     class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
-        fun start(config: Properties, localUserName: String? = null, localUserPassword: String? = null): Shell {
+        fun start(config: Properties, localUserName: String = "", localUserPassword: String = ""): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
             val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
@@ -170,7 +175,7 @@ object InteractiveShell {
                     .register("file", fileDriver)
                     .mount("file:" + extraCommandsPath)
                     .register("classpath", classpathDriver)
-                    .mount("classpath:/net/corda/shell/")
+                    .mount("classpath:/net/corda/tools/shell/")
                     .mount("classpath:/crash/commands/")
                     .build()
             val confFS = FS.Builder()

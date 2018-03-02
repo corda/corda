@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -16,15 +16,15 @@ class CommandLineOptionParser {
     private val optionParser = OptionParser()
 
     private val configFileArg = optionParser
-            .accepts("config-file", "The path to the shell configuration file.")
+            .accepts("config-file", "The path to the shell configuration file, used instead of providing the rest of command line options.")
+            .withOptionalArg()
+    private val cordappsDirectoryArg = optionParser
+            .accepts("cordpass-directory", "The path to directory containing Cordapps jars, Cordapps are require when starting flows.")
             .withOptionalArg()
     private val shellDirectoryArg = optionParser
             .accepts("shell-directory", "The CrAsH shell working directory.")
             .withRequiredArg()
             .defaultsTo(".")
-    private val cordappsDirectoryArg = optionParser
-            .accepts("cordpass-directory", "The path to directory containing Cordapps jars, Cordapps are require when starting flows.")
-            .withOptionalArg()
     private val hostArg = optionParser
             .acceptsAll(listOf("h","host"), "The host of the Corda node.")
             .withRequiredArg()
@@ -51,14 +51,14 @@ class CommandLineOptionParser {
     private val keyStorePasswordArg = optionParser
             .accepts("keystore-password", "The password to unlock the KeyStore file.")
             .withOptionalArg()
+    private val keyStoreDirArg = optionParser
+            .accepts("keystore-file", "The path to the KeyStore file.")
+            .withOptionalArg()
     private val trustStorePasswordArg = optionParser
             .accepts("truststore-password", "The password to unlock the TrustStore file.")
             .withOptionalArg()
-    private val keyStoreDirArg = optionParser
-            .accepts("keystore-file", "The KeyStore file.")
-            .withOptionalArg()
     private val trustStoreDirArg = optionParser
-            .accepts("truststore-file", "The TrustStore file.")
+            .accepts("truststore-file", "The path to the TrustStore file.")
             .withOptionalArg()
 
     fun parse(vararg args: String): CommandLineOptions {
@@ -184,8 +184,8 @@ class ShellConfigurationFile {
             return ShellConfiguration(
                     shellDirectory = Paths.get(shell.workDir),
                     cordappsDirectory = extensions?.let { Paths.get(extensions.cordapps.path) },
-                    user = user,
-                    password = password,
+                    user = user ?: "",
+                    password = password ?: "",
                     hostAndPort = NetworkHostAndPort(node.addresses.rpc.host, node.addresses.rpc.port),
                     ssl = sslOptions,
                     sshdPort = extensions?.sshd?.let { if (it.enabled)it.port else null })

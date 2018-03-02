@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import com.jcabi.manifests.Manifests
 import joptsimple.OptionException
@@ -80,10 +80,10 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
             }
         }
         InteractiveShell.startShell(configuration,
-                { username: String?, credentials: String? ->
+                /*{ username: String?, credentials: String? ->
                     val client = createCordaRPCClientWithSslAndClassLoader(configuration.hostAndPort, sslConfiguration = configuration.ssl, classLoader = classLoader)
                     client.start(username ?: "", credentials?: "").proxy
-                }, classLoader)
+                },*/ classLoader)
         try {
              //connecting to node by requesting node info to fail fast
               InteractiveShell.nodeInfo()
@@ -108,6 +108,8 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
             exit.countDown()
         }
         configuration.sshdPort?.apply{ println("SSH server listening on port $this.") }
+
+        println(configuration)
         exit.await()
         exitProcess(0)
     }

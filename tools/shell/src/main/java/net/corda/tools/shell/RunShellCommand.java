@@ -1,9 +1,7 @@
-package net.corda.shell;
+package net.corda.tools.shell;
 
 import net.corda.core.messaging.*;
 import net.corda.client.jackson.*;
-import net.corda.shell.InteractiveShellCommand;
-import net.corda.shell.InteractiveShell;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 

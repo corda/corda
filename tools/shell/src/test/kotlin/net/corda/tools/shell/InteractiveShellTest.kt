@@ -1,4 +1,4 @@
-package net.corda.shell
+package net.corda.tools.shell
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.client.jackson.JacksonSupport

@@ -1,4 +1,4 @@
-package net.corda.shell.utlities
+package net.corda.tools.shell.utlities
 
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.FlowProgressHandle
