@@ -128,11 +128,7 @@ class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
                 log.info("$i: ${argsList[i]}")
             }
             val flowClass = Class.forName(argsList[0] as String) as Class<FlowLogic<*>>
-            val flowArgs = argsList.drop(1).map {
-                if (it is CordaX500Name)
-                    rpcClient.wellKnownPartyFromX500Name(it)
-                else it
-            }.toTypedArray()
+            val flowArgs = argsList.drop(1).toTypedArray()
             log.info("Calling flow: $flowClass with arguments: ${flowArgs.asList()}")
             rpcClient.startFlowDynamic(flowClass, *flowArgs).returnValue.getOrThrow()
         }
