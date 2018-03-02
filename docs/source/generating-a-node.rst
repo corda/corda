@@ -1,8 +1,6 @@
 Creating nodes locally
 ======================
 
-.. contents::
-
 Node structure
 --------------
 Each Corda node has the following structure:
@@ -91,8 +89,8 @@ The OID and format for these extensions will be described in a further specifica
 The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
-nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined in the
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V2/build.gradle#L97>`_:
+nodes for testing and demos. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined
+in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
 
 .. sourcecode:: groovy
 
@@ -155,7 +153,7 @@ You can extend ``deployNodes`` to generate additional nodes.
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
 Specifying a custom webserver
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 By default, any node listing a webport will use the default development webserver, which is not production-ready. You
 can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
 block:
@@ -174,7 +172,7 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
    node's ``node.conf`` file.
 
 Running deployNodes
--------------------
+~~~~~~~~~~~~~~~~~~~
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
 of the project where the ``deployNodes`` task is defined:
 

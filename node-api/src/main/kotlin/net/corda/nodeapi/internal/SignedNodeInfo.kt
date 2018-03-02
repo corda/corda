@@ -53,3 +53,13 @@ inline fun NodeInfo.sign(signer: (PublicKey, SerializedBytes<NodeInfo>) -> Digit
     val signatures = owningKeys.map { signer(it, serialised) }
     return SignedNodeInfo(serialised, signatures)
 }
+
+/**
+ * A container for a [SignedNodeInfo] and its cached [NodeInfo].
+ */
+class NodeInfoAndSigned private constructor(val nodeInfo: NodeInfo, val signed: SignedNodeInfo) {
+    constructor(nodeInfo: NodeInfo, signer: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature) : this(nodeInfo, nodeInfo.sign(signer))
+    constructor(signedNodeInfo: SignedNodeInfo) : this(signedNodeInfo.verified(), signedNodeInfo)
+    operator fun component1(): NodeInfo = nodeInfo
+    operator fun component2(): SignedNodeInfo = signed
+}
