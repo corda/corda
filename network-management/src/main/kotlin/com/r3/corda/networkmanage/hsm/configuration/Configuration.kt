@@ -21,8 +21,8 @@ data class Parameters(val dataSourceProperties: Properties,
                       val database: DatabaseConfig = DatabaseConfig(),
                       val device: String,
                       val keySpecifier: Int,
-                      val networkMapSigning: NetworkMapCertificateParameters? = null,
-                      val csrSigning: DoormanCertificateParameters? = null)
+                      val networkMap: NetworkMapCertificateParameters? = null,
+                      val doorman: DoormanCertificateParameters? = null)
 
 /**
  * Network map signing process specific parameters.

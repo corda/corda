@@ -122,7 +122,7 @@ abstract class HsmBaseTest {
                 dataSourceProperties = mock(),
                 device = "${hsmSimulator.port}@${hsmSimulator.host}",
                 keySpecifier = 1,
-                csrSigning = DoormanCertificateParameters(
+                doorman = DoormanCertificateParameters(
                         rootKeyStoreFile = rootKeyStoreFile,
                         keyGroup = DOORMAN_CERT_KEY_GROUP,
                         validDays = 3650,
@@ -133,7 +133,7 @@ abstract class HsmBaseTest {
                                 threshold = 2
                         )
                 ),
-                networkMapSigning = NetworkMapCertificateParameters(
+                networkMap = NetworkMapCertificateParameters(
                         username = "INTEGRATION_TEST",
                         keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
                         authParameters = AuthenticationParameters(

@@ -1,5 +1,6 @@
 package com.r3.corda.networkmanage.hsm
 
+import com.google.common.primitives.Booleans
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
@@ -21,8 +22,8 @@ fun main(args: Array<String>) {
             require(Cipher.getMaxAllowedKeyLength("AES") >= 256) {
                 "Unlimited Strength Jurisdiction Policy Files must be installed, see http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html"
             }
-            require(csrSigning != null || networkMapSigning != null) {
-                "Either network map or certificate signing request certificate parameters must be specified."
+            require(Booleans.countTrue(doorman != null, networkMap != null) == 1) {
+                "Exactly one networkMap or doorman configuration needs to be specified."
             }
             requireNotNull(dataSourceProperties)
 
@@ -34,12 +35,11 @@ fun main(args: Array<String>) {
             initialiseSerialization()
             // Create DB connection.
             val persistence = configureDatabase(dataSourceProperties, database)
-            if (networkMapSigning != null) {
-                NetworkMapProcessor(networkMapSigning, device, keySpecifier, persistence).run()
-            }
-            if (csrSigning != null) {
+            if (networkMap != null) {
+                NetworkMapProcessor(networkMap, device, keySpecifier, persistence).run()
+            } else {
                 try {
-                    CsrProcessor(csrSigning, device, keySpecifier, persistence).showMenu()
+                    CsrProcessor(doorman!!, device, keySpecifier, persistence).showMenu()
                 } catch (e: ShowHelpException) {
                     e.errorMessage?.let(::println)
                     e.parser.printHelpOn(System.out)

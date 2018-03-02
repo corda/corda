@@ -18,11 +18,11 @@ class ConfigurationTest : TestBase() {
     fun `config file is parsed correctly`() {
         val parameters = parseParameters("--config-file", validConfigPath)
         assertEquals("3001@192.168.0.1", parameters.device)
-        val doormanCertParameters = parameters.csrSigning!!
+        val doormanCertParameters = parameters.doorman!!
         assertEquals(AuthMode.PASSWORD, doormanCertParameters.authParameters.mode)
         assertEquals(2, doormanCertParameters.authParameters.threshold)
         assertEquals(3650, doormanCertParameters.validDays)
-        val nmParams = parameters.networkMapSigning!!
+        val nmParams = parameters.networkMap!!
         assertEquals(AuthMode.KEY_FILE, nmParams.authParameters.mode)
         assertEquals(Paths.get("./Administrator.KEY"), nmParams.authParameters.keyFilePath)
         assertEquals(2, nmParams.authParameters.threshold)

@@ -14,7 +14,7 @@ class HsmAuthenticatorTest : HsmBaseTest() {
         // given
         val userInput = givenHsmUserAuthenticationInput()
         val hsmSigningServiceConfig = createHsmSigningServiceConfig()
-        val doormanCertificateConfig = hsmSigningServiceConfig.csrSigning!!
+        val doormanCertificateConfig = hsmSigningServiceConfig.doorman!!
         val authenticator = Authenticator(provider = createProvider(
                 doormanCertificateConfig.keyGroup,
                 hsmSigningServiceConfig.keySpecifier,

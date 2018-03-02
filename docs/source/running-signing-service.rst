@@ -34,7 +34,7 @@ Allowed parameters are:
 
 :dataSourceProperties: Data source properties. It should describe (or point to) the Doorman database.
 
-:csrSigning: CSR signing process configuration parameters. If specified, the signing service will sign approved CSRs.
+:doorman: CSR signing process configuration parameters. If specified, the signing service will sign approved CSRs.
 
     :validDays: Number of days issued signatures are valid for.
 
@@ -56,7 +56,7 @@ Allowed parameters are:
 
         :threshold: Minimum authentication strength threshold required for certificate signing requests.
 
-:networkMapSigning: Network map signing process configuration parameters. If specified, the signing service will sign the network map.
+:networkMap: Network map signing process configuration parameters. If specified, the signing service will sign the network map.
 
     :username: HSM username to be used when communicating with the HSM.
 
