@@ -323,22 +323,7 @@ And click submit. Upon clicking submit, the modal dialogue will close, and the n
 
 Checking the output
 ^^^^^^^^^^^^^^^^^^^
-Assuming all went well, you should see some activity in PartyA's web-server terminal window:
-
-.. sourcecode:: none
-
-   >> Signing transaction with our private key.
-   >> Gathering the counterparty's signature.
-   >> Collecting signatures from counter-parties.
-   >> Verifying collected signatures.
-   >> Done
-   >> Obtaining notary signature and recording transaction.
-   >> Requesting signature by notary service
-   >> Broadcasting transaction to participants
-   >> Done
-   >> Done
-
-You can view the newly-created IOU by accessing the vault of PartyA or PartyB:
+Assuming all went well, you can view the newly-created IOU by accessing the vault of PartyA or PartyB:
 
 *Via the HTTP API:*
 
