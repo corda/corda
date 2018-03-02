@@ -515,7 +515,7 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
 }
 
 /**
- * By default use Kotlin reflection and gran the objectInstance. However, that doesn't play nicely with nested
+ * By default use Kotlin reflection and grab the objectInstance. However, that doesn't play nicely with nested
  * private objects. Even setting the accessibility override (setAccessible) still causes an
  * [IllegalAccessException] when attempting to retrieve the value of the INSTANCE field.
  *
