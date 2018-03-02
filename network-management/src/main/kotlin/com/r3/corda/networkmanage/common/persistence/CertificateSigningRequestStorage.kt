@@ -18,7 +18,7 @@ data class CertificateSigningRequest(val requestId: String,
 /**
  *  Provide certificate signing request storage for the certificate signing server.
  */
-interface CertificationRequestStorage {
+interface CertificateSigningRequestStorage {
     companion object {
         val DOORMAN_SIGNATURE = "Doorman"
     }

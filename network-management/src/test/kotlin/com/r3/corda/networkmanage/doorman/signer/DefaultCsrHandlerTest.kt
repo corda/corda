@@ -4,8 +4,8 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import net.corda.core.crypto.Crypto
@@ -26,7 +26,7 @@ class DefaultCsrHandlerTest : TestBase() {
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val cert = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Test,L=London,C=GB"), keyPair)
 
-        val requestStorage: CertificationRequestStorage = mock {
+        val requestStorage: CertificateSigningRequestStorage = mock {
             on { getRequest("New") }.thenReturn(certificateSigningRequest())
             on { getRequest("Signed") }.thenReturn(certificateSigningRequest(
                     status = RequestStatus.DONE,
@@ -51,7 +51,7 @@ class DefaultCsrHandlerTest : TestBase() {
                     Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         }
 
-        val requestStorage: CertificationRequestStorage = mock {
+        val requestStorage: CertificateSigningRequestStorage = mock {
             on { getRequests(RequestStatus.APPROVED) }.thenReturn(listOf(
                     certificateSigningRequest(requestId = "1", request = requests[0], status = RequestStatus.APPROVED),
                     certificateSigningRequest(requestId = "2", request = requests[1], status = RequestStatus.APPROVED)
@@ -97,7 +97,7 @@ class DefaultCsrHandlerTest : TestBase() {
                     Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME), certRole = CertRole.SERVICE_IDENTITY)
         }
 
-        val requestStorage: CertificationRequestStorage = mock {
+        val requestStorage: CertificateSigningRequestStorage = mock {
             on { getRequests(RequestStatus.APPROVED) }.thenReturn(listOf(
                     certificateSigningRequest(requestId = "1", request = requests[0], status = RequestStatus.APPROVED)
             ))

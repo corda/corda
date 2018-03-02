@@ -28,7 +28,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class PersistentNodeInfoStorageTest : TestBase() {
-    private lateinit var requestStorage: CertificationRequestStorage
+    private lateinit var requestStorage: CertificateSigningRequestStorage
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
     private lateinit var persistence: CordaPersistence
     private lateinit var rootCaCert: X509Certificate
@@ -41,7 +41,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         this.intermediateCa = intermediateCa
         persistence = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
-        requestStorage = PersistentCertificateRequestStorage(persistence)
+        requestStorage = PersistentCertificateSigningRequestStorage(persistence)
     }
 
     @After
@@ -65,14 +65,14 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         val requestId = requestStorage.saveRequest(request)
         requestStorage.markRequestTicketCreated(requestId)
-        requestStorage.approveRequest(requestId, CertificationRequestStorage.DOORMAN_SIGNATURE)
+        requestStorage.approveRequest(requestId, CertificateSigningRequestStorage.DOORMAN_SIGNATURE)
 
         assertNull(nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString())))
 
         requestStorage.putCertificatePath(
                 requestId,
                 X509Utilities.buildCertPath(nodeCaCert, intermediateCa.certificate, rootCaCert),
-                CertificationRequestStorage.DOORMAN_SIGNATURE)
+                CertificateSigningRequestStorage.DOORMAN_SIGNATURE)
 
         val storedCertPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString()))
         assertNotNull(storedCertPath)
@@ -132,7 +132,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
 }
 
 internal fun createValidSignedNodeInfo(organisation: String,
-                                       storage: CertificationRequestStorage): Pair<NodeInfoWithSigned, PrivateKey> {
+                                       storage: CertificateSigningRequestStorage): Pair<NodeInfoWithSigned, PrivateKey> {
     val (csr, nodeKeyPair) = createRequest(organisation, certRole = CertRole.NODE_CA)
     val requestId = storage.saveRequest(csr)
     storage.markRequestTicketCreated(requestId)

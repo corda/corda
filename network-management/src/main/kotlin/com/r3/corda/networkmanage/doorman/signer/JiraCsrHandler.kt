@@ -2,7 +2,7 @@ package com.r3.corda.networkmanage.doorman.signer
 
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.JiraClient
@@ -10,7 +10,7 @@ import com.r3.corda.networkmanage.doorman.RejectedRequest
 import net.corda.core.utilities.contextLogger
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
-class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: CertificationRequestStorage, private val delegate: CsrHandler) : CsrHandler by delegate {
+class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: CertificateSigningRequestStorage, private val delegate: CsrHandler) : CsrHandler by delegate {
     private companion object {
         val log = contextLogger()
     }

@@ -1,7 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -25,13 +25,13 @@ import javax.security.auth.x500.X500Principal
 import kotlin.test.*
 
 class PersistentCertificateRequestStorageTest : TestBase() {
-    private lateinit var storage: PersistentCertificateRequestStorage
+    private lateinit var storage: PersistentCertificateSigningRequestStorage
     private lateinit var persistence: CordaPersistence
 
     @Before
     fun startDb() {
         persistence = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
-        storage = PersistentCertificateRequestStorage(persistence)
+        storage = PersistentCertificateSigningRequestStorage(persistence)
     }
 
     @After

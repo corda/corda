@@ -28,7 +28,7 @@ class JiraCsrHandlerTest : TestBase() {
     private lateinit var jiraClient: JiraClient
 
     @Mock
-    private lateinit var certificationRequestStorage: CertificationRequestStorage
+    private lateinit var certificationRequestStorage: CertificateSigningRequestStorage
 
     @Mock
     private lateinit var defaultCsrHandler: DefaultCsrHandler

@@ -1,7 +1,7 @@
 package com.r3.corda.networkmanage.doorman
 
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
@@ -33,7 +33,7 @@ private fun processKeyStore(parameters: NetworkManagementServerParameters): Pair
 /**
  * This storage automatically approves all created requests.
  */
-class ApproveAllCertificateRequestStorage(private val delegate: CertificationRequestStorage) : CertificationRequestStorage by delegate {
+class ApproveAllCertificateRequestStorage(private val delegate: CertificateSigningRequestStorage) : CertificateSigningRequestStorage by delegate {
     override fun saveRequest(request: PKCS10CertificationRequest): String {
         val requestId = delegate.saveRequest(request)
         delegate.markRequestTicketCreated(requestId)

@@ -17,9 +17,9 @@ import java.time.Instant
 import javax.security.auth.x500.X500Principal
 
 /**
- * Database implementation of the [CertificationRequestStorage] interface.
+ * Database implementation of the [CertificateSigningRequestStorage] interface.
  */
-class PersistentCertificateRequestStorage(private val database: CordaPersistence) : CertificationRequestStorage {
+class PersistentCertificateSigningRequestStorage(private val database: CordaPersistence) : CertificateSigningRequestStorage {
     companion object {
         // TODO: make this configurable?
         private val allowedCertRoles = setOf(CertRole.NODE_CA, CertRole.SERVICE_IDENTITY)
@@ -56,7 +56,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
                         legalName = legalName,
                         publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
                         requestBytes = request.encoded,
-                        modifiedBy = CertificationRequestStorage.DOORMAN_SIGNATURE,
+                        modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
                         status = RequestStatus.NEW
                 )
             } catch (e: RequestValidationException) {
@@ -66,7 +66,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
                         publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
                         requestBytes = request.encoded,
                         remark = e.rejectMessage,
-                        modifiedBy = CertificationRequestStorage.DOORMAN_SIGNATURE,
+                        modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
                         status = RequestStatus.REJECTED
                 )
             }

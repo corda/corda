@@ -1,13 +1,11 @@
 package com.r3.corda.networkmanage.doorman.signer
 
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.common.utils.getCertRole
-import net.corda.core.internal.CertRole
-import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.certificateType
@@ -25,7 +23,7 @@ interface CsrHandler {
     fun getResponse(requestId: String): CertificateResponse
 }
 
-class DefaultCsrHandler(private val storage: CertificationRequestStorage,
+class DefaultCsrHandler(private val storage: CertificateSigningRequestStorage,
                         private val csrCertPathAndKey: CertPathAndKey?) : CsrHandler {
 
     override fun processRequests() {

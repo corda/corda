@@ -22,7 +22,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
     private lateinit var persistence: CordaPersistence
     private lateinit var networkMapStorage: PersistentNetworkMapStorage
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
-    private lateinit var requestStorage: PersistentCertificateRequestStorage
+    private lateinit var requestStorage: PersistentCertificateSigningRequestStorage
 
     private lateinit var rootCaCert: X509Certificate
     private lateinit var networkMapCa: CertificateAndKeyPair
@@ -35,7 +35,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         persistence = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         networkMapStorage = PersistentNetworkMapStorage(persistence)
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
-        requestStorage = PersistentCertificateRequestStorage(persistence)
+        requestStorage = PersistentCertificateSigningRequestStorage(persistence)
     }
 
     @After
