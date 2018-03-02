@@ -127,18 +127,24 @@ Significant Changes in 3.0
   operator of the compatibility zone rather than being hard-coded. This allows for simple upgrades at the cost of the introduction
   of an element of centralisation.
 
-  .. note:: In prior versions of Corda, states included the hash of their defining application JAR. However, the code that was
-    used actually came from the class path. In this release, transactions have the JAR containing the contract and states attached
-    to them. The code will be copied over the network to the recipient if that peer lacks a copy of the app. However, for security
-    reasons, in 3.0 the application must still be whitelisted on the node for the transaction to be successfully checked, so all
-    nodes that may encounter a transaction that uses your states must have a copy of your app. Future integration of the deterministic
-    JVM sandbox will eliminate this requirement and allow for true smart contract code migration across the network.
+  .. note:: In prior versions of Corda, states included the hash of their defining application JAR (in the Hash Constraint).
+    In this release, transactions have the JAR containing the contract and states attached to them, so the code will be copied
+    over the network to the recipient if that peer lacks a copy of the app.
+    However, for security reasons, in 3.0, nodes still use the deployed cordapp (existing on the classpath), to verify the contract.
+    Obviously the contract constraint is checked before running the verification code.
+        - For the HashConstraint: the hash of the deployed CorDapp jar must be the same as the hash found in the Transaction.
+        - For the WhitelistConstraint: the Transaction must come with a whitelisted attachment for each Contract State.
+    Corda 3.0 lays the groundwork for the next releases, when contract verification will be done against the Attached contract jar.
+    And, future integration of the deterministic JVM sandbox will allow executing attachments downloaded from any peer on the network
+    and allow for true smart contract code migration across the network.
+    Until the JVM sandbox is shipped, contract jars will have to be approved on the node. (So a node will not execute code downloaded
+    from a peer, unless it was specifically approved)
 
     .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
       unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
       contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. Only
       the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "sharded" into a fat JAR,
-      as JAR dependencies are not supported in Corda 3.0
+      as JAR dependencies are not supported in Corda 3.0.
 
   Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
   can be attached to the transaction. This final constraint type provides a balance of all requirements: smooth rolling upgrades
