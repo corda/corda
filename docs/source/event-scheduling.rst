@@ -70,7 +70,7 @@ Let's take an example of the interest rate swap fixings for our scheduled events
 
 .. container:: codeset
 
-    .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/contract/IRS.kt
+    .. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/contract/IRS.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
