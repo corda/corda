@@ -78,7 +78,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                         approvedRequest.certPath = X509Utilities.buildCertPath(nodeCa.certificate, intermediateCa.certificate, rootCaCert)
                     }
                 }
-                storage.store(approvedRequests, listOf("TEST"))
+                storage.store(approvedRequests, "TEST")
             }
         }
     }

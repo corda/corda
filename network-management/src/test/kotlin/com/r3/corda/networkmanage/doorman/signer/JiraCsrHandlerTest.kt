@@ -95,8 +95,8 @@ class JiraCsrHandlerTest : TestBase() {
     fun `sync tickets status`() {
         val id1 = SecureHash.randomSHA256().toString()
         val id2 = SecureHash.randomSHA256().toString()
-        val csr1 = CertificateSigningRequest(id1, "name1", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
-        val csr2 = CertificateSigningRequest(id2, "name2", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, emptyList(), null)
+        val csr1 = CertificateSigningRequest(id1, "name1", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
+        val csr2 = CertificateSigningRequest(id2, "name2", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
 
         val requests = mutableMapOf(id1 to csr1, id2 to csr2)
 
@@ -106,13 +106,13 @@ class JiraCsrHandlerTest : TestBase() {
         whenever(certificationRequestStorage.approveRequest(any(), any())).then {
             val id = it.getArgument<String>(0)
             if (requests[id]?.status == RequestStatus.NEW) {
-                requests[id] = requests[id]!!.copy(status = RequestStatus.APPROVED, modifiedBy = listOf(it.getArgument(1)))
+                requests[id] = requests[id]!!.copy(status = RequestStatus.APPROVED, modifiedBy = it.getArgument(1))
             }
             null
         }
         whenever(certificationRequestStorage.rejectRequest(any(), any(), any())).then {
             val id = it.getArgument<String>(0)
-            requests[id] = requests[id]!!.copy(status = RequestStatus.REJECTED, modifiedBy = listOf(it.getArgument(1)), remark = it.getArgument(2))
+            requests[id] = requests[id]!!.copy(status = RequestStatus.REJECTED, modifiedBy = it.getArgument(1), remark = it.getArgument(2))
             null
         }
 
@@ -140,7 +140,7 @@ class JiraCsrHandlerTest : TestBase() {
         // Sign request 1
         val certPath = mock<CertPath>()
         val certData = CertificateData(CertificateStatus.VALID, certPath)
-        requests[id1] = requests[id1]!!.copy(status = RequestStatus.SIGNED, certData = certData)
+        requests[id1] = requests[id1]!!.copy(status = RequestStatus.DONE, certData = certData)
 
         // Process request again.
         jiraCsrHandler.processRequests()

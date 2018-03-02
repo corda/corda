@@ -33,8 +33,7 @@ class CertificateSigningRequestEntity(
 
         @Audited
         @Column(name = "modified_by", length = 512)
-        @ElementCollection(targetClass = String::class, fetch = FetchType.EAGER)
-        val modifiedBy: List<String> = emptyList(),
+        val modifiedBy: String,
 
         @Audited
         @Column(name = "modified_at", nullable = false)
@@ -66,7 +65,7 @@ class CertificateSigningRequestEntity(
              legalName: String = this.legalName,
              publicKeyHash: String = this.publicKeyHash,
              status: RequestStatus = this.status,
-             modifiedBy: List<String> = this.modifiedBy,
+             modifiedBy: String = this.modifiedBy,
              modifiedAt: Instant = this.modifiedAt,
              remark: String? = this.remark,
              certificateData: CertificateDataEntity? = this.certificateData,

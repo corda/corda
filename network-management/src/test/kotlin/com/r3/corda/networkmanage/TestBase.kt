@@ -24,7 +24,7 @@ abstract class TestBase {
             remark: String = "Test remark",
             request: PKCS10CertificationRequest = mock(),
             certData: CertificateData = mock(),
-            modifiedBy: List<String> = emptyList()
+            modifiedBy: String = "Test"
     ): CertificateSigningRequest {
         return CertificateSigningRequest(
                 requestId = requestId,

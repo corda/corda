@@ -29,7 +29,7 @@ class DefaultCsrHandlerTest : TestBase() {
         val requestStorage: CertificationRequestStorage = mock {
             on { getRequest("New") }.thenReturn(certificateSigningRequest())
             on { getRequest("Signed") }.thenReturn(certificateSigningRequest(
-                    status = RequestStatus.SIGNED,
+                    status = RequestStatus.DONE,
                     certData = certificateData(CertificateStatus.VALID, X509Utilities.buildCertPath(cert))
             ))
             on { getRequest("Rejected") }.thenReturn(certificateSigningRequest(status = RequestStatus.REJECTED, remark = "Random reason"))
@@ -71,8 +71,8 @@ class DefaultCsrHandlerTest : TestBase() {
 
         // Verify only the approved requests are taken
         verify(requestStorage, times(1)).getRequests(RequestStatus.APPROVED)
-        verify(requestStorage, times(1)).putCertificatePath(eq("1"), certPathCapture.capture(), eq(listOf(DOORMAN_SIGNATURE)))
-        verify(requestStorage, times(1)).putCertificatePath(eq("2"), certPathCapture.capture(), eq(listOf(DOORMAN_SIGNATURE)))
+        verify(requestStorage, times(1)).putCertificatePath(eq("1"), certPathCapture.capture(), eq(DOORMAN_SIGNATURE))
+        verify(requestStorage, times(1)).putCertificatePath(eq("2"), certPathCapture.capture(), eq(DOORMAN_SIGNATURE))
 
         // Then make sure the generated node cert paths are correct
         certPathCapture.allValues.forEachIndexed { index, certPath ->
@@ -113,7 +113,7 @@ class DefaultCsrHandlerTest : TestBase() {
 
         // Verify only the approved requests are taken
         verify(requestStorage, times(1)).getRequests(RequestStatus.APPROVED)
-        verify(requestStorage, times(1)).putCertificatePath(eq("1"), certPathCapture.capture(), eq(listOf(DOORMAN_SIGNATURE)))
+        verify(requestStorage, times(1)).putCertificatePath(eq("1"), certPathCapture.capture(), eq(DOORMAN_SIGNATURE))
 
         // Then make sure the generated node cert paths are correct
         certPathCapture.allValues.forEachIndexed { index, certPath ->

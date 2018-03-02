@@ -13,9 +13,9 @@ class DBSignedCertificateRequestStorage(database: CordaPersistence) : SignedCert
 
     private val storage = PersistentCertificateRequestStorage(database)
 
-    override fun store(requests: List<ApprovedCertificateRequestData>, signers: List<String>) {
+    override fun store(requests: List<ApprovedCertificateRequestData>, signer: String) {
         for ((requestId, _, certPath) in requests) {
-            storage.putCertificatePath(requestId, certPath!!, signers)
+            storage.putCertificatePath(requestId, certPath!!, signer)
         }
     }
 

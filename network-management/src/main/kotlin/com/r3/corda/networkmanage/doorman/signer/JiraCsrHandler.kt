@@ -8,7 +8,6 @@ import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.JiraClient
 import com.r3.corda.networkmanage.doorman.RejectedRequest
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.loggerFor
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
 class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: CertificationRequestStorage, private val delegate: CsrHandler) : CsrHandler by delegate {
@@ -50,7 +49,7 @@ class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: Ce
     private fun updateJiraTickets(approvedRequest: List<ApprovedRequest>, rejectedRequest: List<RejectedRequest>) {
         // Reconfirm request status and update jira status
         val signedRequests = approvedRequest.mapNotNull { storage.getRequest(it.requestId) }
-                .filter { it.status == RequestStatus.SIGNED && it.certData != null }
+                .filter { it.status == RequestStatus.DONE && it.certData != null }
                 .associateBy { it.requestId }
                 .mapValues { it.value.certData!!.certPath }
         jiraClient.updateSignedRequests(signedRequests)

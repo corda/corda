@@ -34,7 +34,7 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage,
             val nodeCertPath = createSignedNodeCertificate(it.request, csrCertPathAndKey)
             // Since Doorman is deployed in the auto-signing mode (i.e. signer != null),
             // we use DOORMAN_SIGNATURE as the signer.
-            storage.putCertificatePath(it.requestId, nodeCertPath, listOf(DOORMAN_SIGNATURE))
+            storage.putCertificatePath(it.requestId, nodeCertPath, DOORMAN_SIGNATURE)
         }
     }
 
@@ -45,7 +45,7 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage,
         return when (response?.status) {
             RequestStatus.NEW, RequestStatus.APPROVED, RequestStatus.TICKET_CREATED, null -> CertificateResponse.NotReady
             RequestStatus.REJECTED -> CertificateResponse.Unauthorised(response.remark ?: "Unknown reason")
-            RequestStatus.SIGNED -> CertificateResponse.Ready(response.certData?.certPath ?: throw IllegalArgumentException("Certificate should not be null."))
+            RequestStatus.DONE -> CertificateResponse.Ready(response.certData?.certPath ?: throw IllegalArgumentException("Certificate should not be null."))
         }
     }
 

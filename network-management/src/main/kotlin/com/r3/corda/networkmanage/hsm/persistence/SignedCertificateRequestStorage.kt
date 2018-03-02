@@ -16,5 +16,5 @@ interface SignedCertificateRequestStorage {
      * @param requests Signed requests that are to be stored.
      * @param signers List of user names that signed those requests. To be specific, each request has been signed by all of those users.
      */
-    fun store(requests: List<ApprovedCertificateRequestData>, signers: List<String>)
+    fun store(requests: List<ApprovedCertificateRequestData>, signer: String)
 }

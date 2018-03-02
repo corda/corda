@@ -64,7 +64,7 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
                 it.certPath = buildCertPath(nodeCaCert, doormanCertAndKey.certificate, rootCert)
             }
             logger.debug("Storing signed CSRs...")
-            storage.store(toSign, signers)
+            storage.store(toSign, signers.toString())
             printStream.println("The following certificates have been signed by $signers:")
             logger.debug("The following certificates have been signed by $signers:")
             toSign.forEachIndexed { index, data ->

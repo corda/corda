@@ -72,7 +72,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         requestStorage.putCertificatePath(
                 requestId,
                 X509Utilities.buildCertPath(nodeCaCert, intermediateCa.certificate, rootCaCert),
-                listOf(CertificationRequestStorage.DOORMAN_SIGNATURE))
+                CertificationRequestStorage.DOORMAN_SIGNATURE)
 
         val storedCertPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString()))
         assertNotNull(storedCertPath)
@@ -139,7 +139,7 @@ internal fun createValidSignedNodeInfo(organisation: String,
     storage.approveRequest(requestId, "TestUser")
     val nodeInfoBuilder = TestNodeInfoBuilder()
     val (identity, key) = nodeInfoBuilder.addIdentity(CordaX500Name.build(X500Principal(csr.subject.encoded)), nodeKeyPair)
-    storage.putCertificatePath(requestId, identity.certPath, listOf("Test"))
+    storage.putCertificatePath(requestId, identity.certPath, "Test")
     val (_, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(1)
     return Pair(NodeInfoWithSigned(signedNodeInfo), key)
 }

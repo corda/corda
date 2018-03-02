@@ -66,7 +66,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
     private fun getSignedRequestByPublicHash(publicKeyHash: SecureHash, transaction: DatabaseTransaction): CertificateSigningRequestEntity? {
         return transaction.singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
             val publicKeyEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::publicKeyHash.name), publicKeyHash.toString())
-            val statusEq = builder.equal(path.get<RequestStatus>(CertificateSigningRequestEntity::status.name), RequestStatus.SIGNED)
+            val statusEq = builder.equal(path.get<RequestStatus>(CertificateSigningRequestEntity::status.name), RequestStatus.DONE)
             builder.and(publicKeyEq, statusEq)
         }
     }

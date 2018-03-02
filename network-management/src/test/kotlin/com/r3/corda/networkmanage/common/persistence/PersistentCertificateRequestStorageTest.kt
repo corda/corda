@@ -108,7 +108,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         storage.putCertificatePath(
                 requestId,
                 generateSignedCertPath(csr, nodeKeyPair),
-                listOf(DOORMAN_SIGNATURE)
+                DOORMAN_SIGNATURE
         )
         // Check request is ready
         assertNotNull(storage.getRequest(requestId)!!.certData)
@@ -126,14 +126,14 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         storage.putCertificatePath(
                 requestId,
                 generateSignedCertPath(csr, nodeKeyPair),
-                listOf(DOORMAN_SIGNATURE)
+                DOORMAN_SIGNATURE
         )
         // When subsequent signature requested
         assertFailsWith(IllegalArgumentException::class) {
             storage.putCertificatePath(
                     requestId,
                     generateSignedCertPath(csr, nodeKeyPair),
-                    listOf(DOORMAN_SIGNATURE))
+                    DOORMAN_SIGNATURE)
         }
     }
 
@@ -149,7 +149,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         storage.putCertificatePath(
                 requestId,
                 generateSignedCertPath(csr, nodeKeyPair),
-                listOf(DOORMAN_SIGNATURE)
+                DOORMAN_SIGNATURE
         )
         // Sign certificate
         // When request with the same public key is requested
@@ -202,7 +202,7 @@ class PersistentCertificateRequestStorageTest : TestBase() {
         storage.putCertificatePath(
                 requestId,
                 generateSignedCertPath(csr, nodeKeyPair),
-                listOf(DOORMAN_SIGNATURE)
+                DOORMAN_SIGNATURE
         )
         val rejectedRequestId = storage.saveRequest(createRequest("BankA", certRole = CertRole.NODE_CA).first)
         assertThat(storage.getRequest(rejectedRequestId)!!.remark).containsIgnoringCase("duplicate")
@@ -234,15 +234,15 @@ class PersistentCertificateRequestStorageTest : TestBase() {
             val auditReader = AuditReaderFactory.get(persistence.entityManagerFactory.createEntityManager())
             val newRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 1)
             assertEquals(RequestStatus.NEW, newRevision.status)
-            assertTrue(newRevision.modifiedBy.isEmpty())
+            assertEquals(DOORMAN_SIGNATURE, newRevision.modifiedBy)
 
             val ticketCreatedRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 2)
             assertEquals(RequestStatus.TICKET_CREATED, ticketCreatedRevision.status)
-            assertTrue(ticketCreatedRevision.modifiedBy.isEmpty())
+            assertEquals(DOORMAN_SIGNATURE, ticketCreatedRevision.modifiedBy)
 
             val approvedRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 3)
             assertEquals(RequestStatus.APPROVED, approvedRevision.status)
-            assertEquals(approver, approvedRevision.modifiedBy.first())
+            assertEquals(approver, approvedRevision.modifiedBy)
         }
     }
 

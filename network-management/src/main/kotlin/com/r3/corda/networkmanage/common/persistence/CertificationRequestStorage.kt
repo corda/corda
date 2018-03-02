@@ -12,7 +12,7 @@ data class CertificateSigningRequest(val requestId: String,
                                      val status: RequestStatus,
                                      val request: PKCS10CertificationRequest,
                                      val remark: String?,
-                                     val modifiedBy: List<String>,
+                                     val modifiedBy: String,
                                      val certData: CertificateData?)
 
 /**
@@ -64,12 +64,12 @@ interface CertificationRequestStorage {
     fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String?)
 
     /**
-     * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.SIGNED].
+     * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.DONE].
      * @param requestId id of the certificate signing request
      * @param signedBy authority (its identifier) signing this request.
      * @throws IllegalArgumentException if request is not found or not in Approved state.
      */
-    fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String>)
+    fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: String)
 }
 
 sealed class CertificateResponse {
@@ -100,9 +100,9 @@ enum class RequestStatus {
     REJECTED,
 
     /**
-     * The request has been signed, this is a terminal state, once a request gets in this state it won't change anymore.
+     * The request has been successfully processed, this is a terminal state, once a request gets in this state it won't change anymore.
      */
-    SIGNED
+    DONE
 }
 
 enum class CertificateStatus {

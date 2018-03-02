@@ -25,7 +25,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         private val allowedCertRoles = setOf(CertRole.NODE_CA, CertRole.SERVICE_IDENTITY)
     }
 
-    override fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String>) {
+    override fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: String) {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
@@ -36,7 +36,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             val certificateSigningRequest = request.copy(
                     modifiedBy = signedBy,
                     modifiedAt = Instant.now(),
-                    status = RequestStatus.SIGNED)
+                    status = RequestStatus.DONE)
             session.merge(certificateSigningRequest)
             val certificateDataEntity = CertificateDataEntity(
                     certificateStatus = CertificateStatus.VALID,
@@ -56,7 +56,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
                         legalName = legalName,
                         publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
                         requestBytes = request.encoded,
-                        modifiedBy = emptyList(),
+                        modifiedBy = CertificationRequestStorage.DOORMAN_SIGNATURE,
                         status = RequestStatus.NEW
                 )
             } catch (e: RequestValidationException) {
@@ -66,7 +66,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
                         publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
                         requestBytes = request.encoded,
                         remark = e.rejectMessage,
-                        modifiedBy = emptyList(),
+                        modifiedBy = CertificationRequestStorage.DOORMAN_SIGNATURE,
                         status = RequestStatus.REJECTED
                 )
             }
@@ -103,7 +103,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             findRequest(requestId, RequestStatus.TICKET_CREATED)?.let {
                 val update = it.copy(
-                        modifiedBy = listOf(approvedBy),
+                        modifiedBy = approvedBy,
                         modifiedAt = Instant.now(),
                         status = RequestStatus.APPROVED)
                 session.merge(update)
@@ -116,7 +116,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             val request = findRequest(requestId)
             request ?: throw IllegalArgumentException("Error when rejecting request with id: $requestId. Request does not exist.")
             val update = request.copy(
-                    modifiedBy = listOf(rejectedBy),
+                    modifiedBy = rejectedBy,
                     modifiedAt = Instant.now(),
                     status = RequestStatus.REJECTED,
                     remark = rejectReason
