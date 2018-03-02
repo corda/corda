@@ -415,7 +415,7 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                         }.putUnencodedChars(type.name).putUnencodedChars(ENUM_HASH)
                     } else {
                         hasher.fingerprintWithCustomSerializerOrElse(factory, type, type) {
-                            if (type.kotlin.objectInstance != null) {
+                            if (type.objectInstance() != null) {
                                 // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
                                 // to the CorDapp but maybe reference to the JAR in the short term.
                                 hasher.putUnencodedChars(type.name)

@@ -57,6 +57,7 @@ object AckWrapper {
 
 object PrivateAckWrapper {
     private object Ack
+
     fun serialize() {
         val factory = testDefaultFactoryNoEvolution()
         SerializationOutput(factory).serialize(Ack)
