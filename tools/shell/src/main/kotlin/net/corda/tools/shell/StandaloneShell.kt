@@ -78,11 +78,7 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
                 password = String(readPassword("Password:"))
             }
         }
-        InteractiveShell.startShell(configuration,
-                /*{ username: String?, credentials: String? ->
-                    val client = createCordaRPCClientWithSslAndClassLoader(configuration.hostAndPort, sslConfiguration = configuration.ssl, classLoader = classLoader)
-                    client.start(username ?: "", credentials?: "").proxy
-                },*/ classLoader)
+        InteractiveShell.startShell(configuration, classLoader)
         try {
              //connecting to node by requesting node info to fail fast
               InteractiveShell.nodeInfo()
