@@ -126,67 +126,6 @@ Database schema changes
 
 An H2 database instance (represented on the filesystem as a file called `persistence.mv.db`) used in Corda 1.0 or 2.0
 cannot be directly reused with Corda 3.0 due to minor improvements and additions to stabilise the underlying schemas.
-These guidelines relate to vault tables and common contract schemas changes that may directly impact your CorDapp application data, and thus, require upgrading:
-
-Changes to Vault related tables:
-
-  1. ``NODE_TRANSACTIONS``:
-
-     * column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``
-
-  2. ``VAULT_STATES``:
-
-     * column ``CONTRACT_STATE`` removed
-
-  3. ``VAULT_FUNGIBLE_STATES``:
-
-     * column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` and the field size increased
-
-  4. ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
-
-     * table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``
-     * column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``
-     * column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
-
-  5. ``VAULT_LINEAR_STATES``:
-
-     * type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)`` - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in varchar format
-
-  6. ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
-
-     * table renamed to ``VAULT_LINEAR_STATES_PARTS``
-     * column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``
-     * column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
-
-Changes to tables from Finance module:
-
-  1. ``contract_cash_states``:
-
-     * columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store
-     Base58 representation of SHA-256 of public key prefixed with `DL`
-
-  2. ``contract_cp_states``:
-
-     * table renamed to ``cp_states``, column changes as for ``contract_cash_states``
-
-  .. note:: We advise not to migrate your schema, but to use a fresh database.
-    However, Vault related tables could be migrated for historical reporting purposes.
-    Please follow these migration instructions to move data to the latest schemas:
-
-    1. In the existing database create a temporary schema and copy Vault tables.
-
-    2. Delete tables in the existing schema - the new version of schema will be recreated at node startup.
-
-    3. Start the Corda 3.0 node connecting to the existing database (may require copy the `persistence.mv.db` file to the installation directory of the new node).
-
-    4. Copy data from the temporary schema to the new one following changes in table names, column names and types.
-       Use ``INTO NEW_SCHEMA.MY_TABLE(columns...) SELECT (columns...) FROM TEMP_SCHEMA.MY_TABLE`` statement, for example SQL statement for ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"`` table:
-
-      .. sourcecode:: sql
-
-        INSERT INTO NEW_SCHEMA.VAULT_FUNGIBLE_STATES_PARTS(OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) select (OUTPUT_INDEX,TRANSACTION_ID,PARTICIPANTS) FROM TEMP_SCHEMA."VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"
-
-    5. Delete the temporary schema created in step 1).
 
 Configuration
 ^^^^^^^^^^^^^

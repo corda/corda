@@ -38,6 +38,29 @@ UNRELEASED
   `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
   See: DummyDealStateSchemaV1.PersistentDummyDealState
 
+* Database schema changes - an H2 database instance of Corda 1.0 and 2.0 cannot be reused for Corda 3.0, listed changes for Vault and Finance module:
+
+    * ``NODE_TRANSACTIONS``:
+       column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``, serialization format of BLOB stored in the column has changed to AMQP
+    * ``VAULT_STATES``:
+       column ``CONTRACT_STATE`` removed
+    * ``VAULT_FUNGIBLE_STATES``:
+        column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` and the field size increased
+    * ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
+        table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``,
+        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
+        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+    * ``VAULT_LINEAR_STATES``:
+        type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)`` - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in varchar format
+    * ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
+        table renamed to ``VAULT_LINEAR_STATES_PARTS``,
+        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
+        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+    * ``contract_cash_states``:
+        columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store Base58 representation of SHA-256 of public key prefixed with `DL`
+    * ``contract_cp_states``:
+        table renamed to ``cp_states``, column changes as for ``contract_cash_states``
+
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
   until final documentation is prepared. Certificates at ``NODE_CA``, ``WELL_KNOWN_SERVICE_IDENTITY`` and above must
