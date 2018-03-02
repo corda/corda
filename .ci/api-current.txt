@@ -565,15 +565,20 @@ public final class net.corda.core.contracts.TransactionStateKt extends java.lang
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$ConflictingAttachmentsRejection extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String)
+  @org.jetbrains.annotations.NotNull public final String getContractClass()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$ContractConstraintRejection extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String)
+  @org.jetbrains.annotations.NotNull public final String getContractClass()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$ContractCreationError extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String, Throwable)
+  @org.jetbrains.annotations.NotNull public final String getContractClass()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$ContractRejection extends net.corda.core.contracts.TransactionVerificationException
+  public <init>(net.corda.core.crypto.SecureHash, String, Throwable)
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.contracts.Contract, Throwable)
+  @org.jetbrains.annotations.NotNull public final String getContractClass()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$Direction extends java.lang.Enum
   protected <init>(String, int)
@@ -596,12 +601,17 @@ public final class net.corda.core.contracts.TransactionStateKt extends java.lang
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$NotaryChangeInWrongTransactionType extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.identity.Party)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party getOutputNotary()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party getTxNotary()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$SignersMissing extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, List)
+  @org.jetbrains.annotations.NotNull public final List getMissing()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.contracts.TransactionVerificationException$TransactionMissingEncumbranceException extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, int, net.corda.core.contracts.TransactionVerificationException$Direction)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.TransactionVerificationException$Direction getInOut()
+  public final int getMissing()
 ##
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.contracts.TypeOnlyCommandData extends java.lang.Object implements net.corda.core.contracts.CommandData
   public <init>()
@@ -1314,6 +1324,8 @@ public static final class net.corda.core.flows.FlowStackSnapshot$Frame extends j
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.flows.IllegalFlowLogicException extends java.lang.IllegalArgumentException
   public <init>(Class, String)
+  public <init>(String, String)
+  @org.jetbrains.annotations.NotNull public final String getType()
 ##
 public @interface net.corda.core.flows.InitiatedBy
   public abstract Class value()
