@@ -2,7 +2,6 @@ package net.corda.tools.shell
 
 import com.jcabi.manifests.Manifests
 import joptsimple.OptionException
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.internal.*
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -109,7 +108,6 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
         }
         configuration.sshdPort?.apply{ println("SSH server listening on port $this.") }
 
-        println(configuration)
         exit.await()
         exitProcess(0)
     }

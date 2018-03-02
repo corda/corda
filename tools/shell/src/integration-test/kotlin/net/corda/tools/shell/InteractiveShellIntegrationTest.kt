@@ -12,8 +12,8 @@ import net.corda.testing.common.internal.withCertificates
 import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
@@ -28,7 +28,7 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should not log in with invalid credentials`() {
         val user = User("u", "p", setOf())
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
@@ -74,7 +74,7 @@ class InteractiveShellIntegrationTest {
 
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
                 var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
+                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
@@ -113,7 +113,7 @@ class InteractiveShellIntegrationTest {
 
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
                 var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
+                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
@@ -199,7 +199,7 @@ class InteractiveShellIntegrationTest {
 
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
                 var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = PortAllocation.RandomFree)) {
+                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
