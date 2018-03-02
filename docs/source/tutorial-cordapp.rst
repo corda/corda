@@ -229,28 +229,27 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
 .. sourcecode:: none
 
-       ______               __
-      / ____/     _________/ /___ _
-     / /     __  / ___/ __  / __ `/         It's kind of like a block chain but
-    / /___  /_/ / /  / /_/ / /_/ /          cords sounded healthier than chains.
-    \____/     /_/   \__,_/\__,_/
+      ______               __
+     / ____/     _________/ /___ _
+    / /     __  / ___/ __  / __ `/         Top tip: never say "oops", instead
+   / /___  /_/ / /  / /_/ / /_/ /          always say "Ah, Interesting!"
+   \____/     /_/   \__,_/\__,_/
 
-    --- Corda Open Source 0.12.1 (da47f1c) -----------------------------------------------
-
-    📚  New! Training now available worldwide, see https://corda.net/corda-training/
-
-    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
-    Database connection url is              : jdbc:h2:tcp://10.163.199.132:54763/node
-    Listening on address                    : 127.0.0.1:10005
-    RPC service listening on address        : localhost:10006
-    Loaded plugins                          : com.example.plugin.ExamplePlugin
-    Node for "PartyA" started up and registered in 35.0 sec
+   --- Corda Open Source corda-3.0 (4157c25) -----------------------------------------------
 
 
-    Welcome to the Corda interactive shell.
-    Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
+   Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
+   Database connection url is              : jdbc:h2:tcp://localhost:59472/node
+   Incoming connection address             : localhost:10005
+   Listening on port                       : 10005
+   Loaded CorDapps                         : corda-finance-corda-3.0, cordapp-example-0.1, corda-core-corda-3.0
+   Node for "PartyA" started up and registered in 38.59 sec
 
-    Fri Jul 07 10:33:47 BST 2017>>>
+
+   Welcome to the Corda interactive shell.
+   Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
+
+   Fri Mar 02 17:34:02 GMT 2018>>> 
 
 For every node except the notary, the script also creates a webserver terminal tab/window:
 
