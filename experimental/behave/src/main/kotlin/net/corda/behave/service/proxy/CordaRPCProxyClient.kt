@@ -124,11 +124,7 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         val flowName = logicType.name
-        val argList = listOf(flowName, *args).map {
-            if (it is Party)
-                it.name
-            else it
-        }
+        val argList = listOf(flowName, *args)
 
         println("Corda RPC Proxy client calling: $flowName with values: $argList")
         val response = doPost<AbstractCashFlow.Result>(targetHostAndPort, "start-flow", argList.serialize().bytes)
