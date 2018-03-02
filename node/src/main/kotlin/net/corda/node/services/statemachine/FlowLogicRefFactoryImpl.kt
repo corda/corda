@@ -54,10 +54,7 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
         } catch (e: ClassNotFoundException) {
             throw IllegalFlowLogicException(flowClassName, "Flow not found: $flowClassName")
         }
-        val asSubclass = forName.asSubclass(FlowLogic::class.java)
-        return if (asSubclass != null)
-            asSubclass
-        else
+        return forName.asSubclass(FlowLogic::class.java) ?:
             throw IllegalFlowLogicException(flowClassName, "The class $flowClassName is not a subclass of FlowLogic.")
     }
 
@@ -102,7 +99,7 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
 
     override fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
         if (ref !is FlowLogicRefImpl) throw IllegalFlowLogicException(ref.javaClass, "FlowLogicRef was not created via correct FlowLogicRefFactory interface")
-        // We re-validate here because a FlowLogicRefImpl could have arrived via deserialisation and therefore the
+        // We re-validate here because a FlowLogicRefImpl could have arrived via deserialization and therefore the
         // class name could point to anything at all.
         val klass = validatedFlowClassFromName(ref.flowLogicClassName)
         return createConstructor(klass, ref.args)()
