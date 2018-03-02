@@ -1,8 +1,6 @@
 Creating nodes locally
 ======================
 
-.. contents::
-
 Node structure
 --------------
 Each Corda node has the following structure:
@@ -70,8 +68,8 @@ The name must also obey the following constraints:
 The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
-nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined in the
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
+nodes for testing and demos. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined
+in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
 
 .. sourcecode:: groovy
 
@@ -165,8 +163,7 @@ a single node to run the network map service, by putting its name in the ``netwo
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
 The Dockerform task
--------------------
-
+~~~~~~~~~~~~~~~~~~~
 The ```Dockerform``` is a sister task of ```Cordform```. It has nearly the same syntax and produces very
 similar results - enhanced by an extra file to enable easy spin up of nodes using ```docker-compose```.
 Below you can find the example task from the ```IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>```
@@ -230,7 +227,7 @@ by default exposes port 10003 which is the default one for RPC connections.
 
 
 Running deployNodes
--------------------
+~~~~~~~~~~~~~~~~~~~
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
 of the project where the ``deployNodes`` task is defined:
 

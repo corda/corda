@@ -57,9 +57,9 @@ in its local network map cache. The node generates its own node-info file on sta
 In addition to the network map, all the nodes on a network must use the same set of network parameters. These are a set
 of constants which guarantee interoperability between nodes. The HTTP network map distributes the network parameters
 which the node downloads automatically. In the absence of this the network parameters must be generated locally. This can
-be done with the network bootstrapper. This a tool that scans all the node configurations from a common directory to
+be done with the network bootstrapper. This is a tool that scans all the node configurations from a common directory to
 generate the network parameters file which is copied to the nodes' directories. It also copies each node's node-info file
-to every other node.
+to every other node so that they can all transact with each other.
 
 The bootstrapper tool can be built with the command:
 
@@ -81,6 +81,12 @@ For example running the command on a directory containing these files :
     └── partyb.conf             // Party B's node.conf file
 
 Would generate directories containing three nodes: notary, partya and partyb.
+
+This tool only bootstraps a network. It cannot dynamically update if a new node needs to join the network or if an existing
+one has changed something in their node-info, e.g. their P2P address. For this the new node-info file will need to be placed
+in the other nodes' ``additional-node-infos`` directory. A simple way to do this is to use `rsync <https://en.wikipedia.org/wiki/Rsync>`_.
+However, if it's known beforehand the set of nodes that will eventually the node folders can be pregenerated in the bootstrap
+and only started when needed.
 
 
 Whitelisting Contracts
