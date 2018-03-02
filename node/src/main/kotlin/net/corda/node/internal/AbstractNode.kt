@@ -302,9 +302,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 throw ConfigurationException("Cannot init CrashShell because node RPC address is not set (via 'rpcSettings' option).")
             }
             val shellConfiguration = configuration.toShellConfig()
-            // TODO Simon create admin dev mode user
-            // TODO StandaloneShell(shellConfiguration) should be at construction time
-            // TODO standAloneShell.start()
             val rpcOps = { username: String?, credentials: String? ->
                 val client =
                     createCordaRPCClientWithSsl(shellConfiguration.hostAndPort, sslConfiguration = shellConfiguration.ssl)

@@ -21,6 +21,11 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
+    test {
+        resources {
+            srcDir file('src/test/resources')
+        }
+    }
 }
 
 dependencies {
@@ -52,9 +57,6 @@ dependencies {
 
     // Manifests: for reading stuff from the manifest file
     compile "com.jcabi:jcabi-manifests:1.1"
-
-    // TODO Simon
-    compile group: 'com.natpryce', name: 'konfig', version: '1.6.1.0'
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"

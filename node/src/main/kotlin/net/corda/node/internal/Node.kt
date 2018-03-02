@@ -27,9 +27,8 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
+import net.corda.node.services.config.shell.shellUser
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -155,7 +154,7 @@ open class Node(configuration: NodeConfiguration,
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService ?:
-        SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+        SecurityConfiguration.AuthService.fromUsers( if (configuration.shouldInitCrashShell()) configuration.rpcUsers + configuration.shellUser() else configuration.rpcUsers)
 
         securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 

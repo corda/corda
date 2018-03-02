@@ -92,18 +92,19 @@ data class SSHDConfiguration(val port: Int) {
     }
 }
 
-data class ShellSslOptions(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration
+data class ShellSslOptions(override val sslKeystore: Path, override val keyStorePassword: String, override val trustStoreFile:Path, override val trustStorePassword: String) : SSLConfiguration {
+    override val certificatesDirectory: Path get() = Paths.get("")
+}
 
 data class ShellConfiguration(
-        val baseDirectory: Path,
+        val shellDirectory: Path,
+        val cordappsDirectory: Path?,
         var user: String?,
         var password: String?,
         val hostAndPort: NetworkHostAndPort,
         val ssl: ShellSslOptions?,
         val sshdPort: Int?,
-        val noLocalShell: Boolean) {
-    val cordappsDirectory: Path = baseDirectory / "cordapps"
-}
+        val noLocalShell: Boolean = false)
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -118,7 +119,7 @@ object InteractiveShell {
     fun startShell(configuration: ShellConfiguration, cordaRPCOps: (username: String?, credentials: String?) -> CordaRPCOps, classLoader: ClassLoader? = null) {
         rpcOps = cordaRPCOps
         InteractiveShell.classLoader = classLoader
-        val dir = configuration.baseDirectory
+        val dir = configuration.shellDirectory
         val runSshDaemon = configuration.sshdPort != null
 
         val config = Properties()

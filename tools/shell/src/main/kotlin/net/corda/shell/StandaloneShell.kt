@@ -18,7 +18,7 @@ import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
 
-    val argsParser = RemoteShellArgsParser()
+    val argsParser = CommandLineOptionParser()
     val cmdlineOptions = try {
         argsParser.parse(*args)
     } catch (ex: OptionException) {
@@ -42,8 +42,8 @@ fun main(args: Array<String>) {
 
 class StandaloneShell(private val configuration: ShellConfiguration) {
 
-    private fun getCordappsInDirectory(cordappsDir: Path): List<URL> =
-            if (!cordappsDir.exists()) {
+    private fun getCordappsInDirectory(cordappsDir: Path?): List<URL> =
+            if (cordappsDir == null || !cordappsDir.exists()) {
                 emptyList()
             } else {
                 cordappsDir.list {

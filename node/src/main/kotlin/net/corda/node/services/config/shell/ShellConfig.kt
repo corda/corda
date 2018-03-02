@@ -1,10 +1,13 @@
 package net.corda.node.services.config.shell
 
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.Permissions
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.nodeapi.internal.config.User
 import net.corda.shell.ShellConfiguration
 import net.corda.shell.ShellSslOptions
+import java.nio.file.Paths
 
 private const val SSH_PORT = 2222
 
@@ -12,14 +15,26 @@ private const val SSH_PORT = 2222
 fun NodeConfiguration.toShellConfig(): ShellConfiguration {
 
     val sslConfiguration = if (this.rpcOptions.useSsl) {
-        ShellSslOptions(this.rpcOptions.sslConfig.certificatesDirectory,
-                this.rpcOptions.sslConfig.keyStorePassword, this.rpcOptions.sslConfig.trustStorePassword)
+        with(this.rpcOptions.sslConfig) {
+            ShellSslOptions(sslKeystore,
+                    keyStorePassword,
+                    trustStoreFile,
+                    trustStorePassword)
+        }
     } else {
         null
     }
-    val localShellUser: User? = this.rpcUsers.firstOrNull { u -> u.username == "demo" } // TODO Simon investigate creating shell user at startup if embedded shell is started (it's obviously in dev mode only)
-    return ShellConfiguration(this.baseDirectory,
-            localShellUser?.username ?: "", localShellUser?.password,
-            this.rpcOptions.address ?: NetworkHostAndPort("localhost", SSH_PORT),
-            sslConfiguration, this.sshd?.port, this.noLocalShell)
+    val localShellUser: User = localShellUser()
+    return ShellConfiguration(
+            shellDirectory = this.baseDirectory,
+            cordappsDirectory = Paths.get(this.baseDirectory.toString() + "/cordapps"),
+            user = localShellUser.username,
+            password = localShellUser.password,
+            hostAndPort = this.rpcOptions.address ?: NetworkHostAndPort("localhost", SSH_PORT),
+            ssl = sslConfiguration,
+            sshdPort = this.sshd?.port,
+            noLocalShell = this.noLocalShell)
 }
+
+private fun localShellUser() = User("shell", "shell", setOf(Permissions.all()))
+fun NodeConfiguration.shellUser() = shouldInitCrashShell()?.let { localShellUser() }

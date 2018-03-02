@@ -80,7 +80,7 @@ class CordaRPCClient private constructor(
     constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(hostAndPort, configuration, null)
 
     companion object {
-        fun createWithSsl(
+        internal fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
                 sslConfiguration: SSLConfiguration? = null
@@ -94,7 +94,7 @@ class CordaRPCClient private constructor(
                 sslConfiguration: SSLConfiguration? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader) // TODO Simon load classes in standalone shell
+            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader)
         }
     }
 
