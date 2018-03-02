@@ -114,6 +114,9 @@ The current set of network parameters:
 
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
         parameters change.
+:whitelistedContractImplementations: List of whitelisted versions of contract code.
+        For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
+        Read more about *Zone constraints* here :doc:`api-contract-constraints`
 
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
