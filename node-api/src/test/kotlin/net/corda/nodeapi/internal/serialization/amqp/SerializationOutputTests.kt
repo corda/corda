@@ -46,6 +46,23 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+object AckWrapper {
+    object Ack
+
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
+
+object PrivateAckWrapper {
+    private object Ack
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
+
 class SerializationOutputTests {
     private companion object {
         val BOB_IDENTITY = TestIdentity(BOB_NAME, 80).identity
@@ -1114,5 +1131,17 @@ class SerializationOutputTests {
 
         // were the issue not fixed we'd blow up here
         SerializationOutput(factory).serialize(c)
+    }
+
+    @Test
+    fun nestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        AckWrapper.serialize()
+    }
+
+    @Test
+    fun privateNestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        PrivateAckWrapper.serialize()
     }
 }
