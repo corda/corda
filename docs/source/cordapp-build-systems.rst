@@ -51,7 +51,7 @@ In certain cases, you may also wish to build against the unstable Master branch.
 
 Corda dependencies
 ^^^^^^^^^^^^^^^^^^
-The ``cordformation`` plugin adds two new gradle configurations:
+The ``cordformation`` and ``cordapp`` plugins add two new gradle configurations:
 
 * ``cordaCompile``, which extends ``compile``
 * ``cordaRuntime``, which extends ``runtime``
@@ -61,6 +61,20 @@ configurations should be used for any Corda dependency (e.g. ``corda-core``, ``c
 dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs).
 
 To build against Corda, you must add the following to your ``build.gradle`` file:
+
+    .. sourcecode:: groovy
+        dependencies
+        {
+            classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
+            classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
+        }
+
+        apply plugin: 'net.corda.plugins.cordapp'
+        apply plugin: 'net.corda.plugins.cordformation'
+
+
+The plugins need to be applied in all gradle build files where there is a dependency on Corda using any of:
+cordaCompile, cordaRuntime, cordapp"
 
 * ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
 * Each Corda compile dependency (eg ``net.corda:corda-core:$corda_release_version``) as a ``cordaCompile`` dependency
