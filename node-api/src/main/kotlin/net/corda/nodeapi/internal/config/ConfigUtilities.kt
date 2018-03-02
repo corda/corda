@@ -62,7 +62,7 @@ fun <T : Any> Config.parseAs(clazz: KClass<T>, strict: Boolean = true): T {
                 // Get the matching property for this parameter
                 val property = clazz.memberProperties.first { it.name == param.name }
                 val path = defaultToOldPath(property)
-                getValueInternal<Any>(path, param.type)
+                getValueInternal<Any>(path, param.type, strict)
             }
     return constructor.callBy(args)
 }
@@ -90,11 +90,11 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType): T {
-    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type))
+private fun <T : Any> Config.getValueInternal(path: String, type: KType, strict: Boolean = true): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, strict) else getCollectionValue(path, type, strict))
 }
 
-private fun Config.getSingleValue(path: String, type: KType): Any? {
+private fun Config.getSingleValue(path: String, type: KType, strict: Boolean = true): Any? {
     if (type.isMarkedNullable && !hasPath(path)) return null
     val typeClass = type.jvmErasure
     return when (typeClass) {
@@ -110,7 +110,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         URL::class -> URL(getString(path))
         CordaX500Name::class -> {
             when (getValue(path).valueType()) {
-                ConfigValueType.OBJECT -> getConfig(path).parseAs()
+                ConfigValueType.OBJECT -> getConfig(path).parseAs(strict)
                 else -> CordaX500Name.parse(getString(path))
             }
         }
@@ -119,12 +119,12 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
-            getConfig(path).parseAs(typeClass)
+            getConfig(path).parseAs(typeClass, strict)
         }
     }
 }
 
-private fun Config.getCollectionValue(path: String, type: KType): Collection<Any> {
+private fun Config.getCollectionValue(path: String, type: KType, strict: Boolean = true): Collection<Any> {
     val typeClass = type.jvmErasure
     require(typeClass == List::class || typeClass == Set::class) { "$typeClass is not supported" }
     val elementClass = type.arguments[0].type?.jvmErasure ?: throw IllegalArgumentException("Cannot work with star projection: $type")
@@ -147,7 +147,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }
         } else {
-            getConfigList(path).map { it.parseAs(elementClass) }
+            getConfigList(path).map { it.parseAs(elementClass, strict) }
         }
     }
     return if (typeClass == Set::class) values.toSet() else values
