@@ -47,6 +47,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+object AckWrapper {
+    object Ack
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
+
+object PrivateAckWrapper {
+    private object Ack
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
+
 @RunWith(Parameterized::class)
 class SerializationOutputTests(private val compression: CordaSerializationEncoding?) {
     private companion object {
@@ -1148,4 +1164,18 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
             assertEquals(encodingNotPermittedFormat.format(compression), message)
         }
     }
+
+    @Test
+    fun nestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        AckWrapper.serialize()
+    }
+
+    @Test
+    fun privateNestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        PrivateAckWrapper.serialize()
+    }
+
 }
+
