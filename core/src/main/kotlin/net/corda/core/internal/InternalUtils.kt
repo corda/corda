@@ -142,6 +142,8 @@ inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) 
 fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
 
+inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
+
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
@@ -372,9 +374,7 @@ inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> Dig
     return SignedData(this, signer(this))
 }
 
-inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
-    return SignedData(this, keyPair.sign(this.bytes))
-}
+fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedData(this, keyPair.sign(this.bytes))
 
 /** Verifies that the correct notarisation request was signed by the counterparty. */
 fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {

@@ -7,7 +7,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
-import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -39,8 +39,7 @@ class NodeInfoWatcherTest {
     private val scheduler = TestScheduler()
     private val testSubscriber = TestSubscriber<NodeInfo>()
 
-    private lateinit var nodeInfo: NodeInfo
-    private lateinit var signedNodeInfo: SignedNodeInfo
+    private lateinit var nodeInfoAndSigned: NodeInfoAndSigned
     private lateinit var nodeInfoPath: Path
     private lateinit var keyManagementService: KeyManagementService
 
@@ -49,9 +48,7 @@ class NodeInfoWatcherTest {
 
     @Before
     fun start() {
-        val nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
-        nodeInfo = nodeInfoAndSigned.first
-        signedNodeInfo = nodeInfoAndSigned.second
+        nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
         val identityService = makeTestIdentityService()
         keyManagementService = MockKeyManagementService(identityService)
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
@@ -62,7 +59,7 @@ class NodeInfoWatcherTest {
     fun `save a NodeInfo`() {
         assertEquals(0,
                 tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
-        NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), signedNodeInfo)
+        NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), nodeInfoAndSigned)
 
         val nodeInfoFiles = tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
         assertEquals(1, nodeInfoFiles.size)
@@ -76,8 +73,8 @@ class NodeInfoWatcherTest {
     @Test
     fun `save a NodeInfo to JimFs`() {
         val jimFs = Jimfs.newFileSystem(Configuration.unix())
-        val jimFolder = jimFs.getPath("/nodeInfo")
-        NodeInfoWatcher.saveToFile(jimFolder, signedNodeInfo)
+        val jimFolder = jimFs.getPath("/nodeInfo").createDirectories()
+        NodeInfoWatcher.saveToFile(jimFolder, nodeInfoAndSigned)
     }
 
     @Test
@@ -104,7 +101,7 @@ class NodeInfoWatcherTest {
         try {
             val readNodes = testSubscriber.onNextEvents.distinct()
             assertEquals(1, readNodes.size)
-            assertEquals(nodeInfo, readNodes.first())
+            assertEquals(nodeInfoAndSigned.nodeInfo, readNodes.first())
         } finally {
             subscription.unsubscribe()
         }
@@ -129,7 +126,7 @@ class NodeInfoWatcherTest {
             testSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS)
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct()
-            assertEquals(nodeInfo, readNodes.first())
+            assertEquals(nodeInfoAndSigned.nodeInfo, readNodes.first())
         } finally {
             subscription.unsubscribe()
         }
@@ -141,6 +138,6 @@ class NodeInfoWatcherTest {
 
     // Write a nodeInfo under the right path.
     private fun createNodeInfoFileInPath() {
-        NodeInfoWatcher.saveToFile(nodeInfoPath, signedNodeInfo)
+        NodeInfoWatcher.saveToFile(nodeInfoPath, nodeInfoAndSigned)
     }
 }

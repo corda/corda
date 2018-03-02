@@ -116,10 +116,9 @@ data class LedgerTransaction @JvmOverloads constructor(
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
     private fun verifyContracts() {
-        for (contractEntry in contracts.entries) {
-            val result = contractEntry.value
+        for ((key, result) in contracts) {
             when (result) {
-                is Try.Failure -> throw TransactionVerificationException.ContractCreationError(id, contractEntry.key, result.exception)
+                is Try.Failure -> throw TransactionVerificationException.ContractCreationError(id, key, result.exception)
                 is Try.Success -> {
                     val contract = result.value
                     try {

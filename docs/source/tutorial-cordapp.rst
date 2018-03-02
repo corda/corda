@@ -17,7 +17,7 @@ if:
 
 We will deploy the CorDapp on 4 test nodes:
 
-* **NetworkMapAndNotary**, which hosts a validating notary service
+* **Notary**, which hosts a validating notary service
 * **PartyA**
 * **PartyB**
 * **PartyC**
@@ -252,7 +252,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
     Fri Jul 07 10:33:47 BST 2017>>>
 
-For every node except the network map/notary, the script also creates a webserver terminal tab/window:
+For every node except the notary, the script also creates a webserver terminal tab/window:
 
 .. sourcecode:: none
 
@@ -364,12 +364,10 @@ Assuming all went well, you should see some activity in PartyA's web-server term
 
    >> Signing transaction with our private key.
    >> Gathering the counterparty's signature.
-   >> Structural step change in child of Gathering the counterparty's signature.
    >> Collecting signatures from counter-parties.
    >> Verifying collected signatures.
    >> Done
    >> Obtaining notary signature and recording transaction.
-   >> Structural step change in child of Obtaining notary signature and recording transaction.
    >> Requesting signature by notary service
    >> Broadcasting transaction to participants
    >> Done
@@ -471,22 +469,26 @@ For more information on the client RPC interface and how to build an RPC client 
 
 Running Nodes Across Machines
 -----------------------------
-The nodes can be split across machines and configured to communicate across the network.
+The nodes can be split across different machines and configured to communicate across the network.
 
-After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and move some of the individual
-node folders to a different machine (e.g. using a USB key). It is important that none of the nodes - including the
-network map/notary node - end up on more than one machine. Each computer should also have a copy of ``runnodes`` and
-``runnodes.bat``.
+After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and for each node that needs to
+be moved to another machine open its config file and change the Artemis messaging address to the IP address of the machine
+where the node will run (e.g. ``p2pAddress="10.18.0.166:10006"``).
+
+These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
+(see :doc:`setting-up-a-corda-network` for more information on this and how to built it) to update the files and have
+them distributed locally.
+
+``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
+
+Once that's done move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
+nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
+and ``runnodes.bat``.
 
 For example, you may end up with the following layout:
 
-* Machine 1: ``NetworkMapAndNotary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
+* Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
 * Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
-
-You must now edit the configuration file for each node, including the network map/notary. Open each node's config file,
-and make the following changes:
-
-* Change the Artemis messaging address to the machine's IP address (e.g. ``p2pAddress="10.18.0.166:10006"``)
 
 After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
 
