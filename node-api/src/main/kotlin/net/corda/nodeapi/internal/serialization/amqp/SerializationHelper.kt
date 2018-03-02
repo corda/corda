@@ -513,3 +513,48 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
             || type.interfaces.any { hasAnnotationInHierarchy(it) }
             || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
 }
+
+/**
+ * By default use Kotlin reflection and grab the objectInstance. However, that doesn't play nicely with nested
+ * private objects. Even setting the accessibility override (setAccessible) still causes an
+ * [IllegalAccessException] when attempting to retrieve the value of the INSTANCE field.
+ *
+ * Whichever reference to the class Kotlin reflection uses, override (set from setAccessible) on that field
+ * isn't set even when it was explicitly set as accessible before calling into the kotlin reflection routines.
+ *
+ * For example
+ *
+ * clazz.getDeclaredField("INSTANCE")?.apply {
+ *     isAccessible = true
+ *     kotlin.objectInstance // This throws as the INSTANCE field isn't accessible
+ * }
+ *
+ * Therefore default back to good old java reflection and simply look for the INSTANCE field as we are never going
+ * to serialize a companion object.
+ *
+ * As such, if objectInstance fails access, revert to Java reflection and try that
+ */
+fun Class<*>.objectInstance() =
+        try {
+            this.kotlin.objectInstance
+        } catch (e: IllegalAccessException) {
+            // Check it really is an object (i.e. it has no constructor)
+            if (constructors.isNotEmpty()) null
+            else {
+                try {
+                    this.getDeclaredField("INSTANCE")?.let { field ->
+                        // and must be marked as both static and final (>0 means they're set)
+                        if (modifiers and Modifier.STATIC == 0 || modifiers and Modifier.FINAL == 0) null
+                        else {
+                            val accessibility = field.isAccessible
+                            field.isAccessible = true
+                            val obj = field.get(null)
+                            field.isAccessible = accessibility
+                            obj
+                        }
+                    }
+                } catch (e: NoSuchFieldException) {
+                    null
+                }
+            }
+        }
