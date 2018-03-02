@@ -311,7 +311,7 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
 /**
  * Reads database and dataSource configuration from a file denoted by 'databaseProvider' system property,
  * overwitten by system properties and defaults to H2 in memory db.
- * @param nodeName Reflects the "instance" of the database username/schema, the value will be used to replace ${nodeOrganizationName} placeholder
+ * @param nodeName Reflects the "instance" of the database username/schema, the value will be used to replace ${custom.nodeOrganizationName} placeholder
  * if the placeholder is present in config.
  * @param postfix Additional postix added to database "instance" name in case config defaults to H2 in memory database.
  */
@@ -330,8 +330,8 @@ fun databaseProviderDataSourceConfig(nodeName: String? = null, postfix: String? 
     val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
     val fixedOverride = ConfigFactory.parseString("baseDirectory = \"\"")
 
-    //implied property nodeOrganizationName to fill the potential placeholders in db schema/ db user properties
-    val nodeOrganizationNameConfig = if (nodeName != null) configOf("nodeOrganizationName" to parseToDbSchemaFriendlyName(nodeName)) else ConfigFactory.empty()
+    //implied property custom.nodeOrganizationName to fill the potential placeholders in db schema/ db user properties
+    val nodeOrganizationNameConfig = if (nodeName != null) configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(nodeName)) else ConfigFactory.empty()
 
     //defaults to H2
     //for H2 the same db instance runs for all integration tests, so adding additional variable postfix create a unique database each time

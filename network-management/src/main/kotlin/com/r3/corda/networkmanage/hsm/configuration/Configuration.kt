@@ -73,5 +73,5 @@ fun parseParameters(vararg args: String): Parameters {
     require(configFile.isRegularFile()) { "Config file $configFile does not exist" }
 
     val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
-    return config.parseAs()
+    return config.parseAs(false)
 }

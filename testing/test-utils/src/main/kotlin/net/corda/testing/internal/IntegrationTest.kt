@@ -15,9 +15,9 @@ import org.junit.rules.ExternalResource
 abstract class IntegrationTest {
     // System properties set in main 'corda-project' build.gradle
     // Note: the database provider configuration file for integration tests should specify:
-    // dataSource.user = ${nodeOrganizationName}
+    // dataSource.user = ${custom.nodeOrganizationName}
     // dataSource.password = [PASSWORD]
-    //    where [PASSWORD] must be the same for all ${nodeOrganizationName}
+    //    where [PASSWORD] must be the same for all ${custom.nodeOrganizationName}
     companion object {
         private val DATABASE_PROVIDER = "databaseProvider"
         private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")

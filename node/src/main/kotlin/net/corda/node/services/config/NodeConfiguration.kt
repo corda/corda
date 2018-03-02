@@ -147,7 +147,7 @@ data class NodeConfigurationImpl(
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
-        override val security : SecurityConfiguration? = null,
+        override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
@@ -175,8 +175,10 @@ data class NodeConfigurationImpl(
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
-        override val graphiteOptions: GraphiteOptions? = null
-    ) : NodeConfiguration {
+        override val graphiteOptions: GraphiteOptions? = null,
+        // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
+        private val h2port: Int = 0
+) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
     }

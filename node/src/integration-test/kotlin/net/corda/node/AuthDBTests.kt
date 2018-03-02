@@ -87,14 +87,14 @@ class AuthDBTests : NodeBasedTest() {
                                                 "password" to "",
                                                 "driverClassName" to "org.h2.Driver"
                                         )
+                                ),
+                                "options" to mapOf(
+                                        "cache" to mapOf(
+                                                "expireAfterSecs" to cacheExpireAfterSecs,
+                                                "maxEntries" to 50
+                                        )
                                 )
-                        ),
-                        "options" to mapOf(
-                                "cache" to mapOf(
-                                        "expireAfterSecs" to cacheExpireAfterSecs,
-                                        "maxEntries" to 50
-                                )
-                           )
+                        )
                 )
         )
 

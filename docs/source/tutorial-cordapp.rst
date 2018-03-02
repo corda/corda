@@ -329,12 +329,10 @@ Assuming all went well, you should see some activity in PartyA's web-server term
 
    >> Signing transaction with our private key.
    >> Gathering the counterparty's signature.
-   >> Structural step change in child of Gathering the counterparty's signature.
    >> Collecting signatures from counter-parties.
    >> Verifying collected signatures.
    >> Done
    >> Obtaining notary signature and recording transaction.
-   >> Structural step change in child of Obtaining notary signature and recording transaction.
    >> Requesting signature by notary service
    >> Broadcasting transaction to participants
    >> Done

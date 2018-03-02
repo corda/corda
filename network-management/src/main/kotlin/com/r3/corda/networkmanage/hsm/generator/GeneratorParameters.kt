@@ -90,5 +90,5 @@ fun parseParameters(configFile: Path): GeneratorParameters {
     return ConfigFactory
             .parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))
             .resolve()
-            .parseAs()
+            .parseAs(false)
 }

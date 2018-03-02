@@ -100,7 +100,7 @@ public class CordaCaplet extends Capsule {
             // Read JVM args from the config if specified, else leave alone.
             List<String> jvmArgs = new ArrayList<>((List<String>) super.attribute(attr));
             try {
-                List<String> configJvmArgs = nodeConfig.getStringList("jvmArgs");
+                List<String> configJvmArgs = nodeConfig.getStringList("custom.jvmArgs");
                 jvmArgs.clear();
                 jvmArgs.addAll(configJvmArgs);
                 log(LOG_VERBOSE, "Configured JVM args = " + jvmArgs);

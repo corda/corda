@@ -59,7 +59,7 @@ SQL templates files are executed at different stage of an integration test:
 Depends on the database providers not each SQL file is present (e.g. db-setp always deletes tabels so db-cleanp is not needed).
 
 The setup ensures that all nodes involved in a single integration test use different database users to achieve database separation.
-The  data source configuration files (denote by ``databaseProvider``) define user and schema by ${nodeOrganizationName} placeholder.
+The  data source configuration files (denote by ``databaseProvider``) define user and schema by ${custom.nodeOrganizationName} placeholder.
 At a runtime the node resolves the placeholder to its organization name.
 
 

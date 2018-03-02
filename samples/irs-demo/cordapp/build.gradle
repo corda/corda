@@ -64,8 +64,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         notary = [validating : true]
         p2pPort 10002
         rpcSettings {
-            port 10003
-            adminPort 10023
+            address("localhost:10003")
+            adminAddress("localhost:10023")
         }
         cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
@@ -75,8 +75,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         rpcSettings {
-            port 10006
-            adminPort 10026
+            address("localhost:10006")
+            adminAddress("localhost:10026")
         }
         cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
@@ -86,8 +86,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
         rpcSettings {
-            port 10009
-            adminPort 10029
+            address("localhost:10009")
+            adminAddress("localhost:10029")
         }
         cordapps = ["${project.group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
@@ -97,8 +97,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Regulator,L=Moscow,C=RU"
         p2pPort 10011
         rpcSettings {
-            port 10012
-            adminPort 10032
+            address("localhost:10012")
+            adminAddress("localhost:10032")
         }
         cordapps = ["${project.group}:finance:$corda_release_version"]
         cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
