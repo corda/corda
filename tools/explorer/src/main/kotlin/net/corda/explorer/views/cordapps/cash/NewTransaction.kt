@@ -133,6 +133,7 @@ class NewTransaction : Fragment() {
                     is FlowException -> {
                         dialog.alertType = Alert.AlertType.ERROR
                         dialog.contentText = ex.message
+                        dialog.isResizable = true
                     }
                     else -> {
                         dialog.close()
