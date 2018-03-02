@@ -1,11 +1,11 @@
 package net.corda.core.crypto
 
-import net.corda.core.internal.X509EdDSAEngine
+import net.corda.core.crypto.internal.cordaSecurityProvider
+import net.corda.core.crypto.internal.providerMap
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -27,7 +27,6 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
-import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
@@ -37,7 +36,6 @@ import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
@@ -165,7 +163,7 @@ object Crypto {
             "COMPOSITE",
             AlgorithmIdentifier(CordaObjectIdentifier.COMPOSITE_KEY),
             emptyList(),
-            CordaSecurityProvider.PROVIDER_NAME,
+            cordaSecurityProvider.name,
             CompositeKey.KEY_ALGORITHM,
             CompositeSignature.SIGNATURE_ALGORITHM,
             null,
@@ -199,35 +197,12 @@ object Crypto {
             + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 
-    // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
-    // that could cause unexpected and suspicious behaviour.
-    // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
-    // The val is private to avoid any harmful state changes.
-    private val providerMap: Map<String, Provider> = mapOf(
-            BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
-            CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
-            "BCPQC" to BouncyCastlePQCProvider()) // Unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
-
-    private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
-        putAll(EdDSASecurityProvider())
-        // Override the normal EdDSA engine with one which can handle X509 keys.
-        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.qualifiedName)
-        addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
-    }
-
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
     @JvmStatic
     fun findProvider(name: String): Provider {
         return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
-    }
-
-    init {
-        // This registration is needed for reading back EdDSA key from java keystore.
-        // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
-        Security.addProvider(getBouncyCastleProvider())
-        Security.addProvider(CordaSecurityProvider())
     }
 
     /**
@@ -885,16 +860,6 @@ object Crypto {
         val key = SecretKeySpec(keyData, "HmacSHA512")
         mac.init(key)
         return mac.doFinal(seed)
-    }
-
-    private class KeyInfoConverter(val signatureScheme: SignatureScheme) : AsymmetricKeyInfoConverter {
-        override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? {
-            return keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
-        }
-
-        override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? {
-            return keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
-        }
     }
 
     /**
