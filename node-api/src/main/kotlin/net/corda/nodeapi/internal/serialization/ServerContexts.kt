@@ -29,7 +29,7 @@ val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(kryoMagic,
         true,
         SerializationContext.UseCase.RPCServer,
         null)
-val KRYO_STORAGE_CONTEXT = SerializationContextImpl(kryoMagic,
+val KRYO_STORAGE_CONTEXT_DEPRECATED = SerializationContextImpl(kryoMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),

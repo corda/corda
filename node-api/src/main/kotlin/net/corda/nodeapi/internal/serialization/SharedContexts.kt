@@ -17,7 +17,7 @@ import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
  * MUST be kept separate from these ones!
  */
 
-val KRYO_P2P_CONTEXT_DEPRICATED = SerializationContextImpl(kryoMagic,
+val KRYO_P2P_CONTEXT_DEPRECATED = SerializationContextImpl(kryoMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
