@@ -6,7 +6,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT_DEPRICATED
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT_DEPRECATED
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
@@ -44,7 +44,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize(context = KRYO_P2P_CONTEXT_DEPRICATED)
+        original.serialize(context = KRYO_P2P_CONTEXT_DEPRECATED)
     }
 
     @Test
@@ -71,7 +71,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = CapturingTransientProperty("Hello")
-        original.serialize(context = KRYO_P2P_CONTEXT_DEPRICATED)
+        original.serialize(context = KRYO_P2P_CONTEXT_DEPRECATED)
     }
 
     @Test
