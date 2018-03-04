@@ -2,13 +2,16 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
 import net.corda.nodeapi.internal.serialization.SerializationScheme
+import java.lang.reflect.Modifier
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -28,9 +31,22 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
 
 abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>) : SerializationScheme {
 
+    //
+    // This method of initialisation for the Whitelist and plugin serializers will have to change
+    // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest
+    // way
+    //
     companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
+        }
+
+        private val serializationSchemas: List<SerializationCustomSerializer<*, *>> by lazy {
+            FastClasspathScanner().addClassLoader(this::class.java.classLoader).scan()
+                    .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
+                    .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .map { it.kotlin.objectOrNewInstance() }
         }
     }
 
@@ -69,11 +85,20 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
             factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
         }
 
-        for (loader in cordappLoader) {
-            for (schema in loader.serializationCustomSerializers) {
+        // If we're passed in an external list we trust that, otherwise revert to looking at the scan of the
+        // Classpath to find custom serialisers
+        if (cordappLoader.isEmpty()) {
+            for (schema in serializationSchemas) {
                 factory.registerExternal(CorDappCustomSerializer(schema, factory))
             }
+        } else {
+            cordappLoader.forEach { loader ->
+                for (schema in loader.serializationCustomSerializers) {
+                    factory.registerExternal(CorDappCustomSerializer(schema, factory))
+                }
+            }
         }
+
     }
 
     private val serializerFactoriesForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
