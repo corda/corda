@@ -19,24 +19,33 @@ Each Corda node has the following structure:
 The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
 into the ``cordapps`` folder.
 
+In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file` for more information), the ``certificates``
+directory is filled with pre-configured keystores if the required keystores do not exist. This ensures that developers
+can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure. To learn more see :doc:`permissioning`.
+
 Node naming
 -----------
 A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations
-(particularly TLS implementations), we constrain the allowed X.500 attribute types to a subset of the minimum supported
-set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
+(particularly TLS implementations), we constrain the allowed X.500 name attribute types to a subset of the minimum
+supported set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
 
 * Organization (O)
 * State (ST)
 * Locality (L)
 * Country (C)
 * Organizational-unit (OU)
-* Common name (CN) (only used for service identities)
+* Common name (CN)
+
+``State`` should be avoided unless required to differentiate from other ``localities`` with the same or similar names at the
+country level. For example, London (GB) would not need a ``state``, but St Ives would (there are two, one in Cornwall, one
+in Cambridgeshire). As legal entities in Corda are likely to be located in major cities, this attribute is not expected to be
+present in the majority of names, but is an option for the cases which require it.
 
 The name must also obey the following constraints:
 
-* The organisation, locality and country attributes are present
+* The ``organisation``, ``locality`` and ``country`` attributes are present
 
-    * The state, organisational-unit and common name attributes are optional
+    * The ``state``, ``organisational-unit`` and ``common name`` attributes are optional
 
 * The fields of the name have the following maximum character lengths:
 
@@ -46,7 +55,7 @@ The name must also obey the following constraints:
     * Locality: 64
     * State: 64
 
-* The country attribute is a valid ISO 3166-1 two letter code in upper-case
+* The ``country`` attribute is a valid ISO 3166-1 two letter code in upper-case
 
 * All attributes must obey the following constraints:
 
@@ -58,12 +67,19 @@ The name must also obey the following constraints:
     * Does not contain the null character
     * Only the latin, common and inherited unicode scripts are supported
 
-* The organisation field of the name also obeys the following constraints:
+* The ``organisation`` field of the name also obeys the following constraints:
 
     * No double-spacing
 
         * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
           character confusability attacks
+
+External identifiers
+^^^^^^^^^^^^^^^^^^^^
+Mappings to external identifiers such as company registration numbers, LEI, BIC, etc. should be stored in custom X.509
+certificate extensions. These values may change for operational reasons, without the identity they're associated with
+necessarily changing, and their inclusion in the distinguished name would cause significant logistical complications.
+The OID and format for these extensions will be described in a further specification.
 
 The Cordform task
 -----------------
@@ -75,9 +91,8 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "O=NetworkMapAndNotary,L=London,C=GB"
         node {
-            name "O=NetworkMapAndNotary,L=London,C=GB"
+            name "O=Notary,L=London,C=GB"
             // The notary will offer a validating notary service.
             notary = [validating : true]
             p2pPort  10002
@@ -138,16 +153,14 @@ Following the previous example ``PartyB`` node will have additional configuratio
 
 Running this task will create three nodes in the ``build/nodes`` folder:
 
-* A ``NetworkMapAndNotary`` node that:
+* A ``Notary`` node that:
 
-  * Serves as the network map
   * Offers a validating notary service
   * Will not have a webserver (since ``webPort`` is not defined)
   * Is running the ``corda-finance`` CorDapp
 
 * ``PartyA`` and ``PartyB`` nodes that:
 
-  * Are pointing at the ``NetworkMapAndNotary`` as the network map service
   * Are not offering any services
   * Will have a webserver (since ``webPort`` is defined)
   * Are running the ``corda-finance`` CorDapp
@@ -157,8 +170,7 @@ Additionally, all three nodes will include any CorDapps defined in the project's
 CorDapps are not listed in each node's ``cordapps`` entry. This means that running the ``deployNodes`` task from the
 template CorDapp, for example, would automatically build and add the template CorDapp to each node.
 
-You can extend ``deployNodes`` to generate additional nodes. The only requirement is that you must specify
-a single node to run the network map service, by putting its name in the ``networkMap`` field.
+You can extend ``deployNodes`` to generate additional nodes.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
