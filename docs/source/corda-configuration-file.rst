@@ -71,7 +71,7 @@ absolute path to the node's base directory.
 :p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
-        note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed
+        note that the host is the included as the advertised entry in the network map. As a result the value listed
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
 

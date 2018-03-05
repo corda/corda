@@ -167,7 +167,7 @@ open class Node(configuration: NodeConfiguration,
         val advertisedAddress = info.addresses[0]
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
-        printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
+        printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
             rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize)
         }

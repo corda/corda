@@ -58,9 +58,10 @@ signed ``NodeInfo`` object that the network map service vends. These are automat
 be used to supplement or replace the HTTP network map. If the same node is advertised through both mechanisms then the
 latest one is taken.
 
-On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. To create a simple
-network without the HTTP network map service then simply place this file in the ``additional-node-infos`` directory
-of every node that's part of this network. For example, a simple way to do this is to use rsync.
+On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. It can also be
+generated using the ``--just-generate-node-info`` command line flag without starting the node. To create a simple network
+without the HTTP network map service simply place this file in the ``additional-node-infos`` directory of every node that's
+part of this network. For example, a simple way to do this is to use rsync.
 
 Usually, test networks have a structure that is known ahead of time. For the creation of such networks we provide a
 ``network-bootstrapper`` tool. This tool pre-generates node configuration directories if given the IP addresses/domain
@@ -107,6 +108,9 @@ The current set of network parameters:
 :modifiedTime: The time when the network parameters were last modified by the compatibility zone operator.
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
         parameters change.
+:whitelistedContractImplementations: List of whitelisted versions of contract code.
+        For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
+        Read more about *Zone constraints* here :doc:`api-contract-constraints`
 
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required

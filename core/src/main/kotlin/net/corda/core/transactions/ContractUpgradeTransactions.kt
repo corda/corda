@@ -48,7 +48,6 @@ data class ContractUpgradeWireTransaction(
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        val legacyContractClassName = resolvedInputs.first().state.contract
         val legacyContractAttachment = services.attachments.openAttachment(legacyContractAttachmentId)
                 ?: throw AttachmentResolutionException(legacyContractAttachmentId)
         val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
@@ -56,8 +55,9 @@ data class ContractUpgradeWireTransaction(
         return ContractUpgradeLedgerTransaction(
                 resolvedInputs,
                 notary,
-                ContractAttachment(legacyContractAttachment, legacyContractClassName),
-                ContractAttachment(upgradedContractAttachment, upgradeContractClassName),
+                legacyContractAttachment,
+                upgradeContractClassName,
+                upgradedContractAttachment,
                 id,
                 privacySalt,
                 sigs,
@@ -102,40 +102,47 @@ data class ContractUpgradeFilteredTransaction(
 data class ContractUpgradeLedgerTransaction(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
-        val legacyContractAttachment: ContractAttachment,
-        val upgradedContractAttachment: ContractAttachment,
+        val legacyContractAttachment: Attachment,
+        val upgradeContractClassName: ContractClassName,
+        val upgradedContractAttachment: Attachment,
         override val id: SecureHash,
         val privacySalt: PrivacySalt,
         override val sigs: List<TransactionSignature>,
         private val networkParameters: NetworkParameters
 ) : FullTransaction(), TransactionWithSignatures {
+    /** The legacy contract class name is determined by the first input state. */
+    private val legacyContractClassName = inputs.first().state.contract
     private val upgradedContract: UpgradedContract<ContractState, *> = loadUpgradedContract()
 
     init {
-        // TODO: relax this constraint once upgrading encumbered states is supported
-        check(inputs.all { it.state.contract == legacyContractAttachment.contract }) {
+        // TODO: relax this constraint once upgrading encumbered states is supported.
+        check(inputs.all { it.state.contract == legacyContractClassName }) {
             "All input states must point to the legacy contract"
         }
-        check(inputs.all { it.state.constraint.isSatisfiedBy(legacyContractAttachment) }) {
-            "Legacy contract constraint does not satisfy the constraint of the input states"
-        }
-        verifyLegacyContractConstraint()
-    }
-
-    private fun verifyLegacyContractConstraint() {
-        check(upgradedContract.legacyContract == legacyContractAttachment.contract) {
+        check(upgradedContract.legacyContract == legacyContractClassName) {
             "Outputs' contract must be an upgraded version of the inputs' contract"
         }
-        val attachmentWithContext = AttachmentWithContext(
-                legacyContractAttachment,
+        verifyConstraints()
+    }
+
+    private fun verifyConstraints() {
+        val attachmentForConstraintVerification = AttachmentWithContext(
+                legacyContractAttachment as? ContractAttachment
+                        ?: ContractAttachment(legacyContractAttachment, legacyContractClassName),
                 upgradedContract.legacyContract,
                 networkParameters.whitelistedContractImplementations
         )
+
+        // TODO: exclude encumbrance states from this check
+        check(inputs.all { it.state.constraint.isSatisfiedBy(attachmentForConstraintVerification) }) {
+            "Legacy contract constraint does not satisfy the constraint of the input states"
+        }
+
         val constraintCheck = if (upgradedContract is UpgradedContractWithLegacyConstraint) {
-            upgradedContract.legacyContractConstraint.isSatisfiedBy(attachmentWithContext)
+            upgradedContract.legacyContractConstraint.isSatisfiedBy(attachmentForConstraintVerification)
         } else {
             // If legacy constraint not specified, defaulting to WhitelistedByZoneAttachmentConstraint
-            WhitelistedByZoneAttachmentConstraint.isSatisfiedBy(attachmentWithContext)
+            WhitelistedByZoneAttachmentConstraint.isSatisfiedBy(attachmentForConstraintVerification)
         }
         check(constraintCheck) {
             "Legacy contract does not satisfy the upgraded contract's constraint"
@@ -158,7 +165,7 @@ data class ContractUpgradeLedgerTransaction(
         // TODO: re-map encumbrance pointers
         input.state.copy(
                 data = upgradedState,
-                contract = upgradedContractAttachment.contract,
+                contract = upgradeContractClassName,
                 constraint = outputConstraint
         )
     }
@@ -175,7 +182,7 @@ data class ContractUpgradeLedgerTransaction(
     private fun loadUpgradedContract(): UpgradedContract<ContractState, *> {
         @Suppress("UNCHECKED_CAST")
         return this::class.java.classLoader
-                .loadClass(upgradedContractAttachment.contract)
+                .loadClass(upgradeContractClassName)
                 .asSubclass(Contract::class.java)
                 .getConstructor()
                 .newInstance() as UpgradedContract<ContractState, *>

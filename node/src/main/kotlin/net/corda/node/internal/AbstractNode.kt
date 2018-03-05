@@ -61,11 +61,11 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NodeBuildProperties
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.sign
 import net.corda.nodeapi.internal.storeLegalIdentity
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
@@ -181,11 +181,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
                 persistentNetworkMapCache.start()
                 val (keyPairs, nodeInfo) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-                val signedNodeInfo = nodeInfo.sign { publicKey, serialised ->
+                val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
                     val privateKey = keyPairs.single { it.public == publicKey }.private
                     privateKey.sign(serialised.bytes)
                 }
-                NodeInfoWatcher.saveToFile(configuration.baseDirectory, signedNodeInfo)
+                NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
                 nodeInfo
             }
         }
@@ -268,11 +268,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 
-        networkMapUpdater.updateNodeInfo(services.myInfo) {
-            it.sign { publicKey, serialised ->
-                services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
-            }
+        log.info("Node-info for this node: ${services.myInfo}")
+
+        val nodeInfoAndSigned = NodeInfoAndSigned(services.myInfo) { publicKey, serialised ->
+            services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
         }
+        networkMapUpdater.updateNodeInfo(nodeInfoAndSigned)
         networkMapUpdater.subscribeToNetworkMap()
 
         // If we successfully  loaded network data from database, we set this future to Unit.

@@ -41,15 +41,21 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
     }
 
     override fun create(flowClassName: String, vararg args: Any?): FlowLogicRef {
-        val flowClass = Class.forName(flowClassName, true, classloader).asSubclass(FlowLogic::class.java)
-        if (flowClass == null) {
-            throw IllegalArgumentException("The class $flowClassName is not a subclass of FlowLogic.")
-        } else {
-            if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
-                throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
-            }
-            return createForRPC(flowClass, *args)
+        val flowClass = validatedFlowClassFromName(flowClassName)
+        if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
+            throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
         }
+        return createForRPC(flowClass, *args)
+    }
+
+    private fun validatedFlowClassFromName(flowClassName: String): Class<out FlowLogic<*>> {
+        val forName = try {
+            Class.forName(flowClassName, true, classloader)
+        } catch (e: ClassNotFoundException) {
+            throw IllegalFlowLogicException(flowClassName, "Flow not found: $flowClassName")
+        }
+        return forName.asSubclass(FlowLogic::class.java) ?:
+            throw IllegalFlowLogicException(flowClassName, "The class $flowClassName is not a subclass of FlowLogic.")
     }
 
     override fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
@@ -93,7 +99,9 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
 
     override fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
         if (ref !is FlowLogicRefImpl) throw IllegalFlowLogicException(ref.javaClass, "FlowLogicRef was not created via correct FlowLogicRefFactory interface")
-        val klass = Class.forName(ref.flowLogicClassName, true, classloader).asSubclass(FlowLogic::class.java)
+        // We re-validate here because a FlowLogicRefImpl could have arrived via deserialization and therefore the
+        // class name could point to anything at all.
+        val klass = validatedFlowClassFromName(ref.flowLogicClassName)
         return createConstructor(klass, ref.args)()
     }
 
