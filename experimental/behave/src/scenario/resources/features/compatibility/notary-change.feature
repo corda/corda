@@ -15,3 +15,17 @@ Feature: Compatibility - Notary version change
     Examples:
       | Corda-Node-Version    | Notary-Type-A       | Notary-Type-B          |
       | corda-3.0             | notary-validating   | notary-non-validating  |
+
+  Scenario Outline: Corda (OS) nodes can continue transacting with each other, using states that have been signed by different notaries (using transaction resolution).
+    Given a node A of version <Corda-Node-Version> using <Notary-Type-A>
+    And node A has the finance app installed
+    And a node B of version <Corda-Node-Version> using <Notary-Type-B>
+    And node B has the finance app installed
+    When the network is ready
+    Then node A can issue 1000 <Currency>
+    And node A can transfer 100 <Currency> to node B
+
+    Examples:
+      | Corda-Node-Version    | Notary-Type-A       | Notary-Type-B          |
+      | corda-3.0             | notary-validating   | notary-non-validating  |
+
