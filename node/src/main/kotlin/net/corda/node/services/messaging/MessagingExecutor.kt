@@ -99,26 +99,32 @@ class MessagingExecutor(
     fun start() {
         require(executor == null)
         executor = thread(name = "Messaging executor", isDaemon = true) {
-            val batch = ArrayList<Job>()
             eventLoop@ while (true) {
-                batch.add(queue.take()) // Block until at least one job is available.
-                queue.drainTo(batch)
-                sendBatchSizeMetric.update(batch.filter { it is Job.Send }.size)
-                val shouldShutdown = try {
-                    // Try to handle the batch in one commit.
-                    handleBatchTransactional(batch)
-                } catch (exception: ActiveMQException) {
-                    // A job failed, rollback and do it one at a time, simply log and skip if an individual job fails.
-                    // If a send job fails the exception will be re-raised in the corresponding future.
-                    // Note that this fallback assumes that there are no two jobs in the batch that depend on one
-                    // another. As the exception is re-raised in the requesting calling thread in case of a send, we can
-                    // assume no "in-flight" messages will be sent out of order after failure.
-                    log.warn("Exception while handling transactional batch, falling back to handling one job at a time", exception)
-                    handleBatchOneByOne(batch)
-                }
-                batch.clear()
-                if (shouldShutdown) {
-                    break@eventLoop
+                val job = queue.take() // Block until at least one job is available.
+                try {
+                    when (job) {
+                        is Job.Acknowledge -> {
+                            acknowledgeJob(job)
+                        }
+                        is Job.Send -> {
+                            try {
+                                sendJob(job)
+                            } catch (duplicateException: ActiveMQDuplicateIdException) {
+                                log.warn("Message duplication", duplicateException)
+                                job.sentFuture.set(Unit)
+                            }
+                        }
+                        Job.Shutdown -> {
+                            session.commit()
+                            break@eventLoop
+                        }
+                    }
+                } catch (exception: Throwable) {
+                    log.error("Exception while handling job $job, disregarding", exception)
+                    if (job is Job.Send) {
+                        job.sentFuture.setException(exception)
+                    }
+                    session.rollback()
                 }
             }
         }
@@ -131,67 +137,6 @@ class MessagingExecutor(
             executor.join()
             this.executor = null
         }
-    }
-
-    /**
-     * Handles a batch of jobs in one transaction.
-     * @return true if the executor should shut down, false otherwise.
-     * @throws ActiveMQException
-     */
-    private fun handleBatchTransactional(batch: List<Job>): Boolean {
-        for (job in batch) {
-            when (job) {
-                is Job.Acknowledge -> {
-                    acknowledgeJob(job)
-                }
-                is Job.Send -> {
-                    sendJob(job)
-                }
-                Job.Shutdown -> {
-                    session.commit()
-                    return true
-                }
-            }
-        }
-        session.commit()
-        return false
-    }
-
-    /**
-     * Handles a batch of jobs one by one, committing after each.
-     * @return true if the executor should shut down, false otherwise.
-     */
-    private fun handleBatchOneByOne(batch: List<Job>): Boolean {
-        for (job in batch) {
-            try {
-                when (job) {
-                    is Job.Acknowledge -> {
-                        acknowledgeJob(job)
-                        session.commit()
-                    }
-                    is Job.Send -> {
-                        try {
-                            sendJob(job)
-                            session.commit()
-                        } catch (duplicateException: ActiveMQDuplicateIdException) {
-                            log.warn("Message duplication", duplicateException)
-                            job.sentFuture.set(Unit)
-                        }
-                    }
-                    Job.Shutdown -> {
-                        session.commit()
-                        return true
-                    }
-                }
-            } catch (exception: Throwable) {
-                log.error("Exception while handling job $job, disregarding", exception)
-                if (job is Job.Send) {
-                    job.sentFuture.setException(exception)
-                }
-                session.rollback()
-            }
-        }
-        return false
     }
 
     private fun sendJob(job: Job.Send) {
