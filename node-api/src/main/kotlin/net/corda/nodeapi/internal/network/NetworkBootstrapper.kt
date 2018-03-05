@@ -191,7 +191,7 @@ class NetworkBootstrapper {
 
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
 
-        println(if (existingWhitelist.isEmpty()) "No existing whitelist found in te base folder." else "Found existing whitelist: ${whitelistFile}")
+        println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: ${whitelistFile}")
 
         val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
         if (excludeContracts.isNotEmpty()) {
