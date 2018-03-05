@@ -14,8 +14,6 @@
   public void setMessage(String)
   public void setOriginalExceptionClassName(String)
 ##
-public @interface net.corda.core.CordaInternal
-##
 public final class net.corda.core.CordaOID extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final String CORDA_PLATFORM = "1.3.6.1.4.1.50530.1"
   public static final net.corda.core.CordaOID INSTANCE
