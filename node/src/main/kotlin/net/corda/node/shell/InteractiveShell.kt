@@ -472,11 +472,6 @@ object InteractiveShell {
         // the standard "track" pattern, and print them until the user presses Ctrl-C
         if (response == null) return doneFuture(Unit)
 
-        if (response !is Observable<*> && response !is DataFeed<*, *>) {
-            out.println(printerFun(response))
-            return doneFuture(Unit)
-        }
-
         if (response is DataFeed<*, *>) {
             out.println("Snapshot:")
             out.println(printerFun(response.snapshot))
@@ -484,7 +479,12 @@ object InteractiveShell {
             out.println("Updates:")
             return printNextElements(response.updates, printerFun, out)
         }
-        return printNextElements(response as Observable<*>, printerFun, out)
+        if (response is Observable<*>) {
+            return printNextElements(response, printerFun, out)
+        }
+
+        out.println(printerFun(response))
+        return doneFuture(Unit)
     }
 
     private fun printNextElements(elements: Observable<*>, printerFun: (Any?) -> String, out: PrintWriter): CordaFuture<Unit> {
