@@ -188,12 +188,20 @@ class NetworkBootstrapper {
     }
 
     private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
+
+        fun whitelistString(whitelist: Map<String, List<AttachmentId>>): String = whitelist.map { it.outputString() }.joinToString("\n\t", "\n\t")
+
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
-        println("Found existing whitelist:")
-        existingWhitelist.forEach { println(it.outputString()) }
+        if (existingWhitelist.isEmpty()) {
+            println("No existing whitelist found in te base folder.")
+        } else {
+            println("Found existing whitelist:${whitelistString(existingWhitelist)}")
+        }
 
         val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
-        println("Exclude Contracts from whitelist: $excludeContracts")
+        if (excludeContracts.isNotEmpty()) {
+            println("Exclude contracts from whitelist: $excludeContracts")
+        }
 
         val newWhiteList: Map<ContractClassName, AttachmentId> = cordapps?.flatMap { cordappJarPath ->
             val jarHash = getJarHash(cordappJarPath)
@@ -202,8 +210,8 @@ class NetworkBootstrapper {
             }
         }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
 
-        println("Calculating whitelist for current CorDapps:")
-        newWhiteList.forEach { (contract, attachment) -> println("$contract:$attachment") }
+        println("Calculated whitelist for current installed CorDapps:")
+        newWhiteList.forEach { (contract, attachment) -> println("\t$contract:$attachment") }
 
         val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
             val existing = existingWhitelist[contractClassName] ?: emptyList()
@@ -211,8 +219,9 @@ class NetworkBootstrapper {
             contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
         }.toMap()
 
-        println("Final whitelist:")
-        merged.forEach { println(it.outputString()) }
+        if (existingWhitelist.isNotEmpty()) {
+            println("Final whitelist: ${whitelistString(merged)}")
+        }
 
         return merged
     }
@@ -243,10 +252,10 @@ class NetworkBootstrapper {
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-            // cluster and is shared by all the other members. This is the notary identity.
+        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+        // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
