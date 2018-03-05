@@ -29,14 +29,7 @@ val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(kryoMagic,
         true,
         SerializationContext.UseCase.RPCServer,
         null)
-val KRYO_STORAGE_CONTEXT_DEPRECATED = SerializationContextImpl(kryoMagic,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage,
-        null,
-        AlwaysAcceptEncodingWhitelist)
+
 val AMQP_STORAGE_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
@@ -45,6 +38,7 @@ val AMQP_STORAGE_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationContext.UseCase.Storage,
         null,
         AlwaysAcceptEncodingWhitelist)
+
 val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),

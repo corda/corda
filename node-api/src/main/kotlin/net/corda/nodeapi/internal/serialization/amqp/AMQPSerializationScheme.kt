@@ -31,11 +31,8 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
 
 abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>) : SerializationScheme {
 
-    //
-    // This method of initialisation for the Whitelist and plugin serializers will have to change
-    // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest
-    // way
-    //
+    // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
+    // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
@@ -86,15 +83,15 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
         }
 
         // If we're passed in an external list we trust that, otherwise revert to looking at the scan of the
-        // Classpath to find custom serialisers
+        // classpath to find custom serializers.
         if (cordappLoader.isEmpty()) {
-            for (schema in serializationSchemas) {
-                factory.registerExternal(CorDappCustomSerializer(schema, factory))
+            for (customSerializer in serializationSchemas) {
+                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         } else {
             cordappLoader.forEach { loader ->
-                for (schema in loader.serializationCustomSerializers) {
-                    factory.registerExternal(CorDappCustomSerializer(schema, factory))
+                for (customSerializer in loader.serializationCustomSerializers) {
+                    factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
                 }
             }
         }
