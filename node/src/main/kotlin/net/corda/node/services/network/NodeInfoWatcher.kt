@@ -8,6 +8,7 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -17,13 +18,12 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import rx.Observable
 import rx.Scheduler
-import java.io.IOException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.util.concurrent.TimeUnit
-import java.util.stream.Stream
 import kotlin.streams.toList
 
 /**
@@ -58,20 +58,14 @@ class NodeInfoWatcher(private val nodePath: Path,
         }
     }
 
-    private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
-
+    private val nodeInfosDir = nodePath / CordformNode.NODE_INFO_DIRECTORY
+    private val nodeInfoFiles = HashMap<Path, FileTime>()
     private val _processedNodeInfoHashes = HashSet<SecureHash>()
     val processedNodeInfoHashes: Set<SecureHash> get() = _processedNodeInfoHashes
 
     init {
         require(pollInterval >= 5.seconds) { "Poll interval must be 5 seconds or longer." }
-        if (!nodeInfoDirectory.isDirectory()) {
-            try {
-                nodeInfoDirectory.createDirectories()
-            } catch (e: IOException) {
-                logger.info("Failed to create $nodeInfoDirectory", e)
-            }
-        }
+        nodeInfosDir.createDirectories()
     }
 
     /**
@@ -93,42 +87,32 @@ class NodeInfoWatcher(private val nodePath: Path,
         return Companion.saveToFile(nodePath, nodeInfoAndSigned)
     }
 
-    /**
-     * Loads all the files contained in a given path and returns the deserialized [NodeInfo]s.
-     * Signatures are checked before returning a value.
-     *
-     * @return a list of [NodeInfo]s
-     */
     private fun loadFromDirectory(): List<NodeInfo> {
-        if (!nodeInfoDirectory.isDirectory()) {
-            return emptyList()
-        }
-        val result = nodeInfoDirectory.list { paths ->
+        val result = nodeInfosDir.list { paths ->
             paths
                     .filter { it.isRegularFile() }
-                    .flatMap { path ->
-                        val nodeInfo = processFile(path)?.let {
-                            if (_processedNodeInfoHashes.add(it.signed.raw.hash)) it.nodeInfo else null
+                    .filter { file ->
+                        val lastModifiedTime = file.lastModifiedTime()
+                        val previousLastModifiedTime = nodeInfoFiles[file]
+                        val newOrChangedFile = previousLastModifiedTime == null || lastModifiedTime > previousLastModifiedTime
+                        nodeInfoFiles[file] = lastModifiedTime
+                        newOrChangedFile
+                    }
+                    .mapNotNull { file ->
+                        logger.debug { "Reading SignedNodeInfo from $file" }
+                        try {
+                            NodeInfoAndSigned(file.readObject())
+                        } catch (e: Exception) {
+                            logger.warn("Unable to read SignedNodeInfo from $file", e)
+                            null
                         }
-                        if (nodeInfo != null) Stream.of(nodeInfo) else Stream.empty()
                     }
                     .toList()
         }
-        if (result.isNotEmpty()) {
-            logger.info("Successfully read ${result.size} NodeInfo files from disk.")
-        }
-        return result
-    }
 
-    private fun processFile(file: Path): NodeInfoAndSigned? {
-        return try {
-            logger.info("Reading NodeInfo from file: $file")
-            val signedNodeInfo = file.readObject<SignedNodeInfo>()
-            NodeInfoAndSigned(signedNodeInfo)
-        } catch (e: Exception) {
-            logger.warn("Exception parsing NodeInfo from file. $file", e)
-            null
-        }
+        logger.debug { "Read ${result.size} NodeInfo files from $nodeInfosDir" }
+        _processedNodeInfoHashes += result.map { it.signed.raw.hash }
+        return result.map { it.nodeInfo }
     }
 }
 
