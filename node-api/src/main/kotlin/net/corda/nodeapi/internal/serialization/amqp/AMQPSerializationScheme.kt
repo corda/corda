@@ -38,7 +38,7 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
         }
 
-        private val serializationSchemas: List<SerializationCustomSerializer<*, *>> by lazy {
+        private val customSerializers: List<SerializationCustomSerializer<*, *>> by lazy {
             FastClasspathScanner().addClassLoader(this::class.java.classLoader).scan()
                     .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
                     .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
@@ -85,7 +85,7 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
         // If we're passed in an external list we trust that, otherwise revert to looking at the scan of the
         // classpath to find custom serializers.
         if (cordappLoader.isEmpty()) {
-            for (customSerializer in serializationSchemas) {
+            for (customSerializer in customSerializers) {
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         } else {
