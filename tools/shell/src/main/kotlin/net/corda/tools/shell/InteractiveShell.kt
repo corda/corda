@@ -47,6 +47,7 @@ import rx.Observable
 import rx.Subscriber
 import java.io.*
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.UndeclaredThrowableException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -98,14 +99,22 @@ data class ShellSslOptions(override val sslKeystore: Path, override val keyStore
 }
 
 data class ShellConfiguration(
-        val shellDirectory: Path,
+        val commandsDirectory: Path,
         val cordappsDirectory: Path? = null,
         var user: String = "",
         var password: String = "",
         val hostAndPort: NetworkHostAndPort,
         val ssl: ShellSslOptions? = null,
         val sshdPort: Int? = null,
-        val noLocalShell: Boolean = false)
+        val sshHostKeyDirectory: Path? = null,
+        val noLocalShell: Boolean = false) {
+    companion object {
+        const val SSH_PORT = 2222
+        const val COMMANDS_DIR = "shell-commands"
+        const val CORDAPPS_DIR = "cordapps"
+        const val SSHD_HOSTKEY_DIR = "ssh"
+    }
+}
 
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -124,25 +133,25 @@ object InteractiveShell {
             client.start(username, credentials).proxy
         }
         InteractiveShell.classLoader = classLoader
-        val dir = configuration.shellDirectory
         val runSshDaemon = configuration.sshdPort != null
 
         val config = Properties()
         if (runSshDaemon) {
-            val sshKeysDir = dir / "sshkey"
-            sshKeysDir.toFile().mkdirs()
-
             // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
-            config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
-            config["crash.ssh.keygen"] = "true"
             config["crash.ssh.port"] = configuration.sshdPort?.toString()
             config["crash.auth"] = "corda"
+            configuration.sshHostKeyDirectory?.apply {
+                val sshKeysDir = configuration.sshHostKeyDirectory
+                sshKeysDir.toFile().mkdirs()
+                config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
+                config["crash.ssh.keygen"] = "true"
+            }
         }
 
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        shell = ShellLifecycle(dir).start(config, configuration.user, configuration.password)
+        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
@@ -164,13 +173,13 @@ object InteractiveShell {
         }
     }
 
-    class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
+    class ShellLifecycle(private val shellCommands: Path) : PluginLifeCycle() {
         fun start(config: Properties, localUserName: String = "", localUserPassword: String = ""): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
             val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
 
-            val extraCommandsPath = (dir / "shell-commands").toAbsolutePath().createDirectories()
+            val extraCommandsPath = shellCommands.toAbsolutePath().createDirectories()
             val commandsFS = FS.Builder()
                     .register("file", fileDriver)
                     .mount("file:" + extraCommandsPath)
@@ -201,7 +210,11 @@ object InteractiveShell {
         }
     }
 
-    fun nodeInfo() = connection.nodeInfo()
+    fun nodeInfo() = try {
+        connection.nodeInfo()
+    } catch (e: UndeclaredThrowableException) {
+        throw e.cause ?: e
+    }
 
     fun createOutputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
@@ -254,7 +267,7 @@ object InteractiveShell {
             return
         }
 
-        val clazz: Class<FlowLogic<*>> = if (classLoader != null) {
+        val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
             uncheckedCast(Class.forName(matches.single(), true, classLoader))
         } else {
             uncheckedCast(Class.forName(matches.single()))
@@ -262,7 +275,7 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz, om)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, om)
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })

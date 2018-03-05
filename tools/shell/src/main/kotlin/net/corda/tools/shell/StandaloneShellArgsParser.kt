@@ -4,8 +4,10 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import org.slf4j.event.Level
 import java.io.PrintStream
 import java.nio.file.Path
@@ -21,10 +23,9 @@ class CommandLineOptionParser {
     private val cordappsDirectoryArg = optionParser
             .accepts("cordpass-directory", "The path to directory containing Cordapps jars, Cordapps are require when starting flows.")
             .withOptionalArg()
-    private val shellDirectoryArg = optionParser
-            .accepts("shell-directory", "The CrAsH shell working directory.")
-            .withRequiredArg()
-            .defaultsTo(".")
+    private val commandsDirectoryArg = optionParser
+            .accepts("commands-directory", "The directory with additional CrAsH shell commands.")
+            .withOptionalArg()
     private val hostArg = optionParser
             .acceptsAll(listOf("h","host"), "The host of the Corda node.")
             .withRequiredArg()
@@ -45,6 +46,9 @@ class CommandLineOptionParser {
     private val sshdPortArg = optionParser
             .accepts("sshd-port", "Enables SSH server for shell.")
             .withOptionalArg()
+    private val sshdHostKeyDirectoryArg = optionParser
+            .accepts("sshd-hostkey-directory", "The directory with hostkey.pem filefor SSH server.")
+            .withOptionalArg()
     private val helpArg = optionParser
             .accepts("help")
             .forHelp()
@@ -54,11 +58,17 @@ class CommandLineOptionParser {
     private val keyStoreDirArg = optionParser
             .accepts("keystore-file", "The path to the KeyStore file.")
             .withOptionalArg()
+    private val keyStoreTypeArg = optionParser
+            .accepts("keystore-type", "The type of the KeyStore (e.g. JKS).")
+            .withOptionalArg()
     private val trustStorePasswordArg = optionParser
             .accepts("truststore-password", "The password to unlock the TrustStore file.")
             .withOptionalArg()
     private val trustStoreDirArg = optionParser
             .accepts("truststore-file", "The path to the TrustStore file.")
+            .withOptionalArg()
+    private val trustStoreTypeArg = optionParser
+            .accepts("truststore-type", "The type of the TrustStore (e.g. JKS).")
             .withOptionalArg()
 
     fun parse(vararg args: String): CommandLineOptions {
@@ -69,60 +79,70 @@ class CommandLineOptionParser {
                 port = optionSet.valueOf(portArg),
                 user = optionSet.valueOf(userArg),
                 password = optionSet.valueOf(passwordArg),
-                shellDirectory = Paths.get(optionSet.valueOf(shellDirectoryArg)).normalize().toAbsolutePath(),
-                cordappsDirectory = (optionSet.valueOf(cordappsDirectoryArg))?.let { Paths.get(optionSet.valueOf(cordappsDirectoryArg)).normalize().toAbsolutePath() },
+                commandsDirectory = (optionSet.valueOf(commandsDirectoryArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
+                cordappsDirectory = (optionSet.valueOf(cordappsDirectoryArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
                 help = optionSet.has(helpArg),
                 loggingLevel = optionSet.valueOf(loggerLevel),
                 sshdPort = optionSet.valueOf(sshdPortArg),
+                sshdHostKeyDirectory = (optionSet.valueOf(sshdHostKeyDirectoryArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
                 keyStorePassword = optionSet.valueOf(keyStorePasswordArg),
                 trustStorePassword = optionSet.valueOf(trustStorePasswordArg),
-                keyStoreFile = (optionSet.valueOf(keyStoreDirArg))?.let { Paths.get(optionSet.valueOf(keyStoreDirArg)).normalize().toAbsolutePath() },
-                trustStoreFile = (optionSet.valueOf(trustStoreDirArg))?.let { Paths.get(optionSet.valueOf(trustStoreDirArg)).normalize().toAbsolutePath() })
+                keyStoreFile = (optionSet.valueOf(keyStoreDirArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
+                trustStoreFile = (optionSet.valueOf(trustStoreDirArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
+                keyStoreType = optionSet.valueOf(keyStoreTypeArg),
+                trustStoreType = optionSet.valueOf(trustStoreTypeArg))
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
 }
 
 data class CommandLineOptions(val configFile: String?,
-                          val shellDirectory: Path?,
-                          val cordappsDirectory: Path?,
-                          val host: String?,
-                          val port: String?,
-                          val user: String?,
-                          val password: String?,
-                          val help: Boolean,
-                          val loggingLevel: Level,
-                          val sshdPort: String?,
-                          val keyStorePassword: String?,
-                          val trustStorePassword: String?,
-                          val keyStoreFile: Path?,
-                          val trustStoreFile: Path?) {
+                              val commandsDirectory: Path?,
+                              val cordappsDirectory: Path?,
+                              val host: String?,
+                              val port: String?,
+                              val user: String?,
+                              val password: String?,
+                              val help: Boolean,
+                              val loggingLevel: Level,
+                              val sshdPort: String?,
+                              val sshdHostKeyDirectory: Path?,
+                              val keyStorePassword: String?,
+                              val trustStorePassword: String?,
+                              val keyStoreFile: Path?,
+                              val trustStoreFile: Path?,
+                              val keyStoreType: String?,
+                              val trustStoreType: String?) {
 
     private fun toConfigFile(): Config {
         val cmdOpts = mutableMapOf<String, Any?>()
 
-        shellDirectory?.apply { cmdOpts["shell.workDir"] = shellDirectory.toString() }
-        cordappsDirectory?.apply { cmdOpts["extensions.cordapps.path"] = cordappsDirectory.toString() }
-        user?.apply { cmdOpts["user"] = user }
-        password?.apply { cmdOpts["password"] = password }
-        host?.apply { cmdOpts["node.addresses.rpc.host"] = host }
-        port?.apply { cmdOpts["node.addresses.rpc.port"] = port }
-        shellDirectory?.apply { cmdOpts["shell.workDir"] = shellDirectory.toString() }
-        keyStoreFile?.apply { cmdOpts["ssl.keystore.path"] = keyStoreFile.toString() }
-        keyStorePassword?.apply { cmdOpts["ssl.keystore.password"] = keyStorePassword }
-        trustStoreFile?.apply { cmdOpts["ssl.truststore.path"] = trustStoreFile.toString() }
-        trustStorePassword?.apply { cmdOpts["ssl.truststore.password"] = trustStorePassword }
+        commandsDirectory?.apply { cmdOpts["extensions.commands.path"] = this.toString() }
+        cordappsDirectory?.apply { cmdOpts["extensions.cordapps.path"] = this.toString() }
+        user?.apply { cmdOpts["node.user"] = this }
+        password?.apply { cmdOpts["node.password"] = this }
+        host?.apply { cmdOpts["node.addresses.rpc.host"] = this }
+        port?.apply { cmdOpts["node.addresses.rpc.port"] = this }
+        keyStoreFile?.apply { cmdOpts["ssl.keystore.path"] = this.toString() }
+        keyStorePassword?.apply { cmdOpts["ssl.keystore.password"] = this }
+        keyStoreType?.apply { cmdOpts["ssl.keystore.type"] = this }
+        trustStoreFile?.apply { cmdOpts["ssl.truststore.path"] = this.toString() }
+        trustStorePassword?.apply { cmdOpts["ssl.truststore.password"] = this }
+        trustStoreType?.apply { cmdOpts["ssl.truststore.type"] = this }
         sshdPort?.apply {
-            cmdOpts["extensions.sshd.port"] = sshdPort
+            cmdOpts["extensions.sshd.port"] = this
             cmdOpts["extensions.sshd.enabled"] = true
         }
+        sshdHostKeyDirectory?.apply { cmdOpts["extensions.sshd.hostkeypath"] = this.toString() }
 
         return ConfigFactory.parseMap(cmdOpts)
     }
 
+    /** Return configuration parsed from an optional config file (provided by the command line option)
+     * and then overridden by the command line options */
     fun toConfig(): ShellConfiguration {
-
-        val fileConfig = configFile?.let{ ConfigFactory.parseFile(Paths.get(configFile).toFile()) } ?: ConfigFactory.empty()
+        val fileConfig = configFile?.let { ConfigFactory.parseFile(Paths.get(configFile).toFile()) }
+                ?: ConfigFactory.empty()
         val typeSafeConfig = toConfigFile().withFallback(fileConfig).resolve()
         val shellConfigFile = typeSafeConfig.parseAs<ShellConfigurationFile.ShellConfigFile>()
         return shellConfigFile.toShellConfiguration()
@@ -130,7 +150,7 @@ data class CommandLineOptions(val configFile: String?,
 }
 
 /** Object representation of Shell configuration file */
-class ShellConfigurationFile {
+private class ShellConfigurationFile {
     data class Rpc(
             val host: String,
             val port: Int)
@@ -138,57 +158,69 @@ class ShellConfigurationFile {
     data class Addresses(
             val rpc: Rpc
     )
+
     data class Node(
-            val addresses: Addresses
+            val addresses: Addresses,
+            val user: String?,
+            val password: String?
     )
-    data class Shell(
-            val workDir: String
-    )
+
     data class Cordapps(
             val path: String
     )
+
     data class Sshd(
             val enabled: Boolean,
-            val port: Int
+            val port: Int,
+            val hostkeypath: String?
     )
+
+    data class Commands(
+            val path: String
+    )
+
     data class Extensions(
             val cordapps: Cordapps,
-            val sshd: Sshd
+            val sshd: Sshd,
+            val commands: Commands?
     )
+
     data class KeyStore(
-            val path : String,
-            val type: String = "JKS",
+            val path: String,
+            val type: String,
             val password: String
     )
+
     data class Ssl(
-            val keystore : KeyStore,
+            val keystore: KeyStore,
             val truststore: KeyStore
     )
-    data class ShellConfigFile (
+
+    data class ShellConfigFile(
             val node: Node,
-            val shell: Shell,
             val extensions: Extensions?,
-            val ssl: Ssl?,
-            val user: String?,
-            val password: String?
+            val ssl: Ssl?
     ) {
         fun toShellConfiguration(): ShellConfiguration {
 
             val sslOptions =
-                   ssl?.let { ShellSslOptions(
-                            sslKeystore = Paths.get(it.keystore.path),
-                            keyStorePassword = it.keystore.password,
-                            trustStoreFile = Paths.get(it.truststore.path),
-                            trustStorePassword = it.truststore.password) }
+                    ssl?.let {
+                        ShellSslOptions(
+                                sslKeystore = Paths.get(it.keystore.path),
+                                keyStorePassword = it.keystore.password,
+                                trustStoreFile = Paths.get(it.truststore.path),
+                                trustStorePassword = it.truststore.password)
+                    }
 
             return ShellConfiguration(
-                    shellDirectory = Paths.get(shell.workDir),
-                    cordappsDirectory = extensions?.let { Paths.get(extensions.cordapps.path) },
-                    user = user ?: "",
-                    password = password ?: "",
+                    commandsDirectory = extensions?.commands?.let { Paths.get(it.path) } ?: Paths.get(".") / COMMANDS_DIR,
+                    cordappsDirectory = extensions?.cordapps?.let { Paths.get(it.path) },
+                    user = node.user ?: "",
+                    password = node.password ?: "",
                     hostAndPort = NetworkHostAndPort(node.addresses.rpc.host, node.addresses.rpc.port),
                     ssl = sslOptions,
-                    sshdPort = extensions?.sshd?.let { if (it.enabled)it.port else null })
+                    sshdPort = extensions?.sshd?.let { if (it.enabled) it.port else null },
+                    sshHostKeyDirectory = extensions?.sshd?.let { if (it.enabled && it.hostkeypath != null) Paths.get(it.hostkeypath) else null })
         }
     }
 }

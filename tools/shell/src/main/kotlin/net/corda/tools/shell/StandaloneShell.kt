@@ -20,8 +20,8 @@ fun main(args: Array<String>) {
     val argsParser = CommandLineOptionParser()
     val cmdlineOptions = try {
         argsParser.parse(*args)
-    } catch (ex: OptionException) {
-        println("Invalid command line arguments: ${ex.message}")
+    } catch (e: OptionException) {
+        println("Invalid command line arguments: ${e.message}")
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
@@ -83,7 +83,7 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
              //connecting to node by requesting node info to fail fast
               InteractiveShell.nodeInfo()
         } catch (e: Exception) {
-            println("Cannot login to ${configuration.hostAndPort}, reason: \"${(e.cause ?: e).message}\"")
+            println("Cannot login to ${configuration.hostAndPort}, reason: \"${e.message}\"")
             exitProcess(1)
         }
 

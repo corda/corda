@@ -1,11 +1,17 @@
 package net.corda.tools.shell
 
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.utilities.loggerFor
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
 class CordaAuthenticationPlugin(private val rpcOps: (username: String, credential: String) -> CordaRPCOps): CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+
+    companion object {
+        private val logger = loggerFor<CordaAuthenticationPlugin>()
+    }
 
     override fun getImplementation(): AuthenticationPlugin<String> = this
 
@@ -19,8 +25,10 @@ class CordaAuthenticationPlugin(private val rpcOps: (username: String, credentia
         try {
             val ops = rpcOps(username, credential)
             return CordaSSHAuthInfo(true, ops)
-        } catch(e: Exception) {
-            e.printStackTrace()
+        } catch (e: ActiveMQSecurityException) {
+            logger.warn(e.message)
+        } catch (e: Exception) {
+            logger.warn(e.message, e)
         }
         return AuthInfo.UNSUCCESSFUL
     }

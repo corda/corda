@@ -15,7 +15,7 @@ class StandaloneShellArgsParserTest {
     fun args_to_cmd_options() {
 
         val args = arrayOf("--config-file", "/x/y/z/config.conf",
-                "--shell-directory", "/x/y/shell",
+                "--commands-directory", "/x/y/commands",
                 "--cordpass-directory", "/x/y/cordapps",
                 "--host", "alocalhost",
                 "--port", "1234",
@@ -23,14 +23,17 @@ class StandaloneShellArgsParserTest {
                 "--password", "abcd1234",
                 "--logging-level", "DEBUG",
                 "--sshd-port", "2223",
+                "--sshd-hostkey-directory", "/x/y/ssh",
                 "--help",
                 "--keystore-password", "pass1",
                 "--truststore-password", "pass2",
                 "--keystore-file", "/x/y/keystore.jks",
-                "--truststore-file", "/x/y/truststore.jks")
+                "--truststore-file", "/x/y/truststore.jks",
+                "--truststore-type", "dummy",
+                "--keystore-type", "JKS")
 
         val expectedOptions = CommandLineOptions(configFile = "/x/y/z/config.conf",
-                shellDirectory = Paths.get("/x/y/shell"),
+                commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
                 host = "alocalhost",
                 port = "1234",
@@ -39,10 +42,13 @@ class StandaloneShellArgsParserTest {
                 help = true,
                 loggingLevel = Level.DEBUG,
                 sshdPort = "2223",
+                sshdHostKeyDirectory = Paths.get("/x/y/ssh"),
                 keyStorePassword = "pass1",
                 trustStorePassword = "pass2",
                 keyStoreFile = Paths.get("/x/y/keystore.jks"),
-                trustStoreFile = Paths.get("/x/y/truststore.jks"))
+                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                trustStoreType = "dummy",
+                keyStoreType = "JKS")
 
         val options = CommandLineOptionParser().parse(*args)
 
@@ -54,7 +60,7 @@ class StandaloneShellArgsParserTest {
         val args = emptyArray<String>()
 
         val expectedOptions = CommandLineOptions(configFile = null,
-                shellDirectory = Paths.get(".").normalize().toAbsolutePath(),
+                commandsDirectory = null,
                 cordappsDirectory = null,
                 host = null,
                 port = null,
@@ -63,10 +69,13 @@ class StandaloneShellArgsParserTest {
                 help = false,
                 loggingLevel = Level.INFO,
                 sshdPort = null,
+                sshdHostKeyDirectory = null,
                 keyStorePassword = null,
                 trustStorePassword = null,
                 keyStoreFile = null,
-                trustStoreFile = null)
+                trustStoreFile = null,
+                trustStoreType = null,
+                keyStoreType = null)
 
         val options = CommandLineOptionParser().parse(*args)
 
@@ -77,7 +86,7 @@ class StandaloneShellArgsParserTest {
     fun args_to_config() {
 
         val options = CommandLineOptions(configFile = null,
-                shellDirectory = Paths.get("/x/y/shell"),
+                commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
                 host = "alocalhost",
                 port = "1234",
@@ -86,23 +95,28 @@ class StandaloneShellArgsParserTest {
                 help = true,
                 loggingLevel = Level.DEBUG,
                 sshdPort = "2223",
+                sshdHostKeyDirectory = Paths.get("/x/y/ssh"),
                 keyStorePassword = "pass1",
                 trustStorePassword = "pass2",
                 keyStoreFile = Paths.get("/x/y/keystore.jks"),
-                trustStoreFile = Paths.get("/x/y/truststore.jks"))
+                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                keyStoreType = "dummy",
+                trustStoreType = "dummy"
+                )
 
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
                 keyStorePassword = "pass1",
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
                 trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
-                shellDirectory = Paths.get("/x/y/shell"),
+                commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
                 user = "demo",
                 password = "abcd1234",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
                 ssl = expectedSsl,
                 sshdPort = 2223,
+                sshHostKeyDirectory = Paths.get("/x/y/ssh"),
                 noLocalShell = false)
 
         val config = options.toConfig()
@@ -114,7 +128,7 @@ class StandaloneShellArgsParserTest {
     fun acmd_options_to_config_from_file() {
 
         val options = CommandLineOptions(configFile = CONFIG_FILE.absolutePath,
-                shellDirectory = null,
+                commandsDirectory = null,
                 cordappsDirectory = null,
                 host = null,
                 port = null,
@@ -123,17 +137,20 @@ class StandaloneShellArgsParserTest {
                 help = false,
                 loggingLevel = Level.DEBUG,
                 sshdPort = null,
+                sshdHostKeyDirectory = null,
                 keyStorePassword = null,
                 trustStorePassword = null,
                 keyStoreFile = null,
-                trustStoreFile = null)
+                trustStoreFile = null,
+                keyStoreType = null,
+                trustStoreType = null)
 
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
                 keyStorePassword = "pass1",
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
                 trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
-                shellDirectory = Paths.get("/x/y/shell"),
+                commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
                 user = "demo",
                 password = "abcd1234",
@@ -150,7 +167,7 @@ class StandaloneShellArgsParserTest {
     fun cmd_options_override_config_from_file() {
 
         val options = CommandLineOptions(configFile = CONFIG_FILE.absolutePath,
-                shellDirectory = null,
+                commandsDirectory = null,
                 cordappsDirectory = null,
                 host = null,
                 port = null,
@@ -159,17 +176,20 @@ class StandaloneShellArgsParserTest {
                 help = false,
                 loggingLevel = Level.DEBUG,
                 sshdPort = null,
+                sshdHostKeyDirectory = null,
                 keyStorePassword = null,
                 trustStorePassword = null,
                 keyStoreFile = Paths.get("/x/y/cmd.jks"),
-                trustStoreFile = null)
+                trustStoreFile = null,
+                keyStoreType = null,
+                trustStoreType = null)
 
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/cmd.jks"),
                 keyStorePassword = "pass1",
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
                 trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
-                shellDirectory = Paths.get("/x/y/shell"),
+                commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
                 user = "demo",
                 password = "blabla",

@@ -16,11 +16,12 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
-import java.lang.reflect.UndeclaredThrowableException
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
@@ -32,12 +33,12 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = ShellConfiguration(shellDirectory = Files.createTempDir().toPath(),
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                     user = "fake", password = "fake",
                     hostAndPort = node.rpcAddress)
             InteractiveShell.startShell(conf)
 
-            assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(UndeclaredThrowableException::class.java)
+            assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQSecurityException::class.java)
         }
     }
 
@@ -48,7 +49,7 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = ShellConfiguration(shellDirectory = Files.createTempDir().toPath(),
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                     user = user.username, password = user.password,
                     hostAndPort = node.rpcAddress)
 
@@ -79,7 +80,7 @@ class InteractiveShellIntegrationTest {
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
                                 clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
-                        val conf = ShellConfiguration(Files.createTempDir().toPath(),
+                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
                                 ssl = sslConfiguration)
@@ -88,7 +89,6 @@ class InteractiveShellIntegrationTest {
 
                         InteractiveShell.nodeInfo()
                         successful = true
-
                     }
                 }
                 assertThat(successful).isTrue()
@@ -112,28 +112,21 @@ class InteractiveShellIntegrationTest {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                var successful = false
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
                                 clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
-                        val conf = ShellConfiguration(Files.createTempDir().toPath(),
+                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
                                 ssl = sslConfiguration)
 
                         InteractiveShell.startShell(conf)
 
-                        try {
-                            InteractiveShell.nodeInfo()
-                            successful = true
-
-                        } catch (e: Exception) {
-                        }
+                        assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQNotConnectedException::class.java)
                     }
                 }
-                assertThat(successful).isFalse()
             }
         }
     }
@@ -147,7 +140,7 @@ class InteractiveShellIntegrationTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
-            val conf = ShellConfiguration(Files.createTempDir().toPath(),
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                     user = user.username, password = user.password,
                     hostAndPort = node.rpcAddress,
                     sshdPort = 2224)
@@ -204,7 +197,7 @@ class InteractiveShellIntegrationTest {
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
                                 clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
-                        val conf = ShellConfiguration(Files.createTempDir().toPath(),
+                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
                                 ssl = sslConfiguration,
