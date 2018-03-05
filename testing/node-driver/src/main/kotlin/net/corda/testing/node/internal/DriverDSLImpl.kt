@@ -889,7 +889,7 @@ class DriverDSLImpl(
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
             val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
-                   throw IllegalStateException("Function instantiating driver must be defined in a package.")
+                     throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 
