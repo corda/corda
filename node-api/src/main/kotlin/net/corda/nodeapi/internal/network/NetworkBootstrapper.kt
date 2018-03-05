@@ -252,8 +252,6 @@ class NetworkBootstrapper {
         }
     }
 
-    private fun Map.Entry<ContractClassName, List<AttachmentId>>.outputString() = "$key:${value.joinToString(",")}"
-
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     // KryoServerSerializationScheme is not accessible from nodeapi.
     private fun initialiseSerialization() {
