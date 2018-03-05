@@ -80,7 +80,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network parameters: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps)
+            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps?.distinct())
             println("Updating whitelist")
             overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
             installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
@@ -189,7 +189,6 @@ class NetworkBootstrapper {
     }
 
     private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
-
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
 
         println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: ${whitelistFile}")
@@ -244,10 +243,10 @@ class NetworkBootstrapper {
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-        // cluster and is shared by all the other members. This is the notary identity.
+            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+            // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
