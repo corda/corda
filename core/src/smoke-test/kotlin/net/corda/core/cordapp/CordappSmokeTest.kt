@@ -34,7 +34,6 @@ class CordappSmokeTest {
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
-            webPort = port.andIncrement,
             isNotary = false,
             users = listOf(user)
     )

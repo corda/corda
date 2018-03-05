@@ -58,9 +58,10 @@ signed ``NodeInfo`` object that the network map service vends. These are automat
 be used to supplement or replace the HTTP network map. If the same node is advertised through both mechanisms then the
 latest one is taken.
 
-On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. To create a simple
-network without the HTTP network map service then simply place this file in the ``additional-node-infos`` directory
-of every node that's part of this network. For example, a simple way to do this is to use rsync.
+On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. It can also be
+generated using the ``--just-generate-node-info`` command line flag without starting the node. To create a simple network
+without the HTTP network map service simply place this file in the ``additional-node-infos`` directory of every node that's
+part of this network. For example, a simple way to do this is to use rsync.
 
 Usually, test networks have a structure that is known ahead of time. For the creation of such networks we provide a
 ``network-bootstrapper`` tool. This tool pre-generates node configuration directories if given the IP addresses/domain
@@ -98,13 +99,20 @@ The current set of network parameters:
 
 :minimumPlatformVersion: The minimum platform version that the nodes must be running. Any node which is below this will
         not start.
+
 :notaries: List of identity and validation type (either validating or non-validating) of the notaries which are permitted
         in the compatibility zone.
-:maxMessageSize: Maximum allowed size in bytes of an individual message sent over the wire. Note that attachments are
+
+:maxMessageSize: (This is currently ignored. However, it will be wired up in a future release.)
+
+.. TODO Replace the above with this once wired: Maximum allowed size in bytes of an individual message sent over the wire. Note that attachments are
         a special case and may be fragmented for streaming transfer, however, an individual transaction or flow message
         may not be larger than this value.
+
 :maxTransactionSize: Maximum allowed size in bytes of a transaction. This is the size of the transaction object and its attachments.
+
 :modifiedTime: The time when the network parameters were last modified by the compatibility zone operator.
+
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
         parameters change.
 :whitelistedContractImplementations: List of whitelisted versions of contract code.
