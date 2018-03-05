@@ -4116,7 +4116,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.KeyManagementService getKeyManagementService()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.NodeInfo getMyInfo()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
-  @org.jetbrains.annotations.NotNull public net.corda.core.node.NetworkParameters getNetworkParameters()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters getNetworkParameters()
   @org.jetbrains.annotations.NotNull protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.TransactionStorage getValidatedTransactions()
