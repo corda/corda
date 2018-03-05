@@ -282,16 +282,22 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
 
 
-        return startedImpl.apply {
+        val startedNode = startedImpl.apply {
             database.transaction {
                 smm.start(tokenizableServices)
                 // Shut down the SMM so no Fibers are scheduled.
                 runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
                 schedulerService.start()
-                scheduleFlows(smm, serverThread, cordappLoader)
             }
             _started = this
         }
+
+        startedNode.apply {
+            database.transaction {
+                scheduleFlows(smm, serverThread, cordappLoader)
+            }
+        }
+        return startedNode
     }
 
     private fun scheduleFlows(smm: StateMachineManager, executor: AffinityExecutor, cordappLoader: CordappLoader) {
