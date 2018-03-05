@@ -35,6 +35,7 @@ interface Cordapp {
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val serviceFlows:  List<Class<out FlowLogic<*>>>
     val schedulableFlows: List<Class<out FlowLogic<*>>>
+    val startupFlows : List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>
     val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>

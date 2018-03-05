@@ -318,6 +318,7 @@ internal class CordaRPCOpsImpl(
             is InvocationOrigin.Service -> FlowInitiator.Service(principal)
             is InvocationOrigin.Shell -> FlowInitiator.Shell
             is InvocationOrigin.Scheduled -> FlowInitiator.Scheduled((origin as InvocationOrigin.Scheduled).scheduledState)
+            is InvocationOrigin.NodeStartup -> FlowInitiator.OnStartup(principal)
         }
     }
 

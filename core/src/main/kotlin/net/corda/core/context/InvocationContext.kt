@@ -1,6 +1,7 @@
 package net.corda.core.context
 
 import net.corda.core.contracts.ScheduledStateRef
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import java.security.Principal
@@ -53,6 +54,11 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
          */
         @JvmStatic
         fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(InvocationOrigin.Shell, trace, null, externalTrace)
+
+        @JvmStatic
+        fun startupFlow(flowClass: Class<FlowLogic<*>>, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null):
+                InvocationContext = InvocationContext(InvocationOrigin.NodeStartup(flowClass.canonicalName), trace, null, externalTrace)
+
     }
 
     /**
@@ -124,6 +130,10 @@ sealed class InvocationOrigin {
      */
     object Shell : InvocationOrigin() {
         override fun principal() = Principal { "Shell User" }
+    }
+
+    data class NodeStartup(val flowClass: String) : InvocationOrigin() {
+        override fun principal() = Principal { "Registered Startup Flow: " + flowClass }
     }
 }
 

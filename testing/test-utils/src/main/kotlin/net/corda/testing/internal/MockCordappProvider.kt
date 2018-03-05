@@ -28,7 +28,8 @@ class MockCordappProvider(cordappLoader: CordappLoader,
                 serializationWhitelists = emptyList(),
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
-                jarPath = Paths.get("").toUri().toURL())
+                jarPath = Paths.get("").toUri().toURL(),
+                startupFlows = emptyList())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
             cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName), contractClassName.toByteArray(), attachments)))
         }
