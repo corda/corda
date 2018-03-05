@@ -176,13 +176,14 @@ class Network private constructor(
     private fun bootstrapRPCProxy() {
 
         val cordaDistribution = nodes.values.first().config.distribution.path
+        val rpcProxyPortNo = nodes.values.first().config.nodeInterface.rpcProxy
 
         val fromPath = Paths.get(currentDirectory.toString()+"/startRPCproxy.sh")
         val toPath = Paths.get(cordaDistribution.toString()+"/startRPCproxy.sh")
         Files.copy(fromPath, toPath, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
 
         log.info("Bootstrapping RPC proxy, please wait ...")
-        rpcProxyCommand = Command(listOf("./startRPCproxy.sh", "$cordaDistribution", ">>startRPCproxy.log","2>&1"),
+        rpcProxyCommand = Command(listOf("./startRPCproxy.sh", "$cordaDistribution", "$rpcProxyPortNo", ">>startRPCproxy.log","2>&1"),
                 cordaDistribution,
                 timeout
         )
