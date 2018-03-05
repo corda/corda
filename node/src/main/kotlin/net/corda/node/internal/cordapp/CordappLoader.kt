@@ -200,12 +200,12 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findRPCFlows(scanResult),
                     findServiceFlows(scanResult),
                     findSchedulableFlows(scanResult),
+                    findStartupFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
                     findSerializers(scanResult),
                     findCustomSchemas(scanResult),
-                    it.url,
-                    findStartupFlows(scanResult))
+                    it.url)
         }
     }
 
@@ -244,7 +244,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
     }
 
-    private fun findStartupFlows(scanResult: RestrictedScanResult) : List<Class<out FlowLogic<*>>>{
+    private fun findStartupFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, OnNodeStartup::class)
     }
 

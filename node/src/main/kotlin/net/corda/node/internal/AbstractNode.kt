@@ -22,6 +22,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.*
 import net.corda.core.node.services.*
+import net.corda.core.node.startup.OnNodeStartup
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -90,6 +91,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.collections.set
 import kotlin.reflect.KClass
+import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.full.declaredMemberFunctions
+import kotlin.reflect.full.findAnnotation
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -156,7 +160,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     /** Set to non-null once [start] has been successfully called. */
     open val started get() = _started
-    @Volatile private var _started: StartedNode<AbstractNode>? = null
+    @Volatile
+    private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
@@ -207,7 +212,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService).transaction {
+        val (startedImpl, schedulerService, installedServices) = initialiseDatabasePersistence(schemaService, identityService).transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
             val (keyPairs, nodeInfo) = initNodeInfo(networkMapCache, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
@@ -261,7 +266,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell(rpcOps)
-            Pair(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
+            Triple(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService, cordaServices)
         }
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
@@ -295,9 +300,23 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         startedNode.apply {
             database.transaction {
                 scheduleFlows(smm, serverThread, cordappLoader)
+                scheduleServiceLifeCycleOnStartup(smm, serverThread, installedServices)
             }
         }
         return startedNode
+    }
+
+    private fun scheduleServiceLifeCycleOnStartup(smm: StateMachineManager, serverThread: AffinityExecutor, installedServices: List<SerializeAsToken>) {
+        installedServices.map { serviceInstance ->
+            serviceInstance::class.declaredMemberFunctions.filter { kFunction ->
+                kFunction.findAnnotation<OnNodeStartup>() != null &&
+                        kFunction.parameters.size == 1
+            }.map { Pair(it, serviceInstance) }
+        }.flatten().forEach { (function, instance) ->
+            kotlin.run{
+                function.call(instance)
+            }
+        }
     }
 
     private fun scheduleFlows(smm: StateMachineManager, executor: AffinityExecutor, cordappLoader: CordappLoader) {
@@ -695,7 +714,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
-        val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
+        val notaryKey = myNotaryIdentity?.owningKey
+                ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
             if (raft != null) {
                 val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
@@ -808,8 +828,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             log.info("Starting Jolokia agent on HTTP port: $port")
             val libDir = Paths.get(configuration.baseDirectory.toString(), "drivers")
             val jarFilePath = JVMAgentRegistry.resolveAgentJar(
-                    "jolokia-jvm-${NodeBuildProperties.JOLOKIA_AGENT_VERSION}-agent.jar", libDir) ?:
-                    throw Error("Unable to locate agent jar file")
+                    "jolokia-jvm-${NodeBuildProperties.JOLOKIA_AGENT_VERSION}-agent.jar", libDir)
+                    ?: throw Error("Unable to locate agent jar file")
             log.info("Agent jar file: $jarFilePath")
             JVMAgentRegistry.attach("jolokia", "port=$port", jarFilePath)
         }
@@ -845,7 +865,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
-            return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+            return cordappServices.getInstance(type)
+                    ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {

@@ -13,14 +13,15 @@ data class CordappImpl(
         override val contractClassNames: List<String>,
         override val initiatedFlows: List<Class<out FlowLogic<*>>>,
         override val rpcFlows: List<Class<out FlowLogic<*>>>,
-        override val serviceFlows:  List<Class<out FlowLogic<*>>>,
+        override val serviceFlows: List<Class<out FlowLogic<*>>>,
         override val schedulableFlows: List<Class<out FlowLogic<*>>>,
+        override val startupFlows: List<Class<out FlowLogic<*>>>,
         override val services: List<Class<out SerializeAsToken>>,
         override val serializationWhitelists: List<SerializationWhitelist>,
         override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
-        override val jarPath: URL,
-        override val startupFlows: List<Class<out FlowLogic<*>>>) : Cordapp {
+        override val jarPath: URL
+) : Cordapp {
     override val name: String = File(jarPath.toURI()).name.removeSuffix(".jar")
 
     /**

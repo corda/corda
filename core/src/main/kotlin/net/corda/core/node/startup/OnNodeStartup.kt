@@ -1,6 +1,7 @@
 package net.corda.core.node.startup
 
 import kotlin.annotation.AnnotationTarget.CLASS
+import kotlin.annotation.AnnotationTarget.FUNCTION
 
 /**
  * Annotate any flow that needs to execute on node startup
@@ -10,5 +11,5 @@ import kotlin.annotation.AnnotationTarget.CLASS
  * The annotated class must be a SubClass of [net.corda.core.flows.FlowLogic]
  */
 
-@Target(CLASS)
+@Target(CLASS, FUNCTION)
 annotation class OnNodeStartup
