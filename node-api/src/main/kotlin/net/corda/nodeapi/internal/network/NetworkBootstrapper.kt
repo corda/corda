@@ -189,18 +189,13 @@ class NetworkBootstrapper {
 
     private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
 
-        fun whitelistString(whitelist: Map<String, List<AttachmentId>>): String = whitelist.map { it.outputString() }.joinToString("\n\t", "\n\t")
-
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
-        if (existingWhitelist.isEmpty()) {
-            println("No existing whitelist found in te base folder.")
-        } else {
-            println("Found existing whitelist:${whitelistString(existingWhitelist)}")
-        }
+
+        println(if (existingWhitelist.isEmpty()) "No existing whitelist found in te base folder." else "Found existing whitelist: ${whitelistFile}")
 
         val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
         if (excludeContracts.isNotEmpty()) {
-            println("Exclude contracts from whitelist: $excludeContracts")
+            println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}}")
         }
 
         val newWhiteList: Map<ContractClassName, AttachmentId> = cordapps?.flatMap { cordappJarPath ->
@@ -210,8 +205,7 @@ class NetworkBootstrapper {
             }
         }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
 
-        println("Calculated whitelist for current installed CorDapps:")
-        newWhiteList.forEach { (contract, attachment) -> println("\t$contract:$attachment") }
+        println("Calculating whitelist for current installed CorDapps..")
 
         val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
             val existing = existingWhitelist[contractClassName] ?: emptyList()
@@ -219,10 +213,7 @@ class NetworkBootstrapper {
             contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
         }.toMap()
 
-        if (existingWhitelist.isNotEmpty()) {
-            println("Final whitelist: ${whitelistString(merged)}")
-        }
-
+        println("CorDapp whitelist " + (if (existingWhitelist.isEmpty()) "generated" else "updated") + " in ${whitelistFile}")
         return merged
     }
 
