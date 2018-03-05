@@ -278,6 +278,9 @@ class SingleThreadedStateMachineManager(
     override fun signalFlowHasStarted(flowId: StateMachineRunId) {
         mutex.locked {
             startedFutures.remove(flowId)?.set(Unit)
+            flows[flowId]?.let { flow ->
+                changesPublisher.onNext(StateMachineManager.Change.Add(flow.fiber.logic))
+            }
         }
     }
 
@@ -588,7 +591,6 @@ class SingleThreadedStateMachineManager(
                         Fiber.unparkDeserialized(flow.fiber, scheduler)
                     }
                 }
-                changesPublisher.onNext(StateMachineManager.Change.Add(flow.fiber.logic))
             }
         }
     }
