@@ -8,6 +8,7 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationContext.Companion.startupFlow
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -73,6 +74,7 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
+import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -279,14 +281,35 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // If we successfully  loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
 
+
         return startedImpl.apply {
             database.transaction {
                 smm.start(tokenizableServices)
                 // Shut down the SMM so no Fibers are scheduled.
                 runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
                 schedulerService.start()
+                scheduleFlows(smm, serverThread, cordappLoader)
             }
             _started = this
+        }
+    }
+
+    private fun scheduleFlows(smm: StateMachineManager, executor: AffinityExecutor, cordappLoader: CordappLoader) {
+        cordappLoader.cordapps.forEach {
+            it.startupFlows.forEach {
+                val noArgConstructor: Constructor<FlowLogic<*>>;
+                try {
+                    noArgConstructor = it.getConstructor() as Constructor<FlowLogic<*>>
+                } catch (e: NoSuchMethodException) {
+                    throw IllegalStateException("No default constructor found on startup flow: " + it.canonicalName)
+                }
+                val flowInstance: FlowLogic<*> = noArgConstructor.newInstance()
+                log.info("Performing startup Flow: " + it.canonicalName)
+                executor.executeASAP {
+                    smm.startFlow(flowInstance, startupFlow(it as Class<FlowLogic<*>>))
+                }
+
+            }
         }
     }
 
