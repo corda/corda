@@ -533,7 +533,8 @@ system = posix
 asm = x86
 
 ifeq ($(system),sgx)
-    cflags += -DSGX
+    cflags += -DSGX -I../linux-sgx/common/inc -I../jvm-enclave/common
+    lflags += $(shared)
 endif
 
 pointer-size = 8

@@ -3969,13 +3969,6 @@ bool Thread::isBlacklisting()
   return (javaThread != NULL) && javaThread->blacklisting();
 }
 
-void Thread::startBlacklisting()
-{
-  if (javaThread != NULL) {
-    javaThread->setBlacklisting(this, 1);
-  }
-}
-
 void shutDown(Thread* t)
 {
   ACQUIRE(t, t->m->shutdownLock);

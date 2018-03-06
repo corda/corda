@@ -30,3 +30,4 @@ libuntrusted_corda_sgx.so: jni/build/Makefile ../../verify-enclave/build/native/
 .PHONY: clean
 clean:
 	$(RM) -r {standalone,common,enclave,jni}/build
+	../../gradlew --project-dir=../.. verify-enclave:clean

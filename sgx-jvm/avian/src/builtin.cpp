@@ -184,9 +184,15 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
-    Avian_avian_SystemClassLoader_startBlacklisting0(Thread* t, object, uintptr_t*)
+    Avian_avian_SystemClassLoader_startBlacklisting0(Thread *t,
+                                                     object,
+                                                     uintptr_t* arguments)
 {
-  t->startBlacklisting();
+  GcThread *jt = cast<GcThread>(t, reinterpret_cast<object>(arguments[0]));
+  if (jt == NULL) {
+    throwNew(t, GcNullPointerException::Type);
+  }
+  jt->setBlacklisting(t, 1);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL

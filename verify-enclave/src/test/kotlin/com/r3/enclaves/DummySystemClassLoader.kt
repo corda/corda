@@ -1,6 +1,6 @@
 package com.r3.enclaves
 
-@Suppress("unused")
+@Suppress("unused", "unused_parameter")
 class DummySystemClassLoader(parent: ClassLoader) : ClassLoader(parent) {
-    fun startBlacklisting() {}
+    fun startBlacklisting(t: Thread) {}
 }

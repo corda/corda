@@ -70,7 +70,6 @@ jint JNICALL DetachCurrentThread(Machine* m)
 
 uint64_t destroyJavaVM(Thread* t, uintptr_t*)
 {
-#ifndef SGX  
   // wait for other non-daemon threads to exit
   {
     ACQUIRE(t, t->m->stateLock);
@@ -78,13 +77,11 @@ uint64_t destroyJavaVM(Thread* t, uintptr_t*)
       t->m->stateLock->wait(t->systemThread, 0);
     }
   }
-#endif
   {
     ENTER(t, Thread::ActiveState);
 
     t->m->classpath->shutDown(t);
   }
-#ifndef SGX
   // wait again in case the Classpath::shutDown process started new
   // threads:
   {
@@ -95,7 +92,6 @@ uint64_t destroyJavaVM(Thread* t, uintptr_t*)
 
     enter(t, Thread::ExclusiveState);
   }
-#endif
   shutDown(t);
 
   return 1;

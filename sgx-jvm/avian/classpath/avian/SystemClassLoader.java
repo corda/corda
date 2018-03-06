@@ -39,13 +39,13 @@ public class SystemClassLoader extends ClassLoader {
 
   private native VMClass findLoadedVMClass(String name);
 
-  private static native void startBlacklisting0();
+  private static native void startBlacklisting0(Thread t);
 
-  public void startBlacklisting() {
+  public void startBlacklisting(Thread t) {
     if (isForbidden("java/util/regex/Pattern$Test")) {
       throw new IllegalStateException("Impossible!");
     }
-    startBlacklisting0();
+    startBlacklisting0(t);
   }
 
   private static final Set<Pattern> BLACKLIST = Collections.unmodifiableSet(setOf(

@@ -4,9 +4,7 @@ package com.r3.enclaves.txverify
 
 import com.esotericsoftware.minlog.Log
 import net.corda.core.contracts.Attachment
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import java.io.File
@@ -44,18 +42,26 @@ class TransactionVerificationRequest(private val wtxToVerify: SerializedBytes<Wi
  */
 @Throws(Exception::class)
 fun verifyInEnclave(reqBytes: ByteArray) {
+    var ex: Throwable? = null
     val ltx = deserialise(reqBytes)
     // Prevent this thread from linking new classes against any
     // blacklisted classes, e.g. ones needed by Kryo or by the
     // JVM itself. Note that java.lang.Thread is also blacklisted.
-    startClassBlacklisting()
-    ltx.verify()
+    Thread {
+        ltx.verify()
+    }.apply {
+        startClassBlacklisting(this)
+        setUncaughtExceptionHandler { _, e -> ex = e }
+        start()
+        join()
+    }
+    throw ex ?: return
 }
 
-private fun startClassBlacklisting() {
+private fun startClassBlacklisting(t: Thread) {
     val systemClassLoader = ClassLoader.getSystemClassLoader()
-    systemClassLoader.javaClass.getMethod("startBlacklisting").apply {
-        invoke(systemClassLoader)
+    systemClassLoader.javaClass.getMethod("startBlacklisting", t.javaClass).apply {
+        invoke(systemClassLoader, t)
     }
 }
 

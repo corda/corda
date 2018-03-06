@@ -158,7 +158,12 @@ const unsigned FixedFootprintThresholdInBytes = ThreadHeapPoolSize
 
 // number of zombie threads which may accumulate before we force a GC
 // to clean them up:
-const unsigned ZombieCollectionThreshold = 16;
+#ifdef SGX
+#  define ZOMBIE_THRESHOLD  0
+#else
+#  define ZOMBIE_THRESHOLD  16
+#endif
+const unsigned ZombieCollectionThreshold = ZOMBIE_THRESHOLD;
 
 enum FieldCode {
   VoidField,
@@ -1342,7 +1347,6 @@ class Thread {
   }
 
   bool isBlacklisting();
-  void startBlacklisting();
 
   JNIEnvVTable* vtable;
   Machine* m;
@@ -1834,15 +1838,6 @@ inline uint64_t runThread(Thread* t, uintptr_t*)
 inline bool startThread(Thread* t, Thread* p)
 {
   p->setFlag(Thread::JoinFlag);
-#ifdef SGX
-  static const char16_t *nameToSkip = u"Reference Handler";
-  if (p->javaThread->name()->length(t) == 17) {
-    if (!memcmp(nameToSkip, cast<GcCharArray>(t, p->javaThread->name()->data())->body().begin(), 17 * 2)) {
-      printf("Skipping start of reference handler thread\n");
-      return true;
-    }
-  }
-#endif
   return t->m->system->success(t->m->system->start(&(p->runnable)));
 }
 

@@ -98,9 +98,9 @@ target_include_directories(os_support PUBLIC ${SGX_SDK_INCLUDE} ${AVIAN_PATH}/in
 add_dependencies(os_support GENERATED_EDL)
 
 # Build the enclave into a static archive. We switch off standard headers to make sure SGX headers are used.
-add_library(enclave_objects enclave.cpp enclave_start_thread.cpp ${GENERATED_RPC_DIR}/java_t.c ${CMAKE_CURRENT_BINARY_DIR}/boot-jar.o ${CMAKE_CURRENT_BINARY_DIR}/app-jar.o)
+add_library(enclave_objects enclave.cpp enclave_start_thread.cpp sgx_thread_completion.cpp ${GENERATED_RPC_DIR}/java_t.c ${CMAKE_CURRENT_BINARY_DIR}/boot-jar.o ${CMAKE_CURRENT_BINARY_DIR}/app-jar.o)
 add_dependencies(enclave_objects GENERATED_EDL)
-target_include_directories(enclave_objects PUBLIC ${SGX_SDK_INCLUDE} ${SGX_SDK_INCLUDE}/tlibc ${SGX_SDK}/sdk/tlibstdcxx/stlport ${AVIAN_PATH}/include ${AVIAN_PATH}/src ${GENERATED_RPC_DIR})
+target_include_directories(enclave_objects PUBLIC ${COMMON_INCLUDE} ${SGX_SDK_INCLUDE} ${SGX_SDK_INCLUDE}/tlibc ${SGX_SDK}/sdk/tlibstdcxx/stlport ${AVIAN_PATH}/include ${AVIAN_PATH}/src ${GENERATED_RPC_DIR})
 target_compile_options(enclave_objects PUBLIC -nostdinc)
 
 # Linker flags:
