@@ -3,7 +3,10 @@ package net.corda.testing.node.internal
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.utilities.*
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -12,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class ShutdownManager(private val executorService: ExecutorService) {
     private class State {
         val registeredShutdowns = ArrayList<CordaFuture<() -> Unit>>()
+        var isShuttingDown = false
         var isShutdown = false
     }
 
@@ -32,6 +36,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     }
 
     fun shutdown() {
+        state.locked { isShuttingDown = true }
         val shutdownActionFutures = state.locked {
             if (isShutdown) {
                 emptyList<CordaFuture<() -> Unit>>()
@@ -100,5 +105,9 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 }
             }
         }
+    }
+
+    fun isShuttingDown(): Boolean {
+        return state.locked { isShuttingDown }
     }
 }
