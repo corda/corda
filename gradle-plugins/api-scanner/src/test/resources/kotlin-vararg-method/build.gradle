@@ -1,0 +1,32 @@
+plugins {
+    id 'net.corda.plugins.api-scanner'
+    id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
+}
+
+description 'Test appearance of Kotlin vararg functions'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        kotlin {
+            srcDir file("../resources/test/kotlin-vararg-method/kotlin")
+        }
+    }
+}
+
+dependencies {
+    compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version'
+    compile 'org.jetbrains.kotlin:kotlin-reflect:$kotlin_version'
+}
+
+jar {
+    baseName = "kotlin-vararg-method"
+}
+
+scanApi {
+    verbose = true
+}

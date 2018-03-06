@@ -1,0 +1,27 @@
+plugins {
+    id 'net.corda.plugins.api-scanner'
+    id 'java'
+}
+
+description 'Test appearance of Java vararg functions'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir file("../resources/test/vararg-method/java")
+        }
+    }
+}
+
+jar {
+    baseName = "vararg-method"
+}
+
+scanApi {
+    verbose = true
+}
