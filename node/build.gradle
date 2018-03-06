@@ -182,7 +182,7 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
     // Jolokia JVM monitoring agent
-    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {
