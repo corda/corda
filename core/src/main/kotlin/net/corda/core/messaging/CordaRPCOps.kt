@@ -356,7 +356,7 @@ interface CordaRPCOps : RPCOps {
 
     /** Sets the value of the node's flows draining mode.
      * If this mode is [enabled], the node will reject new flows through RPC, ignore scheduled flows, and do not process
-     * initial session messages, meaning that P2P counter-parties will not be able to initiate new flows involving the node.
+     * initial session messages, meaning that P2P counterparties will not be able to initiate new flows involving the node.
      *
      * @param enabled whether the flows draining mode will be enabled.
      * */
