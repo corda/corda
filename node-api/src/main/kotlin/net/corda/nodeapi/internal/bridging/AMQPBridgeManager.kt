@@ -126,37 +126,35 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         }
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
-            lock.withLock {
-                val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
-                val properties = HashMap<Any?, Any?>()
-                for (key in artemisMessage.propertyNames) {
-                    var value = artemisMessage.getObjectProperty(key)
-                    if (value is SimpleString) {
-                        value = value.toString()
-                    }
-                    properties[key.toString()] = value
+            val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
+            val properties = HashMap<Any?, Any?>()
+            for (key in artemisMessage.propertyNames) {
+                var value = artemisMessage.getObjectProperty(key)
+                if (value is SimpleString) {
+                    value = value.toString()
                 }
-                log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
-                val peerInbox = translateLocalQueueToInboxAddress(queueName)
-                val sendableMessage = amqpClient.createMessage(data, peerInbox,
-                        legalNames.first().toString(),
-                        properties)
-                sendableMessage.onComplete.then {
-                    log.debug { "Bridge ACK ${sendableMessage.onComplete.get()}" }
-                    lock.withLock {
-                        if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
-                            artemisMessage.acknowledge()
-                        } else {
-                            log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
-                            // We need to commit any acknowledged messages before rolling back the failed
-                            // (unacknowledged) message.
-                            session?.commit()
-                            session?.rollback(false)
-                        }
-                    }
-                }
-                amqpClient.write(sendableMessage)
+                properties[key.toString()] = value
             }
+            log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
+            val peerInbox = translateLocalQueueToInboxAddress(queueName)
+            val sendableMessage = amqpClient.createMessage(data, peerInbox,
+                    legalNames.first().toString(),
+                    properties)
+            sendableMessage.onComplete.then {
+                log.debug { "Bridge ACK ${sendableMessage.onComplete.get()}" }
+                lock.withLock {
+                    if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
+                        artemisMessage.acknowledge()
+                    } else {
+                        log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                        // We need to commit any acknowledged messages before rolling back the failed
+                        // (unacknowledged) message.
+                        session?.commit()
+                        session?.rollback(false)
+                    }
+                }
+            }
+            amqpClient.write(sendableMessage)
         }
     }
 
