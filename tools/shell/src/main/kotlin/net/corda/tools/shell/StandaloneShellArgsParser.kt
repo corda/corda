@@ -47,7 +47,7 @@ class CommandLineOptionParser {
             .accepts("sshd-port", "Enables SSH server for shell.")
             .withOptionalArg()
     private val sshdHostKeyDirectoryArg = optionParser
-            .accepts("sshd-hostkey-directory", "The directory with hostkey.pem filefor SSH server.")
+            .accepts("sshd-hostkey-directory", "The directory with hostkey.pem file for SSH server.")
             .withOptionalArg()
     private val helpArg = optionParser
             .accepts("help")

@@ -105,8 +105,8 @@ Linux and MacOS
 
 .. code:: bash
 
-    ./shell [--config-file FILE | --cordpass-directory DIRECTORY --shell-directory DIRECTORY --host HOST --port PORT
-             --user USER --password PASSWORD --sshd-port PORT --keystore-password PASSWORD
+    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
 Windows
@@ -114,24 +114,25 @@ Windows
 
 .. code:: bash
 
-    shell.bat [--config-file FILE | --cordpass-directory DIRECTORY --shell-directory DIRECTORY --host HOST --port PORT
-             --user USER --password PASSWORD --sshd-port PORT --keystore-password PASSWORD
+    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
 Where:
 
 * ``config-file`` is the path to config file, used instead of providing the rest of command line options
-* ``cordpass-directory`` is the path to directory containing Cordapps jars, Cordapps are require when starting flows
-* ``shell-directory`` is the CrAsH shell working directory.
+* ``cordpass-directory`` is the directory containing Cordapps jars, Cordapps are require when starting flows
+* ``commands-directory`` is the directory with additional CrAsH shell commands
 * ``host`` is the Corda node's host
 * ``port`` is the Corda node's port, specified in the ``node.conf`` file
 * ``user`` is the RPC username, if not provided it will be requested at startup
 * ``password`` is the RPC user password, if not provided it will be requested at startup
 * ``sshd-port`` instructs the standalone shell app to start SSH server on the given port, optional
+* ``sshd-hostkey-directory`` is the directory containing hostkey.pem file for SSH server
 * ``keystore-password`` the password to unlock the KeyStore file containing the standalone shell certificate and private key, optional, unencrypted RPC connection without SSL will be used if the option is not provided
-* ``keystore-file`` is the path to the KeyStore file.
+* ``keystore-file`` is the path to the KeyStore file
 * ``truststore-password`` the password to unlock the TrustStore file containing the Corda node certificate, optional, unencrypted RPC connection without SSL will be used if the option is not provided
-* ``truststore-file`` is the path to the TrustStore file.
+* ``truststore-file`` is the path to the TrustStore file
 * ``help`` prints Shell help
 
 The format of ``config-file``:
