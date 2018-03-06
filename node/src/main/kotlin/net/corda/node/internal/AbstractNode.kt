@@ -635,7 +635,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val props = configuration.dataSourceProperties
         if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
-        val database = configureDatabase(props, configuration.database, identityService, schemaService)
+        val database = configureDatabase(props, configuration.database, identityService, schemaService, cordappLoader.appClassLoader)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
         runOnStop += database::close

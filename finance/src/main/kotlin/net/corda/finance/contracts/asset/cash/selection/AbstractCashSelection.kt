@@ -34,7 +34,7 @@ abstract class AbstractCashSelection {
         fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
             return instance.get() ?: {
                 val _metadata = metadata()
-                val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java).toList()
+                val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java, this::class.java.classLoader).toList()
                 val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
