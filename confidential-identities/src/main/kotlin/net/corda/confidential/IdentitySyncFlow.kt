@@ -22,7 +22,7 @@ import net.corda.core.utilities.unwrap
 
 object IdentitySyncFlow {
     /**
-     * Flow for ensuring that our counter-parties in a transaction have the full certificate paths for *our*
+     * Flow for ensuring that our counterparties in a transaction have the full certificate paths for *our*
      * confidential identities used in states present in the transaction. This is intended for use as a sub-flow of
      * another flow, typically between transaction assembly and signing. An example of where this is useful is where
      * a recipient of a state wants to know that it is being paid by the correct party, and the owner of the state is a
