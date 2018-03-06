@@ -152,7 +152,9 @@ data class NodeConfigurationImpl(
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
-        private val h2port: Int  = 0
+        private val h2port: Int  = 0,
+        // do not use or remove (used by Capsule)
+        private val jarDirs: List<String> = emptyList()
     ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
