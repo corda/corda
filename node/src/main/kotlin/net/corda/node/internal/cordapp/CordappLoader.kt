@@ -10,6 +10,7 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.startup.OnNodeStartup
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
@@ -186,7 +187,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(),
-                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
+                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location, // Core JAR location,
+                startupFlows = listOf()
         )
     }
 
@@ -198,6 +200,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findRPCFlows(scanResult),
                     findServiceFlows(scanResult),
                     findSchedulableFlows(scanResult),
+                    findStartupFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
                     findSerializers(scanResult),
@@ -239,6 +242,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     private fun findSchedulableFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
+    }
+
+    private fun findStartupFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, OnNodeStartup::class)
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
