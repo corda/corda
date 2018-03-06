@@ -13,7 +13,6 @@ class NodeConfig(
         val p2pPort: Int,
         val rpcPort: Int,
         val rpcAdminPort: Int,
-        val webPort: Int,
         val isNotary: Boolean,
         val users: List<User>,
         val runMigration: Boolean = true,
@@ -34,7 +33,6 @@ class NodeConfig(
         val config = empty()
                 .withValue("myLegalName", valueFor(legalName.toString()))
                 .withValue("p2pAddress", addressValueFor(p2pPort))
-                .withValue("webAddress", addressValueFor(webPort))
                 .withValue("rpcSettings", empty()
                         .withValue("address", addressValueFor(rpcPort))
                         .withValue("adminAddress", addressValueFor(rpcAdminPort))
