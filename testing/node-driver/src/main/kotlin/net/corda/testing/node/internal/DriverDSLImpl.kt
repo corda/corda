@@ -796,7 +796,7 @@ class DriverDSLImpl(
                 }
                 node to nodeThread
             }.flatMap { nodeAndThread ->
-               addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
+                addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
             }
         }
 
