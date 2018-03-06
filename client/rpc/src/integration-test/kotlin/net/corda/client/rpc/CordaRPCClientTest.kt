@@ -82,7 +82,6 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         }
     }
 
-    // TODO MS: add another test to verify this doesn't kill flows
     @Test
     fun `shutdown command stops the node`() {
 
