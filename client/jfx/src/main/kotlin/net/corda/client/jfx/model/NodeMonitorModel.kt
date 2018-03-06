@@ -58,9 +58,9 @@ class NodeMonitorModel {
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
         val client = CordaRPCClient(
                 nodeHostAndPort,
-                CordaRPCClientConfiguration.DEFAULT.copy(
-                        connectionMaxRetryInterval = 10.seconds
-                )
+                object : CordaRPCClientConfiguration {
+                    override val connectionMaxRetryInterval = 10.seconds
+                }
         )
         val connection = client.start(username, password)
         val proxy = connection.proxy

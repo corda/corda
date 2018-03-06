@@ -30,7 +30,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.subjects.PublishSubject
-import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -54,7 +53,9 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, CordaRPCClientConfiguration(Duration.ofSeconds(10)))
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, object : CordaRPCClientConfiguration {
+            override val maxReconnectAttempts = 5
+        })
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 
@@ -88,6 +89,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
         val latch = CountDownLatch(1)
         var successful = false
+        val maxCount = 20
+        var count = 0
         CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
 
             val task = scheduler.scheduleAtFixedRate({
@@ -95,7 +98,10 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                     println("Checking whether node is still running...")
                     client.start(rpcUser.username, rpcUser.password).use {
                         println("... node is still running.")
-                        // nothing here, will try again
+                        if (count == maxCount) {
+                            nodeIsShut.onError(AssertionError("Node does not get shutdown by RPC"))
+                        }
+                        count++
                     }
                 } catch (e: ActiveMQNotConnectedException) {
                     println("... node is not running.")
@@ -110,6 +116,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
             nodeIsShut.doOnError { error ->
                 error.printStackTrace()
                 successful = false
+                task.cancel(true)
+                latch.countDown()
             }.doOnCompleted {
                         successful = (node.internals.started == null)
                         task.cancel(true)
@@ -123,7 +131,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         }
     }
 
-    private class CloseableExecutor(private val delegate: ScheduledExecutorService): AutoCloseable, ScheduledExecutorService by delegate {
+    private class CloseableExecutor(private val delegate: ScheduledExecutorService) : AutoCloseable, ScheduledExecutorService by delegate {
 
         override fun close() {
             delegate.shutdown()
@@ -190,7 +198,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 
         val updates = proxy.stateMachinesFeed().updates
 
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0),identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow, 123.DOLLARS, OpaqueBytes.of(0), identity).returnValue.getOrThrow()
         proxy.startFlowDynamic(CashIssueFlow::class.java, 1000.DOLLARS, OpaqueBytes.of(0), identity).returnValue.getOrThrow()
 

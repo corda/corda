@@ -2,7 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
@@ -23,23 +23,46 @@ class CordaRPCConnection internal constructor(connection: RPCConnection<CordaRPC
 
 /**
  * Can be used to configure the RPC client connection.
- *
- * @property connectionMaxRetryInterval How much time to wait between connection retries if the server goes down. This
- *           time will be reached via exponential backoff.
  */
-data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration) {
-    internal fun toRpcClientConfiguration(): RPCClientConfiguration {
-        return RPCClientConfiguration.default.copy(
-                connectionMaxRetryInterval = connectionMaxRetryInterval
-        )
-    }
+interface CordaRPCClientConfiguration {
+
+    /** The minimum protocol version required from the server */
+    val minimumServerProtocolVersion: Int get() = default().minimumServerProtocolVersion
+    /**
+     * If set to true the client will track RPC call sites. If an error occurs subsequently during the RPC or in a
+     * returned Observable stream the stack trace of the originating RPC will be shown as well. Note that
+     * constructing call stacks is a moderately expensive operation.
+     */
+    val trackRpcCallSites: Boolean get() = default().trackRpcCallSites
+    /**
+     * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
+     * and are cleaned up in batches in this interval. If set too large it will waste server side resources for this
+     * duration. If set too low it wastes client side cycles.
+     */
+    val reapInterval: Duration get() = default().reapInterval
+    /** The number of threads to use for observations (for executing [Observable.onNext]) */
+    val observationExecutorPoolSize: Int get() = default().observationExecutorPoolSize
+    /**
+     * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
+     * the limit on the number of leaked observables reaped because of garbage collection per reaping.
+     * See the implementation of [com.google.common.cache.LocalCache] for details.
+     */
+    val cacheConcurrencyLevel: Int get() = default().cacheConcurrencyLevel
+    /** The retry interval of artemis connections in milliseconds */
+    val connectionRetryInterval: Duration get() = default().connectionRetryInterval
+    /** The retry interval multiplier for exponential backoff */
+    val connectionRetryIntervalMultiplier: Double get() = default().connectionRetryIntervalMultiplier
+    /** Maximum retry interval */
+    val connectionMaxRetryInterval: Duration get() = default().connectionMaxRetryInterval
+    /** Maximum reconnect attempts on failover */
+    val maxReconnectAttempts: Int get() = default().maxReconnectAttempts
+    /** Maximum file size */
+    val maxFileSize: Int get() = default().maxFileSize
+    /** The cache expiry of a deduplication watermark per client. */
+    val deduplicationCacheExpiry: Duration get() = default().deduplicationCacheExpiry
 
     companion object {
-        /**
-         * Returns the default configuration we recommend you use.
-         */
-        @JvmField
-        val DEFAULT = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
+        fun default(): CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default
     }
 }
 
@@ -72,16 +95,16 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  */
 class CordaRPCClient private constructor(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
         sslConfiguration: SSLConfiguration? = null
 ) {
     @JvmOverloads
-    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(hostAndPort, configuration, null)
+    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default) : this(hostAndPort, configuration, null)
 
     companion object {
         internal fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
                 sslConfiguration: SSLConfiguration? = null
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
@@ -102,7 +125,7 @@ class CordaRPCClient private constructor(
 
     private val rpcClient = RPCClient<CordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
-            configuration.toRpcClientConfiguration(),
+            configuration,
             KRYO_RPC_CLIENT_CONTEXT
     )
 

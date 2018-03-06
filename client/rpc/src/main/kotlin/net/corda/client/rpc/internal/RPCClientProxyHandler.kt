@@ -10,6 +10,7 @@ import com.google.common.cache.RemovalCause
 import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
 import net.corda.core.context.Actor
@@ -67,7 +68,7 @@ import kotlin.reflect.jvm.javaMethod
  * The cleanup happens in batches using a dedicated reaper, scheduled on [reaperExecutor].
  */
 class RPCClientProxyHandler(
-        private val rpcConfiguration: RPCClientConfiguration,
+        private val rpcConfiguration: CordaRPCClientConfiguration,
         private val rpcUsername: String,
         private val rpcPassword: String,
         private val serverLocator: ServerLocator,

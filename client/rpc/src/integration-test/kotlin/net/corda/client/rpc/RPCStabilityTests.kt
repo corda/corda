@@ -1,7 +1,7 @@
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
@@ -95,7 +95,7 @@ class RPCStabilityTests {
                 Try.on {
                     startRpcClient<RPCOps>(
                             server.get().broker.hostAndPort!!,
-                            configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
+                            configuration = CordaRPCClientConfigurationImpl.default.copy(minimumServerProtocolVersion = 1)
                     ).get()
                 }
             }
@@ -240,7 +240,7 @@ class RPCStabilityTests {
             val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
             // Set retry interval to 1s to reduce test duration
-            val clientConfiguration = RPCClientConfiguration.default.copy(connectionRetryInterval = 1.seconds)
+            val clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(connectionRetryInterval = 1.seconds)
             val clientFollower = shutdownManager.follower()
             val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
             clientFollower.unfollow()
