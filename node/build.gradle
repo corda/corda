@@ -104,6 +104,7 @@ dependencies {
 
     // Jackson support: serialisation to/from JSON, YAML, etc
     compile project(':client:jackson')
+    compile group: 'org.json', name: 'json', version: json_version
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"
@@ -166,9 +167,6 @@ dependencies {
     // BFT-SMaRt
     compile 'commons-codec:commons-codec:1.10'
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
-
-    // FastClasspathScanner: classpath scanning
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"

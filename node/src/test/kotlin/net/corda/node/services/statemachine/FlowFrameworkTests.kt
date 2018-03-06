@@ -34,11 +34,8 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
-import net.corda.testing.node.internal.pumpReceive
-import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -80,8 +77,8 @@ class FlowFrameworkTests {
                 cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
         )
-        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
 
@@ -166,7 +163,7 @@ class FlowFrameworkTests {
 
         var sentCount = 0
         mockNet.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
-        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
+        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val secondFlow = charlieNode.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
@@ -185,7 +182,7 @@ class FlowFrameworkTests {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size) // confirm checkpoint
             bobNode.services.networkMapCache.clearNetworkMapCache()
         }
-        val node2b = mockNet.createNode(MockNodeParameters(bobNode.internals.id))
+        val node2b = mockNet.createNode(InternalMockNodeParameters(bobNode.internals.id))
         bobNode.internals.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
@@ -212,7 +209,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `sending to multiple parties`() {
-        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
+        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
@@ -244,7 +241,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `receiving from multiple parties`() {
-        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
+        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
@@ -400,7 +397,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException propagated in invocation chain`() {
-        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
+        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val charlie = charlieNode.info.singleIdentity()
 
         charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
@@ -414,7 +411,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
-        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
+        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val charlie = charlieNode.info.singleIdentity()
 
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
@@ -662,7 +659,7 @@ class FlowFrameworkTests {
     private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow() = internals.run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
-        val newNode = mockNet.createNode(MockNodeParameters(id, configuration.myLegalName))
+        val newNode = mockNet.createNode(InternalMockNodeParameters(id, configuration.myLegalName))
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork()
@@ -723,9 +720,9 @@ class FlowFrameworkTests {
     }
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
-        return filter { it.message.topic == StateMachineManagerImpl.sessionTopic }.map {
+        return filter { it.getMessage().topic == StateMachineManagerImpl.sessionTopic }.map {
             val from = it.sender.id
-            val message = it.message.data.deserialize<SessionMessage>()
+            val message = it.messageData.deserialize<SessionMessage>()
             SessionTransfer(from, sanitise(message), it.recipients)
         }
     }

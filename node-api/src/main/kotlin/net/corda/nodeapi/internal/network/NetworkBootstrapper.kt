@@ -1,26 +1,34 @@
 package net.corda.nodeapi.internal.network
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.parse
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import java.io.File
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -44,15 +52,18 @@ class NetworkBootstrapper {
         )
 
         private const val LOGS_DIR_NAME = "logs"
+        private const val WHITELIST_FILE_NAME = "whitelist.txt"
+        private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val arg = args.singleOrNull() ?: throw IllegalArgumentException("Expecting single argument which is the nodes' parent directory")
-            NetworkBootstrapper().bootstrap(Paths.get(arg).toAbsolutePath().normalize())
+            val baseNodeDirectory = args.firstOrNull() ?: throw IllegalArgumentException("Expecting first argument which is the nodes' parent directory")
+            val cordapps = if (args.size > 1) args.toList().drop(1) else null
+            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordapps)
         }
     }
 
-    fun bootstrap(directory: Path) {
+    fun bootstrap(directory: Path, cordapps: List<String>?) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
         generateDirectoriesIfNeeded(directory)
@@ -68,8 +79,11 @@ class NetworkBootstrapper {
             distributeNodeInfos(nodeDirs, nodeInfoFiles)
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
-            println("Notary identities to be used in network-parameters file: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            installNetworkParameters(notaryInfos, nodeDirs)
+            println("Notary identities to be used in network parameters: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
+            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps?.distinct())
+            println("Updating whitelist")
+            overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
+            installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
             println("Bootstrapping complete!")
         } finally {
             _contextSerializationEnv.set(null)
@@ -78,16 +92,17 @@ class NetworkBootstrapper {
     }
 
     private fun generateDirectoriesIfNeeded(directory: Path) {
-        val confFiles = directory.list { it.filter { it.toString().endsWith(".conf") }.toList() }
+        val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
+        val webServerConfFiles = directory.list { it.filter { it.toString().endsWith("_web-server.conf") }.toList() }
         if (confFiles.isEmpty()) return
         println("Node config files found in the root directory - generating node directories")
         val cordaJar = extractCordaJarTo(directory)
         for (confFile in confFiles) {
-            val nodeName = confFile.fileName.toString().removeSuffix(".conf")
+            val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
             println("Generating directory for $nodeName")
-            val nodeDir = (directory / nodeName)
-            if (!nodeDir.exists()) { nodeDir.createDirectory() }
+            val nodeDir = (directory / nodeName).createDirectories()
             confFile.moveTo(nodeDir / "node.conf", StandardCopyOption.REPLACE_EXISTING)
+            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.moveTo(nodeDir / "web-server.conf", StandardCopyOption.REPLACE_EXISTING)
             Files.copy(cordaJar, (nodeDir / "corda.jar"), StandardCopyOption.REPLACE_EXISTING)
         }
         Files.delete(cordaJar)
@@ -150,7 +165,7 @@ class NetworkBootstrapper {
             if (nodeConfig.hasPath("notary")) {
                 val validating = nodeConfig.getConfig("notary").getBoolean("validating")
                 // And the node-info file contains the notary's identity
-                val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                 NotaryInfo(nodeInfo.notaryIdentity(), validating)
             } else {
                 null
@@ -158,7 +173,7 @@ class NetworkBootstrapper {
         }.distinct() // We need distinct as nodes part of a distributed notary share the same notary identity
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>) {
+    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>, whitelist: Map<String, List<AttachmentId>>) {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val copier = NetworkParametersCopier(NetworkParameters(
                 minimumPlatformVersion = 1,
@@ -166,20 +181,72 @@ class NetworkBootstrapper {
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
-                epoch = 1
+                epoch = 1,
+                whitelistedContractImplementations = whitelist
         ), overwriteFile = true)
 
         nodeDirs.forEach { copier.install(it) }
     }
 
+    private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
+        val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
+
+        println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: ${whitelistFile}")
+
+        val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
+        if (excludeContracts.isNotEmpty()) {
+            println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}}")
+        }
+
+        val newWhiteList = cordapps?.flatMap { cordappJarPath ->
+            val jarHash = getJarHash(cordappJarPath)
+            scanJarForContracts(cordappJarPath).map { contract ->
+                contract to jarHash
+            }
+        }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
+
+        println("Calculating whitelist for current installed CorDapps..")
+
+        val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
+            val existing = existingWhitelist[contractClassName] ?: emptyList()
+            val newHash = newWhiteList[contractClassName]
+            contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
+        }.toMap()
+
+        println("CorDapp whitelist " + (if (existingWhitelist.isEmpty()) "generated" else "updated") + " in ${whitelistFile}")
+        return merged
+    }
+
+    private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
+        PrintStream(whitelistFile.toFile().outputStream()).use { out ->
+            mergedWhiteList.forEach { (contract, attachments) ->
+                out.println("${contract}:${attachments.joinToString(",")}")
+            }
+        }
+    }
+
+    private fun getJarHash(cordappPath: String): AttachmentId = File(cordappPath).inputStream().use { jar ->
+        val hs = HashingInputStream(Hashing.sha256(), jar)
+        hs.readBytes()
+        SecureHash.SHA256(hs.hash().asBytes())
+    }
+
+    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.readAllLines()
+            .map { line -> line.split(":") }
+            .map { (contract, attachmentIds) ->
+                contract to (attachmentIds.split(",").map(::parse))
+            }.toMap()
+
+    private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
+
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-        // cluster and is shared by all the other members. This is the notary identity.
+            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+            // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }

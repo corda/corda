@@ -2,10 +2,7 @@ package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.UnexpectedFlowEndException
@@ -49,7 +46,7 @@ class AttachmentLoadingTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), MockCordappConfigProvider(), attachments)
+    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), MockCordappConfigProvider(), attachments, testNetworkParameters().whitelistedContractImplementations)
     private val cordapp get() = provider.cordapps.first()
     private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = provider.getAppContext(cordapp)
@@ -87,6 +84,7 @@ class AttachmentLoadingTests {
 
     private val services = object : ServicesForResolution {
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {
             doReturn(null).whenever(this).partyFromKey(DUMMY_BANK_A.owningKey)
         }

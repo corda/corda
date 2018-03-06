@@ -5,7 +5,6 @@ package net.corda.core.internal
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.NotarisationRequest
 import net.corda.core.flows.NotarisationRequestSignature
@@ -38,6 +37,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileTime
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
@@ -130,6 +130,7 @@ fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(thi
 fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
 inline val Path.size: Long get() = Files.size(this)
+fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastModifiedTime(this, *options)
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
 fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
@@ -146,6 +147,8 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
 fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
 fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
+
+inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
@@ -255,6 +258,13 @@ fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
 inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
 
+inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): Stream<R> {
+    return flatMap {
+        val value = transform(it)
+        if (value != null) Stream.of(value) else Stream.empty()
+    }
+}
+
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
@@ -304,8 +314,8 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toWireTransaction(cordappProvider: CordappProvider, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(cordappProvider, serializationContext)
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
@@ -377,15 +387,14 @@ inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> Dig
     return SignedData(this, signer(this))
 }
 
-inline fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> {
-    return SignedData(this, keyPair.sign(this.bytes))
-}
+fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedData(this, keyPair.sign(this.bytes))
 
-fun ByteBuffer.copyBytes() = ByteArray(remaining()).also { get(it) }
+fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
 
 fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
     return CordappContext(cordapp, attachmentId, classLoader, config)
 }
+
 /** Verifies that the correct notarisation request was signed by the counterparty. */
 fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
     val requestingParty = otherSideSession.counterparty

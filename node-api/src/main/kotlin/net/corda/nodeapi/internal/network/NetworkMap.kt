@@ -14,6 +14,9 @@ import java.time.Instant
 const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
 const val NETWORK_PARAMS_UPDATE_FILE_NAME = "network-parameters-update"
 
+typealias SignedNetworkMap = SignedDataWithCert<NetworkMap>
+typealias SignedNetworkParameters = SignedDataWithCert<NetworkParameters>
+
 /**
  * Data structure representing the network map available from the HTTP network map service as a serialised blob.
  * @property nodeInfoHashes list of network participant's [NodeInfo] hashes

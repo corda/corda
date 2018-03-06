@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
 import net.corda.cordform.CordformContext
@@ -18,12 +19,12 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
@@ -44,12 +45,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.driver.VerifierType
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
@@ -229,7 +230,6 @@ class DriverDSLImpl(
                         "p2pAddress" to p2pAddress.toString(),
                         "rpcSettings.address" to rpcAddress.toString(),
                         "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
-                        "webAddress" to webAddress.toString(),
                         "useTestClock" to useTestClock,
                         "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
                         "verifierType" to verifierType.name
@@ -260,7 +260,7 @@ class DriverDSLImpl(
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), rootTruststorePath, rootTruststorePassword).buildKeystore()
+                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)).buildKeystore()
                 config
             }
         } else {
@@ -355,13 +355,17 @@ class DriverDSLImpl(
         val webAddress = cordform.webAddress?.let { NetworkHostAndPort.parse(it) } ?: portAllocation.nextHostAndPort()
         val notary = if (cordform.notary != null) mapOf("notary" to cordform.notary) else emptyMap()
         val rpcUsers = cordform.rpcUsers
-        val config = NodeConfig(ConfigHelper.loadConfig(
+
+        val rawConfig = cordform.config + rpcAddress + notary + mapOf(
+                "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
+        )
+        val typesafe = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
-                configOverrides = cordform.config + rpcAddress + notary + mapOf(
-                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
-                )
-        ))
+                configOverrides = rawConfig.toNodeOnly()
+        )
+        val cordaConfig = typesafe.parseAsNodeConfiguration()
+        val config = NodeConfig(rawConfig, cordaConfig)
         return startNodeInternal(config, webAddress, null, "200m", localNetworkMap)
     }
 
@@ -384,9 +388,9 @@ class DriverDSLImpl(
 
     override fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val process = startWebserver(handle, debugPort, maximumHeapSize)
+        val process = startWebserver(handle as NodeHandleInternal, debugPort, maximumHeapSize)
         shutdownManager.registerProcessShutdown(process)
-        val webReadyFuture = addressMustBeBoundFuture(executorService, (handle as NodeHandleInternal).webAddress, process)
+        val webReadyFuture = addressMustBeBoundFuture(executorService, handle.webAddress, process)
         return webReadyFuture.map { queryWebserver(handle, process) }
     }
 
@@ -484,7 +488,7 @@ class DriverDSLImpl(
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
                     }
-                    val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                    val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                     NotaryInfo(nodeInfo.legalIdentities[0], spec.validating)
                 }
             }
@@ -726,14 +730,12 @@ class DriverDSLImpl(
      * Simple holder class to capture the node configuration both as the raw [Config] object and the parsed [NodeConfiguration].
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
-    private class NodeConfig(val typesafe: Config) {
-        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().also { nodeConfiguration ->
-            val errors = nodeConfiguration.validate()
-            if (errors.isNotEmpty()) {
-                throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-            }
+    private class NodeConfig(val typesafe: Config, val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().also { nodeConfiguration ->
+        val errors = nodeConfiguration.validate()
+        if (errors.isNotEmpty()) {
+            throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
         }
-    }
+    })
 
     companion object {
         internal val log = contextLogger()
@@ -771,7 +773,7 @@ class DriverDSLImpl(
                     throw IllegalStateException("No quasar agent: -javaagent:lib/quasar.jar and working directory project root might fix")
                 }
                 // Write node.conf
-                writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe)
+                writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
                 // TODO pass the version in?
                 val node = InProcessNode(config.corda, MOCK_VERSION_INFO, cordappPackages).start()
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
@@ -798,7 +800,7 @@ class DriverDSLImpl(
                     "debug port is " + (debugPort ?: "not enabled") + ", " +
                     "jolokia monitoring port is " + (monitorPort ?: "not enabled"))
             // Write node.conf
-            writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe)
+            writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
 
             val systemProperties = mutableMapOf(
                     "name" to config.corda.myLegalName,
@@ -844,8 +846,9 @@ class DriverDSLImpl(
             )
         }
 
-        private fun startWebserver(handle: NodeHandle, debugPort: Int?, maximumHeapSize: String): Process {
+        private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
             val className = "net.corda.webserver.WebServer"
+            writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startCordaProcess(
                     className = className, // cannot directly get class for this, so just use string
                     arguments = listOf("--base-directory", handle.baseDirectory.toString()),
@@ -859,6 +862,22 @@ class DriverDSLImpl(
                     maximumHeapSize = maximumHeapSize
             )
         }
+
+        private fun NodeHandleInternal.toWebServerConfig(): Config {
+
+            var config = ConfigFactory.empty()
+            config += "webAddress" to webAddress.toString()
+            config += "myLegalName" to configuration.myLegalName.toString()
+            config += "rpcAddress" to configuration.rpcOptions.address!!.toString()
+            config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
+            config += "useHTTPS" to useHTTPS
+            config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
+            config += "keyStorePassword" to configuration.keyStorePassword
+            config += "trustStorePassword" to configuration.trustStorePassword
+            return config
+        }
+
+        private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))
 
         /**
          * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
@@ -1053,3 +1072,14 @@ fun writeConfig(path: Path, filename: String, config: Config) {
     val configString = config.root().render(ConfigRenderOptions.defaults())
     configString.byteInputStream().copyTo(path / filename, StandardCopyOption.REPLACE_EXISTING)
 }
+
+private fun Config.toNodeOnly(): Config {
+
+    return if (hasPath("webAddress")) {
+        withoutPath("webAddress").withoutPath("useHTTPS")
+    } else {
+        this
+    }
+}
+
+private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))

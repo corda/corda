@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -25,12 +26,13 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.util.*
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
 class AMQPBridgeTest {
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
+
+    private val log = loggerFor<AMQPBridgeTest>()
 
     private val ALICE = TestIdentity(ALICE_NAME)
     private val BOB = TestIdentity(BOB_NAME)
@@ -64,67 +66,101 @@ class AMQPBridgeTest {
 
         //Create target server
         val amqpServer = createAMQPServer()
+        val dedupeSet = mutableSetOf<String>()
 
         val receive = amqpServer.onReceive.toBlocking().iterator
         amqpServer.start()
+
+        val receivedSequence = mutableListOf<Int>()
+        val atNodeSequence = mutableListOf<Int>()
+
+        fun formatMessage(expected: String, actual: Int, received: List<Int>): String {
+            return "Expected message with id $expected, got $actual, previous message receive sequence: " +
+            "${received.joinToString(",  ", "[", "]")}."
+        }
 
         val received1 = receive.next()
         val messageID1 = received1.applicationProperties["CountProp"] as Int
         assertArrayEquals("Test$messageID1".toByteArray(), received1.payload)
         assertEquals(0, messageID1)
+        dedupeSet += received1.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
         received1.complete(true) // Accept first message
+        receivedSequence += messageID1
+        atNodeSequence += messageID1
 
         val received2 = receive.next()
         val messageID2 = received2.applicationProperties["CountProp"] as Int
         assertArrayEquals("Test$messageID2".toByteArray(), received2.payload)
-        assertEquals(1, messageID2)
-        received2.complete(false) // Reject message
+        assertEquals(1, messageID2, formatMessage("1", messageID2, receivedSequence))
+        received2.complete(false) // Reject message and don't add to dedupe
+        receivedSequence += messageID2 // reflects actual sequence
 
+        // drop things until we get back to the replay
         while (true) {
             val received3 = receive.next()
             val messageID3 = received3.applicationProperties["CountProp"] as Int
             assertArrayEquals("Test$messageID3".toByteArray(), received3.payload)
-            assertNotEquals(0, messageID3)
+            receivedSequence += messageID3
             if (messageID3 != 1) { // keep rejecting any batched items following rejection
                 received3.complete(false)
             } else { // beginnings of replay so accept again
                 received3.complete(true)
+                val messageId = received3.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
+                if (messageId !in dedupeSet) {
+                    dedupeSet += messageId
+                    atNodeSequence += messageID3
+                }
                 break
             }
         }
 
+        // start receiving again, but discarding duplicates
         while (true) {
             val received4 = receive.next()
             val messageID4 = received4.applicationProperties["CountProp"] as Int
             assertArrayEquals("Test$messageID4".toByteArray(), received4.payload)
-            if (messageID4 != 1) { // we may get a duplicate of the rejected message, in which case skip
-                assertEquals(2, messageID4) // next message should be in order though
-                break
+            receivedSequence += messageID4
+            val messageId = received4.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
+            if (messageId !in dedupeSet) {
+                dedupeSet += messageId
+                atNodeSequence += messageID4
             }
             received4.complete(true)
+            if (messageID4 == 2) { // started to replay messages after rejection point
+                break
+            }
         }
 
         // Send a fresh item and check receive
         val artemisMessage = artemis.session.createMessage(true).apply {
-            putIntProperty("CountProp", -1)
-            writeBodyBufferBytes("Test_end".toByteArray())
+            putIntProperty("CountProp", 3)
+            writeBodyBufferBytes("Test3".toByteArray())
             // Use the magic deduplication property built into Artemis as our message identity too
             putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
         }
         artemis.producer.send(sourceQueueName, artemisMessage)
 
 
+        // start receiving again, discarding duplicates
         while (true) {
             val received5 = receive.next()
             val messageID5 = received5.applicationProperties["CountProp"] as Int
-            if (messageID5 != 2) { // we may get a duplicate of the interrupted message, in which case skip
-                assertEquals(-1, messageID5) // next message should be in order though
-                assertArrayEquals("Test_end".toByteArray(), received5.payload)
-                break
+            assertArrayEquals("Test$messageID5".toByteArray(), received5.payload)
+            receivedSequence += messageID5
+            val messageId = received5.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
+            if (messageId !in dedupeSet) {
+                dedupeSet += messageId
+                atNodeSequence += messageID5
             }
             received5.complete(true)
+            if (messageID5 == 3) { // reached our fresh message
+                break
+            }
         }
 
+        log.info("Message sequence: ${receivedSequence.joinToString(", ", "[", "]")}")
+        log.info("Deduped sequence: ${atNodeSequence.joinToString(", ", "[", "]")}")
+        assertEquals(listOf(0, 1, 2, 3), atNodeSequence)
         bridgeManager.stop()
         amqpServer.stop()
         artemisClient.stop()

@@ -4,13 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.validateRequest
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 
@@ -31,12 +30,9 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
             val stx = receiveTransaction()
             val notary = stx.notary
             checkNotary(notary)
-            val timeWindow: TimeWindow? = if (stx.isNotaryChangeTransaction())
-                null
-            else
-                stx.tx.timeWindow
             resolveAndContractVerify(stx)
             verifySignatures(stx)
+            val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {

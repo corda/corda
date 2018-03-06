@@ -92,6 +92,9 @@ open class Node(configuration: NodeConfiguration,
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
         }
+
+        // TODO Wire up maxMessageSize
+        const val MAX_FILE_SIZE = 10485760
     }
 
     override val log: Logger get() = staticLog
@@ -165,14 +168,14 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(networkParameters)
         }
         val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
 
-        printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
+        printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize)
+            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
         }
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
+            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             VerifierType.InMemory -> null
         }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
@@ -187,7 +190,7 @@ open class Node(configuration: NodeConfiguration,
                 database,
                 services.networkMapCache,
                 advertisedAddress,
-                networkParameters.maxMessageSize,
+                /*networkParameters.maxMessageSize*/MAX_FILE_SIZE,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
     }
@@ -199,24 +202,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(
-                                this.address!!,
-                                sslConfig,
-                                securityManager,
-                                certificateChainCheckPolicies,
-                                networkParameters.maxMessageSize,
-                                jmxMonitoringHttpPort != null,
-                                rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(
-                                this.address!!,
-                                adminAddress!!,
-                                sslConfig,
-                                securityManager,
-                                certificateChainCheckPolicies,
-                                networkParameters.maxMessageSize,
-                                jmxMonitoringHttpPort != null,
-                                rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
                 return rpcBroker!!.addresses
@@ -226,7 +214,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(networkParameters: NetworkParameters): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -313,7 +301,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
+    override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -330,7 +318,7 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(schemaService, identityService, insideTransaction)
+        return super.initialiseDatabasePersistence(schemaService, identityService)
     }
 
     private val _startupComplete = openFuture<Unit>()
