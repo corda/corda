@@ -60,8 +60,8 @@
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
       <module name="experimental_test" target="1.8" />
-      <module name="explorer-capsule_main" target="1.6" />
-      <module name="explorer-capsule_test" target="1.6" />
+      <module name="explorer-capsule_main" target="1.8" />
+      <module name="explorer-capsule_test" target="1.8" />
       <module name="explorer_main" target="1.8" />
       <module name="explorer_test" target="1.8" />
       <module name="finance_integrationTest" target="1.8" />
@@ -99,8 +99,8 @@
       <module name="network-visualiser_test" target="1.8" />
       <module name="node-api_main" target="1.8" />
       <module name="node-api_test" target="1.8" />
-      <module name="node-capsule_main" target="1.6" />
-      <module name="node-capsule_test" target="1.6" />
+      <module name="node-capsule_main" target="1.8" />
+      <module name="node-capsule_test" target="1.8" />
       <module name="node-driver_integrationTest" target="1.8" />
       <module name="node-driver_main" target="1.8" />
       <module name="node-driver_test" target="1.8" />
@@ -156,8 +156,8 @@
       <module name="verifier_test" target="1.8" />
       <module name="web_main" target="1.8" />
       <module name="web_test" target="1.8" />
-      <module name="webcapsule_main" target="1.6" />
-      <module name="webcapsule_test" target="1.6" />
+      <module name="webcapsule_main" target="1.8" />
+      <module name="webcapsule_test" target="1.8" />
       <module name="webserver-webcapsule_main" target="1.8" />
       <module name="webserver-webcapsule_test" target="1.8" />
       <module name="webserver_integrationTest" target="1.8" />
