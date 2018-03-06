@@ -18,6 +18,7 @@ import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding.SNAPPY
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -57,7 +58,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
                         DBTransaction().apply {
                             txId = key.toString()
                             transaction = value.toSignedTx().
-                                    serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                    serialize(context = SerializationDefaults.STORAGE_CONTEXT.withEncoding(SNAPPY)).bytes
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java,

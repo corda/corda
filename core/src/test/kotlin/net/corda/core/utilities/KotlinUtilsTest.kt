@@ -52,7 +52,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize()
+        original.serialize(context = KRYO_CHECKPOINT_CONTEXT.withEncoding(null)).deserialize()
     }
 
     @Test
@@ -79,7 +79,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = CapturingTransientProperty("Hello")
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize()
+        original.serialize(context = KRYO_CHECKPOINT_CONTEXT.withEncoding(null)).deserialize()
     }
 
     private class NullTransientProperty {
