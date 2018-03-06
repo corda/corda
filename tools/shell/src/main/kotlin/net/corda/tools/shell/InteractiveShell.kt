@@ -1,6 +1,5 @@
 package net.corda.tools.shell
 
-import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.*
@@ -15,11 +14,25 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
+import net.corda.node.internal.security.AdminSubject
+import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.utilities.ANSIProgressRenderer
+import net.corda.node.utilities.StdoutANSIProgressRenderer
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
@@ -42,6 +55,7 @@ import org.crsh.util.Utils
 import org.crsh.vfs.FS
 import org.crsh.vfs.spi.file.FileMountFactory
 import org.crsh.vfs.spi.url.ClassPathMountFactory
+import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
@@ -216,7 +230,7 @@ object InteractiveShell {
         throw e.cause ?: e
     }
 
-    fun createOutputMapper(rpcOps: CordaRPCOps): ObjectMapper {
+    fun yamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
@@ -228,13 +242,35 @@ object InteractiveShell {
         }
     }
 
-    private fun createInputMapper(factory: JsonFactory): ObjectMapper {
-        return JacksonSupport.createNonRpcMapper(factory).apply {
+    private object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
+
+        override fun serialize(nodeInfo: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
+
+            val json = JSONObject()
+            json["addresses"] = nodeInfo.addresses.map { address -> address.serialise() }
+            json["legalIdentities"] = nodeInfo.legalIdentities.map { address -> address.serialise() }
+            json["platformVersion"] = nodeInfo.platformVersion
+            json["serial"] = nodeInfo.serial
+            gen.writeRaw(json.toString())
+        }
+
+        private fun NetworkHostAndPort.serialise() = this.toString()
+        private fun Party.serialise() = JSONObject().put("name", this.name)
+
+        private operator fun JSONObject.set(key: String, value: Any?): JSONObject {
+            return put(key, value)
+        }
+    }
+
+    private fun createOutputMapper(): ObjectMapper {
+
+        return JacksonSupport.createNonRpcMapper().apply {
             // Register serializers for stateful objects from libraries that are special to the RPC system and don't
             // make sense to print out to the screen. For classes we own, annotations can be used instead.
             val rpcModule = SimpleModule()
             rpcModule.addSerializer(Observable::class.java, ObservableSerializer)
             rpcModule.addSerializer(InputStream::class.java, InputStreamSerializer)
+            rpcModule.addSerializer(NodeInfo::class.java, NodeInfoSerializer)
             registerModule(rpcModule)
 
             disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
@@ -243,7 +279,7 @@ object InteractiveShell {
     }
 
     // TODO: This should become the default renderer rather than something used specifically by commands.
-    private val yamlMapper by lazy { createInputMapper(YAMLFactory()) }
+    private val outputMapper by lazy { createOutputMapper() }
 
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out
@@ -430,11 +466,19 @@ object InteractiveShell {
         return result
     }
 
-    private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit> {
-        val printerFun = yamlMapper::writeValueAsString
-        toStream.println(printerFun(response))
-        toStream.flush()
-        return maybeFollow(response, printerFun, toStream)
+    private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter): CordaFuture<Unit> {
+
+        val mapElement: (Any?) -> String = { element -> outputMapper.writerWithDefaultPrettyPrinter().writeValueAsString(element) }
+        val mappingFunction: (Any?) -> String = { value ->
+            if (value is Collection<*>) {
+                value.joinToString(",${System.lineSeparator()}  ", "[${System.lineSeparator()}  ", "${System.lineSeparator()}]") { element ->
+                    mapElement(element)
+                }
+            } else {
+                mapElement(value)
+            }
+        }
+        return maybeFollow(response, mappingFunction, out)
     }
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {
@@ -457,6 +501,7 @@ object InteractiveShell {
         override fun onNext(t: Any?) {
             count++
             toStream.println("Observation $count: " + printerFun(t))
+            toStream.flush()
         }
 
         @Synchronized
@@ -467,25 +512,32 @@ object InteractiveShell {
         }
     }
 
-    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): CordaFuture<Unit> {
+    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, out: PrintWriter): CordaFuture<Unit> {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
         // object graphs that contain yet more observables. So we just look for top level responses that follow
         // the standard "track" pattern, and print them until the user presses Ctrl-C
         if (response == null) return doneFuture(Unit)
 
-        val observable: Observable<*> = when (response) {
-            is Observable<*> -> response
-            is DataFeed<*, *> -> {
-                toStream.println("Snapshot")
-                toStream.println(response.snapshot)
-                response.updates
-            }
-            else -> return doneFuture(Unit)
+        if (response is DataFeed<*, *>) {
+            out.println("Snapshot:")
+            out.println(printerFun(response.snapshot))
+            out.flush()
+            out.println("Updates:")
+            return printNextElements(response.updates, printerFun, out)
+        }
+        if (response is Observable<*>) {
+            return printNextElements(response, printerFun, out)
         }
 
-        val subscriber = PrintingSubscriber(printerFun, toStream)
-        uncheckedCast(observable).subscribe(subscriber)
+        out.println(printerFun(response))
+        return doneFuture(Unit)
+    }
+
+    private fun printNextElements(elements: Observable<*>, printerFun: (Any?) -> String, out: PrintWriter): CordaFuture<Unit> {
+
+        val subscriber = PrintingSubscriber(printerFun, out)
+        uncheckedCast(elements).subscribe(subscriber)
         return subscriber.future
     }
 

@@ -40,6 +40,7 @@ buildscript {
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
+    ext.json_version = '20180130'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
@@ -66,6 +67,7 @@ buildscript {
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+    ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '0.33.0'
     ext.selenium_version = '3.8.1'
@@ -83,6 +85,9 @@ buildscript {
         // This repository is needed for Dokka until 0.9.16 is released.
         maven {
             url 'https://dl.bintray.com/kotlin/kotlin-eap/'
+        }
+        maven {
+            url "$artifactory_contextUrl/corda-releases"
         }
     }
     dependencies {
@@ -188,6 +193,7 @@ allprojects {
         mavenCentral()
         jcenter()
         maven { url 'https://jitpack.io' }
+        maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
     }
 
     configurations {
@@ -304,7 +310,7 @@ task buildCordappDependenciesZip(type: Zip) {
 
 artifactory {
     publish {
-        contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        contextUrl = artifactory_contextUrl
         repository {
             repoKey = 'corda-dev'
             username = 'teamcity'

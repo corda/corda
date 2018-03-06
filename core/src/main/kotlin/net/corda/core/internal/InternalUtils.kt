@@ -5,7 +5,6 @@ package net.corda.core.internal
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.NotarisationRequest
 import net.corda.core.flows.NotarisationRequestSignature
@@ -38,6 +37,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileTime
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
@@ -130,6 +130,7 @@ fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(thi
 fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
 inline val Path.size: Long get() = Files.size(this)
+fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastModifiedTime(this, *options)
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
 fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
@@ -256,6 +257,13 @@ fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.
 
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
 inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
+
+inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): Stream<R> {
+    return flatMap {
+        val value = transform(it)
+        if (value != null) Stream.of(value) else Stream.empty()
+    }
+}
 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
