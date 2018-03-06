@@ -1,6 +1,5 @@
 package net.corda.behave.node
 
-import com.google.common.net.HostAndPort
 import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
@@ -18,8 +17,6 @@ import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.core.internal.openHttpConnection
-import net.corda.core.internal.responseAs
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.commons.io.FileUtils
@@ -140,7 +137,7 @@ class Node(
     }
 
     val logOutput: LogSource by lazy {
-        LogSource(logDirectory, "node-info-gen.log", filePatternUsedForExclusion = true)
+        LogSource(logDirectory, "node-Jose.*.log", filePatternUsedForExclusion = true)
     }
 
     val database: DatabaseConnection by lazy {

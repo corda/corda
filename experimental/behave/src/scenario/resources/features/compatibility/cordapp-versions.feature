@@ -4,7 +4,7 @@ Feature: Compatibility - CorDapp versions
   when each node has a different versions of the same cordapp but identical Flow interfaces and Contract usage.
 
   Scenario Outline: Corda node can transact with another Corda node where each has a different Cordapp versions but with same Flows, Contracts, Contract States, Contract State Schemas
-    Given a node A of version <Corda-Node-Version-X>
+    Given a node A of version <Corda-Node-Version-X> with proxy
     And node A has <Cordapp-Version-X> finance app installed
     And a node B of version <Corda-Node-Version-X>
     And node B has <Cordapp-Version-Y> finance app installed

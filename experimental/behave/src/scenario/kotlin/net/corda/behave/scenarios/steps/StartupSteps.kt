@@ -33,4 +33,11 @@ fun startupSteps(steps: StepsBlock) = steps {
             startup.hasIdentityDetails(name)
         }
     }
+
+    Then<String, String>("^node (\\w+) has loaded app (.+)$") { name, cordapp ->
+        withNetwork {
+            startup.hasLoadedCordapp(name, cordapp)
+        }
+    }
+
 }
