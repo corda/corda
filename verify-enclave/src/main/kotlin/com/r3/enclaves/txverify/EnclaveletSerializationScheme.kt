@@ -6,7 +6,7 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
@@ -27,10 +27,10 @@ private class EnclaveletSerializationScheme {
                     registerScheme(AMQPVerifierSerializationScheme)
                 },
                 /**
-                 * Even though default context is set to Kryo P2P, the encoding will be adjusted depending on the
+                 * Even though default context is set to Amqp P2P, the encoding will be adjusted depending on the
                  * incoming request received.
                  */
-                KRYO_P2P_CONTEXT)
+                AMQP_P2P_CONTEXT)
 
             /*
              * Ensure that we initialise JAXP before blacklisting is enabled.
