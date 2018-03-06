@@ -13,6 +13,28 @@ fun configurationSteps(steps: StepsBlock) = steps {
                         ?: error("Unknown version '$version'"))
     }
 
+    Given<String, String, String>("^a (\\w+) notary node (\\w+) of version ([^ ]+)$") { notaryType, name, version ->
+        node(name)
+                .withDistribution(Distribution.fromVersionString(version)
+                        ?: error("Unknown version '$version'"))
+                .withNotaryType(notaryType.toNotaryType()
+                        ?: error("Unknown notary type '$notaryType'"))
+    }
+
+    Given<String, String>("^a node (\\w+) of version ([^ ]+) with proxy$") { name, version ->
+        node(name).withRPCProxy(true)
+                .withDistribution(Distribution.fromVersionString(version)
+                        ?: error("Unknown version '$version'"))
+    }
+
+    Given<String, String, String>("^a (\\w+) notary node (\\w+) of version ([^ ]+) with proxy$") { notaryType, name, version ->
+        node(name).withRPCProxy(true)
+                .withDistribution(Distribution.fromVersionString(version)
+                        ?: error("Unknown version '$version'"))
+                .withNotaryType(notaryType.toNotaryType()
+                        ?: error("Unknown notary type '$notaryType'"))
+    }
+
     Given<String, String, String>("^a (\\w+) notary (\\w+) of version ([^ ]+)$") { type, name, version ->
         node(name)
                 .withDistribution(Distribution.fromVersionString(version)

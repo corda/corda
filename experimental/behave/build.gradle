@@ -79,6 +79,8 @@ dependencies {
 
     testCompile project(':test-utils')
 
+    compile project(':samples:simm-valuation-demo')
+
     // Unit Tests
 
     testCompile "junit:junit:$junit_version"

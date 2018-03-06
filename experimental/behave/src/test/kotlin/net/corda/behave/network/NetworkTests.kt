@@ -16,12 +16,12 @@ class NetworkTests {
         val distribution = Distribution.fromVersionString("corda-3.0-pre-release-V3")
         val network = Network
                 .new()
-                .addNode(name = "Foo", distribution = distribution!!, withRPCProxy = true)
+                .addNode(name = "Foo", distribution = distribution!!, notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true)
                 .generate()
         network.use {
-            it.waitUntilRunning(30.seconds)
-            it.signal()
-            it.keepAlive(30.seconds)
+            it.waitUntilRunning(300.seconds)
+            it.keepAlive(300.seconds)
+//            it.signal()
         }
     }
 

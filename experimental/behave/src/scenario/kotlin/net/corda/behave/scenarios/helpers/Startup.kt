@@ -83,4 +83,13 @@ class Startup(state: ScenarioState) : Substeps(state) {
         }
     }
 
+    fun hasLoadedCordapp(nodeName: String, cordappName: String) {
+        withNetwork {
+            log.info("Checking CorDapp $cordappName is loaded in node $nodeName ...\n")
+            val logOutput = node(nodeName).logOutput
+            if (!logOutput.find(".*Loaded CorDapps.*$cordappName.*").any()) {
+                fail("Unable to find $cordappName loaded in node $nodeName")
+            }
+        }
+    }
 }

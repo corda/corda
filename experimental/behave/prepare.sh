@@ -16,7 +16,13 @@ mkdir -p ${DRIVERS_DIR}
 cd ../..
 ./gradlew clean install
 cp -v $(ls node/capsule/build/libs/corda-*.jar | tail -n1) ${STAGING_DIR}/corda.jar
-cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) ${STAGING_DIR}/apps/corda-finance.jar
+
+# Copy finance library
+cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) ${STAGING_DIR}/apps
+
+# Copy sample Cordapps
+./gradlew samples:simm-valuation-demo:jar
+cp -v $(ls samples/simm-valuation-demo/build/libs/simm-valuation-demo-*.jar | tail -n1) ${STAGING_DIR}/apps
 
 # Download database drivers
 curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/h2-1.4.196.jar" > ${DRIVERS_DIR}/h2-1.4.196.jar
@@ -30,4 +36,4 @@ cp -v $(ls tools/bootstrapper/build/libs/*.jar | tail -n1) ${STAGING_DIR}/networ
 cd experimental/behave
 ../../gradlew rpcProxyJar
 cp -v $(ls build/libs/corda-rpcProxy*.jar | tail -n1) ${STAGING_DIR}/corda-rpcProxy.jar
-
+rm -rf ${STAGING_DIR}/proxy

@@ -227,7 +227,7 @@ class Network private constructor(
             }
             if (!hasError || CLEANUP_ON_ERROR) {
                 log.info("Cleaning up runtime ...")
-//                FileUtils.deleteDirectory(targetDirectory)
+                FileUtils.deleteDirectory(targetDirectory)
             } else {
                 log.info("Deleting temporary files, but retaining logs and config ...")
                 for (node in nodes.values.map { it.config.name }) {
@@ -337,7 +337,7 @@ class Network private constructor(
         for (node in nodes.values) {
             node.shutDown()
         }
-        cleanup()
+//        cleanup()
     }
 
     fun use(action: (Network) -> Unit) {
