@@ -24,7 +24,7 @@ Before reading this page, you should be familiar with the :doc:`key concepts of 
 Internal APIs and stability guarantees
 --------------------------------------
 
-Corda 3.0 provides a stable wire protocol and support for database upgrades therefore you should expect to be able to migrate persisted data from 3.0 to future versions. However, it will be necessary to recompile applications against future versions of the API until we begin offering ABI stability as well.
+Corda 3.0 provides a stable wire protocol and support for database upgrades. Therefore, you should expect to be able to migrate persisted data from 3.0 to future versions. However, it will be necessary to recompile applications against future versions of the API until we begin offering ABI stability as well.
 
 Additionally, please note whilst Corda 3.0 release has been security audited at a rudimentary level, to esnure node security is maintained the following best practices should be followed:
 
