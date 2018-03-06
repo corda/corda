@@ -53,6 +53,7 @@ class NetworkBootstrapper {
 
         private const val LOGS_DIR_NAME = "logs"
         private const val WHITELIST_FILE_NAME = "whitelist.txt"
+        private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
 
         @JvmStatic
         fun main(args: Array<String>) {
@@ -79,7 +80,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Notary identities to be used in network parameters: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, cordapps?.distinct())
+            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps?.distinct())
             println("Updating whitelist")
             overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
             installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
@@ -187,21 +188,24 @@ class NetworkBootstrapper {
         nodeDirs.forEach { copier.install(it) }
     }
 
-    private fun generateWhitelist(whitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
+    private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
 
-        println("Found existing whitelist:")
-        existingWhitelist.forEach { println(it.outputString()) }
+        println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: ${whitelistFile}")
 
-        val newWhiteList: Map<ContractClassName, AttachmentId> = cordapps?.flatMap { cordappJarPath ->
+        val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
+        if (excludeContracts.isNotEmpty()) {
+            println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}}")
+        }
+
+        val newWhiteList = cordapps?.flatMap { cordappJarPath ->
             val jarHash = getJarHash(cordappJarPath)
             scanJarForContracts(cordappJarPath).map { contract ->
                 contract to jarHash
             }
-        }?.toMap() ?: emptyMap()
+        }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
 
-        println("Calculating whitelist for current CorDapps:")
-        newWhiteList.forEach { (contract, attachment) -> println("$contract:$attachment") }
+        println("Calculating whitelist for current installed CorDapps..")
 
         val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
             val existing = existingWhitelist[contractClassName] ?: emptyList()
@@ -209,15 +213,15 @@ class NetworkBootstrapper {
             contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
         }.toMap()
 
-        println("Final whitelist:")
-        merged.forEach { println(it.outputString()) }
-
+        println("CorDapp whitelist " + (if (existingWhitelist.isEmpty()) "generated" else "updated") + " in ${whitelistFile}")
         return merged
     }
 
     private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
         PrintStream(whitelistFile.toFile().outputStream()).use { out ->
-            mergedWhiteList.forEach { out.println(it.outputString()) }
+            mergedWhiteList.forEach { (contract, attachments) ->
+                out.println("${contract}:${attachments.joinToString(",")}")
+            }
         }
     }
 
@@ -227,11 +231,13 @@ class NetworkBootstrapper {
         SecureHash.SHA256(hs.hash().asBytes())
     }
 
-    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.toFile().readLines()
+    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.readAllLines()
             .map { line -> line.split(":") }
             .map { (contract, attachmentIds) ->
                 contract to (attachmentIds.split(",").map(::parse))
             }.toMap()
+
+    private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
 
     private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
 
@@ -245,8 +251,6 @@ class NetworkBootstrapper {
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
     }
-
-    private fun Map.Entry<ContractClassName, List<AttachmentId>>.outputString() = "$key:${value.joinToString(",")}"
 
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     // KryoServerSerializationScheme is not accessible from nodeapi.
