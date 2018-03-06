@@ -18,28 +18,29 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.subjects.PublishSubject
+import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
-    private val rpcUser = User("user1", "test", permissions = setOf(
-            startFlow<CashIssueFlow>(),
-            startFlow<CashPaymentFlow>(),
-            invokeRpc("vaultQueryBy"),
-            invokeRpc(CordaRPCOps::stateMachinesFeed),
-            invokeRpc("vaultQueryByCriteria"))
+    private val rpcUser = User("user1", "test", permissions = setOf(all())
     )
     private lateinit var node: StartedNode<Node>
     private lateinit var identity: Party
@@ -53,7 +54,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, CordaRPCClientConfiguration(Duration.ofSeconds(10)))
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 
@@ -78,6 +79,55 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     fun `log in with incorrect password`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             login(rpcUser.username, random63BitValue().toString())
+        }
+    }
+
+    // TODO MS: add another test to verify this doesn't kill flows
+    @Test
+    fun `shutdown command stops the node`() {
+
+        val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
+        val latch = CountDownLatch(1)
+        var successful = false
+        CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
+
+            val task = scheduler.scheduleAtFixedRate({
+                try {
+                    println("Checking whether node is still running...")
+                    client.start(rpcUser.username, rpcUser.password).use {
+                        println("... node is still running.")
+                        // nothing here, will try again
+                    }
+                } catch (e: ActiveMQNotConnectedException) {
+                    println("... node is not running.")
+                    nodeIsShut.onCompleted()
+                } catch (e: ActiveMQSecurityException) {
+                    // nothing here - this happens if trying to connect before the node is started
+                } catch (e: Throwable) {
+                    nodeIsShut.onError(e)
+                }
+            }, 1, 1, TimeUnit.SECONDS)
+
+            nodeIsShut.doOnError { error ->
+                error.printStackTrace()
+                successful = false
+            }.doOnCompleted {
+                        successful = (node.internals.started == null)
+                        task.cancel(true)
+                        latch.countDown()
+                    }.subscribe()
+
+            client.start(rpcUser.username, rpcUser.password).use { rpc -> rpc.proxy.shutdown() }
+
+            latch.await()
+            assertThat(successful).isTrue()
+        }
+    }
+
+    private class CloseableExecutor(private val delegate: ScheduledExecutorService): AutoCloseable, ScheduledExecutorService by delegate {
+
+        override fun close() {
+            delegate.shutdown()
         }
     }
 

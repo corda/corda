@@ -365,6 +365,12 @@ interface CordaRPCOps : RPCOps {
      * @see setFlowsDrainingModeEnabled
      */
     fun isFlowsDrainingModeEnabled(): Boolean
+
+    /**
+     * Shuts the node down. Returns immediately.
+     * This does not wait for flows to be completed.
+     */
+    fun shutdown()
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

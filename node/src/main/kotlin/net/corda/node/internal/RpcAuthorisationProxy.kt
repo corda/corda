@@ -167,6 +167,8 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     override fun isFlowsDrainingModeEnabled(): Boolean = guard("isFlowsDrainingModeEnabled", implementation::isFlowsDrainingModeEnabled)
 
+    override fun shutdown() = guard("shutdown", implementation::shutdown)
+
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, action: () -> RESULT) = guard(methodName, emptyList(), action)
 

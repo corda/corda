@@ -85,6 +85,7 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.collections.set
 import kotlin.reflect.KClass
@@ -144,6 +145,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var networkMapUpdater: NetworkMapUpdater
     lateinit var securityManager: RPCSecurityManager
 
+    private val shutdownExecutor = Executors.newSingleThreadExecutor()
+
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit> get() = _nodeReadyFuture
@@ -158,7 +161,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
-        return SecureCordaRPCOps(services, smm, database, flowStarter)
+
+        return SecureCordaRPCOps(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
     }
 
     private fun initCertificate() {
@@ -708,6 +712,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             toRun()
         }
         runOnStop.clear()
+        shutdownExecutor.shutdown()
         _started = null
     }
 

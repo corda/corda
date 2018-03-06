@@ -64,7 +64,8 @@ data class RPCClientConfiguration(
         val deduplicationCacheExpiry: Duration
 ) {
     companion object {
-        val unlimitedReconnectAttempts = -1
+        // TODO MS revert to -1
+        val unlimitedReconnectAttempts = 5
         @JvmStatic
         val default = RPCClientConfiguration(
                 minimumServerProtocolVersion = 0,
