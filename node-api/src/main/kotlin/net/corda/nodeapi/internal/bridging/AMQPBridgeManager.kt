@@ -129,7 +129,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
             val properties = HashMap<Any?, Any?>()
-            for (key in P2PMessagingHeaders.whiteListedHeaders) {
+            for (key in P2PMessagingHeaders.whitelistedHeaders) {
                 if (artemisMessage.containsProperty(key)) {
                     var value = artemisMessage.getObjectProperty(key)
                     if (value is SimpleString) {

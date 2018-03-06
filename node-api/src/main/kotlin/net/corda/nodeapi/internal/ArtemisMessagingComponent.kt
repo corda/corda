@@ -7,7 +7,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders.Type.KEY
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import java.security.PublicKey
@@ -63,14 +62,14 @@ class ArtemisMessagingComponent {
                 const val SESSION_INIT_VALUE = "session_init"
             }
 
-            val whiteListedHeaders: Set<String> = setOf(topicProperty.toString(),
+            val whitelistedHeaders: Set<String> = setOf(topicProperty.toString(),
                     cordaVendorProperty.toString(),
                     releaseVersionProperty.toString(),
                     platformVersionProperty.toString(),
                     senderUUID.toString(),
                     senderSeqNo.toString(),
                     bridgedCertificateSubject.toString(),
-                    KEY,
+                    Type.KEY,
                     Message.HDR_DUPLICATE_DETECTION_ID.toString(),
                     Message.HDR_VALIDATED_USER.toString())
         }
