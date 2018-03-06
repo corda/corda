@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.hsm
 
 import com.google.common.primitives.Booleans
+import com.jcabi.manifests.Manifests
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
@@ -14,7 +15,14 @@ import javax.crypto.Cipher
 
 private val logger = LogManager.getLogger("com.r3.corda.networkmanage.hsm.Main")
 
+private fun logServiceVersion() {
+    if (Manifests.exists("Signing-Service-Version")) {
+        println("Signing Service Version: ${Manifests.read("Signing-Service-Version")}")
+    }
+}
+
 fun main(args: Array<String>) {
+    logServiceVersion()
     parseParameters(*args).run {
         try {
             // Validate

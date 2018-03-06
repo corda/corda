@@ -42,9 +42,9 @@ class ApproveAllCertificateRequestStorage(private val delegate: CertificateSigni
     }
 }
 
-private fun logNetworkManagementVersion() {
-    if (Manifests.exists("Network-Management-Version")) {
-        println("Network Management Version: ${Manifests.read("Network-Management-Version")}")
+private fun logDoormanVersion() {
+    if (Manifests.exists("Doorman-Version")) {
+        println("Doorman Version: ${Manifests.read("Doorman-Version")}")
     }
 }
 
@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
     try {
         parseParameters(*args).run {
             println("Starting in $mode mode")
-            logNetworkManagementVersion()
+            logDoormanVersion()
             when (mode) {
                 Mode.ROOT_KEYGEN -> generateRootKeyPair(
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),

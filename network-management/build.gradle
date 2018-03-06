@@ -112,10 +112,3 @@ dependencies {
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 }
-
-jar {
-    classifier "ignore"
-    manifest {
-        attributes('Network-Management-Version': version)
-    }
-}

@@ -23,6 +23,11 @@ task buildDoormanJAR(type: FatCapsule, dependsOn: ':network-management:jar') {
         project(':network-management').configurations.runtime,
         project(':network-management').jar
     )
+    tasks.withType(Jar) { task ->
+        manifest {
+            attributes('Doorman-Version': version)
+        }
+    }
 }
 
 artifacts {
