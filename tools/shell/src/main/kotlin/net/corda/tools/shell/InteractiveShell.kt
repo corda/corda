@@ -24,15 +24,6 @@ import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
-import net.corda.node.internal.security.AdminSubject
-import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcAuthContext
-import net.corda.node.utilities.ANSIProgressRenderer
-import net.corda.node.utilities.StdoutANSIProgressRenderer
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
@@ -230,7 +221,7 @@ object InteractiveShell {
         throw e.cause ?: e
     }
 
-    fun yamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
+    fun createYamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
