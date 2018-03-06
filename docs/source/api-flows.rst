@@ -484,7 +484,7 @@ Subflows
 Subflows are pieces of reusable flows that may be run by calling ``FlowLogic.subFlow``. There are two broad categories
 of subflows, inlined and initiating ones. The main difference lies in the counter-flow's starting method, initiating
 ones initiate counter-flows automatically, while inlined ones expect some parent counter-flow to run the inlined
-counter-part.
+counterpart.
 
 Inlined subflows
 ^^^^^^^^^^^^^^^^
