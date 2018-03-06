@@ -64,7 +64,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
                 throw SwapIdentitiesException("Signature does not match the expected identity ownership assertion.", ex)
             }
             // Validate then store their identity so that we can prove the key in the transaction is owned by the
-            // counter-party.
+            // counterparty.
             identityService.verifyAndRegisterIdentity(anonymousOtherSide)
             return anonymousOtherSide
         }
