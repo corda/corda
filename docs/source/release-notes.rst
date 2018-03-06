@@ -102,7 +102,7 @@ Significant Changes in 3.0
   controls ensure that all network map data is now signed, thus reducing the power of the network operator to tamper with
   the map.
 
-  There is also support for a group of nodes to operate locally in a private network, which is achieved by copying each
+  There is also support for a group of nodes to operate locally, which is achieved by copying each
   node's signed info file to the other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
 
   .. important:: This replaces the Network Map service that was present in Corda 1.0 and Corda 2.0.
@@ -111,7 +111,7 @@ Significant Changes in 3.0
 
 * **Contract Upgrade**
 
-  Support for the upgrading of Smart Contracts has been significantly extended in this release.
+  Support for the upgrading of contracts has been significantly extended in this release.
 
   Contract states express which attached JARs can define and check them using _constraints_. In older versions the only supported
   constraint was a hash constraint. This provides similar behaviour as public blockchain systems like Bitcoin and Ethereum, in
