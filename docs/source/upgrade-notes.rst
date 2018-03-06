@@ -31,6 +31,21 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 V2.0 to V3.0
 ------------
 
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
+Corda 3.0 uses version 3.0.8 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
+
+.. sourcecode:: shell
+
+    ext.corda_gradle_plugins_version = '3.0.8'
+
+You will also need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = '3.0'
+
 Network Map Service
 ^^^^^^^^^^^^^^^^^^^
 
