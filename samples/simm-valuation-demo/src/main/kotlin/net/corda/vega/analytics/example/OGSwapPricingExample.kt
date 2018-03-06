@@ -1,10 +1,11 @@
-/**
- * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
+/*
+ * R3 Proprietary and Confidential
  *
- * This code has been adapted from the original Java version to demonstrate that 3rd party Java libraries can easily
- * be integrated into Kotlin code.
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
  *
- * Please see distribution for license.
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
 package net.corda.vega.analytics.example
