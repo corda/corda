@@ -1373,12 +1373,10 @@ public static final class net.corda.core.flows.NotarisationRequest$Companion ext
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.flows.NotaryError extends java.lang.Object
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.flows.NotaryError$Conflict extends net.corda.core.flows.NotaryError
-  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SignedData)
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SignedData component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError$Conflict copy(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SignedData)
+  @org.jetbrains.annotations.NotNull public final Map component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError$Conflict copy(net.corda.core.crypto.SecureHash, Map)
   public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SignedData getConflict()
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getTxId()
   public int hashCode()
   @org.jetbrains.annotations.NotNull public String toString()
@@ -1429,13 +1427,13 @@ public static final class net.corda.core.flows.NotaryError$TimeWindowInvalid$Com
   public static final net.corda.core.flows.NotaryError$WrongNotary INSTANCE
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.flows.NotaryException extends net.corda.core.flows.FlowException
-  public <init>(net.corda.core.flows.NotaryError)
+  public <init>(net.corda.core.flows.NotaryError, net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.NotaryError getError()
 ##
 public final class net.corda.core.flows.NotaryFlow extends java.lang.Object
   public <init>()
 ##
-@net.corda.core.flows.InitiatingFlow public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.core.flows.FlowLogic
+@net.corda.core.flows.InitiatingFlow @net.corda.core.DoNotImplement public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.transactions.SignedTransaction)
   public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public List call()
