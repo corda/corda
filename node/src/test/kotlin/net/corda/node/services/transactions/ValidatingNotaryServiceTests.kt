@@ -14,7 +14,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.issueInvalidState
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -80,14 +79,13 @@ class ValidatingNotaryServiceTests {
             aliceNode.services.signInitialTransaction(tx)
         }
 
-        val ex = assertFailsWith(NotaryException::class) {
+        // Expecting SignaturesMissingException instead of NotaryException, since the exception should originate from
+        // the client flow.
+        val ex = assertFailsWith<SignedTransaction.SignaturesMissingException> {
             val future = runClient(stx)
             future.getOrThrow()
         }
-        val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).isInstanceOf(SignedTransaction.SignaturesMissingException::class.java)
-
-        val missingKeys = (notaryError.cause as SignedTransaction.SignaturesMissingException).missing
+        val missingKeys = ex.missing
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 

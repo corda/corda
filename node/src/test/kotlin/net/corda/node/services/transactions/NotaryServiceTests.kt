@@ -3,10 +3,7 @@ package net.corda.node.services.transactions
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.generateSignature
@@ -137,32 +134,45 @@ class NotaryServiceTests {
 
     @Test
     fun `should report conflict when inputs are reused across transactions`() {
-        val inputState = issueState(aliceNode.services, alice)
-        val stx = run {
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
+        val firstState = issueState(aliceNode.services, alice)
+        val secondState = issueState(aliceNode.services, alice)
+
+        fun spendState(state: StateAndRef<*>): SignedTransaction {
+            val stx = run {
+                val tx = TransactionBuilder(notary)
+                        .addInputState(state)
+                        .addCommand(dummyCommand(alice.owningKey))
+                aliceNode.services.signInitialTransaction(tx)
+            }
+            aliceNode.services.startFlow(NotaryFlow.Client(stx))
+            mockNet.runNetwork()
+            return stx
         }
-        val stx2 = run {
+
+        val firstSpendTx = spendState(firstState)
+        val secondSpendTx = spendState(secondState)
+
+        val doubleSpendTx = run {
             val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
                     .addInputState(issueState(aliceNode.services, alice))
+                    .addInputState(firstState)
+                    .addInputState(secondState)
                     .addCommand(dummyCommand(alice.owningKey))
             aliceNode.services.signInitialTransaction(tx)
         }
 
-        val firstSpend = NotaryFlow.Client(stx)
-        val secondSpend = NotaryFlow.Client(stx2) // Double spend the inputState in a second transaction.
-        aliceNode.services.startFlow(firstSpend)
-        val future = aliceNode.services.startFlow(secondSpend)
-
+        val doubleSpend = NotaryFlow.Client(doubleSpendTx) // Double spend the inputState in a second transaction.
+        val future = aliceNode.services.startFlow(doubleSpend)
         mockNet.runNetwork()
 
         val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
         val notaryError = ex.error as NotaryError.Conflict
-        assertEquals(notaryError.txId, stx2.id)
-        notaryError.conflict.verified()
+        assertEquals(notaryError.txId, doubleSpendTx.id)
+        with(notaryError) {
+            assertEquals(consumedStates.size, 2)
+            assertEquals(consumedStates[firstState.ref]!!.hashOfTransactionId, firstSpendTx.id.sha256())
+            assertEquals(consumedStates[secondState.ref]!!.hashOfTransactionId, secondSpendTx.id.sha256())
+        }
     }
 
     @Test
