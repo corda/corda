@@ -14,7 +14,7 @@ fun createCordaRPCClientWithSsl(
 
 fun createCordaRPCClientWithSslAndClassLoader(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
         sslConfiguration: SSLConfiguration? = null,
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
