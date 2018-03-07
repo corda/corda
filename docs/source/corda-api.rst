@@ -31,7 +31,7 @@ Additionally, please note the Corda 3.0 release has been security audited at a r
 * Credentials for RPC users, Database connections, and Shell users should be created using a secure password generator, preferably from the command line of the node host.
 * Nodes should never be deployed using default or development mode credentials.
 * Corda nodes should use one of the supported database platforms, in preference to the default H2 database which is intended for development purposes only. The supported platforms are SQL Server, Azure Server, Oracle, and Postgres.
-* Nodes should be operated within a secure network (such as a DMZ) that restricts inbound and outbound traffic to only the required ports. Node operators should aim to allow access to P2P, RPC and Database connections only.
+* Nodes should be operated within a secure network (such as a DMZ) that restricts inbound and outbound traffic to only the required ports. Specifically, node operators should aim to allow access to peer-to-peer traffic from the internet. RPC and database connections should be internal only.
 * The node webserver module is deprecated and should not be deployed in a production environment because it is not built to the same security standards as the Corda node.
 
 Corda artifacts can be required from Java 9 Jigsaw modules.
