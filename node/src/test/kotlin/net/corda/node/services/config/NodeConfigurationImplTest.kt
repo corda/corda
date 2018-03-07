@@ -13,6 +13,7 @@ package net.corda.node.services.config
 import com.zaxxer.hikari.HikariConfig
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.tools.shell.SSHDConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -86,7 +87,7 @@ class NodeConfigurationImplTest {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private fun  testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
+    private fun testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
         return testConfiguration.copy(dataSourceProperties = dataSourceProperties)
     }
 

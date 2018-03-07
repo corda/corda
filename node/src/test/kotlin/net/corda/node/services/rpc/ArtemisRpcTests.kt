@@ -21,12 +21,12 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.messaging.RPCMessagingClient
-import net.corda.node.testsupport.withCertificates
-import net.corda.node.testsupport.withKeyStores
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.common.internal.withCertificates
+import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.RandomFree
