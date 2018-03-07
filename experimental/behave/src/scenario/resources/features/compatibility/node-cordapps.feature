@@ -26,8 +26,8 @@ Feature: Compatibility - Mixed Corda distributions (OS and Enterprise) running d
     And node A has loaded app <Cordapp-Name>
     And node B has loaded app <Cordapp-Name>
     Then node A can trade with node B
-    And node A vault contains 1 trade
-    And node B vault contains 1 trade
+    And node A vault contains 1 states
+    And node B vault contains 1 states
 #    And node A can run portfolio valuation
 #    And node A portfolio valuation is <Valuation>
 #    And node B portfolio valuation is <Valuation>

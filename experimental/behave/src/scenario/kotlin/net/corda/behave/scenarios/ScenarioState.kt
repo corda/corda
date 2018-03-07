@@ -82,7 +82,7 @@ class ScenarioState {
         network.stop()
     }
 
-    private fun nodeName(name: String) = "Entity$name"
+    private fun nodeName(name: String) = "$name"
 
     private fun newNode(name: String): Node.Builder {
         val builder = Node.new()
