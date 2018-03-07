@@ -11,10 +11,15 @@ class StandaloneShellArgsParserTest {
 
     private val CONFIG_FILE = File(javaClass.classLoader.getResource("config.conf")!!.file)
 
-    private fun String.modifyPathOnWindows() =
-            if (System.getProperty("os.name", "").contains("windows", ignoreCase = true))
-                "C:$this"
-            else this
+    private fun String.modifyPathOnWindows() : String {
+
+        val props = listOf("env.OS","os.name") //env.OS for Team City
+                .map { System.getProperty(it, "") }
+                .filter { it.contains("windows", ignoreCase = true) }
+        return if (props.isNotEmpty())
+            "C:$this"
+        else this
+    }
 
     @Test
     fun args_to_cmd_options() {
