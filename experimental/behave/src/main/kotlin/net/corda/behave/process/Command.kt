@@ -90,6 +90,7 @@ open class Command(
             }
         } catch (e: Exception) {
             log.warn("Error occurred when trying to run process", e)
+            throw e
         }
         process = null
         terminationLatch.countDown()

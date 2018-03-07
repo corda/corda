@@ -4,6 +4,7 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.configuration.toNotaryType
 import net.corda.behave.scenarios.StepsBlock
+import net.corda.core.identity.CordaX500Name
 
 fun configurationSteps(steps: StepsBlock) = steps {
 
@@ -75,4 +76,20 @@ fun configurationSteps(steps: StepsBlock) = steps {
         node(name).withApp(app)
     }
 
+    When<Int,String,String>("^a (\\d+) node (\\w+) RAFT notary cluster of version ([^ ]+)$") { clusterSize, notaryType, version ->
+
+        val clusterName = CordaX500Name("Raft", "Zurich", "CH")
+        val notaryNames = createNotaryNames(clusterSize)
+
+        notaryNames.forEachIndexed { index, notaryName ->
+            node(notaryName.organisation)
+                    .withDistribution(Distribution.fromVersionString(version)
+                            ?: error("Unknown version '$version'"))
+                    .withNotaryType(notaryType.toNotaryType()
+                            ?: error("Unknown notary type '$notaryType'"))
+                    .withRaftConfig(index)
+        }
+    }
 }
+
+private fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }

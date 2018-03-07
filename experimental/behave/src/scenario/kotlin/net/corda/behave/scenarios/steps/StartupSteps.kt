@@ -40,4 +40,15 @@ fun startupSteps(steps: StepsBlock) = steps {
         }
     }
 
+    Then<String,String>("^node (\\w+) can run (\\w+)\$") { name, cordapp ->
+        startup.runCordapp(name, cordapp)
+    }
+
+    Then<String,String,String>("^node (\\w+) can run (\\w+) (\\w+)\$") { name, cordapp, arg1 ->
+        startup.runCordapp(name, cordapp, arg1)
+    }
+
+    Then<String,String,String,String>("^node (\\w+) can run (\\w+) (\\w+) (\\w+)\$") { name, cordapp, arg1, arg2 ->
+        startup.runCordapp(name, cordapp, arg1, arg2)
+    }
 }
