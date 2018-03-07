@@ -95,7 +95,7 @@ The response should be something like
     }
 
 Now, if we ask the same question of Bank C we will see that it's id matches the id for Bank C as a counter
-party to Bank A and Bank A will appear as a counter party
+party to Bank A and Bank A will appear as a counterparty
 
     curl -i -H "Content-Type: application/json" -X GET http://localhost:10011/api/simmvaluationdemo/whoami
 
@@ -103,10 +103,10 @@ party to Bank A and Bank A will appear as a counter party
 
 In what follows, we assume we are Bank A (which is listening on port 10005)
 
-Notice the id field in the output of the ``whoami`` command. We are going to use the id assocatied
-with Bank C, one of our counter parties, to create a trade. The general command for this is:
+Notice the id field in the output of the ``whoami`` command. We are going to use the id associated
+with Bank C, one of our counterparties, to create a trade. The general command for this is:
 
-    curl -i -H "Content-Type: application/json" -X PUT -d <<<JSON representation of the trade>>>  http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+    curl -i -H "Content-Type: application/json" -X PUT -d <<<JSON representation of the trade>>>  http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/trades
 
 where the representation of the trade is
 
@@ -123,14 +123,23 @@ where the representation of the trade is
       "fixedRate"   : "0.1"
     }
 
-Continuing our example, the specific command we would run is
+Continuing our example, the specific command would look as follows
 
     curl -i -H "Content-Type: application/json" \
       -X PUT \
       -d '{"id":"trade1","description" : "desc","tradeDate" : [ 2016, 6, 6 ],  "convention" : "EUR_FIXED_1Y_EURIBOR_3M",  "startDate" : [ 2016, 6, 6 ],  "endDate" : [ 2020, 1, 2 ],  "buySell" : "BUY",  "notional" : "1000",  "fixedRate" : "0.1"}' \
       http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades
 
-With an expected response of
+Note: you should replace the node id 8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM with the node id returned by the
+whoami call above for one of the counterparties. In our worked example we selected "Bank C" and used the generated id for that node.
+Thus, the actual command would be:
+
+    curl -i -H "Content-Type: application/json" \
+      -X PUT \
+      -d '{"id":"trade1","description" : "desc","tradeDate" : [ 2016, 6, 6 ],  "convention" : "EUR_FIXED_1Y_EURIBOR_3M",  "startDate" : [ 2016, 6, 6 ],  "endDate" : [ 2020, 1, 2 ],  "buySell" : "BUY",  "notional" : "1000",  "fixedRate" : "0.1"}' \
+      http://localhost:10005/api/simmvaluationdemo/<<<INSERT BANK C ID HERE>>/trades
+
+Once executed, the expected response is:
 
     HTTP/1.1 202 Accepted
     Date: Thu, 28 Sep 2017 17:19:39 GMT
@@ -141,9 +150,9 @@ With an expected response of
 
 **Verifying trade completion**
 
-With the trade completed and stored by both parties, the complete list of trades with our couterparty can be seen with the following command
+With the trade completed and stored by both parties, the complete list of trades with our counterparty can be seen with the following command
 
-    curl -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+    curl -X GET http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/trades
 
 The command for our example, using Bank A, would thus be
 
@@ -152,7 +161,7 @@ The command for our example, using Bank A, would thus be
 whilst a specific trade can be seen with
 
 
-    curl  -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades/<<<trade id>>>
+    curl  -X GET http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/trades/<<<trade id>>>
 
 If we look at the trade we created above, we assigned it the id "trade1", the complete command in this case would be
 
@@ -163,7 +172,7 @@ If we look at the trade we created above, we assigned it the id "trade1", the co
     curl -i -H "Content-Type: application/json" \
       -X POST \
       -d <<<JSON representation>>>
-      http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations/calculate
+      http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/portfolio/valuations/calculate
 
 Again, the specific command to continue our example would be
 
@@ -174,9 +183,9 @@ Again, the specific command to continue our example would be
 
 **Viewing a valuation**
 
-In the same way we can ask for specific instances of trades with a counter party, we can request details of valuations
+In the same way we can ask for specific instances of trades with a counterparty, we can request details of valuations
 
-    curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations
+    curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/portfolio/valuations
 
 The specific command for out Bank A example is
 
@@ -188,7 +197,7 @@ The specific command for out Bank A example is
 
 This demo does not, however, include real SIMM valuation code but a stub for the OpenGamma set of libraries, so please do not base any financial decisions on results generated by this demo.
 
-This demo was built in partnership with OpenGamma and used their SIMM library. However, due to licensing constraints we cannot distribute their library with this code. For this reason, we have stubbed out the relevant parts and replaced it with a very simplistic template that returns fake (but correctly structured) data. However, if you wish to use a realistic library, then please do get in touch with OpenGamma directly for access to their libraries and we will be happy to demonstrate how to replace the stub code. 
+This demo was built in partnership with OpenGamma and used their SIMM library. However, due to licensing constraints we cannot distribute their library with this code. For this reason, we have stubbed out the relevant parts and replaced it with a very simplistic template that returns fake (but correctly structured) data. However, if you wish to use a realistic library, then please do get in touch with OpenGamma directly for access to their libraries and we will be happy to demonstrate how to replace the stub code.
 
 
 ## Troubleshooting

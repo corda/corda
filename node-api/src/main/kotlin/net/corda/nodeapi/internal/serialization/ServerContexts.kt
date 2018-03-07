@@ -29,20 +29,16 @@ val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(kryoMagic,
         true,
         SerializationContext.UseCase.RPCServer,
         null)
-val KRYO_STORAGE_CONTEXT = SerializationContextImpl(kryoMagic,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage,
-        null)
+
 val AMQP_STORAGE_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
         true,
         SerializationContext.UseCase.Storage,
-        null)
+        null,
+        AlwaysAcceptEncodingWhitelist)
+
 val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),

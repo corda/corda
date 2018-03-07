@@ -19,12 +19,8 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
@@ -40,10 +36,10 @@ import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
-import net.corda.node.services.messaging.P2PMessagingHeaders
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.newNamedSingleThreadExecutor
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction

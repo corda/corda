@@ -17,6 +17,8 @@
       <module name="bootstrapper_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
       <module name="buildSrc_test" target="1.8" />
+      <module name="canonicalizer_main" target="1.8" />
+      <module name="canonicalizer_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
@@ -122,6 +124,9 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="shell_integrationTest" target="1.8" />
+      <module name="shell_main" target="1.8" />
+      <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />

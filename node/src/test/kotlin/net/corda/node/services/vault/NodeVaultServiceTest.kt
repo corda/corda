@@ -29,6 +29,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
@@ -141,7 +142,7 @@ class NodeVaultServiceTest {
                 override val vaultService: NodeVaultService get() = originalVault
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
+                        (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
                         vaultService.notify(statesToRecord, stx.tx)
                     }
                 }
@@ -553,7 +554,7 @@ class NodeVaultServiceTest {
 
         // ensure transaction contract state is persisted in DBStorage
         val signedIssuedTx = services.signInitialTransaction(issueBuilder)
-        services.validatedTransactions.addTransaction(signedIssuedTx)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedIssuedTx)
 
         database.transaction { vaultService.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
@@ -569,7 +570,7 @@ class NodeVaultServiceTest {
 
         // ensure transaction contract state is persisted in DBStorage
         val signedMoveTx = services.signInitialTransaction(issueBuilder)
-        services.validatedTransactions.addTransaction(signedMoveTx)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedMoveTx)
 
         val observedUpdates = vaultSubscriber.onNextEvents
         assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedMoveUpdate))
@@ -599,7 +600,7 @@ class NodeVaultServiceTest {
         }
         val issueStx = bocServices.signInitialTransaction(issueTxBuilder)
         // We need to record the issue transaction so inputs can be resolved for the notary change transaction
-        services.validatedTransactions.addTransaction(issueStx)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(issueStx)
 
         val initialCashState = StateAndRef(issueStx.tx.outputs.single(), StateRef(issueStx.id, 0))
 
@@ -614,7 +615,7 @@ class NodeVaultServiceTest {
         }
 
         // ensure transaction contract state is persisted in DBStorage
-        services.validatedTransactions.addTransaction(SignedTransaction(changeNotaryTx, listOf(NullKeys.NULL_SIGNATURE)))
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(SignedTransaction(changeNotaryTx, listOf(NullKeys.NULL_SIGNATURE)))
 
         // Move cash
         val moveTxBuilder = database.transaction {
@@ -626,7 +627,7 @@ class NodeVaultServiceTest {
 
         // ensure transaction contract state is persisted in DBStorage
         val signedMoveTx = services.signInitialTransaction(moveTxBuilder)
-        services.validatedTransactions.addTransaction(signedMoveTx)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedMoveTx)
 
         database.transaction {
             service.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
@@ -660,7 +661,7 @@ class NodeVaultServiceTest {
 
         // ensure transaction contract state is persisted in DBStorage
         val signedTxb = services.signInitialTransaction(txb)
-        services.validatedTransactions.addTransaction(signedTxb)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedTxb)
 
         // Check that it was ignored as irrelevant.
         assertEquals(currentCashStates, countCash())

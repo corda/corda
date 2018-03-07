@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
@@ -41,7 +42,7 @@ class ProgressTracker(vararg steps: Step) {
         }
 
         data class Structural(val tracker: ProgressTracker, val parent: Step) : Change(tracker) {
-            override fun toString() = "Structural step change in child of ${parent.label}"
+            override fun toString() = STRUCTURAL_STEP_PREFIX + parent.label
         }
     }
 
@@ -181,6 +182,8 @@ class ProgressTracker(vararg steps: Step) {
     fun endWithError(error: Throwable) {
         check(!hasEnded) { "Progress tracker has already ended" }
         _changes.onError(error)
+        _stepsTreeIndexChanges.onError(error)
+        _stepsTreeChanges.onError(error)
     }
 
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
