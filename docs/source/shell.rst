@@ -9,7 +9,7 @@ Shell
 
 .. contents::
 
-The Corda shell is an embedded command line that allows an administrator to control and monitor a node. It is based on
+The Corda shell is an embedded or standalone command line that allows an administrator to control and monitor a node. It is based on
 the `CRaSH`_ shell and supports many of the same features. These features include:
 
 * Invoking any of the node's RPC methods
@@ -19,11 +19,22 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 * Viewing JMX metrics and monitoring exports
 * UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
 
+Permissions
+-----------
+
+When accessing the shell (embedded, standalone, via SSH) RPC permissions are required. This is because the shell actually communicates
+with the node using RPC calls.
+
+* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
+* Starting flows requires ``InvokeRpc.startTrackedFlowDynamic``, ``InvokeRpc.registeredFlows`` and ``InvokeRpc.wellKnownPartyFromX500Name``, as well as a
+  permission for the flow being started
+
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window. It may be disabled by passing the
-``--no-local-shell`` flag when running the node.
+In development mode, the shell will display in the node's terminal window.
+The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
+It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 The shell via SSH
 -----------------
@@ -42,8 +53,8 @@ By default, the SSH server is *disabled*. To enable it, a port must be configure
 
 Authentication
 **************
-Users log in to shell via SSH using the same credentials as for RPC. This is because the shell actually communicates
-with the node using RPC calls. No RPC permissions are required to allow the connection and log in.
+Users log in to shell via SSH using the same credentials as for RPC.
+No RPC permissions are required to allow the connection and log in.
 
 The host key is loaded from the ``<node root directory>/sshkey/hostkey.pem`` file. If this file does not exist, it is
 generated automatically. In development mode, the seed may be specified to give the same results on the same computer
@@ -69,7 +80,7 @@ Where:
 
 The RPC password will be requested after a connection is established.
 
-:note: In development mode, restarting a node frequently may cause the host key to be regenerated. SSH usually saves
+.. note:: In development mode, restarting a node frequently may cause the host key to be regenerated. SSH usually saves
     trusted hosts and will refuse to connect in case of a change. This check can be disabled using the
     ``-o StrictHostKeyChecking=no`` flag. This option should never be used in production environment!
 
@@ -78,14 +89,99 @@ Windows
 
 Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
-Permissions
-***********
+The standalone shell
+------------------------------
+The standalone shell is a standalone application interacting with a Corda node via RPC calls.
+RPC node permissions are necessary for authentication and authorisation.
+Certain operations, such as starting flows, require access to CordApps jars.
 
-When accessing the shell via SSH, some additional RPC permissions are required:
+Starting the standalone shell
+*************************
 
-* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
-* Starting flows requires ``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows``, as well as a
-  permission for the flow being started
+Run the following command from the terminal:
+
+Linux and MacOS
+^^^^^^^^^^^^^^^
+
+.. code:: bash
+
+    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
+             --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
+
+Windows
+^^^^^^^
+
+.. code:: bash
+
+    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
+             --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
+
+Where:
+
+* ``config-file`` is the path to config file, used instead of providing the rest of command line options
+* ``cordpass-directory`` is the directory containing Cordapps jars, Cordapps are require when starting flows
+* ``commands-directory`` is the directory with additional CrAsH shell commands
+* ``host`` is the Corda node's host
+* ``port`` is the Corda node's port, specified in the ``node.conf`` file
+* ``user`` is the RPC username, if not provided it will be requested at startup
+* ``password`` is the RPC user password, if not provided it will be requested at startup
+* ``sshd-port`` instructs the standalone shell app to start SSH server on the given port, optional
+* ``sshd-hostkey-directory`` is the directory containing hostkey.pem file for SSH server
+* ``keystore-password`` the password to unlock the KeyStore file containing the standalone shell certificate and private key, optional, unencrypted RPC connection without SSL will be used if the option is not provided
+* ``keystore-file`` is the path to the KeyStore file
+* ``truststore-password`` the password to unlock the TrustStore file containing the Corda node certificate, optional, unencrypted RPC connection without SSL will be used if the option is not provided
+* ``truststore-file`` is the path to the TrustStore file
+* ``help`` prints Shell help
+
+The format of ``config-file``:
+
+.. code:: bash
+
+    node {
+        addresses {
+            rpc {
+                host : "localhost"
+                port : 10006
+            }
+        }
+    }
+    shell {
+	    workDir : /path/to/dir
+    }
+    extensions {
+        cordapps {
+            path : /path/to/cordapps/dir
+        }
+        sshd {
+            enabled : "false"
+            port : 2223
+        }
+    }
+    ssl {
+        keystore {
+            path: "/path/to/keystore"
+            type: "JKS"
+            password: password
+        }
+        trustore {
+            path: "/path/to/trusttore"
+            type: "JKS"
+            password: password
+        }
+    }
+    user : demo
+    password : demo
+
+
+Standalone Shell via SSH
+------------------------------------------
+The standalone shell can embed an SSH server which redirects interactions via RPC calls to the Corda node.
+To run SSH server use ``--sshd-port`` option when starting standalone shell or ``extensions.sshd`` entry in the configuration file.
+For connection to SSH refer to `Connecting to the shell`_.
+Certain operations (like starting Flows) will require Shell's ``--cordpass-directory`` to be configured correctly (see `Starting the standalone shell`_).
+
 
 Interacting with the node via the shell
 ---------------------------------------

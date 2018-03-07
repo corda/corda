@@ -315,7 +315,7 @@ of the page, and enter the IOU details into the web-form. The IOU must have a po
 
 .. sourcecode:: none
 
-  Counter-party: Select from list
+  Counterparty: Select from list
   Value (Int):   5
 
 And click submit. Upon clicking submit, the modal dialogue will close, and the nodes will agree the IOU.
@@ -375,7 +375,7 @@ This will print out the following progress steps:
     ✅   Verifying contract constraints.
     ✅   Signing transaction with our private key.
     ✅   Gathering the counterparty's signature.
-        ✅   Collecting signatures from counter-parties.
+        ✅   Collecting signatures from counterparties.
         ✅   Verifying collected signatures.
     ✅   Obtaining notary signature and recording transaction.
         ✅   Requesting signature by notary service

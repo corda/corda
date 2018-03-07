@@ -78,16 +78,16 @@ public/private keypairs and certificates. The keypairs and certificates should o
 Certificate role extension
 --------------------------
 Corda certificates have a custom X.509 v3 extension that specifies the role the certificate relates to. This extension
-has the OID 1.3.6.1.4.1.50530.1.1 and is non-critical, so implementations outside of Corda nodes can safely ignore it.
+has the OID ``1.3.6.1.4.1.50530.1.1`` and is non-critical, so implementations outside of Corda nodes can safely ignore it.
 The extension contains a single ASN.1 integer identifying the identity type the certificate is for:
 
 1. Doorman
 2. Network map
-3. Service identity (such as a notary or oracle)
-3. Node certificate authority (from which the TLS and well-known identity certificates are issued)
-4. Transport layer security
-5. Well-known legal identity
-6. Confidential legal identity
+3. Service identity (currently only used as the shared identity in distributed notaries)
+4. Node certificate authority (from which the TLS and well-known identity certificates are issued)
+5. Transport layer security
+6. Well-known legal identity
+7. Confidential legal identity
 
 In a typical installation, node administrators needn't be aware of these. However, when node certificates are managed
 by external tools (such as an existing PKI solution deployed within an organisation), it is important to understand

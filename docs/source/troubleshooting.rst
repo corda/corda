@@ -77,6 +77,25 @@ If IDEA refuses to open a project because an SDK has not been selected, you may 
 
 If you are having trouble selecting the correct JDK, the JetBrains website provides the `following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
 
+IDEA complains about JVM target
+*******************************
+
+If you receive a ``Cannot inline bytecode build with JVM target 1.8 into bytecode...``, please ensure JDK is not
+outdated and check that
+
+.. parsed-literal::
+
+    Settings/Build, Execution, Deployment/Compiler/Kotlin Compiler/Target JVM Version=1.8
+
+..
+
+IDEA red-lining - Unresolved reference: function
+************************************************
+
+If you are running under an outdated SDK, IntelliJ will not complain about lack of an SDK, but you might notice
+some functions are red-lined and compilation fails. In this case you should update you SDK, see JetBrains website
+`following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
+
 IDEA fails to compile Corda because it refuses to find some dependencies
 ************************************************************************
 
@@ -100,7 +119,7 @@ or checking the
 
 .. parsed-literal::
 
-    Settings/Build,Execution,Deployment/Build Tools/Gradle/Runner/Delegate IDE build-run actions to gradle
+    Settings/Build, Execution, Deployment/Build Tools/Gradle/Runner/Delegate IDE build-run actions to gradle
 
 ..
 

@@ -30,6 +30,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
@@ -97,14 +98,6 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 ) : SingletonSerializeAsToken(), MessagingService, AutoCloseable {
     companion object {
         private val log = contextLogger()
-        // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
-        // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
-        // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
-        // confusion.
-        private val topicProperty = SimpleString("platform-topic")
-        private val cordaVendorProperty = SimpleString("corda-vendor")
-        private val releaseVersionProperty = SimpleString("release-version")
-        private val platformVersionProperty = SimpleString("platform-version")
         private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
         private const val messageMaxRetryCount: Int = 3
 
@@ -392,9 +385,9 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
-            val topic = message.required(topicProperty) { getStringProperty(it) }
+            val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
-            val platformVersion = message.required(platformVersionProperty) { getIntProperty(it) }
+            val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { message.getStringProperty(it) }
             log.info("Received message from: ${message.address} user: $user topic: $topic uuid: $uuid")
@@ -523,13 +516,13 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             state.locked {
                 val mqAddress = getMQAddress(target)
                 val artemisMessage = producerSession!!.createMessage(true).apply {
-                    putStringProperty(cordaVendorProperty, cordaVendor)
-                    putStringProperty(releaseVersionProperty, releaseVersion)
-                    putIntProperty(platformVersionProperty, versionInfo.platformVersion)
-                    putStringProperty(topicProperty, SimpleString(message.topic))
+                    putStringProperty(P2PMessagingHeaders.cordaVendorProperty, cordaVendor)
+                    putStringProperty(P2PMessagingHeaders.releaseVersionProperty, releaseVersion)
+                    putIntProperty(P2PMessagingHeaders.platformVersionProperty, versionInfo.platformVersion)
+                    putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString(message.topic))
                     writeBodyBufferBytes(message.data.bytes)
                     // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
+                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId))
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
                     if (amqDelayMillis > 0 && message.topic == StateMachineManagerImpl.sessionTopic) {

@@ -785,8 +785,8 @@ public static final class net.corda.core.crypto.CompositeSignaturesWithKeys$Comp
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.CompositeSignaturesWithKeys getEMPTY()
 ##
 public final class net.corda.core.crypto.CordaObjectIdentifier extends java.lang.Object
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.ASN1ObjectIdentifier COMPOSITE_KEY
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.ASN1ObjectIdentifier COMPOSITE_SIGNATURE
+  @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.ASN1ObjectIdentifier COMPOSITE_KEY
+  @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.ASN1ObjectIdentifier COMPOSITE_SIGNATURE
   public static final net.corda.core.crypto.CordaObjectIdentifier INSTANCE
 ##
 public final class net.corda.core.crypto.CordaSecurityProvider extends java.security.Provider
@@ -832,15 +832,15 @@ public final class net.corda.core.crypto.Crypto extends java.lang.Object
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final java.security.PrivateKey toSupportedPrivateKey(java.security.PrivateKey)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final java.security.PublicKey toSupportedPublicKey(java.security.PublicKey)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final java.security.PublicKey toSupportedPublicKey(org.bouncycastle.asn1.x509.SubjectPublicKeyInfo)
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme COMPOSITE_KEY
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme DEFAULT_SIGNATURE_SCHEME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme ECDSA_SECP256K1_SHA256
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme ECDSA_SECP256R1_SHA256
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme EDDSA_ED25519_SHA512
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme COMPOSITE_KEY
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme DEFAULT_SIGNATURE_SCHEME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme ECDSA_SECP256K1_SHA256
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme ECDSA_SECP256R1_SHA256
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme EDDSA_ED25519_SHA512
   public static final net.corda.core.crypto.Crypto INSTANCE
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme RSA_SHA256
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.DLSequence SHA512_256
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme SPHINCS256_SHA256
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme RSA_SHA256
+  @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.DLSequence SHA512_256
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.crypto.SignatureScheme SPHINCS256_SHA256
 ##
 public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final Set byKeys(Iterable)
@@ -1429,7 +1429,7 @@ public static final class net.corda.core.flows.NotarisationRequest$Companion ext
   public int hashCode()
   @org.jetbrains.annotations.NotNull public String toString()
   public static final net.corda.core.flows.NotaryError$TimeWindowInvalid$Companion Companion
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.flows.NotaryError$TimeWindowInvalid INSTANCE
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.flows.NotaryError$TimeWindowInvalid INSTANCE
 ##
 public static final class net.corda.core.flows.NotaryError$TimeWindowInvalid$Companion extends java.lang.Object
 ##
@@ -4333,7 +4333,7 @@ public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java
   public int hashCode()
   public String toString()
   public static final net.corda.client.rpc.CordaRPCClientConfiguration$Companion Companion
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.client.rpc.CordaRPCClientConfiguration DEFAULT
+  @org.jetbrains.annotations.NotNull public static final net.corda.client.rpc.CordaRPCClientConfiguration DEFAULT
 ##
 public static final class net.corda.client.rpc.CordaRPCClientConfiguration$Companion extends java.lang.Object
 ##
@@ -4552,14 +4552,14 @@ public static final class net.corda.testing.core.SerializationEnvironmentRule$ap
 ##
 public final class net.corda.testing.core.TestConstants extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final net.corda.core.contracts.Command dummyCommand(java.security.PublicKey...)
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name ALICE_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name BOB_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name BOC_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name CHARLIE_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_BANK_A_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_BANK_B_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_BANK_C_NAME
-  @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_NOTARY_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name ALICE_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name BOB_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name BOC_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name CHARLIE_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_BANK_A_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_BANK_B_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_BANK_C_NAME
+  @org.jetbrains.annotations.NotNull public static final net.corda.core.identity.CordaX500Name DUMMY_NOTARY_NAME
   public static final int MAX_MESSAGE_SIZE = 10485760
 ##
 public final class net.corda.testing.core.TestIdentity extends java.lang.Object
