@@ -76,7 +76,7 @@ Significant Changes in 3.0
     as early as possible to allow the community to develop with greater confidence.
 
    .. important:: Whilst Corda has stabilised its wire protocol and infrastructure for peer to peer communication and persistent storage
-      of states; the RPC framework will, for this release, not be covered by this guarantee. The moving of the client and
+      of states, the RPC framework will, for this release, not be covered by this guarantee. The moving of the client and
       server contexts away from Kryo to our stable AMQP implementation is planned for the next release of Corda
 
   * **Artemis and Bridges**
@@ -127,18 +127,29 @@ Significant Changes in 3.0
   operator of the compatibility zone rather than being hard-coded. This allows for simple upgrades at the cost of the introduction
   of an element of centralisation.
 
+  Zone constraints provide a less restrictive but more centralised control mechanism. This can be useful when you want
+  the ability to upgrade an app and you don’t mind the upgrade taking effect “just in time” when a transaction happens
+  to be required for other business reasons. These allow you to specify that the network parameters of a compatibility zone
+  (see :doc:`network-map`) is expected to contain a map of class name to hashes of JARs that are allowed to provide that
+  class. The process for upgrading an app then involves asking the zone operator to add the hash of your new JAR to the
+  parameters file, and trigger the network parameters upgrade process. This involves each node operator running a shell
+  command to accept the new parameters file and then restarting the node. Node owners who do not restart their node in
+  time effectively stop being a part of the network.
+
   .. note:: In prior versions of Corda, states included the hash of their defining application JAR (in the Hash Constraint).
     In this release, transactions have the JAR containing the contract and states attached to them, so the code will be copied
     over the network to the recipient if that peer lacks a copy of the app.
-    However, for security reasons, in 3.0, nodes still use the deployed cordapp (existing on the classpath), to verify the contract.
-    Obviously the contract constraint is checked before running the verification code.
-        - For the HashConstraint: the hash of the deployed CorDapp jar must be the same as the hash found in the Transaction.
-        - For the WhitelistConstraint: the Transaction must come with a whitelisted attachment for each Contract State.
-    Corda 3.0 lays the groundwork for the next releases, when contract verification will be done against the Attached contract jar.
-    And, future integration of the deterministic JVM sandbox will allow executing attachments downloaded from any peer on the network
-    and allow for true smart contract code migration across the network.
-    Until the JVM sandbox is shipped, contract jars will have to be approved on the node. (So a node will not execute code downloaded
-    from a peer, unless it was specifically approved)
+
+    Prior to running the verification code of a contract the JAR within which the verification code of the contract resides
+    is tested for compliance to the contract constraints:
+        - For the ``HashConstraint``: the hash of the deployed CorDapp jar must be the same as the hash found in the Transaction.
+        - For the ``ZoneConstraint``: the Transaction must come with a whitelisted attachment for each Contract State.
+    If this step fails the normal transaction verification failure path is followed.
+
+    Corda 3.0 lays the groundwork for future releases, when contract verification will be done against the attached contract JARs
+    rather than requiring a locally deployed CorDapp of the exact version specified by the transaction. The future vision for this
+    feature will entail the dynamic downloading of the appropriate version of the smart contract and it's execution within a
+    sandboxed environment.
 
     .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
       unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
@@ -157,7 +168,7 @@ Significant Changes in 3.0
 
   A great deal of work has been carried out to refine the APIs provided to test CorDapps, making them simpler, more intuitive,
   and generally easier to use. In addition, these APIs have been added to the *locked* list of the APIs we guarantee to be stable
-  over time. This should greatly increase confidence when upgrading between versions, as your testing environments will work
+  over time. This should greatly increase productivity when upgrading between versions, as your testing environments will work
   without alteration.
 
   Please see the :doc:`upgrade-notes` for more information on transitioning older tests to the new framework.
