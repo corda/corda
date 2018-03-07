@@ -28,9 +28,9 @@ Corda 3.0 provides a stable wire protocol and support for database upgrades. The
 
 Additionally, please note the Corda 3.0 release has been security audited at a rudimentary level so to ensure node security is maintained the following best practices should be followed:
 
-* Credentials for RPC users, Database connections, and Shell users should be created using a secure password generator, preferably from the command line of the node host.
+* Credentials for RPC users, database connections, and shell users should be created using a secure password generator, preferably from the command line of the node host.
 * Nodes should never be deployed using default or development mode credentials.
-* Corda nodes should use one of the supported database platforms, in preference to the default H2 database which is intended for development purposes only. The supported platforms are SQL Server, Azure Server, Oracle, and Postgres.
+* Corda nodes should use one of the supported database platforms, in preference to the default H2 database which is intended for development purposes only. Postgres is a supported platform.
 * Nodes should be operated within a secure network (such as a DMZ) that restricts inbound and outbound traffic to only the required ports. Specifically, node operators should aim to allow access to peer-to-peer traffic from the internet. RPC and database connections should be internal only.
 * The node webserver module is deprecated and should not be deployed in a production environment because it is not built to the same security standards as the Corda node.
 
