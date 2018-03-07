@@ -295,6 +295,10 @@ class Node(
             return this
         }
 
+        fun withRaftConfig(clusterIndex: Int) {
+            // TODO
+        }
+
         fun withIssuableCurrencies(vararg currencies: String): Builder {
             issuableCurrencies.addAll(currencies)
             return this
@@ -346,13 +350,17 @@ class Node(
                             databaseType,
                             location = location,
                             country = country,
+                            cordapps = CordappConfiguration(
+                                apps = apps,
+                                includeFinance = includeFinance
+                            ),
                             configElements = *arrayOf(
-                                    NotaryConfiguration(notaryType),
-                                    CurrencyConfiguration(issuableCurrencies),
-                                    CordappConfiguration(
-                                            apps = *apps.toTypedArray(),
-                                            includeFinance = includeFinance
-                                    )
+                                NotaryConfiguration(notaryType),
+                                CurrencyConfiguration(issuableCurrencies),
+                                CordappConfiguration(
+                                        apps = apps,
+                                        includeFinance = includeFinance
+                                )
                             )
                     ),
                     directory,
@@ -364,7 +372,6 @@ class Node(
         private fun <T> error(message: String): T {
             throw IllegalArgumentException(message)
         }
-
     }
 
     companion object {

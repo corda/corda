@@ -42,9 +42,9 @@ data class NetworkInterface(
 
         private fun getPort(suggestedPortNumber: Int): Int {
             var portNumber = suggestedPortNumber
-//            while (isPortInUse(portNumber)) {
-//                portNumber = startOfBackupRange.getAndIncrement()
-//            }
+            while (isPortInUse(portNumber)) {
+                portNumber = startOfBackupRange.getAndIncrement()
+            }
             if (portNumber >= 65535) {
                 throw Exception("No free port found (suggested $suggestedPortNumber)")
             }
