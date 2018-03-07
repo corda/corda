@@ -26,7 +26,7 @@ Internal APIs and stability guarantees
 
 Corda 3.0 provides a stable wire protocol and support for database upgrades. Therefore, you should expect to be able to migrate persisted data from 3.0 to future versions. However, it will be necessary to recompile applications against future versions of the API until we begin offering ABI stability as well.
 
-Additionally, please note whilst Corda 3.0 release has been security audited at a rudimentary level, to esnure node security is maintained the following best practices should be followed:
+Additionally, please note the Corda 3.0 release has been security audited at a rudimentary level so to ensure node security is maintained the following best practices should be followed:
 
 * Credentials for RPC users, Database connections, and Shell users should be created using a secure password generator, preferably from the command line of the node host.
 * Nodes should never be deployed using default or development mode credentials.
