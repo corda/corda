@@ -2,8 +2,10 @@ package net.corda.behave.scenarios
 
 import cucumber.api.java8.En
 import net.corda.behave.scenarios.helpers.*
+import net.corda.behave.scenarios.helpers.cordapps.Options
 import net.corda.behave.scenarios.helpers.cordapps.SIMMValuation
 import net.corda.behave.scenarios.steps.*
+import net.corda.behave.scenarios.steps.cordapp.optionsSteps
 import net.corda.behave.scenarios.steps.cordapp.simmValuationSteps
 import net.corda.core.messaging.CordaRPCOps
 import org.slf4j.Logger
@@ -23,7 +25,8 @@ class StepsContainer(val state: ScenarioState) : En {
             ::sshSteps,
             ::startupSteps,
             ::vaultSteps,
-            ::simmValuationSteps
+            ::simmValuationSteps,
+            ::optionsSteps
     )
 
     init {
@@ -57,6 +60,8 @@ class StepsContainer(val state: ScenarioState) : En {
     val cash = Cash(state)
 
     val simmValuation = SIMMValuation(state)
+
+    val options = Options(state)
 
     private fun steps(action: (StepsContainer.() -> Unit)) {
         action(this)

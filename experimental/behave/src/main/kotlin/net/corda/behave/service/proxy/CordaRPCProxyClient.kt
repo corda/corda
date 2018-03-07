@@ -127,7 +127,10 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         val argList = listOf(flowName, *args)
 
         println("Corda RPC Proxy client calling: $flowName with values: $argList")
-        val response = doPost<AbstractCashFlow.Result>(targetHostAndPort, "start-flow", argList.serialize().bytes)
+        // TODO: Fix me to return an arbitrary result type <T>
+//        val response = doPost<AbstractCashFlow.Result>(targetHostAndPort, "start-flow", argList.serialize().bytes)
+//        val response = doPost<ContractState>(targetHostAndPort, "start-flow", argList.serialize().bytes)
+        val response = doPost<SignedTransaction>(targetHostAndPort, "start-flow", argList.serialize().bytes)
         val result = doneFuture(response)
         return FlowHandleImpl(StateMachineRunId.createRandom(), result) as FlowHandle<T>
     }

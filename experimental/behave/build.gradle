@@ -7,6 +7,7 @@ buildscript {
     ext.kubernetes_client_version = '0.2'
 
     repositories {
+        mavenLocal()
         maven {
             jcenter()
             url 'https://jitpack.io'
@@ -79,7 +80,10 @@ dependencies {
 
     testCompile project(':test-utils')
 
+    // CorDapps (TODO: move to separate repo)
     compile project(':samples:simm-valuation-demo')
+    compile files('/Users/josecoll/.m2/repository//net/corda/option/cordapp-option/0.1/cordapp-option-0.1.jar')
+//    compileOnly "net.corda.option:cordapp-option:0.1"
 
     // Unit Tests
 
