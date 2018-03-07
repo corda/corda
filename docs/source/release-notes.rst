@@ -153,8 +153,9 @@ Significant Changes in 3.0
 
     .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
       unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
-      contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. Only
-      the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "sharded" into a fat JAR,
+      contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. For
+      example, our `Cordapp template <https://github.com/corda/cordapp-template-kotlin/tree/release-V3>`_ is structured like that.
+      Only the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "sharded" into a fat JAR,
       as JAR dependencies are not supported in Corda 3.0.
 
   Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
