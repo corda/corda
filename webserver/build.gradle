@@ -5,13 +5,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node web server'
 
-buildscript {
-    def properties = new Properties()
-    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
-
-    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
-}
-
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
