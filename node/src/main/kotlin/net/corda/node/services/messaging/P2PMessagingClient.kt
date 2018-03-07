@@ -27,11 +27,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
 import net.corda.node.internal.LifecycleSupport
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multiplex
@@ -43,13 +39,11 @@ import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -59,12 +53,7 @@ import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientConsumer
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.api.core.client.ServerLocator
+import org.apache.activemq.artemis.api.core.client.*
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.Subscription
@@ -124,17 +113,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, AutoCloseable {
     companion object {
         private val log = contextLogger()
-        // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
-        // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
-        // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
-        // confusion.
-        val topicProperty = SimpleString("platform-topic")
-        val cordaVendorProperty = SimpleString("corda-vendor")
-        val releaseVersionProperty = SimpleString("release-version")
-        val platformVersionProperty = SimpleString("platform-version")
-        val senderUUID = SimpleString("sender-uuid")
-        val senderSeqNo = SimpleString("send-seq-no")
-
+        private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
         private const val messageMaxRetryCount: Int = 3
 
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
@@ -403,13 +382,13 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
-            val topic = message.required(topicProperty) { getStringProperty(it) }
+            val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
-            val platformVersion = message.required(platformVersionProperty) { getIntProperty(it) }
+            val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }
-            val receivedSenderUUID = message.getStringProperty(senderUUID)
-            val receivedSenderSeqNo = if (message.containsProperty(senderSeqNo)) message.getLongProperty(senderSeqNo) else null
+            val receivedSenderUUID = message.getStringProperty(P2PMessagingHeaders.senderUUID)
+            val receivedSenderSeqNo = if (message.containsProperty(P2PMessagingHeaders.senderSeqNo)) message.getLongProperty(P2PMessagingHeaders.senderSeqNo) else null
             log.trace { "Received message from: ${message.address} user: $user topic: $topic id: $uniqueMessageId senderUUID: $receivedSenderUUID senderSeqNo: $receivedSenderSeqNo" }
 
             return ArtemisReceivedMessage(topic, CordaX500Name.parse(user), platformVersion, uniqueMessageId, receivedSenderUUID, receivedSenderSeqNo, message)

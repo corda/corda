@@ -176,10 +176,3 @@ interface AcknowledgeHandle {
 
 typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, AcknowledgeHandle) -> Unit
 
-object P2PMessagingHeaders {
-
-    object Type {
-        const val KEY = "corda_p2p_message_type"
-        const val SESSION_INIT_VALUE = "session_init"
-    }
-}

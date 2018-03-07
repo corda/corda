@@ -15,14 +15,12 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.*
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
@@ -73,7 +71,7 @@ class AMQPBridgeTest {
         val artemis = artemisClient.started!!
         for (i in 0 until 3) {
             val artemisMessage = artemis.session.createMessage(true).apply {
-                putIntProperty("CountProp", i)
+                putIntProperty(P2PMessagingHeaders.senderUUID, i)
                 writeBodyBufferBytes("Test$i".toByteArray())
                 // Use the magic deduplication property built into Artemis as our message identity too
                 putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
@@ -97,7 +95,7 @@ class AMQPBridgeTest {
         }
 
         val received1 = receive.next()
-        val messageID1 = received1.applicationProperties["CountProp"] as Int
+        val messageID1 = received1.applicationProperties[P2PMessagingHeaders.senderUUID.toString()] as Int
         assertArrayEquals("Test$messageID1".toByteArray(), received1.payload)
         assertEquals(0, messageID1)
         dedupeSet += received1.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
@@ -106,7 +104,7 @@ class AMQPBridgeTest {
         atNodeSequence += messageID1
 
         val received2 = receive.next()
-        val messageID2 = received2.applicationProperties["CountProp"] as Int
+        val messageID2 = received2.applicationProperties[P2PMessagingHeaders.senderUUID.toString()] as Int
         assertArrayEquals("Test$messageID2".toByteArray(), received2.payload)
         assertEquals(1, messageID2, formatMessage("1", messageID2, receivedSequence))
         received2.complete(false) // Reject message and don't add to dedupe
@@ -115,7 +113,7 @@ class AMQPBridgeTest {
         // drop things until we get back to the replay
         while (true) {
             val received3 = receive.next()
-            val messageID3 = received3.applicationProperties["CountProp"] as Int
+            val messageID3 = received3.applicationProperties[P2PMessagingHeaders.senderUUID.toString()] as Int
             assertArrayEquals("Test$messageID3".toByteArray(), received3.payload)
             receivedSequence += messageID3
             if (messageID3 != 1) { // keep rejecting any batched items following rejection
@@ -134,7 +132,7 @@ class AMQPBridgeTest {
         // start receiving again, but discarding duplicates
         while (true) {
             val received4 = receive.next()
-            val messageID4 = received4.applicationProperties["CountProp"] as Int
+            val messageID4 = received4.applicationProperties[P2PMessagingHeaders.senderUUID.toString()] as Int
             assertArrayEquals("Test$messageID4".toByteArray(), received4.payload)
             receivedSequence += messageID4
             val messageId = received4.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
@@ -150,7 +148,7 @@ class AMQPBridgeTest {
 
         // Send a fresh item and check receive
         val artemisMessage = artemis.session.createMessage(true).apply {
-            putIntProperty("CountProp", 3)
+            putIntProperty(P2PMessagingHeaders.senderUUID, 3)
             writeBodyBufferBytes("Test3".toByteArray())
             // Use the magic deduplication property built into Artemis as our message identity too
             putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
@@ -161,7 +159,7 @@ class AMQPBridgeTest {
         // start receiving again, discarding duplicates
         while (true) {
             val received5 = receive.next()
-            val messageID5 = received5.applicationProperties["CountProp"] as Int
+            val messageID5 = received5.applicationProperties[P2PMessagingHeaders.senderUUID.toString()] as Int
             assertArrayEquals("Test$messageID5".toByteArray(), received5.payload)
             receivedSequence += messageID5
             val messageId = received5.applicationProperties[HDR_DUPLICATE_DETECTION_ID.toString()] as String
