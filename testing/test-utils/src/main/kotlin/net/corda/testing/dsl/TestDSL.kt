@@ -3,8 +3,8 @@ package net.corda.testing.dsl
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
@@ -13,9 +13,9 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
@@ -95,6 +95,12 @@ data class TestTransactionDSLInterpreter private constructor(
     override fun input(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
+    }
+
+    override fun unspendableInput(stateRef: StateRef) {
+        @Suppress("UNCHECKED_CAST")
+        val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef) as TransactionState<ReferenceState>
+        transactionBuilder.addInputReferenceState(StateAndRef(state, stateRef))
     }
 
     override fun output(contractClassName: ContractClassName,

@@ -35,7 +35,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class NodeAttachmentStorageTest {
-    // Use an in memory file system for testing attachment storage.
+    // Refer an in memory file system for testing attachment storage.
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
 

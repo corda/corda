@@ -22,6 +22,9 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
     override val inputs: List<StateRef> = deserialiseComponentGroup(ComponentGroupEnum.INPUTS_GROUP, { SerializedBytes<StateRef>(it).deserialize() })
 
+    /** Pointers to unspendable reference data, identified by (tx identity hash, output index). */
+    override val referenceInputs: List<StateRef> = deserialiseComponentGroup(ComponentGroupEnum.REFERENCE_GROUP, { SerializedBytes<StateRef>(it).deserialize() })
+
     override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP, { SerializedBytes<TransactionState<ContractState>>(it).deserialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentsClassLoader(attachments)) })
 
     /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
@@ -51,7 +54,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      */
     val availableComponentGroups: List<List<Any>>
         get() {
-            val result = mutableListOf(inputs, outputs, commands, attachments)
+            val result = mutableListOf(referenceInputs, inputs, outputs, commands, attachments)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
             return result
@@ -173,6 +176,7 @@ class FilteredTransaction internal constructor(
             }
 
             fun updateFilteredComponents() {
+                wtx.referenceInputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.REFERENCE_GROUP.ordinal, internalIndex) }
                 wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.INPUTS_GROUP.ordinal, internalIndex) }
                 wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.OUTPUTS_GROUP.ordinal, internalIndex) }
                 wtx.commands.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.COMMANDS_GROUP.ordinal, internalIndex) }

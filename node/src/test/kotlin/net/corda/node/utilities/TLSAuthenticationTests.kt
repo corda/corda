@@ -4,7 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.*
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +20,9 @@ import java.security.KeyStore
 import javax.net.ssl.*
 import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Various tests for mixed-scheme mutual TLS authentication, such as:
@@ -340,8 +342,8 @@ class TLSAuthenticationTests {
     private fun buildTLSSockets(
             serverSocketFactory: SSLServerSocketFactory,
             clientSocketFactory: SSLSocketFactory,
-            serverPort: Int = 0, // Use 0 to get first free socket.
-            clientPort: Int = 0, // Use 0 to get first free socket.
+            serverPort: Int = 0, // Refer 0 to get first free socket.
+            clientPort: Int = 0, // Refer 0 to get first free socket.
             cipherSuitesServer: Array<String> = CORDA_TLS_CIPHER_SUITES,
             cipherSuitesClient: Array<String> = CORDA_TLS_CIPHER_SUITES
     ): Pair<SSLServerSocket, SSLSocket> {

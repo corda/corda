@@ -40,7 +40,9 @@ data class LedgerTransaction @JvmOverloads constructor(
         override val notary: Party?,
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
-        private val networkParameters: NetworkParameters? = null
+        private val networkParameters: NetworkParameters? = null,
+        /** The resolved reference data undependable input states. */
+        override val referenceInputs: List<StateAndRef<ReferenceState>> = emptyList()
 ) : FullTransaction() {
     //DOCEND 1
     init {
@@ -57,7 +59,7 @@ data class LedgerTransaction @JvmOverloads constructor(
         }
     }
 
-    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
+    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract } + referenceInputs.map { it.state.contract })
             .toSet().map { it to createContractFor(it) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
@@ -139,7 +141,7 @@ data class LedgerTransaction @JvmOverloads constructor(
      *       flexible on output notaries.
      */
     private fun checkNoNotaryChange() {
-        if (notary != null && inputs.isNotEmpty()) {
+        if (notary != null && (inputs.isNotEmpty() || referenceInputs.isNotEmpty())) {
             outputs.forEach {
                 if (it.notary != notary) {
                     throw TransactionVerificationException.NotaryChangeInWrongTransactionType(id, notary, it.notary)
@@ -399,7 +401,8 @@ data class LedgerTransaction @JvmOverloads constructor(
              id: SecureHash,
              notary: Party?,
              timeWindow: TimeWindow?,
-             privacySalt: PrivacySalt
-    ) = copy(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null)
+             privacySalt: PrivacySalt,
+             referenceInputs: List<StateAndRef<ReferenceState>>
+    ) = copy(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, referenceInputs)
 }
 

@@ -17,11 +17,13 @@ import java.security.PublicKey
  * on the fly.
  */
 @CordaSerializable
-data class NotaryChangeWireTransaction(
+data class NotaryChangeWireTransaction @JvmOverloads constructor(
         override val inputs: List<StateRef>,
         override val notary: Party,
-        val newNotary: Party
+        val newNotary: Party,
+        override val referenceInputs: List<StateRef> = emptyList()
 ) : CoreTransaction() {
+
     /**
      * This transaction does not contain any output states, outputs can be obtained by resolving a
      * [NotaryChangeLedgerTransaction] and applying the notary modification to inputs.
@@ -43,8 +45,10 @@ data class NotaryChangeWireTransaction(
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>) : NotaryChangeLedgerTransaction {
+        @Suppress("UNCHECKED_CAST")
+        val resolvedReferenceInputs = services.loadStates(referenceInputs.toSet()).toList() as List<StateAndRef<ReferenceState>>
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
+        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs, resolvedReferenceInputs)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
@@ -56,12 +60,13 @@ data class NotaryChangeWireTransaction(
  * signatures are checked against the signers specified by input states' *participants* fields, so full resolution is
  * needed for signature verification.
  */
-data class NotaryChangeLedgerTransaction(
+data class NotaryChangeLedgerTransaction @JvmOverloads constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val newNotary: Party,
         override val id: SecureHash,
-        override val sigs: List<TransactionSignature>
+        override val sigs: List<TransactionSignature>,
+        override val referenceInputs: List<StateAndRef<ReferenceState>> = emptyList()
 ) : FullTransaction(), TransactionWithSignatures {
     init {
         checkEncumbrances()
