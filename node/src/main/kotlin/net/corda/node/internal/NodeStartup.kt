@@ -22,12 +22,13 @@ import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
-import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.tools.shell.InteractiveShell
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -153,7 +154,6 @@ open class NodeStartup(val args: Array<String>) {
             node.generateAndSaveNodeInfo()
             return
         }
-
         val startedNode = node.start()
         Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
         startedNode.internals.nodeReadyFuture.thenMatch({
@@ -165,11 +165,14 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell(startedNode)
+                        InteractiveShell.runLocalShell( {startedNode.dispose()} )
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
                 }
+            }
+            if (conf.shouldStartSSHDaemon()) {
+                Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
             }
         },
                 { th ->

@@ -25,6 +25,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -311,8 +312,6 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
         }
 }
 
-data class SSHDConfiguration(val port: Int)
-
 // Supported types of authentication/authorization data providers
 enum class AuthDataSourceType {
     // External RDBMS
@@ -348,6 +347,8 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
             }
         }
 
+        fun copyWithAdditionalUser(user: User) = AuthService(dataSource.copyWithAdditionalUser(user), id, options)
+
         // Optional components: cache
         data class Options(val cache: Options.Cache?) {
 
@@ -374,6 +375,12 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                     AuthDataSourceType.INMEMORY -> require(users != null && connection == null)
                     AuthDataSourceType.DB -> require(users == null && connection != null)
                 }
+            }
+
+            fun copyWithAdditionalUser(user: User) : DataSource{
+                val extendedList = this.users?.toMutableList()?: mutableListOf()
+                extendedList.add(user)
+                return DataSource(this.type, this.passwordEncryption, this.connection, listOf(*extendedList.toTypedArray()))
             }
         }
 

@@ -15,12 +15,12 @@ import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.node.testsupport.withCertificates
-import net.corda.node.testsupport.withKeyStores
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.common.internal.withCertificates
+import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree

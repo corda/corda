@@ -135,6 +135,9 @@
       <module name="sgx-hsm-tool_test" target="1.8" />
       <module name="sgx-jvm_hsm-tool_main" target="1.8" />
       <module name="sgx-jvm_hsm-tool_test" target="1.8" />
+      <module name="shell_integrationTest" target="1.8" />
+      <module name="shell_main" target="1.8" />
+      <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
