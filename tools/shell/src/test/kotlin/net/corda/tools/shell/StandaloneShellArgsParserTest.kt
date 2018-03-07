@@ -11,6 +11,11 @@ class StandaloneShellArgsParserTest {
 
     private val CONFIG_FILE = File(javaClass.classLoader.getResource("config.conf")!!.file)
 
+    private fun String.modifyPathOnWindows() =
+            if (System.getProperty("os.name", "").contains("windows", ignoreCase = true))
+                "C:$this"
+            else this
+
     @Test
     fun args_to_cmd_options() {
 
@@ -33,8 +38,8 @@ class StandaloneShellArgsParserTest {
                 "--keystore-type", "JKS")
 
         val expectedOptions = CommandLineOptions(configFile = "/x/y/z/config.conf",
-                commandsDirectory = Paths.get("/x/y/commands"),
-                cordappsDirectory = Paths.get("/x/y/cordapps"),
+                commandsDirectory = Paths.get("/x/y/commands".modifyPathOnWindows()),
+                cordappsDirectory = Paths.get("/x/y/cordapps".modifyPathOnWindows()),
                 host = "alocalhost",
                 port = "1234",
                 user = "demo",
@@ -42,11 +47,11 @@ class StandaloneShellArgsParserTest {
                 help = true,
                 loggingLevel = Level.DEBUG,
                 sshdPort = "2223",
-                sshdHostKeyDirectory = Paths.get("/x/y/ssh"),
+                sshdHostKeyDirectory = Paths.get("/x/y/ssh".modifyPathOnWindows()),
                 keyStorePassword = "pass1",
                 trustStorePassword = "pass2",
-                keyStoreFile = Paths.get("/x/y/keystore.jks"),
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                keyStoreFile = Paths.get("/x/y/keystore.jks".modifyPathOnWindows()),
+                trustStoreFile = Paths.get("/x/y/truststore.jks".modifyPathOnWindows()),
                 trustStoreType = "dummy",
                 keyStoreType = "JKS")
 
@@ -106,17 +111,17 @@ class StandaloneShellArgsParserTest {
 
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
                 keyStorePassword = "pass1",
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                trustStoreFile = Paths.get("/x/y/truststore.jks".modifyPathOnWindows()),
                 trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
-                commandsDirectory = Paths.get("/x/y/commands"),
-                cordappsDirectory = Paths.get("/x/y/cordapps"),
+                commandsDirectory = Paths.get("/x/y/commands".modifyPathOnWindows()),
+                cordappsDirectory = Paths.get("/x/y/cordapps".modifyPathOnWindows()),
                 user = "demo",
                 password = "abcd1234",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
                 ssl = expectedSsl,
                 sshdPort = 2223,
-                sshHostKeyDirectory = Paths.get("/x/y/ssh"),
+                sshHostKeyDirectory = Paths.get("/x/y/ssh".modifyPathOnWindows()),
                 noLocalShell = false)
 
         val config = options.toConfig()
@@ -145,13 +150,13 @@ class StandaloneShellArgsParserTest {
                 keyStoreType = null,
                 trustStoreType = null)
 
-        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
+        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks".modifyPathOnWindows()),
                 keyStorePassword = "pass1",
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                trustStoreFile = Paths.get("/x/y/truststore.jks".modifyPathOnWindows()),
                 trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
-                commandsDirectory = Paths.get("/x/y/commands"),
-                cordappsDirectory = Paths.get("/x/y/cordapps"),
+                commandsDirectory = Paths.get("/x/y/commands".modifyPathOnWindows()),
+                cordappsDirectory = Paths.get("/x/y/cordapps".modifyPathOnWindows()),
                 user = "demo",
                 password = "abcd1234",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
@@ -184,13 +189,13 @@ class StandaloneShellArgsParserTest {
                 keyStoreType = null,
                 trustStoreType = null)
 
-        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/cmd.jks"),
+        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/cmd.jks".modifyPathOnWindows()),
                 keyStorePassword = "pass1",
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                trustStoreFile = Paths.get("/x/y/truststore.jks".modifyPathOnWindows()),
                 trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
-                commandsDirectory = Paths.get("/x/y/commands"),
-                cordappsDirectory = Paths.get("/x/y/cordapps"),
+                commandsDirectory = Paths.get("/x/y/commands".modifyPathOnWindows()),
+                cordappsDirectory = Paths.get("/x/y/cordapps".modifyPathOnWindows()),
                 user = "demo",
                 password = "blabla",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
