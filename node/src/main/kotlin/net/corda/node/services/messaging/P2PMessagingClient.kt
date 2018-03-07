@@ -46,6 +46,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress
@@ -124,17 +125,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, AutoCloseable {
     companion object {
         private val log = contextLogger()
-        // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
-        // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
-        // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
-        // confusion.
-        val topicProperty = SimpleString("platform-topic")
-        val cordaVendorProperty = SimpleString("corda-vendor")
-        val releaseVersionProperty = SimpleString("release-version")
-        val platformVersionProperty = SimpleString("platform-version")
-        val senderUUID = SimpleString("sender-uuid")
-        val senderSeqNo = SimpleString("send-seq-no")
-
+        private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
         private const val messageMaxRetryCount: Int = 3
 
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
@@ -403,9 +394,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
-            val topic = message.required(topicProperty) { getStringProperty(it) }
+            val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
-            val platformVersion = message.required(platformVersionProperty) { getIntProperty(it) }
+            val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }
             val receivedSenderUUID = message.getStringProperty(senderUUID)

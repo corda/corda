@@ -20,6 +20,7 @@ import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
@@ -138,12 +139,14 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
             val properties = HashMap<Any?, Any?>()
-            for (key in artemisMessage.propertyNames) {
-                var value = artemisMessage.getObjectProperty(key)
-                if (value is SimpleString) {
-                    value = value.toString()
+            for (key in P2PMessagingHeaders.whitelistedHeaders) {
+                if (artemisMessage.containsProperty(key)) {
+                    var value = artemisMessage.getObjectProperty(key)
+                    if (value is SimpleString) {
+                        value = value.toString()
+                    }
+                    properties[key] = value
                 }
-                properties[key.toString()] = value
             }
             log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
             val peerInbox = translateLocalQueueToInboxAddress(queueName)
