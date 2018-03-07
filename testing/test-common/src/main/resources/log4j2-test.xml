@@ -25,5 +25,9 @@
         <Logger name="org.hibernate.SQL" level="info" additivity="false"> 
             <AppenderRef ref="Console-Appender"/> 
         </Logger>
+        <Logger name="org.jolokia" additivity="true" level="warn">
+            <AppenderRef ref="Console-Appender-Println"/>
+            <AppenderRef ref="RollingFile-Appender" />
+        </Logger>
     </Loggers>
 </Configuration>
