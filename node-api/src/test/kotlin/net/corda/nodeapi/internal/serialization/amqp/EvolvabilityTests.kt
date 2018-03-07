@@ -5,6 +5,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
