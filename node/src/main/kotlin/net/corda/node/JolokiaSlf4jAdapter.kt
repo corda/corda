@@ -1,13 +1,13 @@
-package net.corda.webserver
+package net.corda.node
 
 import org.jolokia.util.LogHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * This also exists in node, because depends on jolokia
+ * This also exists in webserver, because depends on jolokia
  **/
-class JolokiaSlf4Adapter : LogHandler {
+class JolokiaSlf4jAdapter : LogHandler {
     companion object {
         val log: Logger = LoggerFactory.getLogger("org.jolokia")
     }
@@ -35,6 +35,4 @@ class JolokiaSlf4Adapter : LogHandler {
             log.info(message)
         }
     }
-
-
 }

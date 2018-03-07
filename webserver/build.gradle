@@ -5,6 +5,13 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node web server'
 
+buildscript {
+    def properties = new Properties()
+    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
+
+    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+}
+
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
@@ -58,6 +65,9 @@ dependencies {
 
     // For rendering the index page.
     compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.3"
+
+    // for Jolokia logger
+    compile "org.jolokia:jolokia-war:$jolokia_version"
 
     integrationTestCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
