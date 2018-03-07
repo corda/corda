@@ -147,10 +147,3 @@ object TopicStringValidator {
     fun check(tag: String) = require(regex.matcher(tag).matches())
 }
 
-object P2PMessagingHeaders {
-
-    object Type {
-        const val KEY = "corda_p2p_message_type"
-        const val SESSION_INIT_VALUE = "session_init"
-    }
-}
