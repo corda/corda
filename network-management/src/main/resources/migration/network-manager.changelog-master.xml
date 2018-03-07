@@ -15,5 +15,6 @@
     <include file="migration/network-manager.changelog-signing-network-params.xml"/>
     <include file="migration/network-manager.changelog-pub-key-move.xml"/>
     <include file="migration/network-manager.changelog-modified-by-refactor.xml"/>
+    <include file="migration/network-manager.changelog-adding-crr.xml"/>
 
 </databaseChangeLog>

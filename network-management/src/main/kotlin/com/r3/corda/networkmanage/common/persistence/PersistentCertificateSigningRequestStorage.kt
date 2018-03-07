@@ -18,6 +18,7 @@ import net.corda.core.crypto.Crypto.toSupportedPublicKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
@@ -35,7 +36,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
         private val allowedCertRoles = setOf(CertRole.NODE_CA, CertRole.SERVICE_IDENTITY)
     }
 
-    override fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: String) {
+    override fun putCertificatePath(requestId: String, certPath: CertPath, signedBy: String) {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
@@ -50,8 +51,9 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
             session.merge(certificateSigningRequest)
             val certificateDataEntity = CertificateDataEntity(
                     certificateStatus = CertificateStatus.VALID,
-                    certificatePathBytes = certificates.encoded,
-                    certificateSigningRequest = certificateSigningRequest)
+                    certificatePathBytes = certPath.encoded,
+                    certificateSigningRequest = certificateSigningRequest,
+                    certificateSerialNumber = certPath.x509Certificates.first().serialNumber)
             session.persist(certificateDataEntity)
         }
     }

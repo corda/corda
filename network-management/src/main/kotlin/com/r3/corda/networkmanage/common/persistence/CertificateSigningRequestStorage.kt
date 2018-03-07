@@ -76,10 +76,11 @@ interface CertificateSigningRequestStorage {
     /**
      * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.DONE].
      * @param requestId id of the certificate signing request
+     * @param certPath chain of certificates starting with the one generated in response to the CSR up to the root.
      * @param signedBy authority (its identifier) signing this request.
      * @throws IllegalArgumentException if request is not found or not in Approved state.
      */
-    fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: String)
+    fun putCertificatePath(requestId: String, certPath: CertPath, signedBy: String)
 }
 
 sealed class CertificateResponse {

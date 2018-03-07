@@ -18,7 +18,9 @@ import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.SecureHash
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.envers.Audited
+import java.math.BigInteger
 import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.time.Instant
 import javax.persistence.*
 
@@ -114,13 +116,20 @@ class CertificateDataEntity(
 
         @OneToOne(fetch = FetchType.EAGER, optional = false)
         @JoinColumn(name = "certificate_signing_request", foreignKey = ForeignKey(name = "FK__cert_data__cert_sign_req"))
-        val certificateSigningRequest: CertificateSigningRequestEntity
+        val certificateSigningRequest: CertificateSigningRequestEntity,
+
+        @Column(name = "certificate_serial_number", unique = true)
+        val certificateSerialNumber: BigInteger
 ) {
     fun toCertificateData(): CertificateData {
         return CertificateData(
                 certStatus = certificateStatus,
                 certPath = toCertificatePath()
         )
+    }
+
+    fun legalName(): String {
+        return (toCertificatePath().certificates.first() as X509Certificate).subjectX500Principal.name
     }
 
     private fun toCertificatePath(): CertPath = buildCertPath(certificatePathBytes)

@@ -58,6 +58,7 @@ sealed class NetworkManagementSchemaServices {
             mappedTypes = listOf(
                     CertificateSigningRequestEntity::class.java,
                     CertificateDataEntity::class.java,
+                    CertificateRevocationRequestEntity::class.java,
                     NodeInfoEntity::class.java,
                     NetworkParametersEntity::class.java,
                     NetworkMapEntity::class.java)) {
