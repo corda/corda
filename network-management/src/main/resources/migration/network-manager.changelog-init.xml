@@ -9,7 +9,9 @@
   ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
   -->
 
-<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
     <changeSet author="R3.Corda" id="1513267683777-1" dbms="mssql">
         <createSequence sequenceName="hibernate_sequence" minValue="1"/>
     </changeSet>
@@ -22,42 +24,20 @@
     <changeSet author="R3.Corda" id="1513267683777-1.1" dbms="h2">
         <createSequence sequenceName="hibernate_sequence"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-2">
-        <createTable tableName="CertificateSigningRequestEntity_modifiedBy">
-            <column name="CertificateSigningRequestEntity_request_id" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="NVARCHAR(512)"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-3">
-        <createTable tableName="CertificateSigningRequestEntity_modifiedBy_AUD">
-            <column name="REV" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="CertificateSigningRequestEntity_request_id" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="NVARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="revtype" type="TINYINT"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-4">
+    <changeSet author="R3.Corda" id="1520338500424-2">
         <createTable tableName="certificate_data">
-            <column name="ID" type="BIGINT">
+            <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="certificate_path_bytes" type="BLOB"/>
             <column name="certificate_status" type="INT"/>
-            <column name="public_key_hash" type="NVARCHAR(64)"/>
             <column name="certificate_signing_request" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
+            <column name="certificate_serial_number" type="NUMERIC(28)"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-5">
+    <changeSet author="R3.Corda" id="1520338500424-3">
         <createTable tableName="certificate_signing_request">
             <column name="request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
@@ -72,26 +52,29 @@
             <column name="request_bytes" type="BLOB">
                 <constraints nullable="false"/>
             </column>
-            <column name="status" type="VARCHAR(255)">
+            <column name="status" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
+            <column name="public_key_hash" type="NVARCHAR(64)"/>
+            <column name="modified_by" type="NVARCHAR(512)"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-6">
+    <changeSet author="R3.Corda" id="1520338500424-4">
         <createTable tableName="certificate_signing_request_AUD">
             <column name="request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="rev" type="INT">
+            <column name="REV" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="revtype" type="TINYINT"/>
+            <column name="REVTYPE" type="TINYINT"/>
             <column name="modified_at" type="TIMESTAMP"/>
             <column name="remark" type="NVARCHAR(256)"/>
-            <column name="status" type="VARCHAR(255)"/>
+            <column name="status" type="NVARCHAR(255)"/>
+            <column name="modified_by" type="NVARCHAR(512)"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-7">
+    <changeSet author="R3.Corda" id="1520338500424-5">
         <createTable tableName="network_map">
             <column name="version" type="BIGINT">
                 <constraints nullable="false"/>
@@ -101,16 +84,18 @@
             <column name="signature" type="BLOB"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-8">
+    <changeSet author="R3.Corda" id="1520338500424-6">
         <createTable tableName="network_parameters">
-            <column name="version" type="BIGINT">
+            <column name="hash" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="bytes" type="BLOB"/>
-            <column name="hash" type="NVARCHAR(64)"/>
+            <column name="certificate" type="BLOB"/>
+            <column name="created" type="TIMESTAMP"/>
+            <column name="parameters_bytes" type="BLOB"/>
+            <column name="signature" type="BLOB"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-9">
+    <changeSet author="R3.Corda" id="1520338500424-7">
         <createTable tableName="node_info">
             <column name="node_info_hash" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
@@ -121,86 +106,142 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-10">
+    <changeSet author="R3.Corda" id="1520338500424-8">
         <createTable tableName="REVINFO">
-            <column autoIncrement="true" name="rev" type="INT">
-                <constraints primaryKey="true" primaryKeyName="CONSTRAINT_6"/>
+            <column autoIncrement="true" name="REV" type="INT">
+                <constraints primaryKey="true" primaryKeyName="PK_REVINFO_REV"/>
             </column>
-            <column name="revtstmp" type="BIGINT"/>
+            <column name="REVTSTMP" type="BIGINT"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-11">
-        <addPrimaryKey columnNames="version" constraintName="CONSTRAINT_3" tableName="network_parameters"/>
+    <changeSet author="R3.Corda" id="CRR">
+        <createTable tableName="certificate_revocation_request">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_id" type="NVARCHAR(256)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="certificate_serial_number" type="NUMERIC(28)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="legal_name" type="NVARCHAR(256)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="NVARCHAR(256)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reporter" type="NVARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="NVARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="remark" type="NVARCHAR(256)"/>
+            <column name="revocation_reason" type="NVARCHAR(256)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="certificate_data" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-12">
-        <addPrimaryKey columnNames="id" constraintName="CONSTRAINT_7" tableName="certificate_data"/>
+    <changeSet author="R3.Corda" id="CRR_AUD">
+        <createTable tableName="certificate_revocation_request_AUD">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rev" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revtype" type="TINYINT"/>
+            <column name="revocation_reason" type="NVARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="NVARCHAR(256)"/>
+            <column name="remark" type="NVARCHAR(256)"/>
+            <column name="status" type="NVARCHAR(256)"/>
+        </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-13">
-        <addPrimaryKey columnNames="rev, CertificateSigningRequestEntity_request_id, modified_by"
-                       constraintName="CONSTRAINT_B" tableName="CertificateSigningRequestEntity_modifiedBy_AUD"/>
+    <changeSet author="R3.Corda" id="1520338500424-9">
+        <addPrimaryKey columnNames="hash" constraintName="PK_NP_H" tableName="network_parameters"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-14">
-        <addPrimaryKey columnNames="request_id, rev" constraintName="CONSTRAINT_C"
-                       tableName="certificate_signing_request_AUD"/>
+    <changeSet author="R3.Corda" id="1520338500424-10">
+        <addPrimaryKey columnNames="id" constraintName="PK_CD_ID" tableName="certificate_data"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-15">
-        <addPrimaryKey columnNames="node_info_hash" constraintName="CONSTRAINT_C3" tableName="node_info"/>
+    <changeSet author="R3.Corda" id="1520338500424-11">
+        <addPrimaryKey columnNames="request_id, rev" constraintName="PK_CSRA_RID" tableName="certificate_signing_request_AUD"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-16">
-        <addPrimaryKey columnNames="version" constraintName="CONSTRAINT_CB" tableName="network_map"/>
+    <changeSet author="R3.Corda" id="1520338500424-12">
+        <addPrimaryKey columnNames="node_info_hash" constraintName="PK_NI_NIH" tableName="node_info"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-17">
-        <addPrimaryKey columnNames="request_id" constraintName="CONSTRAINT_D" tableName="certificate_signing_request"/>
+    <changeSet author="R3.Corda" id="1520338500424-13">
+        <addPrimaryKey columnNames="version" constraintName="PK_NM_V" tableName="network_map"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-18">
-        <addUniqueConstraint columnNames="hash" constraintName="UK_3XJ82Q6C0LT4D7XV085CUUX4Q" tableName="network_parameters"/>
+    <changeSet author="R3.Corda" id="1520338500424-14">
+        <addPrimaryKey columnNames="request_id" constraintName="PK_CSR_RID" tableName="certificate_signing_request"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-19">
-        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_4MJ3D7DDYMYV6OA2284VWDFHV" tableName="certificate_data"/>
+    <changeSet author="R3.Corda" id="PK_CRR">
+        <addPrimaryKey columnNames="id" constraintName="certificate_revocation_request_pk" tableName="certificate_revocation_request"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-20">
-        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_P37OS0TPLQ2ER2TM9JSDTF1CL" tableName="node_info"/>
+    <changeSet author="R3.Corda" id="PK_CRR_AUD">
+        <addPrimaryKey columnNames="id, rev" constraintName="certificate_revocation_request_AUD_pk" tableName="certificate_revocation_request_AUD"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-21">
-        <createIndex indexName="FK5G5CAGCRX7SIU8LWTAVIRUNXD_INDEX_C" tableName="certificate_signing_request_AUD">
-            <column name="rev"/>
+    <changeSet author="R3.Corda" id="1520338500424-15">
+        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_CD_CSR" tableName="certificate_data"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1520338500424-16">
+        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_NI_CSR" tableName="node_info"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1520338500424-19">
+        <createIndex indexName="IDX_CSRA_REV" tableName="certificate_signing_request_AUD">
+            <column name="REV"/>
         </createIndex>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-22">
-        <createIndex indexName="FKLFW2KLKDPLYDROVIBVEOMF9PU_INDEX_C"
-                     tableName="CertificateSigningRequestEntity_modifiedBy">
-            <column name="CertificateSigningRequestEntity_request_id"/>
-        </createIndex>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-23">
-        <createIndex indexName="IDX_PUB_KEY_HASH" tableName="certificate_data">
+    <changeSet author="R3.Corda" id="1520338500424-20">
+        <createIndex indexName="IDX_PUB_KEY_HASH" tableName="certificate_signing_request">
             <column name="public_key_hash"/>
         </createIndex>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-24">
-        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="certificate_signing_request_AUD"
-                                 constraintName="FK5g5cagcrx7siu8lwtavirunxd"
-                                 referencedColumnNames="rev" referencedTableName="REVINFO"/>
+    <changeSet author="R3.Corda" id="1520338500424-21">
+        <addForeignKeyConstraint baseColumnNames="REV" baseTableName="certificate_signing_request_AUD"
+                                 constraintName="FK_CSRA_REV"
+                                 referencedColumnNames="REV" referencedTableName="REVINFO"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-25">
-        <addForeignKeyConstraint baseColumnNames="rev" baseTableName="CertificateSigningRequestEntity_modifiedBy_AUD"
-                                 constraintName="FKcnmaj1j6to8d5gby6n1q3ck9c"
-                                 referencedColumnNames="rev" referencedTableName="REVINFO"/>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-26">
-        <addForeignKeyConstraint baseColumnNames="CertificateSigningRequestEntity_request_id" baseTableName="CertificateSigningRequestEntity_modifiedBy"
-                                 constraintName="FKlfw2klkdplydrovibveomf9pu"
+    <changeSet author="R3.Corda" id="1520338500424-22">
+        <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="node_info"
+                                 constraintName="FK_NI_CSR"
                                  referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="1513267683777-27">
+    <changeSet author="R3.Corda" id="1520338500424-23">
         <addForeignKeyConstraint baseColumnNames="certificate_signing_request" baseTableName="certificate_data"
-                                 constraintName="FK__cert_data__cert_sign_req"
+                                 constraintName="FK_CD_CSR"
                                  referencedColumnNames="request_id" referencedTableName="certificate_signing_request"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="add unique constraint on certificate_data">
-        <addUniqueConstraint tableName="certificate_data" columnNames="certificate_signing_request"/>
+    <changeSet author="R3.Corda" id="FK_CRR_CD">
+        <addForeignKeyConstraint baseColumnNames="certificate_data"
+                                 baseTableName="certificate_revocation_request"
+                                 constraintName="cert_data__cert_rev_req_fk"
+                                 referencedColumnNames="id"
+                                 referencedTableName="certificate_data"/>
     </changeSet>
-    <changeSet author="R3.Corda" id="add unique constraint on node_info">
-        <addUniqueConstraint tableName="node_info" columnNames="certificate_signing_request"/>
+    <changeSet author="R3.Corda" id="FK_CRR_AUD_RI">
+        <addForeignKeyConstraint baseColumnNames="rev"
+                                 baseTableName="certificate_revocation_request_AUD"
+                                 constraintName="cert_rev_req__REVINFO_AUD_fk"
+                                 referencedColumnNames="rev"
+                                 referencedTableName="REVINFO"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1520338500424-24">
+        <createIndex indexName="IDX_NP_HASH" tableName="network_parameters">
+            <column name="hash"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="R3.Corda" id="IDX_REV_CRR_AUD">
+        <createIndex indexName="certificate_revocation_request_AUD_index" tableName="certificate_revocation_request_AUD">
+            <column name="rev"/>
+        </createIndex>
     </changeSet>
 </databaseChangeLog>
