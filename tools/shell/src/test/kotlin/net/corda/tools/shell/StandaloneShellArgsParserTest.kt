@@ -9,7 +9,7 @@ import java.io.File
 
 class StandaloneShellArgsParserTest {
 
-    private val CONFIG_FILE = File(javaClass.classLoader.getResource("config.conf")!!.file)
+    private val CONFIG_FILE = File(StandaloneShellArgsParserTest::class.java.getResource("/config.conf").toURI())
 
     @Test
     fun args_to_cmd_options() {
@@ -33,8 +33,8 @@ class StandaloneShellArgsParserTest {
                 "--keystore-type", "JKS")
 
         val expectedOptions = CommandLineOptions(configFile = "/x/y/z/config.conf",
-                commandsDirectory = Paths.get("/x/y/commands"),
-                cordappsDirectory = Paths.get("/x/y/cordapps"),
+                commandsDirectory = Paths.get("/x/y/commands").normalize().toAbsolutePath(),
+                cordappsDirectory = Paths.get("/x/y/cordapps").normalize().toAbsolutePath(),
                 host = "alocalhost",
                 port = "1234",
                 user = "demo",
@@ -42,11 +42,11 @@ class StandaloneShellArgsParserTest {
                 help = true,
                 loggingLevel = Level.DEBUG,
                 sshdPort = "2223",
-                sshdHostKeyDirectory = Paths.get("/x/y/ssh"),
+                sshdHostKeyDirectory = Paths.get("/x/y/ssh").normalize().toAbsolutePath(),
                 keyStorePassword = "pass1",
                 trustStorePassword = "pass2",
-                keyStoreFile = Paths.get("/x/y/keystore.jks"),
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
+                keyStoreFile = Paths.get("/x/y/keystore.jks").normalize().toAbsolutePath(),
+                trustStoreFile = Paths.get("/x/y/truststore.jks").normalize().toAbsolutePath(),
                 trustStoreType = "dummy",
                 keyStoreType = "JKS")
 
@@ -125,7 +125,7 @@ class StandaloneShellArgsParserTest {
     }
 
     @Test
-    fun acmd_options_to_config_from_file() {
+    fun cmd_options_to_config_from_file() {
 
         val options = CommandLineOptions(configFile = CONFIG_FILE.absolutePath,
                 commandsDirectory = null,
