@@ -66,9 +66,6 @@ dependencies {
     // For rendering the index page.
     compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.3"
 
-    // for Jolokia logger
-    compile "org.jolokia:jolokia-war:$jolokia_version"
-
     integrationTestCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
 }
