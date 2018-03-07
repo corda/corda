@@ -9,7 +9,7 @@ import java.io.File
 
 class StandaloneShellArgsParserTest {
 
-    private val CONFIG_FILE = File(javaClass.classLoader.getResource("config.conf")!!.file)
+    private val CONFIG_FILE = File(StandaloneShellArgsParserTest::class.java.getResource("/config.conf").toURI())
 
     @Test
     fun args_to_cmd_options() {
