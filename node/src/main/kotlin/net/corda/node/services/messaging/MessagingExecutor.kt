@@ -18,13 +18,12 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException
-import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
-import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicLong
@@ -161,18 +160,18 @@ class MessagingExecutor(
 
     internal fun cordaToArtemisMessage(message: Message): ClientMessage? {
         return session.createMessage(true).apply {
-            putStringProperty(P2PMessagingClient.cordaVendorProperty, cordaVendor)
-            putStringProperty(P2PMessagingClient.releaseVersionProperty, releaseVersion)
-            putIntProperty(P2PMessagingClient.platformVersionProperty, versionInfo.platformVersion)
-            putStringProperty(P2PMessagingClient.topicProperty, SimpleString(message.topic))
+            putStringProperty(P2PMessagingHeaders.cordaVendorProperty, cordaVendor)
+            putStringProperty(P2PMessagingHeaders.releaseVersionProperty, releaseVersion)
+            putIntProperty(P2PMessagingHeaders.platformVersionProperty, versionInfo.platformVersion)
+            putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString(message.topic))
             sendMessageSizeMetric.update(message.data.bytes.size)
             writeBodyBufferBytes(message.data.bytes)
             // Use the magic deduplication property built into Artemis as our message identity too
             putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
             // If we are the sender (ie. we are not going through recovery of some sort), use sequence number short cut.
             if (ourSenderUUID == message.senderUUID) {
-                putStringProperty(P2PMessagingClient.senderUUID, SimpleString(ourSenderUUID))
-                putLongProperty(P2PMessagingClient.senderSeqNo, ourSenderSeqNo.getAndIncrement())
+                putStringProperty(P2PMessagingHeaders.senderUUID, SimpleString(ourSenderUUID))
+                putLongProperty(P2PMessagingHeaders.senderSeqNo, ourSenderSeqNo.getAndIncrement())
             }
             // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
             if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {

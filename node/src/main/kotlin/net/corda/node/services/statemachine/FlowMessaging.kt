@@ -20,8 +20,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.AcknowledgeHandle
-import net.corda.node.services.messaging.P2PMessagingHeaders
 import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import java.io.NotSerializableException
 
 /**
