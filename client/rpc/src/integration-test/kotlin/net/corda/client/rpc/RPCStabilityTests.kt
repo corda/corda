@@ -338,12 +338,12 @@ class RPCStabilityTests {
 
             serverFollower.unfollow()
             val proxy = RPCClient<ThreadOps>(serverPort).start(ThreadOps::class.java, "alice", "alice").proxy
-            val expectedMap = mutableMapOf<Int, String>()
-            val resultsMap = mutableMapOf<Int, String>()
+            val expectedMap = mutableMapOf<Int, StringBuilder>()
+            val resultsMap = mutableMapOf<Int, StringBuilder>()
 
             (1 until threadNo).forEach { nr ->
                 (1 until messageNo).forEach { msgNo ->
-                    expectedMap[nr] = expectedMap.getOrDefault(nr, "").plus("($nr-$msgNo)")
+                    expectedMap[nr] = expectedMap.getOrDefault(nr, StringBuilder()).append("($nr-$msgNo)")
                 }
             }
 
@@ -351,18 +351,18 @@ class RPCStabilityTests {
             (1 until threadNo).forEach { nr ->
                 val thread = thread {
                     (1 until messageNo).forEach { msgNo ->
-                        resultsMap[nr] = resultsMap.getOrDefault(nr, "").plus(proxy.sendMessage(nr, msgNo))
+                        resultsMap[nr] = resultsMap.getOrDefault(nr, StringBuilder()).append(proxy.sendMessage(nr, msgNo))
                     }
                 }
                 threads[nr] = thread
             }
             // give the threads a chance to start sending some messages
-            Thread.sleep(1000)
+            Thread.sleep(50)
             serverFollower.shutdown()
             startRpcServer<ThreadOps>(rpcUser = User("alice", "alice", setOf("ALL")),
                     ops = ops, customPort = serverPort).getOrThrow()
             threads.values.forEach { it.join() }
-            (1 until threadNo).forEach { assertEquals(expectedMap[it], resultsMap[it]) }
+            (1 until threadNo).forEach { assertEquals(expectedMap[it].toString(), resultsMap[it].toString()) }
         }
 
     }
