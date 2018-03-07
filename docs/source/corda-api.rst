@@ -24,20 +24,20 @@ Before reading this page, you should be familiar with the :doc:`key concepts of 
 Internal APIs and stability guarantees
 --------------------------------------
 
-.. warning:: For Corda 1.0 we do not currently provide a stable wire protocol or support for database upgrades.
-   Additionally, the JSON format produced by the client-jackson module may change in future.
-   Therefore, you should not expect to be able to migrate persisted data from 1.0 to future versions.
+Corda 3.0 provides a stable wire protocol and support for database upgrades. Therefore, you should expect to be able to migrate persisted data from 3.0 to future versions. However, it will be necessary to recompile applications against future versions of the API until we begin offering ABI stability as well.
 
-   Additionally, it may be necessary to recompile applications against future versions of the API until we begin offering
-   ABI stability as well. We plan to do this soon after the release of Corda 1.0.
+Additionally, please note the Corda 3.0 release has been security audited at a rudimentary level so to ensure node security is maintained the following best practices should be followed:
 
-   Finally, please note that the 1.0 release has not yet been security audited. You should not run it in situations
-   where security is required.
+* Credentials for RPC users, database connections, and shell users should be created using a secure password generator, preferably from the command line of the node host.
+* Nodes should never be deployed using default or development mode credentials.
+* Corda nodes should use one of the supported database platforms, in preference to the default H2 database which is intended for development purposes only. Postgres is a supported platform.
+* Nodes should be operated within a secure network (such as a DMZ) that restricts inbound and outbound traffic to only the required ports. Specifically, node operators should aim to allow access to peer-to-peer traffic from the internet. RPC and database connections should be internal only.
+* The node webserver module is deprecated and should not be deployed in a production environment because it is not built to the same security standards as the Corda node.
 
 Corda artifacts can be required from Java 9 Jigsaw modules.
 From within a ``module-info.java``, you can reference one of the modules e.g., ``requires net.corda.core;``.
 
-.. warning:: while Corda artifacts can be required from ``module-info.java`` files, they are still not proper Jigsaw modules,
+.. warning:: While Corda artifacts can be required from ``module-info.java`` files, they are still not proper Jigsaw modules,
    because they rely on the automatic module mechanism and declare no module descriptors themselves. We plan to integrate Jigsaw more thoroughly in the future.
 
 Corda stable modules
