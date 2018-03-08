@@ -21,14 +21,14 @@ object ContractUpgradeUtils {
         val upgradedContractAttachmentId = getContractAttachmentId(upgradedContractClass.name, services)
 
         val inputs = listOf(stateAndRef.ref)
-        return ContractUpgradeWireTransaction(
+        return ContractUpgradeTransactionBuilder(
                 inputs,
                 stateAndRef.state.notary,
                 legacyContractAttachmentId,
                 upgradedContractClass.name,
                 upgradedContractAttachmentId,
                 privacySalt
-        )
+        ).build()
     }
 
     private fun getContractAttachmentId(name: ContractClassName, services: ServicesForResolution): AttachmentId {
