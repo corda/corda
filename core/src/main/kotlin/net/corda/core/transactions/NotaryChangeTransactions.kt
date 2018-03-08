@@ -9,6 +9,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
@@ -70,6 +71,9 @@ data class NotaryChangeWireTransaction(
     enum class Component {
         INPUTS, NOTARY, NEW_NOTARY
     }
+
+    @Deprecated("Required only for backwards compatibility purposes. This type of transaction should not be constructed outside Corda code.", ReplaceWith("NotaryChangeTransactionBuilder"), DeprecationLevel.WARNING)
+    constructor(inputs: List<StateRef>, notary: Party, newNotary: Party) : this(listOf(inputs, notary, newNotary).map { it.serialize() })
 }
 
 /**

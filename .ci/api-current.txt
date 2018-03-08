@@ -2994,10 +2994,10 @@ public static final class net.corda.core.serialization.SingletonSerializationTok
   @org.jetbrains.annotations.NotNull public final String getReason()
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.transactions.ContractUpgradeFilteredTransaction extends net.corda.core.transactions.CoreTransaction
-  public <init>(List, net.corda.core.crypto.SecureHash)
-  @org.jetbrains.annotations.NotNull public final List component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeFilteredTransaction copy(List, net.corda.core.crypto.SecureHash)
+  public <init>(Map, Map)
+  @org.jetbrains.annotations.NotNull public final Map component1()
+  @org.jetbrains.annotations.NotNull public final Map component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.ContractUpgradeFilteredTransaction copy(Map, Map)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
   @org.jetbrains.annotations.NotNull public List getInputs()
