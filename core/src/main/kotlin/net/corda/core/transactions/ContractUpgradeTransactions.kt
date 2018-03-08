@@ -11,8 +11,8 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction.FilteredComponent
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.*
-import net.corda.core.transactions.ContractUpgradeWireTransaction.FilteredComponent
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
@@ -59,6 +59,7 @@ data class ContractUpgradeWireTransaction(
         }
     }
 
+    /** Required for filtering transaction components. */
     private val nonces = (1 until serializedComponents.size).map { (Ints.toByteArray(it) + privacySalt.bytes).sha256() }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
@@ -99,22 +100,21 @@ data class ContractUpgradeWireTransaction(
     enum class Component {
         INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT
     }
-
-    class FilteredComponent(val component: OpaqueBytes, val nonce: SecureHash)
 }
 
 /**
  * A filtered version of the [ContractUpgradeWireTransaction]. In comparison with a regular [FilteredTransaction], there
  * is no flexibility on what parts of the transaction to reveal – the inputs and notary field are always visible and the
  * rest of the transaction is always hidden. Its only purpose is to hide transaction data when using a non-validating notary.
- *
- * @property inputs The inputs of this transaction.
- * @property notary The notary for this transaction.
- * @property hiddenComponentHash Hash of the hidden components of the [ContractUpgradeWireTransaction].
  */
 @CordaSerializable
 data class ContractUpgradeFilteredTransaction(
+        /** Transaction components that are exposed. */
         val visibleComponents: Map<Int, FilteredComponent>,
+        /**
+         * Hashes of the transaction components that are not revealed in this transaction.
+         * Required for computing the transaction id.
+         */
         private val hiddenComponents: Map<Int, SecureHash>
 ) : CoreTransaction() {
     override val inputs: List<StateRef> by lazy {
@@ -141,6 +141,9 @@ data class ContractUpgradeFilteredTransaction(
         }
     }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
+
+    /** Contains the serialized component and the associated nonce for computing the transaction id. */
+    class FilteredComponent(val component: OpaqueBytes, val nonce: SecureHash)
 }
 
 /**
