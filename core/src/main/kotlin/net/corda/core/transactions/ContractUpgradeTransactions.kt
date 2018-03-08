@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
@@ -52,7 +53,7 @@ data class ContractUpgradeWireTransaction(
 
     override val id: SecureHash by lazy {
         serializedComponents.mapIndexed { index, component ->
-            SecureHash.sha256Twice(component.bytes + nonces[index].bytes)
+            componentHash(nonces[index], component)
         }.reduce { combinedHash, componentHash ->
             combinedHash.hashConcat(componentHash)
         }
@@ -91,7 +92,7 @@ data class ContractUpgradeWireTransaction(
                 NOTARY.ordinal to FilteredComponent(serializedComponents[NOTARY.ordinal], nonces[NOTARY.ordinal])
         )
         val hiddenComponents = (totalComponents - visibleComponents.keys).map { index ->
-            val hash = SecureHash.sha256Twice(serializedComponents[index].bytes + nonces[index].bytes)
+            val hash = componentHash(nonces[index], serializedComponents[index])
             index to hash
         }.toMap()
 
@@ -131,7 +132,7 @@ data class ContractUpgradeFilteredTransaction(
         val hashList = (0 until totalComponents).map { i ->
             when {
                 visibleComponents.containsKey(i) -> {
-                    SecureHash.sha256Twice(visibleComponents[i]!!.component.bytes + visibleComponents[i]!!.nonce.bytes)
+                    componentHash(visibleComponents[i]!!.nonce, visibleComponents[i]!!.component)
                 }
                 hiddenComponents.containsKey(i) -> hiddenComponents[i]!!
                 else -> throw IllegalStateException("Missing component hashes")
