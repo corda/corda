@@ -1,6 +1,6 @@
 package net.corda.core.transactions
 
-import com.google.common.io.ByteStreams
+import com.google.common.primitives.Ints
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -12,6 +12,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.*
+import net.corda.core.transactions.ContractUpgradeWireTransaction.FilteredComponent
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
@@ -51,20 +52,14 @@ data class ContractUpgradeWireTransaction(
                 "outputs can only be obtained from a resolved ContractUpgradeLedgerTransaction")
 
     override val id: SecureHash by lazy {
-        (serializedComponents[INPUTS.ordinal].bytes + serializedComponents[NOTARY.ordinal].bytes).sha256()
-                .hashConcat(hiddenComponentHash)
+        serializedComponents.mapIndexed { index, component ->
+            SecureHash.sha256Twice(component.bytes + nonces[index].bytes)
+        }.reduce { combinedHash, componentHash ->
+            combinedHash.hashConcat(componentHash)
+        }
     }
 
-    /** Hash of the list of components that are hidden in the [ContractUpgradeFilteredTransaction]. */
-    private val hiddenComponentHash: SecureHash
-        get() {
-            val combinedBytes = ByteStreams.newDataOutput()
-            // First two elements are always visible - inputs and notary
-            for (i in (2 until serializedComponents.size)) {
-                combinedBytes.write(serializedComponents[i].bytes)
-            }
-            return combinedBytes.toByteArray().sha256().hashConcat(privacySalt.bytes.sha256())
-        }
+    private val nonces = (1 until serializedComponents.size).map { (Ints.toByteArray(it) + privacySalt.bytes).sha256() }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
@@ -88,12 +83,24 @@ data class ContractUpgradeWireTransaction(
 
     /** Constructs a filtered transaction: the inputs and the notary party are always visible, while the rest are hidden. */
     fun buildFilteredTransaction(): ContractUpgradeFilteredTransaction {
-        return ContractUpgradeFilteredTransaction(serializedComponents.take(2), hiddenComponentHash)
+        val totalComponents = (0 until serializedComponents.size).toSet()
+        val visibleComponents = mapOf(
+                INPUTS.ordinal to FilteredComponent(serializedComponents[INPUTS.ordinal], nonces[INPUTS.ordinal]),
+                NOTARY.ordinal to FilteredComponent(serializedComponents[NOTARY.ordinal], nonces[NOTARY.ordinal])
+        )
+        val hiddenComponents = (totalComponents - visibleComponents.keys).map { index ->
+            val hash = SecureHash.sha256Twice(serializedComponents[index].bytes + nonces[index].bytes)
+            index to hash
+        }.toMap()
+
+        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents)
     }
 
     enum class Component {
         INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT
     }
+
+    class FilteredComponent(val component: OpaqueBytes, val nonce: SecureHash)
 }
 
 /**
@@ -107,13 +114,31 @@ data class ContractUpgradeWireTransaction(
  */
 @CordaSerializable
 data class ContractUpgradeFilteredTransaction(
-        val serializedComponents: List<OpaqueBytes>,
-        val hiddenComponentHash: SecureHash
+        val visibleComponents: Map<Int, FilteredComponent>,
+        private val hiddenComponents: Map<Int, SecureHash>
 ) : CoreTransaction() {
-    override val inputs: List<StateRef> by lazy { serializedComponents[INPUTS.ordinal].deserialize<List<StateRef>>() }
-    override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
+    override val inputs: List<StateRef> by lazy {
+        visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
+                ?: throw IllegalArgumentException("Inputs not specified")
+    }
+    override val notary: Party by lazy {
+        visibleComponents[NOTARY.ordinal]?.component?.deserialize<Party>()
+                ?: throw IllegalArgumentException("Notary not specified")
+    }
     override val id: SecureHash by lazy {
-        (serializedComponents[INPUTS.ordinal].bytes + serializedComponents[NOTARY.ordinal].bytes).sha256().hashConcat(hiddenComponentHash)
+        val totalComponents = visibleComponents.size + hiddenComponents.size
+        val hashList = (0 until totalComponents).map { i ->
+            when {
+                visibleComponents.containsKey(i) -> {
+                    SecureHash.sha256Twice(visibleComponents[i]!!.component.bytes + visibleComponents[i]!!.nonce.bytes)
+                }
+                hiddenComponents.containsKey(i) -> hiddenComponents[i]!!
+                else -> throw IllegalStateException("Missing component hashes")
+            }
+        }
+        hashList.reduce { combinedHash, componentHash ->
+            combinedHash.hashConcat(componentHash)
+        }
     }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
 }
