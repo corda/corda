@@ -4,12 +4,10 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
+.. _changelog_v3:
 
-* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
-  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
-  one node with the legal name is found.
+Version 3.0
+-----------
 
 * Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
   at CorDapp context creation time from a file source during runtime.
@@ -84,6 +82,10 @@ UNRELEASED
 
    * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
      Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+
+  * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+    where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+    one node with the legal name is found.
 
    * The common name in the node's X500 legal name is no longer reserved and can be used as part of the node's name.
 
@@ -204,6 +206,9 @@ UNRELEASED
   ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
   will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
   process for existing projects in the ``tools\scripts`` directory of the Corda repo.
+
+* ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
+  multiple transactions at once.
 
 .. _changelog_v1:
 
