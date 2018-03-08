@@ -1,8 +1,7 @@
 package net.corda.core.flows
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
@@ -43,7 +42,7 @@ class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: Se
         val signature = requestSignature.digitalSignature
         if (intendedSigner.owningKey != signature.by) {
             val errorMessage = "Expected a signature by ${intendedSigner.owningKey}, but received by ${signature.by}}"
-            throw NotaryException(NotaryError.RequestSignatureInvalid(IllegalArgumentException(errorMessage)))
+            throw NotaryInternalException(NotaryError.RequestSignatureInvalid(IllegalArgumentException(errorMessage)))
         }
         // TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to
         // reserialize it in that version to get the exact same bytes. Modify the serialization logic once that's
@@ -59,7 +58,7 @@ class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: Se
             when (e) {
                 is InvalidKeyException, is SignatureException -> {
                     val error = NotaryError.RequestSignatureInvalid(e)
-                    throw NotaryException(error)
+                    throw NotaryInternalException(error)
                 }
                 else -> throw e
             }
@@ -99,3 +98,7 @@ data class NotarisationPayload(val transaction: Any, val requestSignature: Notar
      */
     val coreTransaction get() = transaction as CoreTransaction
 }
+
+/** Payload returned by the notary service flow to the client. */
+@CordaSerializable
+data class NotarisationResponse(val signatures: List<TransactionSignature>)

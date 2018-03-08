@@ -4,14 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.validateRequest
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.core.transactions.WireTransaction
@@ -58,7 +55,7 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,
-                is SignatureException -> NotaryException(NotaryError.TransactionInvalid(e))
+                is SignatureException -> NotaryInternalException(NotaryError.TransactionInvalid(e))
                 else -> e
             }
         }
@@ -89,7 +86,7 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
         try {
             tx.verifySignaturesExcept(service.notaryIdentityKey)
         } catch (e: SignatureException) {
-            throw NotaryException(NotaryError.TransactionInvalid(e))
+            throw NotaryInternalException(NotaryError.TransactionInvalid(e))
         }
     }
 
