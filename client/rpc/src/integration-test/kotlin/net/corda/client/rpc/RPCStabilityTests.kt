@@ -332,21 +332,26 @@ class RPCStabilityTests {
             val serverFollower = shutdownManager.follower()
             val serverPort = startRpcServer<NoOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
+
             val clientConfiguration = RPCClientConfiguration.default.copy(connectionRetryInterval = 500.millis, maxReconnectAttempts = 1)
             val clientFollower = shutdownManager.follower()
             val client = startRpcClient<NoOps>(serverPort, configuration = clientConfiguration).getOrThrow()
             clientFollower.unfollow()
+
             var terminateHandlerCalled = false
             var errorHandlerCalled = false
-             val subscription = client.subscribe()
+            val subscription = client.subscribe()
                      .doOnTerminate{ terminateHandlerCalled = true }
                      .doOnError { errorHandlerCalled = true }
                      .subscribe()
+
             serverFollower.shutdown()
             Thread.sleep(100)
+
             assertTrue(terminateHandlerCalled)
             assertTrue(errorHandlerCalled)
             assertTrue(subscription.isUnsubscribed)
+
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }
