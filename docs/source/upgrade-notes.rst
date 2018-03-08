@@ -38,7 +38,7 @@ Corda 3.0 uses version 3.0.8 of the gradle plugins and your ``build.gradle`` fil
 
 .. sourcecode:: shell
 
-    ext.corda_gradle_plugins_version = '3.0.8'
+    ext.corda_gradle_plugins_version = '3.0.9'
 
 You will also need to update the ``corda_release_version`` identifier in your project gradle file.
 
@@ -209,6 +209,15 @@ Testing
 * testNodeConfiguration has been retired, please use a mock object framework of your choice instead
 
 * MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
+
+* Starting a flow can now be done directly from a node object. Change calls of the form ``node.getServices().startFlow(...)``
+  to ``node.startFlow(...)``
+
+* Similarly a tranaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
+  to ``node.transaction({() -> ... })``
+
+* ``startFlow`` now returns a ``CordaFuture``, there is no need to call ``startFlow(...).getResultantFuture()``
+
 
 V1.0 to V2.0
 ------------
