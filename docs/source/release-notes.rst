@@ -120,7 +120,7 @@ Significant Changes in 3.0
   applied to all states and be signed by all parties.
 
   .. tip:: This is a fairly heavyweight operation. As such, consideration should be given as to the most opportune time at
-    which it should be performed. 
+    which it should be performed.
 
   Hash constraints provide for maximum decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a
   new constraint, a _network parameters_ constraint, that allows the list of acceptable contract JARs to be maintained by the
@@ -261,6 +261,20 @@ Security Auditing
   was undertaken and its recommendations were acted upon. The security assurance process will develop in parallel to the
   Corda platform and will combine code review, automated security testing and secure development practices to ensure Corda
   fulfils its security guarantees.
+
+Security fixes
+~~~~~~~~~~~~~~
+
+  * Due to a potential privacy leak, there has been a breaking change in the error object returned by the
+    notary service when trying to consume the same state twice: `NotaryError.Conflict` no longer contains the identity
+    of the party that initiated the first spend of the state, and specifies the hash of the consuming transaction id for
+    a state instead of the id itself.
+
+    Without this change, knowing the reference of a particular state, an attacker could construct an invalid
+    double-spend transaction, and obtain the information on the transaction and the party that consumed it. It could
+    repeat this process with the newly obtained transaction id by guessing its output indexes to obtain the forward
+    transaction graph with associated identities. When anonymous identities are used, this could also reveal the identity
+    of the owner of an asset.
 
 Minor Changes
 ~~~~~~~~~~~~~
