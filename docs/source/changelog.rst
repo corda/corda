@@ -7,6 +7,11 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Due to a security risk, the `conflict` property has been removed from `NotaryError.Conflict` error object. It has been replaced
+  with `consumedStates` instead. The new property no longer specifies the original requesting party and transaction id for
+  a consumed state. Instead, only the hash of the transaction id is revealed. For more details why this change had to be
+  made please refer to the release notes.
+
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.
