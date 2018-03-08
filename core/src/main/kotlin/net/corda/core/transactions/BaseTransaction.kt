@@ -14,7 +14,7 @@ import java.util.function.Predicate
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
     /** A list of re-useable reference data states which can be referred to by other inputs in this transaction. */
-    abstract val referenceInputs: List<*>
+    abstract val unspendableInputs: List<*>
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */
     abstract val inputs: List<*>
     /** Ordered list of states defined by this transaction, along with the associated notaries. */
@@ -32,14 +32,14 @@ abstract class BaseTransaction : NamedByHash {
     }
 
     private fun checkNotarySetIfInputsPresent() {
-        if (inputs.isNotEmpty() || referenceInputs.isNotEmpty()) {
+        if (inputs.isNotEmpty() || unspendableInputs.isNotEmpty()) {
             check(notary != null) { "The notary must be specified explicitly for any transaction that has inputs" }
         }
     }
 
     private fun checkNoDuplicateInputs() {
         check(inputs.size == inputs.toSet().size) { "Duplicate input states detected" }
-        check(referenceInputs.size == referenceInputs.toSet().size) { "Duplicate unspendable input states detected" }
+        check(unspendableInputs.size == unspendableInputs.toSet().size) { "Duplicate unspendable input states detected" }
     }
 
     /**

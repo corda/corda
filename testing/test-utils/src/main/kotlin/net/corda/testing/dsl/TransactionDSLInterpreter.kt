@@ -93,7 +93,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
     fun unspendableInput(stateLabel: String) = unspendableInput(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
 
     /**
-     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single input state and adds it's reference as an
+     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single input state and adds its reference as an
      * unspendable input to the current transaction.
      * @param state The state to be added.
      */

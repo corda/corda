@@ -18,14 +18,14 @@ import java.security.PublicKey
 /** A special transaction for upgrading the contract of a state. */
 
 @CordaSerializable
-data class ContractUpgradeWireTransaction @JvmOverloads constructor(
+data class ContractUpgradeWireTransaction constructor(
         override val inputs: List<StateRef>,
         override val notary: Party,
         val legacyContractAttachmentId: SecureHash,
         val upgradeContractClassName: ContractClassName,
         val upgradedContractAttachmentId: SecureHash,
         val privacySalt: PrivacySalt = PrivacySalt(),
-        override val referenceInputs: List<StateRef> = emptyList()
+        override val unspendableInputs: List<StateRef> = emptyList()
 ) : CoreTransaction() {
 
     init {
@@ -45,13 +45,12 @@ data class ContractUpgradeWireTransaction @JvmOverloads constructor(
     private val hiddenComponentHash: SecureHash
         get() = serializedHash(listOf(legacyContractAttachmentId, upgradeContractClassName, privacySalt))
 
-    override val id: SecureHash by lazy { serializedHash(inputs + referenceInputs + notary).hashConcat(hiddenComponentHash) }
+    override val id: SecureHash by lazy { serializedHash(inputs + unspendableInputs + notary).hashConcat(hiddenComponentHash) }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
-        @Suppress("UNCHECKED_CAST")
-        val resolvedReferenceInputs = services.loadStates(referenceInputs.toSet()).toList() as List<StateAndRef<ReferenceState>>
-        val resolvedInputs = services.loadStates(inputs.toSet() + referenceInputs.toSet()).toList()
+        val resolvedUnspendableInputs = services.loadStates(unspendableInputs.toSet()).toList()
+        val resolvedInputs = services.loadStates(inputs.toSet() + unspendableInputs.toSet()).toList()
         val legacyContractAttachment = services.attachments.openAttachment(legacyContractAttachmentId)
                 ?: throw AttachmentResolutionException(legacyContractAttachmentId)
         val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
@@ -66,12 +65,12 @@ data class ContractUpgradeWireTransaction @JvmOverloads constructor(
                 privacySalt,
                 sigs,
                 services.networkParameters,
-                resolvedReferenceInputs
+                resolvedUnspendableInputs
         )
     }
 
     fun buildFilteredTransaction(): ContractUpgradeFilteredTransaction {
-        return ContractUpgradeFilteredTransaction(inputs, notary, hiddenComponentHash, referenceInputs)
+        return ContractUpgradeFilteredTransaction(inputs, notary, hiddenComponentHash, unspendableInputs)
     }
 }
 
@@ -85,13 +84,13 @@ data class ContractUpgradeWireTransaction @JvmOverloads constructor(
  * @property rest Hash of the hidden components of the [ContractUpgradeWireTransaction].
  */
 @CordaSerializable
-data class ContractUpgradeFilteredTransaction @JvmOverloads constructor(
+data class ContractUpgradeFilteredTransaction constructor(
         override val inputs: List<StateRef>,
         override val notary: Party,
         val rest: SecureHash,
-        override val referenceInputs: List<StateRef> = emptyList()
+        override val unspendableInputs: List<StateRef> = emptyList()
 ) : CoreTransaction() {
-    override val id: SecureHash get() = serializedHash(inputs + referenceInputs + notary).hashConcat(rest)
+    override val id: SecureHash get() = serializedHash(inputs + unspendableInputs + notary).hashConcat(rest)
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
 }
 
@@ -105,7 +104,7 @@ data class ContractUpgradeFilteredTransaction @JvmOverloads constructor(
  * In contrast with a regular transaction, signatures are checked against the signers specified by input states'
  * *participants* fields, so full resolution is needed for signature verification.
  */
-data class ContractUpgradeLedgerTransaction @JvmOverloads constructor(
+data class ContractUpgradeLedgerTransaction constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val legacyContractAttachment: Attachment,
@@ -115,7 +114,7 @@ data class ContractUpgradeLedgerTransaction @JvmOverloads constructor(
         val privacySalt: PrivacySalt,
         override val sigs: List<TransactionSignature>,
         private val networkParameters: NetworkParameters,
-        override val referenceInputs: List<StateAndRef<ReferenceState>> = emptyList()
+        override val unspendableInputs: List<StateAndRef<ContractState>> = emptyList()
 ) : FullTransaction(), TransactionWithSignatures {
     /** The legacy contract class name is determined by the first input state. */
     private val legacyContractClassName = inputs.first().state.contract

@@ -98,9 +98,8 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun unspendableInput(stateRef: StateRef) {
-        @Suppress("UNCHECKED_CAST")
-        val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef) as TransactionState<ReferenceState>
-        transactionBuilder.addInputReferenceState(StateAndRef(state, stateRef))
+        val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        transactionBuilder.addUnspendableInputState(StateAndRef(state, stateRef))
     }
 
     override fun output(contractClassName: ContractClassName,
@@ -298,7 +297,8 @@ data class TestLedgerDSLInterpreter private constructor(
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
                 ltx.verify()
-                val doubleSpend = wtx.inputs.intersect(usedInputs)
+                val allInputs = wtx.inputs `union` wtx.unspendableInputs
+                val doubleSpend = allInputs `intersect` usedInputs
                 if (!doubleSpend.isEmpty()) {
                     val txIds = mutableListOf(wtx.id)
                     doubleSpend.mapTo(txIds) { it.txhash }

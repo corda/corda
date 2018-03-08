@@ -126,12 +126,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        @Suppress("UNCHECKED_CAST")
-        val resolvedReferenceInputs = referenceInputs.map { ref ->
+        val resolvedUnspendableInputs = unspendableInputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
-        } as List<StateAndRef<ReferenceState>>
+        }
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferenceInputs)
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedUnspendableInputs)
         checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
         return ltx
     }
@@ -147,7 +146,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
         ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
-        minus(ltx.referenceInputs.serialize().size)
+        minus(ltx.unspendableInputs.serialize().size)
         minus(ltx.inputs.serialize().size)
         minus(ltx.commands.serialize().size)
         minus(ltx.outputs.serialize().size)
@@ -245,7 +244,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                                   timeWindow: TimeWindow?,
                                   referenceInputs: List<StateRef> = emptyList()): List<ComponentGroup> {
             val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
-            if (referenceInputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(REFERENCE_GROUP.ordinal, referenceInputs.map { it.serialize() }))
+            if (referenceInputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(UNSPENDABLE_INPUTS_GROUP.ordinal, referenceInputs.map { it.serialize() }))
             if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(INPUTS_GROUP.ordinal, inputs.map { it.serialize() }))
             if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.map { it.serialize() }))
             // Adding commandData only to the commands group. Signers are added in their own group.
@@ -263,7 +262,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
-        for (referenceInput in referenceInputs) buf.appendln("${Emoji.rightArrow}REF DATA:      $referenceInput")
+        for (referenceInput in unspendableInputs) buf.appendln("${Emoji.rightArrow}REFS:      $referenceInput")
         for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
         for ((data) in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $data")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")

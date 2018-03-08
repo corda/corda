@@ -23,7 +23,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     override val inputs: List<StateRef> = deserialiseComponentGroup(ComponentGroupEnum.INPUTS_GROUP, { SerializedBytes<StateRef>(it).deserialize() })
 
     /** Pointers to unspendable reference data, identified by (tx identity hash, output index). */
-    override val referenceInputs: List<StateRef> = deserialiseComponentGroup(ComponentGroupEnum.REFERENCE_GROUP, { SerializedBytes<StateRef>(it).deserialize() })
+    override val unspendableInputs: List<StateRef> = deserialiseComponentGroup(ComponentGroupEnum.UNSPENDABLE_INPUTS_GROUP, { SerializedBytes<StateRef>(it).deserialize() })
 
     override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP, { SerializedBytes<TransactionState<ContractState>>(it).deserialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentsClassLoader(attachments)) })
 
@@ -54,7 +54,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      */
     val availableComponentGroups: List<List<Any>>
         get() {
-            val result = mutableListOf(referenceInputs, inputs, outputs, commands, attachments)
+            val result = mutableListOf(unspendableInputs, inputs, outputs, commands, attachments)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
             return result
@@ -176,13 +176,13 @@ class FilteredTransaction internal constructor(
             }
 
             fun updateFilteredComponents() {
-                wtx.referenceInputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.REFERENCE_GROUP.ordinal, internalIndex) }
                 wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.INPUTS_GROUP.ordinal, internalIndex) }
                 wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.OUTPUTS_GROUP.ordinal, internalIndex) }
                 wtx.commands.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.COMMANDS_GROUP.ordinal, internalIndex) }
                 wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, internalIndex) }
                 if (wtx.notary != null) filter(wtx.notary, ComponentGroupEnum.NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, 0)
+                wtx.unspendableInputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.UNSPENDABLE_INPUTS_GROUP.ordinal, internalIndex) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one

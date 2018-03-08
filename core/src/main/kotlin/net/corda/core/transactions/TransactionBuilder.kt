@@ -33,7 +33,7 @@ import kotlin.collections.ArrayList
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
  */
-open class TransactionBuilder(
+open class TransactionBuilder constructor(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -42,12 +42,12 @@ open class TransactionBuilder(
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt(),
-        protected val referenceInputs: MutableList<StateRef> = arrayListOf()
+        protected val unspendableInputs: MutableList<StateRef> = arrayListOf()
 ) {
     constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
-    private val referenceInputsWithTransactionState = arrayListOf<TransactionState<ReferenceState>>()
+    private val referenceInputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
     /**
      * Creates a copy of the builder.
@@ -55,13 +55,13 @@ open class TransactionBuilder(
     fun copy(): TransactionBuilder {
         val t = TransactionBuilder(
                 notary = notary,
-                referenceInputs = ArrayList(referenceInputs),
                 inputs = ArrayList(inputs),
                 attachments = ArrayList(attachments),
                 outputs = ArrayList(outputs),
                 commands = ArrayList(commands),
                 window = window,
-                privacySalt = privacySalt
+                privacySalt = privacySalt,
+                unspendableInputs = ArrayList(unspendableInputs)
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referenceInputsWithTransactionState.addAll(this.referenceInputsWithTransactionState)
@@ -69,8 +69,11 @@ open class TransactionBuilder(
     }
 
     // DOCSTART 1
-    /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-    @Deprecated("The Corda gods kill a kitten if you use this method. So don't be that person and use this method.")
+    /**
+     * A more convenient way to add items to this transaction that calls the add* methods for you based on type
+     * Don't
+     */
+    @Deprecated("*** WARNING: THIS METHOD CANNOT BE USED TO ADD UNSPENDABLE STATES!! USE \"addUnspendableInputState\"***")
     fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
             when (t) {
@@ -116,7 +119,7 @@ open class TransactionBuilder(
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window, referenceInputStates()), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window, unspendableInputStates()), privacySalt)
         }
     }
 
@@ -153,9 +156,9 @@ open class TransactionBuilder(
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
     }
 
-    open fun addInputReferenceState(stateAndRef: StateAndRef<ReferenceState>): TransactionBuilder {
+    open fun addUnspendableInputState(stateAndRef: StateAndRef<ContractState>): TransactionBuilder {
         checkNotary(stateAndRef)
-        referenceInputs.add(stateAndRef.ref)
+        unspendableInputs.add(stateAndRef.ref)
         referenceInputsWithTransactionState.add(stateAndRef.state)
         return this
     }
@@ -224,7 +227,7 @@ open class TransactionBuilder(
     }
 
     // Accessors that yield immutable snapshots.
-    fun referenceInputStates(): List<StateRef> = ArrayList(referenceInputs)
+    fun unspendableInputStates(): List<StateRef> = ArrayList(unspendableInputs)
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
     fun attachments(): List<SecureHash> = ArrayList(attachments)
