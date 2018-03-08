@@ -7,6 +7,7 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
+import net.corda.core.internal.combinedHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
@@ -52,11 +53,10 @@ data class ContractUpgradeWireTransaction(
                 "outputs can only be obtained from a resolved ContractUpgradeLedgerTransaction")
 
     override val id: SecureHash by lazy {
-        serializedComponents.mapIndexed { index, component ->
+        val componentHashes =serializedComponents.mapIndexed { index, component ->
             componentHash(nonces[index], component)
-        }.reduce { combinedHash, componentHash ->
-            combinedHash.hashConcat(componentHash)
         }
+        combinedHash(componentHashes)
     }
 
     /** Required for filtering transaction components. */
@@ -138,9 +138,7 @@ data class ContractUpgradeFilteredTransaction(
                 else -> throw IllegalStateException("Missing component hashes")
             }
         }
-        hashList.reduce { combinedHash, componentHash ->
-            combinedHash.hashConcat(componentHash)
-        }
+        combinedHash(hashList)
     }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
 
