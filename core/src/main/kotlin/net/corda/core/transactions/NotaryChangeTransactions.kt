@@ -51,9 +51,11 @@ data class NotaryChangeWireTransaction(
      * thus input state refs will always be unique. Also, filtering doesn't apply on this type of transactions.
      */
     override val id: SecureHash by lazy {
-        serializedComponents[INPUTS.ordinal].bytes.sha256()
-                .hashConcat(serializedComponents[NOTARY.ordinal].bytes.sha256())
-                .hashConcat(serializedComponents[NEW_NOTARY.ordinal].bytes.sha256())
+        serializedComponents.map { component ->
+            component.bytes.sha256()
+        }.reduce { combinedHash, componentHash ->
+            combinedHash.hashConcat(componentHash)
+        }
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
