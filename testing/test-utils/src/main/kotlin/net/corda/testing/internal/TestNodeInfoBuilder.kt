@@ -7,6 +7,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -47,10 +48,11 @@ class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKe
         )
     }
 
-    fun buildWithSigned(serial: Long = 1, platformVersion: Int = 1): Pair<NodeInfo, SignedNodeInfo> {
+    fun buildWithSigned(serial: Long = 1, platformVersion: Int = 1): NodeInfoAndSigned {
         val nodeInfo = build(serial, platformVersion)
-        val privateKeys = identitiesAndPrivateKeys.map { it.second }
-        return Pair(nodeInfo, nodeInfo.signWith(privateKeys))
+        return NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
+            identitiesAndPrivateKeys.first { it.first.owningKey == publicKey }.second.sign(serialised.bytes)
+        }
     }
 
     fun reset() {
@@ -58,7 +60,7 @@ class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKe
     }
 }
 
-fun createNodeInfoAndSigned(vararg names: CordaX500Name, serial: Long = 1, platformVersion: Int = 1): Pair<NodeInfo, SignedNodeInfo> {
+fun createNodeInfoAndSigned(vararg names: CordaX500Name, serial: Long = 1, platformVersion: Int = 1): NodeInfoAndSigned {
     val nodeInfoBuilder = TestNodeInfoBuilder()
     names.forEach { nodeInfoBuilder.addIdentity(it) }
     return nodeInfoBuilder.buildWithSigned(serial, platformVersion)

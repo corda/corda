@@ -3,6 +3,9 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
@@ -14,15 +17,19 @@ import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
+import org.junit.Assert
 import org.junit.Test
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
+import java.util.*
+import java.util.concurrent.*
+import kotlin.streams.toList
+import kotlin.test.assertEquals
 
 class DriverTests {
     private companion object {
@@ -69,7 +76,7 @@ class DriverTests {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(DriverParameters(portAllocation = PortAllocation.RandomFree)) {
+        val nodeHandle = driver(DriverParameters(portAllocation = RandomFree)) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -116,4 +123,65 @@ class DriverTests {
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }
+
+    @Test
+    fun `driver rejects multiple nodes with the same name`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            assertThatThrownBy { listOf(newNode(DUMMY_BANK_A_NAME)(), newNode(DUMMY_BANK_B_NAME)(), newNode(DUMMY_BANK_A_NAME)()).transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test
+    fun `driver rejects multiple nodes with the same name parallel`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
+
+            assertThatThrownBy { nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test
+    fun `driver allows reusing names of nodes that have been stopped`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+
+            nodeA.stop()
+
+            assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
+        }
+    }
+
+
+    @Test
+    fun `driver waits for nodes to finish`() {
+        fun NodeHandle.stopQuietly() = try {
+            stop()
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+
+        val handlesFuture = openFuture<List<NodeHandle>>()
+        val driverExit = CountDownLatch(1)
+        val testFuture = ForkJoinPool.commonPool().fork {
+            val handles = LinkedList(handlesFuture.getOrThrow())
+            val last = handles.removeLast()
+            handles.forEach { it.stopQuietly() }
+            assertEquals(1, driverExit.count)
+            last.stopQuietly()
+        }
+        driver(DriverParameters(startNodesInProcess = true, waitForAllNodesToFinish = true)) {
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+            handlesFuture.set(listOf(nodeA) + notaryHandles.map { it.nodeHandles.getOrThrow() }.flatten())
+        }
+        driverExit.countDown()
+        testFuture.getOrThrow()
+    }
+
+    private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
 }

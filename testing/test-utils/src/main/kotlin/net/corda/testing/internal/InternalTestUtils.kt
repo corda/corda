@@ -4,6 +4,9 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.SslOptions
@@ -136,3 +139,16 @@ fun SslOptions.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<Strin
             "rpcSettings.ssl.trustStorePassword" to trustStorePassword
     )
 }
+
+/**
+ * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
+ * TODO: Should be removed after multiple identities are introduced.
+ */
+fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
+
+/**
+ * Returns the party identity of the first identity on the node. Until we have proper handling of multiple identities per node,
+ * for tests we use the first identity as special one.
+ * TODO: Should be removed after multiple identities are introduced.
+ */
+fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party

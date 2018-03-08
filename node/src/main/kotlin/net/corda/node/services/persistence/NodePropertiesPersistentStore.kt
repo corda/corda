@@ -29,10 +29,10 @@ class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, persistenc
     @Table(name = "${NODE_DATABASE_PREFIX}properties")
     class DBNodeProperty(
             @Id
-            @Column(name = "key")
+            @Column(name = "property_key")
             val key: String = "",
 
-            @Column(name = "value")
+            @Column(name = "property_value")
             var value: String? = ""
     )
 }

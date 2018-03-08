@@ -22,12 +22,11 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.test.spring.springDriver
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
@@ -85,7 +84,7 @@ class IRSDemoTest {
             val numBDeals = getTradeCount(nodeBApi)
 
             runUploadRates(controllerApi)
-            runTrade(nodeAApi, controller.nodeInfo.chooseIdentity())
+            runTrade(nodeAApi, controller.nodeInfo.singleIdentity())
 
             assertThat(getTradeCount(nodeAApi)).isEqualTo(numADeals + 1)
             assertThat(getTradeCount(nodeBApi)).isEqualTo(numBDeals + 1)

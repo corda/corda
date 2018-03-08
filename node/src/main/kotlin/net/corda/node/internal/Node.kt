@@ -169,9 +169,11 @@ open class Node(configuration: NodeConfiguration,
         val advertisedAddress = info.addresses[0]
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, MAX_FILE_SIZE)
 
-        printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
+        printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
             rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, MAX_FILE_SIZE)
+            printBasicNodeInfo("RPC connection address", it.primary.toString())
+            printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
         verifierMessagingClient = when (configuration.verifierType) {
             VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, MAX_FILE_SIZE)

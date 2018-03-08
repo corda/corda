@@ -120,7 +120,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
         // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
         activeMQServer.start()
-        Node.printBasicNodeInfo("Listening on port", p2pPort.toString())
+        log.info("P2P messaging server listening on port $p2pPort")
     }
 
     private fun createArtemisConfig() = SecureArtemisConfiguration().apply {

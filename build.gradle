@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "corda-3.0-HC02"
+    ext.corda_release_version = "corda-3.0-RC02"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
@@ -39,6 +39,7 @@ buildscript {
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
     ext.jolokia_version = '1.3.7'
+    ext.json_version = '20180130'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
@@ -61,12 +62,12 @@ buildscript {
     ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
+    ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
-    ext.docker_compose_rule_version = '0.33.0'
+    ext.docker_compose_rule_version = '0.33.1'
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
 
@@ -266,14 +267,20 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     node {
         name "O=Bank A,OU=corda,L=London,C=GB"
         p2pPort 10012
-        rpcPort 10013
+        rpcSettings {
+            address "localhost:10013"
+            adminAddress "localhost:10023"
+        }
         webPort 10014
         cordapps = []
     }
     node {
         name "O=Bank B,OU=corda,L=London,C=GB"
         p2pAddress "localhost:10007"
-        rpcAddress "localhost:10008"
+        rpcSettings {
+            address "localhost:10008"
+            adminAddress "localhost:10018"
+        }
         webAddress "localhost:10009"
         cordapps = []
     }

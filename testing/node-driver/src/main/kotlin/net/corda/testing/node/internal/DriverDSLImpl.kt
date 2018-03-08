@@ -18,7 +18,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -44,12 +43,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.driver.VerifierType
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
@@ -76,6 +75,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 import net.corda.nodeapi.internal.config.User as InternalUser
 
@@ -101,6 +101,7 @@ class DriverDSLImpl(
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
+    private val nodeNames = mutableSetOf<CordaX500Name>()
     /**
      * Future which completes when the network map is available, whether a local one or one from the CZ. This future acts
      * as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap] object, which
@@ -110,8 +111,13 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
+    interface Waitable {
+        @Throws(InterruptedException::class)
+        fun waitFor(): Unit
+    }
+
     class State {
-        val processes = ArrayList<Process>()
+        val processes = ArrayList<Waitable>()
     }
 
     private val state = ThreadBox(State())
@@ -186,6 +192,12 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        synchronized(nodeNames) {
+            val wasANewNode = nodeNames.add(name)
+            if (!wasANewNode) {
+                throw IllegalArgumentException("Node with name $name is already started or starting.")
+            }
+        }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
@@ -477,7 +489,7 @@ class DriverDSLImpl(
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
                     }
-                    val nodeInfo = nodeInfoFile.readAll().deserialize<SignedNodeInfo>().verified()
+                    val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                     NotaryInfo(nodeInfo.legalIdentities[0], spec.validating)
                 }
             }
@@ -642,6 +654,9 @@ class DriverDSLImpl(
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
             countObservables.remove(config.corda.myLegalName)
+            synchronized(nodeNames) {
+                nodeNames.remove(config.corda.myLegalName)
+            }
         }
 
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
@@ -656,20 +671,32 @@ class DriverDSLImpl(
                         }
                     }
             )
-            return nodeAndThreadFuture.flatMap { (node, thread) ->
+            val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
             }
+            state.locked {
+                processes += object : Waitable {
+                    override fun waitFor() {
+                        nodeAndThreadFuture.getOrThrow().second.join()
+                    }
+                }
+            }
+            return nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForAllNodesToFinish) {
                 state.locked {
-                    processes += process
+                    processes += object : Waitable {
+                        override fun waitFor() {
+                            process.waitFor()
+                        }
+                    }
                 }
             } else {
                 shutdownManager.registerProcessShutdown(process)
@@ -952,7 +979,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(defaultParameters.initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(true)
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -1003,7 +1030,7 @@ fun <A> internalDriver(
         debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
+        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,

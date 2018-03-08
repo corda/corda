@@ -103,7 +103,7 @@ open class TransactionBuilder(
         val resolvedOutputs = outputs.map { state ->
             when {
                 state.constraint !is AutomaticHashConstraint -> state
-                useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint(services.networkParameters.whitelistedContractImplementations))
+                useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
                 else -> services.cordappProvider.getContractAttachmentID(state.contract)?.let {
                     state.copy(constraint = HashAttachmentConstraint(it))
                 } ?: throw MissingContractAttachments(listOf(state))

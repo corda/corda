@@ -8,4 +8,3 @@ Corda networks
    permissioning
    network-map
    versioning
-   permissioning-certificate-spec
