@@ -1,10 +1,9 @@
 package net.corda.core.transactions
 
-import com.google.common.primitives.Ints
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.node.NetworkParameters
@@ -60,7 +59,9 @@ data class ContractUpgradeWireTransaction(
     }
 
     /** Required for filtering transaction components. */
-    private val nonces = (0 until serializedComponents.size).map { (Ints.toByteArray(it) + privacySalt.bytes).sha256() }
+    private val nonces = (0 until serializedComponents.size).map {
+        computeNonce(privacySalt, it, 0)
+    }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
