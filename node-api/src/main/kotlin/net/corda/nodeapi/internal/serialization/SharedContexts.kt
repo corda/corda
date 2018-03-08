@@ -15,13 +15,6 @@ import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
  * MUST be kept separate from these ones!
  */
 
-val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.P2P)
-
 val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         SerializationDefaults.javaClass.classLoader,
         QuasarWhitelist,

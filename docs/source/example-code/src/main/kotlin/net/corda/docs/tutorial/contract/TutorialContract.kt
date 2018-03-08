@@ -10,7 +10,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.utils.sumCashBy
-import net.corda.testing.core.chooseIdentityAndCert
+import net.corda.testing.core.singleIdentityAndCert
 import java.time.Instant
 import java.util.*
 
@@ -112,7 +112,7 @@ class CommercialPaper : Contract {
                 services = services,
                 tx = tx,
                 amount = paper.state.data.faceValue.withoutIssuer(),
-                ourIdentity = services.myInfo.chooseIdentityAndCert(),
+                ourIdentity = services.myInfo.singleIdentityAndCert(),
                 to = paper.state.data.owner
         )
         tx.addInputState(paper)

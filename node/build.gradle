@@ -96,6 +96,7 @@ dependencies {
 
     // Jackson support: serialisation to/from JSON, YAML, etc
     compile project(':client:jackson')
+    compile group: 'org.json', name: 'json', version: json_version
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"
@@ -181,7 +182,7 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
     // Jolokia JVM monitoring agent
-    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {

@@ -8,7 +8,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import java.security.PublicKey
@@ -30,18 +29,19 @@ abstract class NotaryService : SingletonSerializeAsToken() {
         }
 
         /**
-         * Checks if the current instant provided by the clock falls within the specified time window.
+         * Checks if the current instant provided by the clock falls within the specified time window. Should only be
+         * used by a notary service flow.
          *
-         * @throws NotaryException if current time is outside the specified time window. The exception contains
+         * @throws NotaryInternalException if current time is outside the specified time window. The exception contains
          *                         the [NotaryError.TimeWindowInvalid] error.
          */
         @JvmStatic
-        @Throws(NotaryException::class)
+        @Throws(NotaryInternalException::class)
         fun validateTimeWindow(clock: Clock, timeWindow: TimeWindow?) {
             if (timeWindow == null) return
             val currentTime = clock.instant()
             if (currentTime !in timeWindow) {
-                throw NotaryException(
+                throw NotaryInternalException(
                         NotaryError.TimeWindowInvalid(currentTime, timeWindow)
                 )
             }
@@ -82,26 +82,22 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party) {
         try {
             uniquenessProvider.commit(inputs, txId, caller)
-        } catch (e: UniquenessException) {
-            val conflicts = inputs.filterIndexed { i, stateRef ->
-                val consumingTx = e.error.stateHistory[stateRef]
-                consumingTx != null && consumingTx != UniquenessProvider.ConsumingTx(txId, i, caller)
-            }
-            if (conflicts.isNotEmpty()) {
-                // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
-                log.warn("Notary conflicts for $txId: $conflicts")
-                throw notaryException(txId, e)
-            }
+        } catch (e: NotaryInternalException) {
+            if (e.error is NotaryError.Conflict) {
+                val conflicts = inputs.filterIndexed { _, stateRef ->
+                    val cause = e.error.consumedStates[stateRef]
+                    cause != null && cause.hashOfTransactionId != txId.sha256()
+                }
+                if (conflicts.isNotEmpty()) {
+                    // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
+                    log.info("Notary conflicts for $txId: $conflicts")
+                    throw e
+                }
+            } else throw e
         } catch (e: Exception) {
             log.error("Internal error", e)
-            throw NotaryException(NotaryError.General(Exception("Service unavailable, please try again later")))
+            throw NotaryInternalException(NotaryError.General(Exception("Service unavailable, please try again later")))
         }
-    }
-
-    private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {
-        val conflictData = e.error.serialize()
-        val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
-        return NotaryException(NotaryError.Conflict(txId, signedConflict))
     }
 
     /** Sign a [ByteArray] input. */
@@ -117,6 +113,8 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
 
     // TODO: Sign multiple transactions at once by building their Merkle tree and then signing over its root.
 
-    @Deprecated("This property is no longer used") @Suppress("DEPRECATION")
-    protected open val timeWindowChecker: TimeWindowChecker get() = throw UnsupportedOperationException("No default implementation, need to override")
+    @Deprecated("This property is no longer used")
+    @Suppress("DEPRECATION")
+    protected open val timeWindowChecker: TimeWindowChecker
+        get() = throw UnsupportedOperationException("No default implementation, need to override")
 }

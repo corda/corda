@@ -12,7 +12,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.utils.ScreenCoordinate
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.netmap.simulation.place
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import java.util.*
 
@@ -88,7 +88,7 @@ class VisualiserViewModel {
         try {
             return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
         } catch (e: Exception) {
-            throw Exception("Cannot project ${node.started!!.info.chooseIdentity()}", e)
+            throw Exception("Cannot project ${node.started!!.info.singleIdentity()}", e)
         }
     }
 

@@ -13,22 +13,18 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.*
 import java.util.jar.JarInputStream
 
+/**
+ * A mock implementation of [AttachmentStorage] for use within tests
+ */
 class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
-    companion object {
-        fun getBytes(jar: InputStream) = run {
-            val s = ByteArrayOutputStream()
-            jar.copyTo(s)
-            s.close()
-            s.toByteArray()
-        }
-    }
 
-    val files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
+    private val _files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
+    /** A map of the currently stored files by their [SecureHash] */
+    val files: Map<SecureHash, Pair<Attachment, ByteArray>> get() = _files
 
     override fun importAttachment(jar: InputStream): AttachmentId = importAttachment(jar, UNKNOWN_UPLOADER, null)
 
@@ -56,23 +52,22 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     fun importContractAttachment(contractClassNames: List<ContractClassName>, uploader: String, jar: InputStream): AttachmentId = importAttachmentInternal(jar, uploader, null, contractClassNames)
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = getBytes(jar).let { bytes -> Pair(bytes.sha256(), bytes) }
+    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = jar.readBytes().let { bytes -> Pair(bytes.sha256(), bytes) }
 
-    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash): AbstractAttachment(dataLoader)
+    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash) : AbstractAttachment(dataLoader)
 
     private fun importAttachmentInternal(jar: InputStream, uploader: String, filename: String?, contractClassNames: List<ContractClassName>? = null): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
 
-        val bytes = getBytes(jar)
+        val bytes = jar.readBytes()
 
         val sha256 = bytes.sha256()
         if (sha256 !in files.keys) {
             val baseAttachment = MockAttachment({ bytes }, sha256)
             val attachment = if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader)
-            files[sha256] = Pair(attachment, bytes)
+            _files[sha256] = Pair(attachment, bytes)
         }
         return sha256
     }
-
 }

@@ -1,8 +1,9 @@
 package net.corda.core.contracts
 
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.services.AttachmentId
+import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
@@ -27,18 +28,14 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * An [AttachmentConstraint] that verifies that the hash of the attachment is in the network parameters whitelist.
  * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
  * It allows for centralized control over the cordapps that can be used.
- *
- * @param whitelistedContractImplementations whitelisted attachment IDs by contract class name.
  */
-class WhitelistedByZoneAttachmentConstraint(private val whitelistedContractImplementations: Map<String, List<AttachmentId>>) : AttachmentConstraint {
-
+object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        return whitelistedContractImplementations.let { whitelist ->
-            when (attachment) {
-                is ConstraintAttachment -> attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
-                else -> false
-            }
-        }
+        return if (attachment is AttachmentWithContext) {
+            val whitelist = attachment.whitelistedContractImplementations
+                    ?: throw IllegalStateException("Unable to verify WhitelistedByZoneAttachmentConstraint - whitelist not specified")
+            attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
+        } else false
     }
 }
 
@@ -55,17 +52,5 @@ class WhitelistedByZoneAttachmentConstraint(private val whitelistedContractImple
 object AutomaticHashConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticHashConstraint placeholder")
-    }
-}
-
-/**
- * Used only for passing to the Attachment constraint verification.
- * Encapsulates a [ContractAttachment] and the state contract
- */
-class ConstraintAttachment(val contractAttachment: ContractAttachment, val stateContract: ContractClassName) : Attachment by contractAttachment {
-    init {
-        require(stateContract in contractAttachment.allContracts) {
-            "This ConstraintAttachment was not initialised properly"
-        }
     }
 }

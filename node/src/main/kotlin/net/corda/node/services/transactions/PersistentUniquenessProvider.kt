@@ -3,10 +3,13 @@ package net.corda.node.services.transactions
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryInternalException
+import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
-import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -67,8 +70,9 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable
-                            var txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                            var index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                            val txId = it.id.txId
+                                    ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                            val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
                             Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                                     UniquenessProvider.ConsumingTx(
                                             id = SecureHash.parse(it.consumingTxHash),
@@ -90,7 +94,6 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     }
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
-
         val conflict = mutex.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
             for (inputState in states) {
@@ -99,7 +102,8 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
             }
             if (conflictingStates.isNotEmpty()) {
                 log.debug("Failure, input states already committed: ${conflictingStates.keys}")
-                UniquenessProvider.Conflict(conflictingStates)
+                val conflict = conflictingStates.mapValues { StateConsumptionDetails(it.value.id.sha256()) }
+                conflict
             } else {
                 states.forEachIndexed { i, stateRef ->
                     committedStates[stateRef] = UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
@@ -109,6 +113,6 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
             }
         }
 
-        if (conflict != null) throw UniquenessException(conflict)
+        if (conflict != null) throw NotaryInternalException(NotaryError.Conflict(txId, conflict))
     }
 }

@@ -34,7 +34,13 @@ class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
             // is: https://youtrack.jetbrains.com/issue/KT-13077
             // TODO: Revisit this when Kotlin issue is fixed.
 
-            loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
+            // So this used to report as an error, but given we serialise exceptions all the time it
+            // provides for very scary log files so move this to trace level
+            loggerFor<PropertySerializer>().let { logger ->
+                logger.trace("Using kotlin introspection on internal type ${this.declaringClass}")
+                logger.trace("Unexpected internal Kotlin error", e)
+            }
+
             return true
         }
     }
@@ -70,7 +76,13 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
         // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue
         // is: https://youtrack.jetbrains.com/issue/KT-13077
         // TODO: Revisit this when Kotlin issue is fixed.
-        loggerFor<PropertySerializer>().error("Unexpected internal Kotlin error", e)
+
+        // So this used to report as an error, but given we serialise exceptions all the time it
+        // provides for very scary log files so move this to trace level
+        loggerFor<PropertySerializer>().let { logger ->
+            logger.trace("Using kotlin introspection on internal type $field")
+            logger.trace("Unexpected internal Kotlin error", e)
+        }
         true
     }
 }

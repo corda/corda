@@ -18,7 +18,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -116,7 +116,7 @@ class CollectSignaturesFlowTests {
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = aliceNode.services.startFlow(TestFlow.Initiator(state, notary))
         mockNet.runNetwork()
-        val result = flow.getOrThrow()
+        val result = flow.resultFuture.getOrThrow()
         result.verifyRequiredSignatures()
         println(result.tx)
         println(result.sigs)
@@ -128,7 +128,7 @@ class CollectSignaturesFlowTests {
         val ptx = aliceNode.services.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
-        val result = flow.getOrThrow()
+        val result = flow.resultFuture.getOrThrow()
         result.verifyRequiredSignatures()
         println(result.tx)
         println(result.sigs)
@@ -142,7 +142,7 @@ class CollectSignaturesFlowTests {
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {
-            flow.getOrThrow()
+            flow.resultFuture.getOrThrow()
         }
     }
 
@@ -156,7 +156,7 @@ class CollectSignaturesFlowTests {
         val signedByBoth = bobNode.services.addSignature(signedByA)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(signedByBoth, emptySet()))
         mockNet.runNetwork()
-        val result = flow.getOrThrow()
+        val result = flow.resultFuture.getOrThrow()
         println(result.tx)
         println(result.sigs)
     }

@@ -9,7 +9,7 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.StateLoader
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.utilities.days
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
@@ -48,7 +48,7 @@ class NodeSchedulerServiceTest {
         doReturn(flowsDraingMode).whenever(it).flowsDrainingMode
     }
     private val transactionStates = mutableMapOf<StateRef, TransactionState<*>>()
-    private val stateLoader = rigorousMock<StateLoader>().also {
+    private val servicesForResolution = rigorousMock<ServicesForResolution>().also {
         doLookup(transactionStates).whenever(it).loadState(any())
     }
     private val flows = mutableMapOf<FlowLogicRef, FlowLogic<*>>()
@@ -63,7 +63,7 @@ class NodeSchedulerServiceTest {
             testClock,
             database,
             flowStarter,
-            stateLoader,
+            servicesForResolution,
             serverThread = MoreExecutors.directExecutor(),
             flowLogicRefFactory = flowLogicRefFactory,
             nodeProperties = nodeProperties,

@@ -77,6 +77,9 @@ data class TestTransactionDSLInterpreter private constructor(
 
     val services = object : ServicesForResolution by ledgerInterpreter.services {
         override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+            return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
+        }
         override val cordappProvider: CordappProvider = ledgerInterpreter.services.cordappProvider
     }
 

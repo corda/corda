@@ -11,6 +11,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationFactory
@@ -45,6 +46,24 @@ import kotlin.reflect.full.superclasses
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+
+object AckWrapper {
+    object Ack
+
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
+
+object PrivateAckWrapper {
+    private object Ack
+
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
 
 class SerializationOutputTests {
     private companion object {
@@ -1114,5 +1133,17 @@ class SerializationOutputTests {
 
         // were the issue not fixed we'd blow up here
         SerializationOutput(factory).serialize(c)
+    }
+
+    @Test
+    fun nestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        AckWrapper.serialize()
+    }
+
+    @Test
+    fun privateNestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        PrivateAckWrapper.serialize()
     }
 }

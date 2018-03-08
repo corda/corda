@@ -12,11 +12,10 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.schema.NodeSchemaService.NodeCoreV1
 import net.corda.node.services.schema.NodeSchemaService.NodeNotaryV1
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
@@ -32,7 +31,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {
-        val mockNet = MockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
+        val mockNet = InternalMockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
@@ -41,7 +40,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs with minimal core schema set`() {
-        val mockNet = MockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
 
@@ -53,7 +52,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs inclusive of notary node schema set`() {
-        val mockNet = MockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
         val mockNotaryNode = mockNet.notaryNodes.first()
         val schemaService = mockNotaryNode.services.schemaService
 

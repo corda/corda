@@ -305,7 +305,8 @@ object SimmFlow {
         @Suspendable
         private fun agreePortfolio(portfolio: Portfolio): SignedTransaction {
             logger.info("Handshake finished, awaiting Simm offer")
-            require(offer.dealBeingOffered.portfolio == portfolio.refs)
+
+            require(offer.dealBeingOffered.portfolio.toSet() == portfolio.refs.toSet())
 
             val seller = TwoPartyDealFlow.Instigator(
                     replyToSession,
