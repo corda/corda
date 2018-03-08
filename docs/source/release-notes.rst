@@ -148,7 +148,7 @@ Significant Changes in 3.0
 
     Corda 3.0 lays the groundwork for future releases, when contract verification will be done against the attached contract JARs
     rather than requiring a locally deployed CorDapp of the exact version specified by the transaction. The future vision for this
-    feature will entail the dynamic downloading of the appropriate version of the smart contract and it's execution within a
+    feature will entail the dynamic downloading of the appropriate version of the smart contract and its execution within a
     sandboxed environment.
 
     .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
