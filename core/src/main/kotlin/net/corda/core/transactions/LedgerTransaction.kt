@@ -400,6 +400,6 @@ data class LedgerTransaction @JvmOverloads constructor(
              notary: Party?,
              timeWindow: TimeWindow?,
              privacySalt: PrivacySalt
-    ) = copy(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null)
+    ) = copy(inputs = inputs, outputs = outputs, commands = commands, attachments = attachments, id = id, notary = notary, timeWindow = timeWindow, privacySalt = privacySalt, networkParameters = null)
 }
 
