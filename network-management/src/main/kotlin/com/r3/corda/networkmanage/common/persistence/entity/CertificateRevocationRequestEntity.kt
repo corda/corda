@@ -52,8 +52,7 @@ class CertificateRevocationRequestEntity(
         @Column(name = "remark", length = 256)
         val remark: String? = null
 ) {
-    fun copy(id: Long? = this.id,
-             requestId: String = this.requestId,
+    fun copy(requestId: String = this.requestId,
              certificateData: CertificateDataEntity = this.certificateData,
              certificateSerialNumber: BigInteger = this.certificateSerialNumber,
              status: RequestStatus = this.status,
@@ -64,7 +63,7 @@ class CertificateRevocationRequestEntity(
              revocationReason: CRLReason = this.revocationReason,
              remark: String? = this.remark): CertificateRevocationRequestEntity {
         return CertificateRevocationRequestEntity(
-                id = id,
+                id = this.id,
                 requestId = requestId,
                 certificateData = certificateData,
                 certificateSerialNumber = certificateSerialNumber,

@@ -132,5 +132,17 @@ class CertificateDataEntity(
         return (toCertificatePath().certificates.first() as X509Certificate).subjectX500Principal.name
     }
 
+    fun copy(certificateStatus: CertificateStatus = this.certificateStatus,
+             certificatePathBytes: ByteArray = this.certificatePathBytes,
+             certificateSigningRequest: CertificateSigningRequestEntity = this.certificateSigningRequest,
+             certificateSerialNumber: BigInteger = this.certificateSerialNumber): CertificateDataEntity {
+        return CertificateDataEntity(
+                id = this.id,
+                certificateStatus = certificateStatus,
+                certificatePathBytes = certificatePathBytes,
+                certificateSigningRequest = certificateSigningRequest,
+                certificateSerialNumber = certificateSerialNumber)
+    }
+
     private fun toCertificatePath(): CertPath = buildCertPath(certificatePathBytes)
 }

@@ -158,11 +158,41 @@
                 <constraints nullable="false"/>
             </column>
             <column name="revtype" type="TINYINT"/>
-            <column name="revocation_reason" type="NVARCHAR(255)"/>
+            <column name="revocation_reason" type="NVARCHAR(256)"/>
             <column name="modified_at" type="TIMESTAMP"/>
             <column name="modified_by" type="NVARCHAR(256)"/>
             <column name="remark" type="NVARCHAR(256)"/>
             <column name="status" type="NVARCHAR(256)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="CRL">
+        <createTable tableName="certificate_revocation_list">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer" type="NVARCHAR(256)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="crl_bytes" type="BLOB"/>
+            <column name="modified_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signed_by" type="NVARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="CRL_AUD">
+        <createTable tableName="certificate_revocation_list_AUD">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rev" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revtype" type="TINYINT"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+            <column name="signed_by" type="NVARCHAR(512)"/>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-9">
@@ -188,6 +218,12 @@
     </changeSet>
     <changeSet author="R3.Corda" id="PK_CRR_AUD">
         <addPrimaryKey columnNames="id, rev" constraintName="certificate_revocation_request_AUD_pk" tableName="certificate_revocation_request_AUD"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="PK_CRL">
+        <addPrimaryKey columnNames="id" constraintName="certificate_revocation_list_pk" tableName="certificate_revocation_list"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="PK_CRL_AUD">
+        <addPrimaryKey columnNames="id, rev" constraintName="certificate_revocation_list_AUD_pk" tableName="certificate_revocation_list_AUD"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-15">
         <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_CD_CSR" tableName="certificate_data"/>

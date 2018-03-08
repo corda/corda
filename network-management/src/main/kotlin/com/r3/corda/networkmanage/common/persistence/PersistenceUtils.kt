@@ -59,6 +59,7 @@ sealed class NetworkManagementSchemaServices {
                     CertificateSigningRequestEntity::class.java,
                     CertificateDataEntity::class.java,
                     CertificateRevocationRequestEntity::class.java,
+                    CertificateRevocationListEntity::class.java,
                     NodeInfoEntity::class.java,
                     NetworkParametersEntity::class.java,
                     NetworkMapEntity::class.java)) {
