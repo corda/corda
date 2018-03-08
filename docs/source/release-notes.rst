@@ -276,6 +276,7 @@ Minor Changes
     - documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
   * Overall improvements to error handling (RPC, Flows, Network Client).
   * TLS authentication now supports mixed RSA and ECDSA keys.
+  * PrivacySalt computation is faster as it does not depend on the OS's entropy pool directly.
   * Numerous bug fixes and documentation tweaks.
   * Removed dependency on Jolokia WAR file.
 
