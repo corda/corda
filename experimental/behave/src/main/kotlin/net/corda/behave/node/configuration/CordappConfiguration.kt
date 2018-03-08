@@ -1,6 +1,6 @@
 package net.corda.behave.node.configuration
 
-class CordappConfiguration(var apps: List<String> = emptyList(), var includeFinance: Boolean = false) : ConfigurationTemplate() {
+class CordappConfiguration(var apps: List<String> = emptyList(), val includeFinance: Boolean = false) : ConfigurationTemplate() {
 
     private val applications = apps + if (includeFinance) {
         listOf("net.corda:corda-finance:CORDA_VERSION")
