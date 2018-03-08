@@ -4,9 +4,6 @@ import org.jolokia.util.LogHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/**
- * This also exists in webserver, because depends on jolokia
- **/
 class JolokiaSlf4jAdapter : LogHandler {
     companion object {
         val log: Logger = LoggerFactory.getLogger("org.jolokia")
