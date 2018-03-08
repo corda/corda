@@ -14,7 +14,6 @@ import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -156,10 +155,10 @@ class NotaryFlow {
             check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
                 "We are not a notary on the network"
             }
-            val (id, inputs, timeWindow, notary) = receiveAndVerifyTx()
+            val (id, inputs, timeWindow, notary, unspendableInputs) = receiveAndVerifyTx()
             checkNotary(notary)
             service.validateTimeWindow(timeWindow)
-            service.commitInputStates(inputs, id, otherSideSession.counterparty)
+            service.commitInputStates(inputs, id, otherSideSession.counterparty, unspendableInputs)
             signAndSendResponse(id)
             return null
         }
@@ -191,7 +190,7 @@ class NotaryFlow {
  * The minimum amount of information needed to notarise a transaction. Note that this does not include
  * any sensitive transaction details.
  */
-data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
+data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?, val unspendableInputs: List<StateRef> = emptyList())
 
 /**
  * Exception thrown by the notary service if any issues are encountered while trying to commit a transaction. The

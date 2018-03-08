@@ -14,7 +14,7 @@ import net.corda.core.serialization.CordaSerializable
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction */
-    fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party)
+    fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, unspendableStates: List<StateRef> = emptyList())
 
     /** Specifies the consuming transaction for every conflicting state */
     @CordaSerializable
