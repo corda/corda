@@ -574,7 +574,7 @@ and prevents the node from deserialising arbitrary objects.
 
 We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
 any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
-serialisation, etc. The node exposes the platform version its on and we envision CorDapps will use this to be able to
+serialisation, etc. The node exposes the platform version it's on and we envision CorDapps will use this to be able to
 run on older versions of the platform to the one they were compiled against. Platform version borrows heavily from Android's
 API Level.
 
