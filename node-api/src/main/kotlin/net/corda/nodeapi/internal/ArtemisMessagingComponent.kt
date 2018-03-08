@@ -31,13 +31,6 @@ class ArtemisMessagingComponent {
         const val BRIDGE_NOTIFY = "${INTERNAL_PREFIX}bridge.notify"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
 
-        /**
-         * In the operation mode where we have an out of process bridge we cannot correctly populate the Artemis validated user header
-         * as the TLS does not terminate directly onto Artemis. We therefore use this internal only header to forward
-         * the equivalent information from the Float.
-         */
-        val bridgedCertificateSubject = SimpleString("sender-subject-name")
-
         object P2PMessagingHeaders {
             // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
             // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
