@@ -350,17 +350,13 @@ class Node(
                             databaseType,
                             location = location,
                             country = country,
+                            notary = NotaryConfiguration(notaryType),
                             cordapps = CordappConfiguration(
                                 apps = apps,
                                 includeFinance = includeFinance
                             ),
                             configElements = *arrayOf(
-                                NotaryConfiguration(notaryType),
-                                CurrencyConfiguration(issuableCurrencies),
-                                CordappConfiguration(
-                                        apps = apps,
-                                        includeFinance = includeFinance
-                                )
+                                CurrencyConfiguration(issuableCurrencies)
                             )
                     ),
                     directory,

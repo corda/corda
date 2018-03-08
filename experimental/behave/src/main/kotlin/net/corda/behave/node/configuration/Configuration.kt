@@ -20,6 +20,7 @@ class Configuration(
                 nodeInterface.dbPort,
                 password = DEFAULT_PASSWORD
         ),
+        val notary: NotaryConfiguration = NotaryConfiguration(),
         val cordapps: CordappConfiguration = CordappConfiguration(),
         vararg configElements: ConfigurationTemplate
 ) {
