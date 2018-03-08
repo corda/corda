@@ -44,7 +44,7 @@ You will also need to update the ``corda_release_version`` identifier in your pr
 
 .. sourcecode:: shell
 
-  ext.corda_release_version = '3.0'
+  ext.corda_release_version = 'corda-3.0'
 
 Network Map Service
 ^^^^^^^^^^^^^^^^^^^
