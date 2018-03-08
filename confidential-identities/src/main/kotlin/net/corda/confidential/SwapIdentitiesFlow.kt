@@ -76,7 +76,8 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
         val serializedIdentity = SerializedBytes<PartyAndCertificate>(legalIdentityAnonymous.serialize().bytes)
 
-        // Special case that if we're both parties, a single identity is generated
+        // Special case that if we're both parties, a single identity is generated.
+        // TODO: for increased privacy, we should create one anonymous key per output state.
         val identities = LinkedHashMap<Party, AnonymousParty>()
         if (serviceHub.myInfo.isLegalIdentity(otherParty)) {
             identities.put(otherParty, legalIdentityAnonymous.party.anonymise())
