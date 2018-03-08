@@ -78,7 +78,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * Generates a random SHA-256 value.
          */
         @JvmStatic
-        fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
+        fun randomSHA256() = sha256(secureRandomBytes(32))
 
         /**
          * A SHA-256 hash value consisting of 32 0x00 bytes.
