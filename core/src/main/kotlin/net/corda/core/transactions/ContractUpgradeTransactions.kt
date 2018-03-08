@@ -60,7 +60,7 @@ data class ContractUpgradeWireTransaction(
     }
 
     /** Required for filtering transaction components. */
-    private val nonces = (1 until serializedComponents.size).map { (Ints.toByteArray(it) + privacySalt.bytes).sha256() }
+    private val nonces = (0 until serializedComponents.size).map { (Ints.toByteArray(it) + privacySalt.bytes).sha256() }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
@@ -115,7 +115,7 @@ data class ContractUpgradeFilteredTransaction(
          * Hashes of the transaction components that are not revealed in this transaction.
          * Required for computing the transaction id.
          */
-        private val hiddenComponents: Map<Int, SecureHash>
+        val hiddenComponents: Map<Int, SecureHash>
 ) : CoreTransaction() {
     override val inputs: List<StateRef> by lazy {
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
@@ -143,6 +143,7 @@ data class ContractUpgradeFilteredTransaction(
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
 
     /** Contains the serialized component and the associated nonce for computing the transaction id. */
+    @CordaSerializable
     class FilteredComponent(val component: OpaqueBytes, val nonce: SecureHash)
 }
 

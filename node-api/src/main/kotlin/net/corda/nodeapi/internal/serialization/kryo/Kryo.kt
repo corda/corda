@@ -10,6 +10,7 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
@@ -271,6 +272,20 @@ object ContractUpgradeWireTransactionSerializer : Serializer<ContractUpgradeWire
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
 
         return ContractUpgradeWireTransaction(components, privacySalt)
+    }
+}
+
+@ThreadSafe
+object ContractUpgradeFilteredTransactionSerializer : Serializer<ContractUpgradeFilteredTransaction>() {
+    override fun write(kryo: Kryo, output: Output, obj: ContractUpgradeFilteredTransaction) {
+        kryo.writeClassAndObject(output, obj.visibleComponents)
+        kryo.writeClassAndObject(output, obj.hiddenComponents)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<ContractUpgradeFilteredTransaction>): ContractUpgradeFilteredTransaction {
+        val visibleComponents: Map<Int, ContractUpgradeFilteredTransaction.FilteredComponent> = uncheckedCast(kryo.readClassAndObject(input))
+        val hiddenComponents: Map<Int, SecureHash> = uncheckedCast(kryo.readClassAndObject(input))
+        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents)
     }
 }
 
