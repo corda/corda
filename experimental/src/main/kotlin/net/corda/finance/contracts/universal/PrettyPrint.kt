@@ -70,7 +70,7 @@ private class PrettyPrint(arr : Arrangement) {
         }
     }
 
-    fun prettyPrint(per: Perceivable<Boolean>) {
+    fun prettyPrint(per: Perceivable<Boolean>, @Suppress("UNUSED_PARAMETER") x: Boolean? = null) {
         when (per) {
             is Const -> print("\"${per.value}\"")
             is PerceivableOr -> {
@@ -210,7 +210,7 @@ private class PrettyPrint(arr : Arrangement) {
     }
 
     // Convenience function to remove unchecked cast warnings
-    private fun<T> Perceivable<*>.asType() = uncheckedCast(this)
+    private fun<T> Perceivable<*>.asType() = uncheckedCast<Perceivable<*>, Perceivable<T>>(this)
 }
 
 fun prettyPrint(arr: Arrangement): String {
