@@ -259,6 +259,8 @@ class Node(
 
         private var notaryType = NotaryType.NONE
 
+        private var compatibilityZoneURL: String? = null
+
         private val issuableCurrencies = mutableListOf<String>()
 
         private var location: String = "London"
@@ -292,6 +294,11 @@ class Node(
 
         fun withNotaryType(newNotaryType: NotaryType): Builder {
             notaryType = newNotaryType
+            return this
+        }
+
+        fun withNetworkMap(newCompatibilityZoneURL: String?): Builder {
+            compatibilityZoneURL = newCompatibilityZoneURL
             return this
         }
 
@@ -357,6 +364,7 @@ class Node(
                             ),
                             configElements = *arrayOf(
                                 NotaryConfiguration(notaryType),
+                                NetworkMapConfiguration(compatibilityZoneURL),
                                 CurrencyConfiguration(issuableCurrencies)
                             )
                     ),

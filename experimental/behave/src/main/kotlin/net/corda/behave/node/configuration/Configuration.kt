@@ -25,16 +25,12 @@ class Configuration(
         vararg configElements: ConfigurationTemplate
 ) {
 
-    private val developerMode = true
-
-    private val useHttps = false
+    private val developerMode = (distribution.type == Distribution.Type.CORDA)
 
     private val basicConfig = """
             |myLegalName="C=$country,L=$location,O=$name"
             |keyStorePassword="cordacadevpass"
             |trustStorePassword="trustpass"
-            |extraAdvertisedServiceIds=[ "" ]
-            |useHTTPS=$useHttps
             |devMode=$developerMode
             |jarDirs = [ "../libs" ]
             """.trimMargin()

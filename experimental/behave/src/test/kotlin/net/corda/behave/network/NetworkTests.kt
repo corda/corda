@@ -13,8 +13,8 @@ class NetworkTests {
 
     @Ignore
     @Test
-    fun `network of single node with RPC proxy can be spun up`() {
-        val distribution = Distribution.fromVersionString("corda-3.0-pre-release-V3")
+    fun `OS Corda network of single node with RPC proxy can be spun up`() {
+        val distribution = Distribution.LATEST_MASTER
         val network = Network
                 .new(distribution)
                 .addNode(name = "Foo", distribution = distribution, notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true)
@@ -22,7 +22,7 @@ class NetworkTests {
         network.use {
             it.waitUntilRunning(300.seconds)
             it.keepAlive(300.seconds)
-//            it.signal()
+            it.signal()
         }
     }
 
@@ -42,13 +42,30 @@ class NetworkTests {
 
     @Ignore
     @Test
-    fun `network of two nodes (one with RPC proxy) and a non-validating notary can be spun up`() {
-        val distribution = Distribution.fromVersionString("corda-3.0-pre-release-V3")
+    fun `Mixed OS Corda network of two nodes (with an RPC proxy each) and a non-validating notary can be spun up`() {
+        // Note: this test exercises the NetworkBootstrapper to setup a local network
+        val distribution = Distribution.LATEST_MASTER
         val network = Network
                 .new(distribution)
-                .addNode(name = "EntityA", distribution = distribution, withRPCProxy = true)
-//                .addNode(name = "EntityB", distribution = distribution)
-                .addNode(name = "EntityB", distribution = Distribution.LATEST_R3_MASTER)
+                .addNode(name = "EntityA", distribution = Distribution.LATEST_MASTER, withRPCProxy = true)
+                .addNode(name = "EntityB", distribution = Distribution.LATEST_R3_MASTER, withRPCProxy = true)
+                .addNode(name = "Notary", distribution = distribution, notaryType = NotaryType.NON_VALIDATING)
+                .generate()
+        network.use {
+            it.waitUntilRunning(Duration.ofDays(1))
+            it.keepAlive(Duration.ofDays(1))
+        }
+    }
+
+    @Ignore
+    @Test
+    fun `Mixed R3 Corda network of two nodes (with an RPC proxy each) and a non-validating notary can be spun up`() {
+        // Note: this test exercises the Doorman / Notary / NMS setup sequence
+        val distribution = Distribution.LATEST_R3_MASTER
+        val network = Network
+                .new(distribution)
+                .addNode(name = "EntityA", distribution = Distribution.LATEST_R3_MASTER, withRPCProxy = true)
+                .addNode(name = "EntityB", distribution = Distribution.LATEST_MASTER, withRPCProxy = true)
                 .addNode(name = "Notary", distribution = distribution, notaryType = NotaryType.NON_VALIDATING)
                 .generate()
         network.use {

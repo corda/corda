@@ -31,7 +31,7 @@ class DockerContainerServiceTests {
 //                .addNode("Notary", NOTARY_V3_SNAPSHOT, notaryType = NotaryType.NON_VALIDATING)
                 .addNode("Corda", CORDA_V3_SNAPSHOT)
 //                .addNode("Notary-healthcheck", CORDAPP_HC_V3_SNAPSHOT)
-                .generate(false)
+                .generate()
         network.use {
             it.waitUntilRunning(30.seconds)
             it.signal()
