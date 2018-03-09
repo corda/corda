@@ -47,7 +47,7 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,
-                is SignatureException -> NotaryException(NotaryError.TransactionInvalid(e))
+                is SignatureException -> NotaryInternalException(NotaryError.TransactionInvalid(e))
                 else -> e
             }
         }
@@ -77,7 +77,7 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
         try {
             tx.verifySignaturesExcept(service.notaryIdentityKey)
         } catch (e: SignatureException) {
-            throw NotaryException(NotaryError.TransactionInvalid(e))
+            throw NotaryInternalException(NotaryError.TransactionInvalid(e))
         }
     }
 }

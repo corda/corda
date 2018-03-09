@@ -179,7 +179,7 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun secureRandomBytes(numOfBytes: Int): ByteArray = newSecureRandom().generateSeed(numOfBytes)
+fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply { newSecureRandom().nextBytes(this) }
 
 /**
  * This is a hack added because during deserialisation when no-param constructors are called sometimes default values
@@ -257,7 +257,11 @@ fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentG
 /** Return the SHA256(SHA256(nonce || serializedComponent)). */
 fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
 
-/** Serialise the object and return the hash of the serialized bytes. */
+/**
+ * Serialise the object and return the hash of the serialized bytes. Note that the resulting hash may not be deterministic
+ * across platform versions: serialization can produce different values if any of the types being serialized have changed,
+ * or if the version of serialization specified by the context changes.
+ */
 fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
 
 /**
