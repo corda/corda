@@ -326,13 +326,14 @@ val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun URL.post(serializedData: OpaqueBytes) {
-    openHttpConnection().apply {
+fun URL.post(serializedData: OpaqueBytes): ByteArray {
+    return openHttpConnection().run {
         doOutput = true
         requestMethod = "POST"
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
+        inputStream.use { it.readBytes() }
     }
 }
 
