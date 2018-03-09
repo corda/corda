@@ -17,20 +17,19 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.crypto.sha256
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryInternalException
+import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
-import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.MySQLConfiguration
-import java.security.PublicKey
 import java.sql.BatchUpdateException
 import java.sql.Connection
 import java.sql.SQLTransientConnectionException
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
@@ -117,7 +116,7 @@ class MySQLUniquenessProvider(
         } catch (e: BatchUpdateException) {
             log.info("Unable to commit input states, finding conflicts, txId: $txId", e)
             conflictCounter.inc()
-            retryTransaction(FindConflicts(states))
+            retryTransaction(FindConflicts(txId, states))
         } finally {
             val dt = s.stop().elapsed(TimeUnit.MILLISECONDS)
             commitTimer.update(dt, TimeUnit.MILLISECONDS)
@@ -173,26 +172,22 @@ class MySQLUniquenessProvider(
         }
     }
 
-    private class FindConflicts(val states: List<StateRef>) : RetryableTransaction {
+    private class FindConflicts(val txId: SecureHash, val states: List<StateRef>) : RetryableTransaction {
         override fun run(conn: Connection) {
-            val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
+            val conflicts = mutableMapOf<StateRef, StateConsumptionDetails>()
             states.forEach {
                 val st = conn.prepareStatement(findStatement).apply {
                     setBytes(1, it.txhash.bytes)
                     setInt(2, it.index)
                 }
                 val result = st.executeQuery()
-
                 if (result.next()) {
                     val consumingTxId = SecureHash.SHA256(result.getBytes(1))
-                    val inputIndex = result.getInt(2)
-                    val partyName = CordaX500Name.parse(result.getString(3))
-                    val partyKey: PublicKey = result.getBytes(4).deserialize()
-                    conflicts[it] = UniquenessProvider.ConsumingTx(consumingTxId, inputIndex, Party(partyName, partyKey))
+                    conflicts[it] = StateConsumptionDetails(consumingTxId.sha256())
                 }
             }
             conn.commit()
-            if (conflicts.isNotEmpty()) throw UniquenessException(UniquenessProvider.Conflict(conflicts))
+            if (conflicts.isNotEmpty()) throw NotaryInternalException(NotaryError.Conflict(txId, conflicts))
         }
     }
 }
