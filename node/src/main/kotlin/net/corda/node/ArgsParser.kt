@@ -95,9 +95,9 @@ data class CmdLineOptions(val baseDirectory: Path,
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
         if (isRegistration) {
-            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
+            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone URL (compatibilityZoneURL) must be present in node configuration file in registration mode." }
             requireNotNull(networkRootTruststorePath) { "Network root trust store path must be provided in registration mode." }
-            requireNotNull(networkRootTruststorePassword) { "Network root trust store password must be provided in registration mode." }
+            requireNotNull(networkRootTruststorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
         }
         return config
     }
