@@ -361,12 +361,12 @@ Once all nodes have performed the authorisation process, a participant must be c
 This flow sub-classes ``AbstractStateReplacementFlow``, which can be used to upgrade state objects that do not need a
 contract upgrade.
 
-One the flow ends successfully, all the participants of the old state object should have the upgraded state object
+Once the flow ends successfully, all the participants of the old state object should have the upgraded state object
 which references the new contract code.
 
 .. note:: You may spot a `Kotlin bug<https://youtrack.jetbrains.com/issue/KT-13003>` while trying to call this flow using
-   method reference like ``proxy.startFlow(::Initiate, state, Contract::java.class`` - until the bug is fixed, the solution
-   is to simply use wrapper function  - ``proxy.startFlow( { (a,b) -> Initiate(a,b) }, state, Contract::java.class``
+   a method reference like ``proxy.startFlow(::Initiate, state, Contract::java.class`` - until the bug is fixed, the solution
+   is to simply use the following wrapper function  - ``proxy.startFlow( { (a,b) -> Initiate(a,b) }, state, Contract::java.class``
 
 Points to note
 ~~~~~~~~~~~~~~
