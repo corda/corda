@@ -6,6 +6,7 @@ import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
+import net.corda.behave.node.configuration.NetworkInterface
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.Command
 import net.corda.behave.process.JarCommand
@@ -66,8 +67,10 @@ class Network private constructor(
                 databaseType: DatabaseType = DatabaseType.H2,
                 notaryType: NotaryType = NotaryType.NONE,
                 issuableCurrencies: List<String> = emptyList(),
+                compatibilityZoneURL: String = "http://localhost:1300",
                 withRPCProxy: Boolean = false
         ): Builder {
+            val czURL = if (distribution.type == Distribution.Type.R3_CORDA) compatibilityZoneURL else null
             return addNode(Node.new()
                     .withName(name)
                     .withDistribution(distribution)
@@ -75,6 +78,7 @@ class Network private constructor(
                     .withNotaryType(notaryType)
                     .withIssuableCurrencies(*issuableCurrencies.toTypedArray())
                     .withRPCProxy(withRPCProxy)
+                    .withNetworkMap(czURL)
             )
         }
 
@@ -87,12 +91,12 @@ class Network private constructor(
             return this
         }
 
-        fun generate(runNetworkBootstrapper : Boolean = true): Network {
+        fun generate(): Network {
             val network = Network(nodes, directory, timeout)
             if (distribution.type == Distribution.Type.R3_CORDA)
                 network.bootstrapDoorman(distribution)
-            if (runNetworkBootstrapper)
-                network.bootstrapNetwork()
+            else
+                network.bootstrapLocalNetwork()
             return network
         }
 
@@ -210,7 +214,7 @@ class Network private constructor(
         }
     }
 
-    private fun bootstrapNetwork() {
+    private fun bootstrapLocalNetwork() {
         copyDatabaseDrivers()
         if (!configureNodes()) {
             hasError = true
@@ -219,7 +223,7 @@ class Network private constructor(
         // WARNING!! Need to use the correct bootstrapper
         // only if using OS nodes (need to choose the latest version)
         val bootstrapper = nodes.values
-                .filter { !it.config.distribution.version.contains("r3corda") }
+                .filter { it.config.distribution.type != Distribution.Type.R3_CORDA }
                 .sortedByDescending { it.config.distribution.version }
                 .first()
                 .config.distribution.networkBootstrapper
@@ -260,7 +264,6 @@ class Network private constructor(
     }
 
     private fun bootstrapRPCProxy() {
-
         val cordaDistribution = nodes.values.first().config.distribution.path
         val rpcProxyPortNo = nodes.values.first().config.nodeInterface.rpcProxy
 
