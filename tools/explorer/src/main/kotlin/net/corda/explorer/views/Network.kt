@@ -30,6 +30,7 @@ import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
@@ -81,7 +82,11 @@ class Network : CordaView() {
                     .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
                     .filterNotNull()
                     .map { it.stateAndRef.state.data }.getParties()
-            val outputParties = it.transaction.tx.outputStates.observable().getParties()
+            val outputParties = it.transaction.coreTransaction.let {
+                if (it is WireTransaction) it.outputStates.observable().getParties()
+                // For ContractUpgradeWireTransaction and NotaryChangeWireTransaction the output parties are the same as input parties
+                else inputParties
+            }
             val signingParties = it.transaction.sigs.map { it.by.toKnownParty() }
             // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
             // TODO : Expose artemis queue to get real message information.
