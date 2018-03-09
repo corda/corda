@@ -225,6 +225,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 clientFailureCheckPeriod = -1
                 minLargeMessageSize = maxMessageSize
                 isUseGlobalPools = nodeSerializationEnv != null
+                confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize
             }
             val sessionFactory = locator!!.createSessionFactory()
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)

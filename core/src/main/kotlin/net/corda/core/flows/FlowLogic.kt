@@ -153,7 +153,7 @@ abstract class FlowLogic<out T> {
                 sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
                 shouldRetrySend = true
         )
-        return stateMachine.suspend(request, maySkipCheckpoint = true)[this]!!.checkPayloadIs(receiveType)
+        return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
     }
 
     @Suspendable
