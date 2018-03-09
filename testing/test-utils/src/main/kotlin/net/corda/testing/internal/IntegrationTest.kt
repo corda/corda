@@ -29,7 +29,7 @@ abstract class IntegrationTest {
     // dataSource.password = [PASSWORD]
     //    where [PASSWORD] must be the same for all ${custom.nodeOrganizationName}
     companion object {
-        private val DATABASE_PROVIDER = "databaseProvider"
+        private val DATABASE_PROVIDER = "custom.databaseProvider"
         private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")
         private val TEST_DB_SCRIPT_DIR = "test.db.script.dir"
         private val testDbScriptDir = System.getProperty(TEST_DB_SCRIPT_DIR, "database-scripts")

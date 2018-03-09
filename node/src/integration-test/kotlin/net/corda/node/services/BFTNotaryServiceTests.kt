@@ -56,7 +56,8 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
                 "node_6", "node_7", "node_8", "node_9")
     }

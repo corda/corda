@@ -34,6 +34,7 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseToDbSchemaFriendlyName
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -330,14 +331,12 @@ fun databaseProviderDataSourceConfig(nodeName: String? = null, postfix: String? 
     val parseOptions = ConfigParseOptions.defaults()
 
     //read overrides from command line (passed by Gradle as system properties)
-    val dataSourceKeys = listOf(DATA_SOURCE_URL, DATA_SOURCE_CLASSNAME, DATA_SOURCE_USER, DATA_SOURCE_PASSWORD)
-    val dataSourceSystemProperties = Properties()
-    val allSystemProperties = System.getProperties().toList().map { it.first.toString() to it.second.toString() }.toMap()
-    dataSourceKeys.filter { allSystemProperties.containsKey(it) }.forEach { dataSourceSystemProperties.setProperty(it, allSystemProperties[it]) }
-    val systemConfigOverride = ConfigFactory.parseProperties(dataSourceSystemProperties, parseOptions)
+    val systemConfigOverride = ConfigFactory.parseMap(System.getProperties().filterKeys { (it as String).startsWith(ConfigHelper.CORDA_PROPERTY_PREFIX) }
+            .mapKeys { (it.key as String).removePrefix(ConfigHelper.CORDA_PROPERTY_PREFIX) }
+            .filterKeys { listOf(DATA_SOURCE_URL, DATA_SOURCE_CLASSNAME, DATA_SOURCE_USER, DATA_SOURCE_PASSWORD).contains(it) })
 
     //read from db vendor specific configuration file
-    val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
+    val databaseConfig = ConfigFactory.parseResources(System.getProperty("custom.databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
     val fixedOverride = ConfigFactory.parseString("baseDirectory = \"\"")
 
     //implied property custom.nodeOrganizationName to fill the potential placeholders in db schema/ db user properties

@@ -48,7 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : IntegrationTest() {
      private companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
 
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")

@@ -32,7 +32,8 @@ import javax.security.auth.x500.X500Principal
 
 class NodeKeystoreCheckTest : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 

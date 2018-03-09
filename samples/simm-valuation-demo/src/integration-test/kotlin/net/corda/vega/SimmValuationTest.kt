@@ -40,7 +40,8 @@ class SimmValuationTest : IntegrationTest() {
         val nodeBLegalName = DUMMY_BANK_B_NAME
         val testTradeId = "trade1"
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
     }

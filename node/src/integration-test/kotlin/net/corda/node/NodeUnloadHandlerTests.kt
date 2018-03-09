@@ -29,7 +29,8 @@ import java.util.concurrent.TimeUnit
 
 class NodeUnloadHandlerTests : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName())
         val latch = CountDownLatch(1)
     }

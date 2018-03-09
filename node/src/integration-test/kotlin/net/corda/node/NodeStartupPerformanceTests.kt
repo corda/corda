@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit
 @Ignore("Only use locally")
 class NodeStartupPerformanceTests : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
     }

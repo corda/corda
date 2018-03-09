@@ -48,7 +48,8 @@ import kotlin.test.assertFailsWith
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
 
         private val cacheExpireAfterSecs: Long = 1

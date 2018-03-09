@@ -201,11 +201,11 @@ allprojects {
         systemProperty(AMQP_ENABLE_PROP_NAME, System.getProperty(AMQP_ENABLE_PROP_NAME))
 
          // relational database provider to be used by node
-        final DATABASE_PROVIDER = "databaseProvider"
-        final DATASOURCE_URL = "dataSourceProperties.dataSource.url"
-        final DATASOURCE_CLASSNAME = "dataSourceProperties.dataSourceClassName"
-        final DATASOURCE_USER = "dataSourceProperties.dataSource.user"
-        final DATASOURCE_PASSWORD = "dataSourceProperties.dataSource.password"
+        final DATABASE_PROVIDER = "custom.databaseProvider"
+        final DATASOURCE_URL = "corda.dataSourceProperties.dataSource.url"
+        final DATASOURCE_CLASSNAME = "corda.dataSourceProperties.dataSourceClassName"
+        final DATASOURCE_USER = "corda.dataSourceProperties.dataSource.user"
+        final DATASOURCE_PASSWORD = "corda.dataSourceProperties.dataSource.password"
 
         // integration testing database configuration (to be used in conjunction with a DATABASE_PROVIDER)
         final TEST_DB_ADMIN_USER = "test.db.admin.user"

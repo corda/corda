@@ -51,7 +51,8 @@ import kotlin.test.assertFailsWith
 class MySQLNotaryServiceTests : IntegrationTest() {
     companion object {
         val notaryName = CordaX500Name("MySQL Notary Service", "Zurich", "CH")
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2")
     }
 

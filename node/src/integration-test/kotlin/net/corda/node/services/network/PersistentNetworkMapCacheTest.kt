@@ -35,7 +35,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val BOB = TestIdentity(BOB_NAME, 80).party
         val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_REGULATOR.name.toDatabaseSchemaName(), ALICE.name.toDatabaseSchemaName(),
                 BOB.name.toDatabaseSchemaName())
     }

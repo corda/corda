@@ -40,7 +40,8 @@ import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas("RAFTNotaryService_0", "RAFTNotaryService_1", "RAFTNotaryService_2",
                 DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }

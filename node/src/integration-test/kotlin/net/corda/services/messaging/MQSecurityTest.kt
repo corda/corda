@@ -54,7 +54,8 @@ import kotlin.test.assertEquals
  */
 abstract class MQSecurityTest : NodeBasedTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName())
     }
 

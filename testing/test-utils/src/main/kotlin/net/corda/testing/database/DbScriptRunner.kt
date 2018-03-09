@@ -11,8 +11,8 @@
 package net.corda.testing.database
 
 import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.config.ConfigHelper
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_CLASSNAME
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_PASSWORD
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_URL
@@ -25,7 +25,6 @@ import org.springframework.util.StringUtils
 import java.sql.Connection
 import java.sql.SQLException
 import java.sql.SQLWarning
-import java.util.*
 
 object DbScriptRunner {
     private val logger = loggerFor<DbScriptRunner>()
@@ -34,22 +33,25 @@ object DbScriptRunner {
     private const val TEST_DB_ADMIN_USER = "test.db.admin.user"
     private const val TEST_DB_ADMIN_PASSWORD = "test.db.admin.password"
 
-    private fun createDataSource(dbProvider: String) : DriverManagerDataSource {
-        val parseOptions = ConfigParseOptions.defaults()
-        val allSystemProperties = System.getProperties().toList().map { it.first.toString() to it.second.toString() }.toMap()
-        val dataSourceSystemProperties = Properties()
-        val dataSourceKeys = listOf(TEST_DB_ADMIN_USER, TEST_DB_ADMIN_PASSWORD, DATA_SOURCE_URL, DATA_SOURCE_CLASSNAME,
-                DATA_SOURCE_USER, DATA_SOURCE_PASSWORD)
-        dataSourceKeys.filter { allSystemProperties.containsKey(it) }.forEach { dataSourceSystemProperties.setProperty(it, allSystemProperties[it]) }
-        val databaseConfig = ConfigFactory.parseProperties(dataSourceSystemProperties, parseOptions)
-                .withFallback(ConfigFactory.parseResources("$dbProvider.conf", parseOptions.setAllowMissing(false)))
+    private fun createDataSource(dbProvider: String): DriverManagerDataSource {
 
-        val dataSource = DriverManagerDataSource()
-        dataSource.setDriverClassName(databaseConfig.getString(DATA_SOURCE_CLASSNAME))
-        dataSource.url = databaseConfig.getString(DATA_SOURCE_URL)
-        dataSource.username = databaseConfig.getString(TEST_DB_ADMIN_USER)
-        dataSource.password = databaseConfig.getString(TEST_DB_ADMIN_PASSWORD)
-        return dataSource
+        val cordaConfigs = ConfigFactory.parseMap(System.getProperties().filterKeys { (it as String).startsWith(ConfigHelper.CORDA_PROPERTY_PREFIX) }
+                .mapKeys { (it.key as String).removePrefix(ConfigHelper.CORDA_PROPERTY_PREFIX) }
+                .filterKeys { listOf(DATA_SOURCE_URL, DATA_SOURCE_CLASSNAME, DATA_SOURCE_USER, DATA_SOURCE_PASSWORD).contains(it) })
+
+        val testConfigs = ConfigFactory.parseMap(System.getProperties().filterKeys { listOf(TEST_DB_ADMIN_USER, TEST_DB_ADMIN_PASSWORD).contains(it) }
+                .mapKeys { (it.key as String) })
+
+        val databaseConfig = cordaConfigs
+                .withFallback(testConfigs)
+                .withFallback(ConfigFactory.parseResources("$dbProvider.conf"))
+
+        return (DriverManagerDataSource()).also {
+            it.setDriverClassName(databaseConfig.getString(DATA_SOURCE_CLASSNAME))
+            it.url = databaseConfig.getString(DATA_SOURCE_URL)
+            it.username = databaseConfig.getString(TEST_DB_ADMIN_USER)
+            it.password = databaseConfig.getString(TEST_DB_ADMIN_PASSWORD)
+        }
     }
 
     fun runDbScript(dbProvider: String, initScript: String? = null, databaseSchemas: List<String> = emptyList()) {
@@ -70,7 +72,7 @@ object DbScriptRunner {
             scripts.map { it.replace("\${schema}", schema) }
 
     fun merge(scripts: List<String>, schemas: List<String>): List<String> =
-            if(schemas.isEmpty()) scripts else schemas.map { merge(scripts, it) }.flatten()
+            if (schemas.isEmpty()) scripts else schemas.map { merge(scripts, it) }.flatten()
 }
 
 //rewritten version of org.springframework.jdbc.datasource.init.ResourceDatabasePopulator

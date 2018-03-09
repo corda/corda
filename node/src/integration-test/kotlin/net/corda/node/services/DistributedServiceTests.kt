@@ -49,7 +49,8 @@ class DistributedServiceTests : IntegrationTest() {
     private lateinit var raftNotaryIdentity: Party
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
                 ALICE_NAME.toDatabaseSchemaName())
     }

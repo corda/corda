@@ -38,7 +38,8 @@ import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }

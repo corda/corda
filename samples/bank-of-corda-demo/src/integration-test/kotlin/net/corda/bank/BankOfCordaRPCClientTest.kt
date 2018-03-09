@@ -34,7 +34,8 @@ import org.junit.Test
 
 class BankOfCordaRPCClientTest : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(BOC_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
                 BIGCORP_NAME.organisation)
     }

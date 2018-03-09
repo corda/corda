@@ -32,7 +32,8 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
     companion object {
         const val EVIL: Long = 666
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 

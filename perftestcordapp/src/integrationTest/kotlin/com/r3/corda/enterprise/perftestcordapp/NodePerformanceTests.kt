@@ -51,7 +51,8 @@ import java.util.concurrent.TimeUnit
 class NodePerformanceTests : IntegrationTest() {
      companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
                 DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }

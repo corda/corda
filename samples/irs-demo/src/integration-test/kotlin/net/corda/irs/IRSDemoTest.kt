@@ -56,7 +56,8 @@ class IRSDemoTest : IntegrationTest() {
     companion object {
         private val log = contextLogger()
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName(), "Regulator")
     }

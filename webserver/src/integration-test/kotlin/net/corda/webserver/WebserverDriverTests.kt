@@ -37,7 +37,8 @@ class WebserverDriverTests : IntegrationTest() {
             addressMustNotBeBound(executorService, webserverAddr)
         }
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }
 

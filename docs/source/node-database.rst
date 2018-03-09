@@ -60,7 +60,7 @@ Example node configuration for SQL Azure:
 
 Oracle
 ````````````````````````
-Corda supports Oracle 11g RC2 and Oracle 12c with ojdbc6.jar driver..
+Corda supports Oracle 11g RC2 (with ojdbc6.jar) and Oracle 12c (ojdbc8.jar).
 The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'READ_COMMITTED'.
 The property ``database.schema`` is optional.
 

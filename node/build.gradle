@@ -192,7 +192,7 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
     // Add runtime-only dependency on the JDBC driver for the specified DB provider (used in database integration tests)
-    def DB_PROVIDER = System.getProperty("databaseProvider")
+    def DB_PROVIDER = System.getProperty("custom.databaseProvider")
     switch (DB_PROVIDER) {
         case null: //DB provider not provided, use default H2 driver (already in the classpath)
             break

@@ -67,7 +67,8 @@ class NodeMonitorModelTest : IntegrationTest() {
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
     }

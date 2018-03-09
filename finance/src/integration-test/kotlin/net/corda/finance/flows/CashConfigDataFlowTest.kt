@@ -27,7 +27,8 @@ import org.junit.Test
 
 class CashConfigDataFlowTest : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
                 DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }

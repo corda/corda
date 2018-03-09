@@ -20,7 +20,8 @@ import org.junit.Test
 
 class BankOfCordaCordformTest : IntegrationTest() {
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas("NotaryService", "BankOfCorda", BIGCORP_NAME.organisation)
     }
 

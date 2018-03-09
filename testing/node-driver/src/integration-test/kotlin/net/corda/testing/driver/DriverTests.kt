@@ -58,7 +58,8 @@ class DriverTests : IntegrationTest() {
             addressMustNotBeBound(executorService, hostAndPort)
         }
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
                 DUMMY_REGULATOR_NAME.toDatabaseSchemaName())
     }

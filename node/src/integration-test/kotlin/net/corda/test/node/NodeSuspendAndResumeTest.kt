@@ -27,17 +27,27 @@ import net.corda.node.internal.Node
 import net.corda.node.services.Permissions
 import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
 
     private val rpcUser = User("user1", "test", permissions = setOf(
             Permissions.startFlow<CashIssueFlow>(),

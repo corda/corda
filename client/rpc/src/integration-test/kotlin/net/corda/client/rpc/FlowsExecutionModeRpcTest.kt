@@ -29,7 +29,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
-import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
@@ -42,10 +41,10 @@ import org.junit.Test
 class FlowsExecutionModeRpcTest : IntegrationTest() {
 
     companion object {
-
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME).map { it.toDatabaseSchemaNames("", "_10000", "_10003", "_10006") }.flatten().toTypedArray(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
     @Test
@@ -72,6 +71,12 @@ class FlowsExecutionModeRpcTest : IntegrationTest() {
 }
 
 class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+    }
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     private lateinit var node: StartedNode<Node>

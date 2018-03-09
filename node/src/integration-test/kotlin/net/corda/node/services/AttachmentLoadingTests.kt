@@ -58,7 +58,8 @@ class AttachmentLoadingTests : IntegrationTest() {
     private val appContext get() = provider.getAppContext(cordapp)
 
     private companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
 

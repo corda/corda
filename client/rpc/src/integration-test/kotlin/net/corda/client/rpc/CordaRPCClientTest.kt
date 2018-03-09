@@ -63,7 +63,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         connection = client.start(username, password, externalTrace, impersonatedActor)
     }
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 

@@ -23,32 +23,36 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
-import org.junit.After
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
-class P2PFlowsDrainingModeTest {
+class P2PFlowsDrainingModeTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+
+        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
+    }
 
     private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
     private var executor: ScheduledExecutorService? = null
-
-    companion object {
-        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
-    }
 
     @Before
     fun setup() {
@@ -64,8 +68,8 @@ class P2PFlowsDrainingModeTest {
     fun `flows draining mode suspends consumption of initial session messages`() {
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
-            val initiatedNode = startNode().getOrThrow()
-            val initiating = startNode(rpcUsers = users).getOrThrow().rpc
+            val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
+            val initiating = startNode(rpcUsers = users, providedName = BOB_NAME).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 

@@ -43,7 +43,8 @@ class LargeTransactionsTest : IntegrationTest() {
     companion object {
         val BOB = TestIdentity(BOB_NAME, 80).party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }

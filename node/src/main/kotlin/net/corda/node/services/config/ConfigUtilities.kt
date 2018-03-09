@@ -44,7 +44,7 @@ object ConfigHelper {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
-        val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider")+".conf", parseOptions.setAllowMissing(true))
+        val databaseConfig = ConfigFactory.parseResources(System.getProperty("custom.databaseProvider")+".conf", parseOptions.setAllowMissing(true))
 
         val systemOverrides = systemProperties().cordaEntriesOnly()
         val environmentOverrides = systemEnvironment().cordaEntriesOnly()

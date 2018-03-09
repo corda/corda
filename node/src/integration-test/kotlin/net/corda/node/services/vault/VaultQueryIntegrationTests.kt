@@ -37,7 +37,8 @@ class VaultQueryIntegrationTests : VaultQueryTests() {
 
     companion object {
         val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).name
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val databaseSchemas = IntegrationTestSchemas(MEGA_CORP.toDatabaseSchemaName())
 
         @BeforeClass
