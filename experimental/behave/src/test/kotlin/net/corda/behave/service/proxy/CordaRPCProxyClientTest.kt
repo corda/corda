@@ -1,6 +1,7 @@
 package net.corda.behave.service.proxy
 
 import net.corda.behave.network.Network
+import net.corda.behave.node.Distribution
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -18,7 +19,7 @@ class CordaRPCProxyClientTest {
         private lateinit var network : Network
 
         @BeforeClass @JvmStatic fun setUp() {
-            network = Network.new().addNode(name = "Foo", notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true).generate()
+            network = Network.new(Distribution.MASTER).addNode(name = "Foo", notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true).generate()
             network.start()
             network.waitUntilRunning()
         }

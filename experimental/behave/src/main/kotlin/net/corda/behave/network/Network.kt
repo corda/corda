@@ -1,9 +1,7 @@
 package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.file.LogSource
-import net.corda.behave.file.currentDirectory
-import net.corda.behave.file.div
+import net.corda.behave.file.*
 import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
@@ -49,7 +47,8 @@ class Network private constructor(
     }
 
     class Builder internal constructor(
-            private val timeout: Duration
+            private val timeout: Duration,
+            private val distribution: Distribution
     ) {
 
         private val nodes = mutableMapOf<String, Node>()
@@ -90,6 +89,8 @@ class Network private constructor(
 
         fun generate(runNetworkBootstrapper : Boolean = true): Network {
             val network = Network(nodes, directory, timeout)
+            if (distribution.type == Distribution.Type.R3_CORDA)
+                network.bootstrapDoorman(distribution)
             if (runNetworkBootstrapper)
                 network.bootstrapNetwork()
             return network
@@ -121,6 +122,91 @@ class Network private constructor(
             true
         } else {
             false
+        }
+    }
+
+    /**
+     * This method performs the configuration steps defined in the R3 Corda Network Management readme:
+     * https://github.com/corda/enterprise/blob/master/network-management/README.md
+     * using Local signing and "Auto Approval" mode
+     */
+    private fun bootstrapDoorman(distribution: Distribution) {
+
+        // Copy over reference configuration files used in bootstapping
+        val source = doormanConfigDirectory / "*"
+        val destination = currentDirectory / "build/runs/doorman"
+        Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
+
+        // 1. Create key stores for local signer
+
+        //  java -jar doorman-<version>.jar --mode ROOT_KEYGEN
+        runCommand(JarCommand(distribution.doormanJar,
+                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "ROOT_KEYGEN"),
+                              targetDirectory, timeout))
+
+        //  java -jar doorman-<version>.jar --mode CA_KEYGEN
+        runCommand(JarCommand(distribution.doormanJar,
+                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "CA_KEYGEN"),
+                              targetDirectory, timeout))
+
+        // 2. Start the doorman service for notary registration
+        runCommand(JarCommand(distribution.doormanJar,
+                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf"),
+                              targetDirectory, timeout))
+
+        // 3. Create notary node and register with the doorman
+        runCommand(JarCommand(distribution.cordaJar,
+                              arrayOf("--initial-registration",
+                                      "--base-directory", "$targetDirectory/Notary",
+                                      "--network-root-truststore", "truststore/network-root-truststore.jks",
+                                      "--network-root-truststore-password", ""),
+                              targetDirectory, timeout))
+
+        // 4. Generate node info files for notary nodes
+        runCommand(JarCommand(distribution.cordaJar,
+                              arrayOf("--just-generate-node-info",
+                                      "--base-directory", "$targetDirectory/Notary"),
+                              targetDirectory, timeout))
+        // cp (or ln -s) nodeInfo* notary-node-info
+
+        // 5. Add notary identities to the network parameters
+
+        // 6. Load initial network parameters file for network map service
+        runCommand(JarCommand(distribution.doormanJar,
+                              arrayOf("--config-file", "$doormanConfigDirectory/node.conf", "--update-network-parameters", "$doormanScriptsDirectory/network-parameters.conf"),
+                              targetDirectory, timeout))
+
+        // 7. Start a fully configured Doorman / NMS
+        runCommand(JarCommand(distribution.doormanJar,
+                              arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
+                              targetDirectory, timeout))
+    }
+
+    private fun runCommand(command: JarCommand) {
+        if (!command.jarFile.exists()) {
+            log.warn("Jar file does not exist: ${command.jarFile}")
+            return
+        }
+        log.info("Running command: {}", command)
+        command.output.subscribe {
+            if (it.contains("Exception")) {
+                log.warn("Found error in output; interrupting command execution ...\n{}", it)
+                command.interrupt()
+            }
+        }
+        command.start()
+        if (!command.waitFor()) {
+            hasError = true
+            error("Failed to execute command") {
+                val matches = LogSource(targetDirectory)
+                        .find(".*[Ee]xception.*")
+                        .groupBy { it.filename.absolutePath }
+                for (match in matches) {
+                    log.info("Log(${match.key}):\n${match.value.joinToString("\n") { it.contents }}")
+                }
+            }
+        } else {
+            log.info("Command executed successfully")
         }
     }
 
@@ -363,9 +449,8 @@ class Network private constructor(
         const val CLEANUP_ON_ERROR = false
 
         fun new(
+                distribution: Distribution,
                 timeout: Duration = 2.minutes
-        ): Builder = Builder(timeout)
-
+        ): Builder = Builder(timeout, distribution)
     }
-
 }

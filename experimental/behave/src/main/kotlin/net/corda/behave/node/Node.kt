@@ -41,7 +41,7 @@ class Node(
     private val logDirectory = runtimeDirectory / "logs"
 
     private val command = JarCommand(
-            config.distribution.jarFile,
+            config.distribution.cordaJar,
             arrayOf("--config", "node.conf"),
             runtimeDirectory,
             settings.timeout,
@@ -356,6 +356,7 @@ class Node(
                                 includeFinance = includeFinance
                             ),
                             configElements = *arrayOf(
+                                NotaryConfiguration(notaryType),
                                 CurrencyConfiguration(issuableCurrencies)
                             )
                     ),
