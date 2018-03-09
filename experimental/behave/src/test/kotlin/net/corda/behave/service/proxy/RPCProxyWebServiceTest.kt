@@ -34,7 +34,7 @@ class RPCProxyWebServiceTest {
 //    @JvmField
 //    val testSerialization = SerializationEnvironmentRule(true)
 
-    private val hostAndPort = NetworkHostAndPort("localhost", 13012)
+    private val hostAndPort = NetworkHostAndPort("localhost", 13002)
     private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
 
     private val hostAndPortB = NetworkHostAndPort("localhost", 13007)
@@ -93,7 +93,7 @@ class RPCProxyWebServiceTest {
 
     @Test
     fun startFlowCashPayment() {
-        val recipient = rpcProxyClient.partiesFromName("EntityB", false).first()
+        val recipient = rpcProxyClient.partiesFromName("PartyB", false).first()
         val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(100), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
@@ -162,12 +162,12 @@ class RPCProxyWebServiceTest {
         try {
             val responseA = rpcProxyClient.vaultQuery(Cash.State::class.java)
             responseA.states.forEach { state ->
-                println("Entity A: ${state.state.data.amount}")
+                println("PartyA: ${state.state.data.amount}")
             }
 
             val responseB = rpcProxyClientB.vaultQuery(Cash.State::class.java)
             responseB.states.forEach { state ->
-                println("Entity B: ${state.state.data.amount}")
+                println("Party B: ${state.state.data.amount}")
             }
         }
         catch (e: Exception) {

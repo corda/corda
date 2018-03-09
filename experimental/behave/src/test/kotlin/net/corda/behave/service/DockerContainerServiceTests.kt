@@ -2,7 +2,6 @@ package net.corda.behave.service
 
 import net.corda.behave.network.Network
 import net.corda.behave.node.Distribution
-import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.seconds
 import net.corda.behave.service.containers.DockerContainerService
 import org.assertj.core.api.Assertions.assertThat
@@ -10,10 +9,10 @@ import org.junit.Test
 
 class DockerContainerServiceTests {
 
-    private val DOORMAN_V3_SNAPSHOT = Distribution.fromDockerImage(baseImage = "localhost:5000/r3/doorman", imageTag = "3.0-snapshot")
-    private val NOTARY_V3_SNAPSHOT = Distribution.fromDockerImage(baseImage = "localhost:5000/r3/notary", imageTag = "3.0-snapshot")
-    private val CORDA_V3_SNAPSHOT = Distribution.fromDockerImage(baseImage = "localhost:5000/r3/corda", imageTag = "3.0-snapshot")
-    private val CORDAPP_HC_V3_SNAPSHOT = Distribution.fromDockerImage(baseImage = "localhost:5000/r3/notary-healthcheck", imageTag = "3.0-snapshot")
+    private val DOORMAN_V3_SNAPSHOT = Distribution.fromDockerImage(Distribution.Type.CORDA, baseImage = "localhost:5000/r3/doorman", imageTag = "3.0-snapshot")
+    private val NOTARY_V3_SNAPSHOT = Distribution.fromDockerImage(Distribution.Type.CORDA, baseImage = "localhost:5000/r3/notary", imageTag = "3.0-snapshot")
+    private val CORDA_V3_SNAPSHOT = Distribution.fromDockerImage(Distribution.Type.CORDA, baseImage = "localhost:5000/r3/corda", imageTag = "3.0-snapshot")
+    private val CORDAPP_HC_V3_SNAPSHOT = Distribution.fromDockerImage(Distribution.Type.CORDA, baseImage = "localhost:5000/r3/notary-healthcheck", imageTag = "3.0-snapshot")
 
     @Test
     fun `corda network using docker can be started and stopped`() {
@@ -27,7 +26,7 @@ class DockerContainerServiceTests {
             localhost:5000/r3/notary                      3.0-snapshot        6e98046ee9da        2 days ago          82 MB
          */
         val network = Network
-                .new()
+                .new(CORDA_V3_SNAPSHOT)
 //                .addNode("Doorman", DOORMAN_V3_SNAPSHOT)
 //                .addNode("Notary", NOTARY_V3_SNAPSHOT, notaryType = NotaryType.NON_VALIDATING)
                 .addNode("Corda", CORDA_V3_SNAPSHOT)

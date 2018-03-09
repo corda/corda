@@ -81,8 +81,8 @@ dependencies {
     testCompile project(':test-utils')
 
     // CorDapps (TODO: move to separate repo)
-    compile project(':samples:simm-valuation-demo')
-    compile files('/Users/josecoll/.m2/repository//net/corda/option/cordapp-option/0.1/cordapp-option-0.1.jar')
+    compileOnly project(':samples:simm-valuation-demo')
+    compileOnly files('/Users/josecoll/.m2/repository/net/corda/option/cordapp-option/0.1/cordapp-option-0.1.jar')
 //    compileOnly "net.corda.option:cordapp-option:0.1"
 
     // Unit Tests
@@ -139,7 +139,9 @@ task rpcProxyJar(type: Jar) {
     from {
         configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
     }
+//    zip64 true
     with jar
+//    exclude("test/**")
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
     exclude("META-INF/*.SF")

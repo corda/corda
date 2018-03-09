@@ -2,6 +2,7 @@ package net.corda.behave.scenarios
 
 import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
+import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat
@@ -41,7 +42,8 @@ class ScenarioState {
             // Network is already running
             return
         }
-        val networkBuilder = Network.new()
+        // TODO: make this configurable
+        val networkBuilder = Network.new(Distribution.MASTER)
         for (node in nodes) {
             networkBuilder.addNode(node)
         }
