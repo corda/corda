@@ -33,10 +33,17 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     }
 
     companion object {
-        private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
 
         /**
-         * Topologically sorts the given transactions such that dependencies are listed before dependers. */
+         * Request unspendable inputs as well as regular inputs.
+         */
+        private fun dependencyIDs(stx: SignedTransaction): Set<SecureHash> {
+            return stx.inputs.map { it.txhash }.toSet() + stx.unspendableInputs.map { it.txhash }.toSet()
+        }
+
+        /**
+         * Topologically sorts the given transactions such that dependencies are listed before dependers.
+         */
         @JvmStatic
         fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
             // Construct txhash -> dependent-txs map
