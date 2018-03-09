@@ -2,11 +2,12 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -238,7 +239,19 @@ open class SerializerFactory(
 
         if (metaSchema.isNotEmpty()) {
             val mc = MetaCarpenter(metaSchema, classCarpenter)
-            mc.build()
+            try {
+                mc.build()
+            } catch (e: MetaCarpenterException) {
+                // preserve the actual message locally
+                loggerFor<SerializerFactory>().apply {
+                    error ("${e.message} [hint: enable trace debugging for the stack trace]")
+                    trace (e.getStackTraceAsString())
+                }
+
+                // prevent carpenter exceptions escaping into the world, convert things into a nice
+                // NotSerializableException for when this escapes over the wire
+                throw NotSerializableException(e.name)
+            }
             processSchema(schemaAndDescriptor, true)
         }
     }

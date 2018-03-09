@@ -9,6 +9,9 @@ from the previous milestone release.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
+* Carpenter Exceptions will be caught internally by the Serializer and rethrown as NotSerializable
+  * Error specifics logged to log file. At trace level, stack trace on the handling node will also be logged
+
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
 
 * The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.

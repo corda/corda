@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serialization
+package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
@@ -16,7 +16,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.nodeapi.internal.serialization.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
