@@ -24,7 +24,7 @@ fun scanJarForContracts(cordappJarPath: String): List<ContractClassName> {
     val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) ).distinct()
 
     // Only keep instantiable contracts
-    return URLClassLoader(arrayOf(File(cordappJarPath).toURL()), currentClassLoader).use {
+    return URLClassLoader(arrayOf(File(cordappJarPath).toURI().toURL()), currentClassLoader).use {
         contracts.map(it::loadClass).filter { !it.isInterface && !Modifier.isAbstract(it.modifiers) }
     }.map { it.name }
 }
