@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
-import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -14,9 +13,9 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.pendingFlowsCount
-import net.corda.testing.node.internal.shutdownEvent
+import net.corda.testing.node.internal.cleanShutdown
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
@@ -86,39 +85,29 @@ class P2PFlowsDrainingModeTest {
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
 
-            val initiatedNode = startNode().getOrThrow()
-            val initiating = startNode(rpcUsers = users).getOrThrow().rpc
-            val counterParty = initiatedNode.nodeInfo.singleIdentity()
-            val initiated = initiatedNode.rpc
+            val nodeA = startNode(rpcUsers = users).getOrThrow()
+            val nodeB = startNode(rpcUsers = users).getOrThrow()
 
-            var shouldFail = true
-
-            val onError = { error: Throwable ->
-                error.printStackTrace()
-                shouldFail = true
-            }
-
-            initiated.setFlowsDrainingModeEnabled(true)
-
-            val (_, updates) = initiated.pendingFlowsCount(logger::info)
-
-            updates.doOnError(onError)
-                    .doOnCompleted {
-                        shouldFail = false
-                        initiated.shutdown()
-                    }
-                    .subscribe()
-
-            initiating.stateMachinesFeed().updates.filter { it is StateMachineUpdate.Added }.doOnNext { initiated.setFlowsDrainingModeEnabled(false) }.subscribe()
-
+            var successful = false
             val latch = CountDownLatch(1)
 
-            initiatedNode.shutdownEvent().doOnError(onError).doAfterTerminate { latch.countDown() }.subscribe()
+            nodeB.rpc.setFlowsDrainingModeEnabled(true)
 
-            initiating.startFlow(::InitiateSessionFlow, counterParty)
+            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
+
+            nodeA.cleanShutdown(logger::info)
+                    .doOnError { error ->
+                        error.printStackTrace()
+                        successful = false
+                    }
+                    .doOnCompleted { successful = true }
+                    .doAfterTerminate { latch.countDown() }
+                    .subscribe()
+
+            nodeB.rpc.setFlowsDrainingModeEnabled(false)
 
             latch.await()
-            assertThat(shouldFail).isFalse()
+            assertThat(successful).isTrue()
         }
     }
 }

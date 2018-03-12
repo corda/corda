@@ -122,9 +122,18 @@ internal interface InternalMockMessagingService : MessagingService {
     fun stop()
 }
 
-fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], period: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+fun NodeHandle.cleanShutdown(log: (String) -> Unit, user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
 
-    return rpcClient().shutdownEvent(user.username, user.password, period)
+    rpc.apply {
+        setFlowsDrainingModeEnabled(true)
+        pendingFlowsCount(log).updates.doOnError { error -> throw error }.doOnCompleted { shutdown() }.subscribe()
+    }
+    return shutdownEvent(user, pollingPeriod)
+}
+
+fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+
+    return rpcClient().shutdownEvent(user.username, user.password, pollingPeriod)
 }
 
 fun CordaRPCClient.start(user: User) = start(user.username, user.password)
