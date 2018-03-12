@@ -400,6 +400,9 @@ fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
                     }
                 }
             }.subscribe()
+    if (completedFlowsCount == 0) {
+        updates.onCompleted()
+    }
     return DataFeed(pendingFlowsCount, updates)
 }
 

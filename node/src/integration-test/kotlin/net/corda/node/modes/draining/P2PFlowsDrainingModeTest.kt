@@ -15,7 +15,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.cleanShutdown
+import net.corda.testing.node.internal.drainAndShutdown
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
@@ -92,7 +92,7 @@ class P2PFlowsDrainingModeTest {
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.cleanShutdown()
+            nodeA.drainAndShutdown()
                     .doOnError { error ->
                         error.printStackTrace()
                         successful = false

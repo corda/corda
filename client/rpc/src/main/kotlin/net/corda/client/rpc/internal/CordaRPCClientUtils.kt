@@ -28,7 +28,7 @@ fun createCordaRPCClientWithSslAndClassLoader(
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
 
-fun CordaRPCClient.cleanShutdown(username: String, password: String, pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+fun CordaRPCClient.drainAndShutdown(username: String, password: String, pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
 
     val connection = start(username, password)
     connection.proxy.apply {
