@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.internal.cleanShutdown
 import net.corda.client.rpc.internal.shutdownEvent
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -122,13 +123,9 @@ internal interface InternalMockMessagingService : MessagingService {
     fun stop()
 }
 
-fun NodeHandle.cleanShutdown(log: (String) -> Unit, user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+fun NodeHandle.cleanShutdown(user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
 
-    rpc.apply {
-        setFlowsDrainingModeEnabled(true)
-        pendingFlowsCount(log).updates.doOnError { error -> throw error }.doOnCompleted { shutdown() }.subscribe()
-    }
-    return shutdownEvent(user, pollingPeriod)
+    return rpcClient().cleanShutdown(user.username, user.password, pollingPeriod)
 }
 
 fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {

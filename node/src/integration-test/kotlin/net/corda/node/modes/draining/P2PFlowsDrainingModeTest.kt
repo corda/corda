@@ -95,7 +95,7 @@ class P2PFlowsDrainingModeTest {
 
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.cleanShutdown(logger::info)
+            nodeA.cleanShutdown()
                     .doOnError { error ->
                         error.printStackTrace()
                         successful = false

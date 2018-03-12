@@ -2,6 +2,7 @@ package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -26,6 +27,19 @@ fun createCordaRPCClientWithSslAndClassLoader(
         sslConfiguration: SSLConfiguration? = null,
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
+
+fun CordaRPCClient.cleanShutdown(username: String, password: String, pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+
+    val connection = start(username, password)
+    connection.proxy.apply {
+        setFlowsDrainingModeEnabled(true)
+        pendingFlowsCount().updates
+                .doOnError { error -> throw error }
+                .doOnCompleted { shutdown() }
+                .subscribe()
+    }
+    return shutdownEvent(username, password, pollingPeriod).doAfterTerminate { connection.close() }
+}
 
 fun CordaRPCClient.shutdownEvent(username: String, password: String, period: Duration = Duration.ofSeconds(1)): Observable<Unit> {
 
