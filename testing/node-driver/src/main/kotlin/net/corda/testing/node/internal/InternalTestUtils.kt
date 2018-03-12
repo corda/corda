@@ -1,5 +1,8 @@
 package net.corda.testing.node.internal
 
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.internal.shutdownEvent
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -7,6 +10,9 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.times
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
@@ -14,10 +20,13 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.User
 import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
+import rx.Observable
 import java.net.Socket
 import java.net.SocketException
 import java.time.Duration
@@ -113,4 +122,18 @@ internal interface InternalMockMessagingService : MessagingService {
     fun stop()
 }
 
+fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], period: Duration = Duration.ofSeconds(1)): Observable<Unit> {
 
+    return rpcClient().shutdownEvent(user.username, user.password, period)
+}
+
+fun CordaRPCClient.start(user: User) = start(user.username, user.password)
+
+fun NodeHandle.rpcClient(configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) = CordaRPCClient(rpcAddress, configuration)
+
+fun CordaRPCOps.pendingFlowsCount(log: (String) -> Unit): DataFeed<Int, Pair<Int, Int>> {
+
+    val pending = pendingFlowsCount()
+    log("Pending flows: ${pending.snapshot}")
+    return pending.copy(updates = pending.updates.doOnNext { (completed, total) -> log("Draining progress: $completed/$total") }.doOnCompleted { log("Draining progress: complete!") })
+}

@@ -1,8 +1,6 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -14,20 +12,19 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
-import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import net.corda.testing.node.internal.pendingFlowsCount
+import net.corda.testing.node.internal.shutdownEvent
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import rx.Observable
-import rx.subjects.PublishSubject
-import java.time.Duration
-import java.util.concurrent.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
 class P2PFlowsDrainingModeTest {
@@ -94,42 +91,29 @@ class P2PFlowsDrainingModeTest {
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 
-            initiated.setFlowsDrainingModeEnabled(true)
-
             var shouldFail = true
 
-            val stateMachineState = initiated.stateMachinesFeed()
-            var pendingFlowsCount = stateMachineState.snapshot.size
-            stateMachineState
-                    .updates
-                    .doOnNext { update ->
-                        when (update) {
-                            is StateMachineUpdate.Added -> {
-                                pendingFlowsCount++
-                            }
-                            is StateMachineUpdate.Removed -> {
-                                pendingFlowsCount--
-                                if (pendingFlowsCount == 0) {
-                                    shouldFail = false
-                                    initiated.shutdown()
-                                }
-                            }
-                        }
-                    }.subscribe()
+            val onError = { error: Throwable ->
+                error.printStackTrace()
+                shouldFail = true
+            }
+
+            initiated.setFlowsDrainingModeEnabled(true)
+
+            val (_, updates) = initiated.pendingFlowsCount(logger::info)
+
+            updates.doOnError(onError)
+                    .doOnCompleted {
+                        shouldFail = false
+                        initiated.shutdown()
+                    }
+                    .subscribe()
 
             initiating.stateMachinesFeed().updates.filter { it is StateMachineUpdate.Added }.doOnNext { initiated.setFlowsDrainingModeEnabled(false) }.subscribe()
 
             val latch = CountDownLatch(1)
 
-            initiatedNode.shutdownEvent()
-                    .doOnError { error ->
-                        error.printStackTrace()
-                        shouldFail = true
-                    }
-                    .doAfterTerminate {
-                        latch.countDown()
-                    }
-                    .subscribe()
+            initiatedNode.shutdownEvent().doOnError(onError).doAfterTerminate { latch.countDown() }.subscribe()
 
             initiating.startFlow(::InitiateSessionFlow, counterParty)
 
@@ -138,40 +122,6 @@ class P2PFlowsDrainingModeTest {
         }
     }
 }
-
-private fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], period: Duration = Duration.ofSeconds(1)): Observable<Unit> {
-
-    val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
-    val scheduler = Executors.newSingleThreadScheduledExecutor()
-    val client = rpcClient()
-
-    var task: ScheduledFuture<*>? = null
-    return nodeIsShut
-            .doOnSubscribe {
-                task = scheduler.scheduleAtFixedRate({
-                    try {
-                        client.start(user).use {
-                            // just close the connection
-                        }
-                    } catch (e: ActiveMQNotConnectedException) {
-                        // not cool here, for the connection might be interrupted without the node actually getting shut down - OK for tests
-                        nodeIsShut.onCompleted()
-                    } catch (e: ActiveMQSecurityException) {
-                        // nothing here - this happens if trying to connect before the node is started
-                    } catch (e: Throwable) {
-                        nodeIsShut.onError(e)
-                    }
-                }, 1, period.toMillis(), TimeUnit.MILLISECONDS)
-            }
-            .doAfterTerminate {
-                task?.cancel(true)
-                scheduler.shutdown()
-            }
-}
-
-private fun CordaRPCClient.start(user: User) = start(user.username, user.password)
-
-private fun NodeHandle.rpcClient(configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) = CordaRPCClient(rpcAddress, configuration)
 
 @StartableByRPC
 @InitiatingFlow

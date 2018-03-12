@@ -21,6 +21,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import rx.Observable
+import rx.subjects.PublishSubject
 import java.io.IOException
 import java.io.InputStream
 import java.security.PublicKey
@@ -371,6 +372,35 @@ interface CordaRPCOps : RPCOps {
      * This does not wait for flows to be completed.
      */
     fun shutdown()
+}
+
+/**
+ * Returns a [DataFeed] that keeps track on the count of pending flows.
+ */
+fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
+
+    val stateMachineState = stateMachinesFeed()
+    var pendingFlowsCount = stateMachineState.snapshot.size
+    var completedFlowsCount = 0
+    val updates = PublishSubject.create<Pair<Int, Int>>()
+    stateMachineState
+            .updates
+            .doOnNext { update ->
+                when (update) {
+                    is StateMachineUpdate.Added -> {
+                        pendingFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                    }
+                    is StateMachineUpdate.Removed -> {
+                        completedFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                        if (completedFlowsCount == pendingFlowsCount) {
+                            updates.onCompleted()
+                        }
+                    }
+                }
+            }.subscribe()
+    return DataFeed(pendingFlowsCount, updates)
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
