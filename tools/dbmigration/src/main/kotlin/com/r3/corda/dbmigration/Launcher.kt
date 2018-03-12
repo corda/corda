@@ -139,7 +139,7 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
 }
 
 private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: Path, mode: Mode, classLoader: ClassLoader, schemas: Set<MappedSchema>) {
-    val config = ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class)
+    val config = ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class, false)
 
     fun runMigrationCommand(withMigration: (SchemaMigration) -> Unit): Unit = runWithDataSource(config) { dataSource ->
         withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader))
