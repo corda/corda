@@ -95,17 +95,17 @@ interface CordaRPCClientConfiguration {
  */
 class CordaRPCClient private constructor(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
         sslConfiguration: SSLConfiguration? = null,
         classLoader: ClassLoader? = null
 ) {
     @JvmOverloads
-    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default) : this(hostAndPort, configuration, null)
+    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(hostAndPort, configuration, null)
 
     companion object {
         internal fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
                 sslConfiguration: SSLConfiguration? = null
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
@@ -113,7 +113,7 @@ class CordaRPCClient private constructor(
 
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
                 sslConfiguration: SSLConfiguration? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
