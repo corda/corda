@@ -67,8 +67,6 @@ class NetworkParametersConfigurationTest {
         assertThat(notaries[1].validating).isFalse()
         assertThat(networkParameters.maxMessageSize).isEqualTo(100)
         assertThat(networkParameters.maxTransactionSize).isEqualTo(100)
-        // This is rather weak, though making this an exact test will require mocking a clock.
-        assertThat(networkParameters.modifiedTime).isBefore(Instant.now())
         assertThat(networkParameters.epoch).isEqualTo(1)
     }
 
