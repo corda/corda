@@ -5,6 +5,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.RPCException
+import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -1177,5 +1178,13 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         PrivateAckWrapper.serialize()
     }
 
+    @Test
+    fun throwable() {
+        class TestException(message: String?, cause: Throwable?) : CordaException(message, cause)
+        val testExcp = TestException("hello", Throwable().apply { stackTrace = Thread.currentThread().stackTrace } )
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(testExcp)
+
+    }
 }
 

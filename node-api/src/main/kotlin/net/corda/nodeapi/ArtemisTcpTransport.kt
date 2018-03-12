@@ -17,26 +17,37 @@ sealed class ConnectionDirection {
     ) : ConnectionDirection()
 }
 
+/** Class to set Artemis TCP configuration options. */
 class ArtemisTcpTransport {
     companion object {
         const val VERIFY_PEER_LEGAL_NAME = "corda.verifyPeerCommonName"
 
-        // Restrict enabled TLS cipher suites to:
-        // AES128 using Galois/Counter Mode (GCM) for the block cipher being used to encrypt the message stream.
-        // SHA256 as message authentication algorithm.
-        // ECDHE as key exchange algorithm. DHE is also supported if one wants to completely avoid the use of ECC for TLS.
-        // ECDSA and RSA for digital signatures. Our self-generated certificates all use ECDSA for handshakes,
-        // but we allow classical RSA certificates to work in case:
-        // a) we need to use keytool certificates in some demos,
-        // b) we use cloud providers or HSMs that do not support ECC.
+        /**
+         * Corda supported TLS schemes.
+         * <p><ul>
+         * <li>TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+         * <li>TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+         * <li>TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
+         * </ul></p>
+         * As shown above, current version restricts enabled TLS cipher suites to:
+         * AES128 using Galois/Counter Mode (GCM) for the block cipher being used to encrypt the message stream.
+         * SHA256 as message authentication algorithm.
+         * Ephemeral Diffie Hellman key exchange for advanced forward secrecy. ECDHE is preferred, but DHE is also
+         * supported in case one wants to completely avoid the use of ECC for TLS.
+         * ECDSA and RSA for digital signatures. Our self-generated certificates all use ECDSA for handshakes,
+         * but we allow classical RSA certificates to work in case one uses external tools or cloud providers or HSMs
+         * that do not support ECC certificates.
+         */
         val CIPHER_SUITES = listOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
+        /** Supported TLS versions, currently TLSv1.2 only. */
         val TLS_VERSIONS = listOf("TLSv1.2")
 
+        /** Specify [TransportConfiguration] for TCP communication. */
         fun tcpTransport(
                 direction: ConnectionDirection,
                 hostAndPort: NetworkHostAndPort,

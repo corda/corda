@@ -65,6 +65,7 @@ dependencies {
     compile project(':node-api')
     compile project(":confidential-identities")
     compile project(':client:rpc')
+    compile project(':tools:shell')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -101,9 +102,6 @@ dependencies {
     compile("com.intellij:forms_rt:7.0.3") {
         exclude group: "asm"
     }
-
-    // Jackson support: serialisation to/from JSON, YAML, etc
-    compile project(':client:jackson')
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"
@@ -149,17 +147,6 @@ dependencies {
     // Netty: All of it.
     compile "io.netty:netty-all:$netty_version"
 
-    // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile("com.github.corda.crash:crash.shell:$crash_version") {
-        exclude group: "org.slf4j", module: "slf4j-jdk14"
-        exclude group: "org.bouncycastle"
-    }
-
-    compile("com.github.corda.crash:crash.connectors.ssh:$crash_version") {
-        exclude group: "org.slf4j", module: "slf4j-jdk14"
-        exclude group: "org.bouncycastle"
-    }
-
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
@@ -173,9 +160,6 @@ dependencies {
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
-
-    // Jsh: Testing SSH server
-    integrationTestCompile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
 
     // AgentLoader: dynamic loading of JVM agents
     compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"

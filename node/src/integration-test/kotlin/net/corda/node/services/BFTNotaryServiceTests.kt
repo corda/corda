@@ -6,6 +6,7 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
@@ -28,8 +29,8 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
@@ -142,13 +143,12 @@ class BFTNotaryServiceTests {
             }.single()
             spendTxs.zip(results).forEach { (tx, result) ->
                 if (result is Try.Failure) {
-                    val error = (result.exception as NotaryException).error as NotaryError.Conflict
+                    val exception = result.exception as NotaryException
+                    val error = exception.error as NotaryError.Conflict
                     assertEquals(tx.id, error.txId)
-                    val (stateRef, consumingTx) = error.conflict.verified().stateHistory.entries.single()
+                    val (stateRef, cause) = error.consumedStates.entries.single()
                     assertEquals(StateRef(issueTx.id, 0), stateRef)
-                    assertEquals(spendTxs[successfulIndex].id, consumingTx.id)
-                    assertEquals(0, consumingTx.inputIndex)
-                    assertEquals(info.singleIdentity(), consumingTx.requestingParty)
+                    assertEquals(spendTxs[successfulIndex].id.sha256(), cause.hashOfTransactionId)
                 }
             }
         }
