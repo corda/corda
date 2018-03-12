@@ -12,11 +12,13 @@ import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
-import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -86,6 +88,9 @@ open class NodeStartup(val args: Array<String>) {
             } else {
                 conf0
             }
+        } catch (e: UnknownConfigurationKeysException) {
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             logger.error("Exception during node configuration", e)
             return false
@@ -149,11 +154,14 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell(startedNode)
+                        InteractiveShell.runLocalShell( {startedNode.dispose()} )
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
                 }
+            }
+            if (conf.shouldStartSSHDaemon()) {
+                Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
             }
         },
                 { th ->

@@ -44,13 +44,12 @@ object ProcessUtilities {
             if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
             add("-XX:+UseG1GC")
             addAll(extraJvmArguments)
-            add("-cp")
-            add(classpath)
             add(className)
             addAll(arguments)
         }
         return ProcessBuilder(command).apply {
             inheritIO()
+            environment().put("CLASSPATH", classpath)
             if (workingDirectory != null) {
                 redirectError((workingDirectory / "$className.stderr.log").toFile())
                 redirectOutput((workingDirectory / "$className.stdout.log").toFile())

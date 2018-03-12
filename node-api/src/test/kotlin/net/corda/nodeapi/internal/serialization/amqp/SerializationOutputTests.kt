@@ -5,6 +5,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.RPCException
+import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -46,6 +47,22 @@ import kotlin.reflect.full.superclasses
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+
+object AckWrapper {
+    object Ack
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
+
+object PrivateAckWrapper {
+    private object Ack
+    fun serialize() {
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(Ack)
+    }
+}
 
 @RunWith(Parameterized::class)
 class SerializationOutputTests(private val compression: CordaSerializationEncoding?) {
@@ -1148,4 +1165,26 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
             assertEquals(encodingNotPermittedFormat.format(compression), message)
         }
     }
+
+    @Test
+    fun nestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        AckWrapper.serialize()
+    }
+
+    @Test
+    fun privateNestedObjects() {
+        // The "test" is that this doesn't throw, anything else is a success
+        PrivateAckWrapper.serialize()
+    }
+
+    @Test
+    fun throwable() {
+        class TestException(message: String?, cause: Throwable?) : CordaException(message, cause)
+        val testExcp = TestException("hello", Throwable().apply { stackTrace = Thread.currentThread().stackTrace } )
+        val factory = testDefaultFactoryNoEvolution()
+        SerializationOutput(factory).serialize(testExcp)
+
+    }
 }
+

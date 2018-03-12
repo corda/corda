@@ -4,9 +4,11 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.SslOptions
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
@@ -118,7 +120,7 @@ fun createDevNodeCaCertPath(
 /** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
 
-fun SslOptions.useSslRpcOverrides(): Map<String, String> {
+fun SSLConfiguration.useSslRpcOverrides(): Map<String, String> {
     return mapOf(
             "rpcSettings.useSsl" to "true",
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
@@ -127,7 +129,7 @@ fun SslOptions.useSslRpcOverrides(): Map<String, String> {
     )
 }
 
-fun SslOptions.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
+fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
     return mapOf(
             "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
             "rpcSettings.useSsl" to "false",
@@ -136,3 +138,16 @@ fun SslOptions.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<Strin
             "rpcSettings.ssl.trustStorePassword" to trustStorePassword
     )
 }
+
+/**
+ * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
+ * TODO: Should be removed after multiple identities are introduced.
+ */
+fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
+
+/**
+ * Returns the party identity of the first identity on the node. Until we have proper handling of multiple identities per node,
+ * for tests we use the first identity as special one.
+ * TODO: Should be removed after multiple identities are introduced.
+ */
+fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party

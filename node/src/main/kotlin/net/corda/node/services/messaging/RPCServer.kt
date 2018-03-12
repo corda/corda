@@ -210,7 +210,7 @@ class RPCServer(
         return thread(name = "rpc-server-sender", isDaemon = true) {
             var deduplicationSequenceNumber = 0L
             while (true) {
-                val job = sendJobQueue.poll()
+                val job = sendJobQueue.take()
                 when (job) {
                     is RpcSendJob.Send -> handleSendJob(deduplicationSequenceNumber++, job)
                     RpcSendJob.Stop -> return@thread

@@ -38,7 +38,7 @@ class BankOfCordaCordform : CordformDefinition() {
         }
         node {
             name(BOC_NAME)
-            extraConfig = mapOf("issuableCurrencies" to listOf("USD"))
+            extraConfig = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD")))
             p2pPort(10005)
             rpcSettings {
                 address("localhost:$BOC_RPC_PORT")

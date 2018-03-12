@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -150,7 +151,11 @@ data class NodeConfigurationImpl(
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
-        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
+        // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
+        private val h2port: Int  = 0,
+        // do not use or remove (used by Capsule)
+        private val jarDirs: List<String> = emptyList()
     ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
@@ -249,8 +254,6 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
         }
 }
 
-data class SSHDConfiguration(val port: Int)
-
 // Supported types of authentication/authorization data providers
 enum class AuthDataSourceType {
     // External RDBMS
@@ -286,6 +289,8 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
             }
         }
 
+        fun copyWithAdditionalUser(user: User) = AuthService(dataSource.copyWithAdditionalUser(user), id, options)
+
         // Optional components: cache
         data class Options(val cache: Options.Cache?) {
 
@@ -312,6 +317,12 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                     AuthDataSourceType.INMEMORY -> require(users != null && connection == null)
                     AuthDataSourceType.DB -> require(users == null && connection != null)
                 }
+            }
+
+            fun copyWithAdditionalUser(user: User) : DataSource{
+                val extendedList = this.users?.toMutableList()?: mutableListOf()
+                extendedList.add(user)
+                return DataSource(this.type, this.passwordEncryption, this.connection, listOf(*extendedList.toTypedArray()))
             }
         }
 
