@@ -87,12 +87,9 @@ class P2PFlowsDrainingModeTest {
 
             val nodeA = startNode(rpcUsers = users).getOrThrow()
             val nodeB = startNode(rpcUsers = users).getOrThrow()
-
             var successful = false
             val latch = CountDownLatch(1)
-
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
-
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
             nodeA.cleanShutdown()
@@ -103,7 +100,6 @@ class P2PFlowsDrainingModeTest {
                     .doOnCompleted { successful = true }
                     .doAfterTerminate { latch.countDown() }
                     .subscribe()
-
             nodeB.rpc.setFlowsDrainingModeEnabled(false)
 
             latch.await()
