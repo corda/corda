@@ -175,7 +175,8 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
-    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    // Jolokia JVM monitoring agent, required to push logs through slf4j
+    compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {
