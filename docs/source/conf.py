@@ -54,9 +54,9 @@ author = u'R3 DLG'
 # built documents.
 #
 # The short X.Y version.
-version = '3.0'
+version = 'V3.0'
 # The full version, including alpha/beta/rc tags.
-release = '3.0'
+release = 'V3.0'
 # The version for use in the dropdown html.
 html_context = {'version': '3.0'}
 
