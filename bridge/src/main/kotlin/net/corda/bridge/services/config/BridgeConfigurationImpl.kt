@@ -7,6 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
 
 
@@ -17,7 +18,8 @@ data class CustomSSLConfiguration(override val keyStorePassword: String,
                                   override val certificatesDirectory: Path) : SSLConfiguration
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
-                                           override val customSSLConfiguration: CustomSSLConfiguration?) : BridgeOutboundConfiguration
+                                           override val customSSLConfiguration: CustomSSLConfiguration?,
+                                           override val socksProxyConfig: SocksProxyConfig? = null) : BridgeOutboundConfiguration
 
 data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
                                           override val customSSLConfiguration: CustomSSLConfiguration?) : BridgeInboundConfiguration

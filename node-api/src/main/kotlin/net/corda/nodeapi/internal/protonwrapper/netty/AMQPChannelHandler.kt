@@ -15,6 +15,8 @@ import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.channel.socket.SocketChannel
+import io.netty.handler.proxy.ProxyConnectException
+import io.netty.handler.proxy.ProxyConnectionEvent
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import io.netty.util.ReferenceCountUtil
@@ -51,6 +53,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     private var localCert: X509Certificate? = null
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
+    private var suppressClose: Boolean = false
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
@@ -82,12 +85,17 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
-        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false)))
+        if (!suppressClose) {
+            onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false)))
+        }
         eventProcessor?.close()
         ctx.fireChannelInactive()
     }
 
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
+        if (evt is ProxyConnectionEvent) {
+            remoteAddress = evt.destinationAddress() // update address to teh real target address
+        }
         if (evt is SslHandshakeCompletionEvent) {
             if (evt.isSuccess) {
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
@@ -108,6 +116,15 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 log.error("Handshake failure $evt")
                 ctx.close()
             }
+        }
+    }
+
+
+    @Suppress("OverridingDeprecatedMember")
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        if (cause is ProxyConnectException) {
+            log.warn("Proxy connection failed ${cause.message}")
+            suppressClose = true // The pipeline gets marked as active on connection to the proxy rather than to the target, which causes excess close events
         }
     }
 
