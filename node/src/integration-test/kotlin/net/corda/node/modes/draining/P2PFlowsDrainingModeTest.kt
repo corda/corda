@@ -2,6 +2,7 @@ package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -13,6 +14,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
@@ -22,11 +24,10 @@ import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
 import rx.subjects.PublishSubject
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.time.Duration
+import java.util.concurrent.*
 import kotlin.test.fail
 
 class P2PFlowsDrainingModeTest {
@@ -118,87 +119,80 @@ class P2PFlowsDrainingModeTest {
 
             initiating.stateMachinesFeed().updates.filter { it is StateMachineUpdate.Added }.doOnNext { initiated.setFlowsDrainingModeEnabled(false) }.subscribe()
 
-            val flow = initiating.startFlow(::InitiateSessionFlow, counterParty)
-
-            flow.returnValue.map { result ->
-                if (shouldFail) {
-                    fail("Shouldn't happen until flows draining mode is switched off.")
-                } else {
-                    assertThat(result).isEqualTo("Hi there answer")
-                }
-            }
-
-            val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
             val latch = CountDownLatch(1)
-            val maxCount = 20
-            var count = 0
-            val initiatedClient = CordaRPCClient(initiatedNode.rpcAddress)
-            CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
 
-                val task = scheduler.scheduleAtFixedRate({
+            initiatedNode.shutdownEvent()
+                    .doOnError { error ->
+                        error.printStackTrace()
+                        shouldFail = true
+                    }
+                    .doAfterTerminate {
+                        latch.countDown()
+                    }
+                    .subscribe()
+
+            initiating.startFlow(::InitiateSessionFlow, counterParty)
+
+            latch.await()
+            assertThat(shouldFail).isFalse()
+        }
+    }
+}
+
+private fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], period: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+
+    val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
+    val scheduler = Executors.newSingleThreadScheduledExecutor()
+    val client = rpcClient()
+
+    var task: ScheduledFuture<*>? = null
+    return nodeIsShut
+            .doOnSubscribe {
+                task = scheduler.scheduleAtFixedRate({
                     try {
-                        println("Checking whether node is still running...")
-                        initiatedClient.start(initiatedNode.rpcUsers[0].username, initiatedNode.rpcUsers[0].password).use {
-                            println("... node is still running.")
-                            if (count == maxCount) {
-                                nodeIsShut.onError(AssertionError("Node does not get shutdown by RPC"))
-                            }
-                            count++
+                        client.start(user).use {
+                            // just close the connection
                         }
                     } catch (e: ActiveMQNotConnectedException) {
-                        println("... node is not running.")
+                        // not cool here, for the connection might be interrupted without the node actually getting shut down - OK for tests
                         nodeIsShut.onCompleted()
                     } catch (e: ActiveMQSecurityException) {
                         // nothing here - this happens if trying to connect before the node is started
                     } catch (e: Throwable) {
                         nodeIsShut.onError(e)
                     }
-                }, 1, 1, TimeUnit.SECONDS)
-
-                nodeIsShut.doOnError { error ->
-                    error.printStackTrace()
-                    shouldFail = true
-                    task.cancel(true)
-                    latch.countDown()
-                }.doOnCompleted {
-                            task.cancel(true)
-                            latch.countDown()
-                        }.subscribe()
-
-                latch.await()
-                assertThat(shouldFail).isFalse()
+                }, 1, period.toMillis(), TimeUnit.MILLISECONDS)
             }
-        }
+            .doAfterTerminate {
+                task?.cancel(true)
+                scheduler.shutdown()
+            }
+}
+
+private fun CordaRPCClient.start(user: User) = start(user.username, user.password)
+
+private fun NodeHandle.rpcClient(configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) = CordaRPCClient(rpcAddress, configuration)
+
+@StartableByRPC
+@InitiatingFlow
+class InitiateSessionFlow(private val counterParty: Party) : FlowLogic<String>() {
+
+    @Suspendable
+    override fun call(): String {
+
+        val session = initiateFlow(counterParty)
+        session.send("Hi there")
+        return session.receive<String>().unwrap { it }
     }
+}
 
-    private class CloseableExecutor(private val delegate: ScheduledExecutorService) : AutoCloseable, ScheduledExecutorService by delegate {
+@InitiatedBy(InitiateSessionFlow::class)
+class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
 
-        override fun close() {
-            delegate.shutdown()
-        }
-    }
+    @Suspendable
+    override fun call() {
 
-    @StartableByRPC
-    @InitiatingFlow
-    class InitiateSessionFlow(private val counterParty: Party) : FlowLogic<String>() {
-
-        @Suspendable
-        override fun call(): String {
-
-            val session = initiateFlow(counterParty)
-            session.send("Hi there")
-            return session.receive<String>().unwrap { it }
-        }
-    }
-
-    @InitiatedBy(InitiateSessionFlow::class)
-    class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
-
-        @Suspendable
-        override fun call() {
-
-            val message = initiatingSession.receive<String>().unwrap { it }
-            initiatingSession.send("$message answer")
-        }
+        val message = initiatingSession.receive<String>().unwrap { it }
+        initiatingSession.send("$message answer")
     }
 }
