@@ -29,14 +29,6 @@ val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         true,
         SerializationContext.UseCase.RPCServer)
 
-val KRYO_STORAGE_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
-        AllButBlacklisted,
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.Storage)
-
-
 val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,

@@ -41,6 +41,13 @@ oracle example here: https://github.com/corda/oracle-example.
 The system test utilize docker. Amount of RAM required to run the IRS system test is around 2.5GB, it is important
 to allocated appropriate system resources (On MacOS/Windows this may require explicit changes to docker configuration)
 
+### Docker and docker-compose location
+
+By default, the test expect docker and docker-compose to be located in default Unix installation path ("/usr/local/bin/" 
+or "/usr/bin/"). If your ```docker``` or ```docker-compose``` executables are located elsewhere (for example, on Windows)
+you can specify the full path (including full executable name) using ```DOCKER_COMPOSE_LOCATION``` and ```DOCKER_LOCATION``` 
+system variables.
+
 ### Gradle
 
 The system test is designed to exercise the entire stack, including Corda nodes and the web frontend. It uses [Docker](https://www.docker.com), [docker-compose](https://docs.docker.com/compose/), and

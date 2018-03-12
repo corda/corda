@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
@@ -17,13 +18,6 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
-
-/**
- * Annotation indicating a constructor to be used to reconstruct instances of a class during deserialization.
- */
-@Target(AnnotationTarget.CONSTRUCTOR)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ConstructorForDeserialization
 
 /**
  * Code for finding the constructor we will use for deserialization.

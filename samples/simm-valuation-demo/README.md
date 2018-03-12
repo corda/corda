@@ -88,7 +88,7 @@ The response should be something like
     }
 
 Now, if we ask the same question of Bank C we will see that it's id matches the id for Bank C as a counter
-party to Bank A and Bank A will appear as a counter party
+party to Bank A and Bank A will appear as a counterparty
 
     curl -i -H "Content-Type: application/json" -X GET http://localhost:10011/api/simmvaluationdemo/whoami
 
@@ -97,9 +97,9 @@ party to Bank A and Bank A will appear as a counter party
 In what follows, we assume we are Bank A (which is listening on port 10005)
 
 Notice the id field in the output of the ``whoami`` command. We are going to use the id associated
-with Bank C, one of our counter parties, to create a trade. The general command for this is:
+with Bank C, one of our counterparties, to create a trade. The general command for this is:
 
-    curl -i -H "Content-Type: application/json" -X PUT -d <<<JSON representation of the trade>>>  http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+    curl -i -H "Content-Type: application/json" -X PUT -d <<<JSON representation of the trade>>>  http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/trades
 
 where the representation of the trade is
 
@@ -145,7 +145,7 @@ Once executed, the expected response is:
 
 With the trade completed and stored by both parties, the complete list of trades with our counterparty can be seen with the following command
 
-    curl -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+    curl -X GET http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/trades
 
 The command for our example, using Bank A, would thus be
 
@@ -154,7 +154,7 @@ The command for our example, using Bank A, would thus be
 whilst a specific trade can be seen with
 
 
-    curl  -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades/<<<trade id>>>
+    curl  -X GET http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/trades/<<<trade id>>>
 
 If we look at the trade we created above, we assigned it the id "trade1", the complete command in this case would be
 
@@ -165,7 +165,7 @@ If we look at the trade we created above, we assigned it the id "trade1", the co
     curl -i -H "Content-Type: application/json" \
       -X POST \
       -d <<<JSON representation>>>
-      http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations/calculate
+      http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/portfolio/valuations/calculate
 
 Again, the specific command to continue our example would be
 
@@ -176,9 +176,9 @@ Again, the specific command to continue our example would be
 
 **Viewing a valuation**
 
-In the same way we can ask for specific instances of trades with a counter party, we can request details of valuations
+In the same way we can ask for specific instances of trades with a counterparty, we can request details of valuations
 
-    curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations
+    curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/<<<counterparty id>>>/portfolio/valuations
 
 The specific command for out Bank A example is
 

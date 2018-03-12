@@ -4,8 +4,15 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
+.. _changelog_v3:
+
+Version 3.0
+-----------
+
+* Due to a security risk, the `conflict` property has been removed from `NotaryError.Conflict` error object. It has been replaced
+  with `consumedStates` instead. The new property no longer specifies the original requesting party and transaction id for
+  a consumed state. Instead, only the hash of the transaction id is revealed. For more details why this change had to be
+  made please refer to the release notes.
 
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
@@ -38,13 +45,36 @@ UNRELEASED
   `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
   See: DummyDealStateSchemaV1.PersistentDummyDealState
 
+* Database schema changes - an H2 database instance of Corda 1.0 and 2.0 cannot be reused for Corda 3.0, listed changes for Vault and Finance module:
+
+    * ``NODE_TRANSACTIONS``:
+       column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``, serialization format of BLOB stored in the column has changed to AMQP
+    * ``VAULT_STATES``:
+       column ``CONTRACT_STATE`` removed
+    * ``VAULT_FUNGIBLE_STATES``:
+        column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` and the field size increased
+    * ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
+        table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``,
+        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
+        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+    * ``VAULT_LINEAR_STATES``:
+        type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)`` - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in varchar format
+    * ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
+        table renamed to ``VAULT_LINEAR_STATES_PARTS``,
+        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
+        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+    * ``contract_cash_states``:
+        columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store Base58 representation of SHA-256 of public key prefixed with `DL`
+    * ``contract_cp_states``:
+        table renamed to ``cp_states``, column changes as for ``contract_cash_states``
+
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
   until final documentation is prepared. Certificates at ``NODE_CA``, ``WELL_KNOWN_SERVICE_IDENTITY`` and above must
   only ever by issued by network services and therefore issuance constraints are not relevant to end users.
   The ``TLS``, ``WELL_KNOWN_LEGAL_IDENTITY`` roles must be issued by the ``NODE_CA`` certificate issued by the
   Doorman, and ``CONFIDENTIAL_IDENTITY`` certificates must be issued from a ``WELL_KNOWN_LEGAL_IDENTITY`` certificate.
-  For a detailed specification of the extension please see :doc:`permissioning-certificate-specification`.
+  For a detailed specification of the extension please see :doc:`permissioning`.
 
 * The network map service concept has been re-designed. More information can be found in :doc:`network-map`.
 
@@ -84,6 +114,10 @@ UNRELEASED
 
    * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
      Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+
+  * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+    where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+    one node with the legal name is found.
 
    * The common name in the node's X500 legal name is no longer reserved and can be used as part of the node's name.
 
@@ -204,6 +238,9 @@ UNRELEASED
   ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
   will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
   process for existing projects in the ``tools\scripts`` directory of the Corda repo.
+
+* ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
+  multiple transactions at once.
 
 .. _changelog_v1:
 

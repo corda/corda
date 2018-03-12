@@ -363,7 +363,7 @@ Assuming all went well, you should see some activity in PartyA's web-server term
 
    >> Signing transaction with our private key.
    >> Gathering the counterparty's signature.
-   >> Collecting signatures from counter-parties.
+   >> Collecting signatures from counterparties.
    >> Verifying collected signatures.
    >> Done
    >> Obtaining notary signature and recording transaction.
@@ -423,7 +423,7 @@ This will print out the following progress steps:
     ✅   Verifying contract constraints.
     ✅   Signing transaction with our private key.
     ✅   Gathering the counterparty's signature.
-        ✅   Collecting signatures from counter-parties.
+        ✅   Collecting signatures from counterparties.
         ✅   Verifying collected signatures.
     ✅   Obtaining notary signature and recording transaction.
         ✅   Requesting signature by notary service

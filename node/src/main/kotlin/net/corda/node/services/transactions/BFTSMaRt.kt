@@ -14,10 +14,8 @@ import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.flows.NotarisationPayload
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toTypedArray
 import net.corda.core.node.services.UniquenessProvider
@@ -56,15 +54,15 @@ object BFTSMaRt {
     /** Sent from [Replica] to [Client]. */
     @CordaSerializable
     sealed class ReplicaResponse {
-        data class Error(val error: NotaryError) : ReplicaResponse()
-        data class Signature(val txSignature: DigitalSignature) : ReplicaResponse()
+        data class Error(val error: SignedData<NotaryError>) : ReplicaResponse()
+        data class Signature(val txSignature: TransactionSignature) : ReplicaResponse()
     }
 
     /** An aggregate response from all replica ([Replica]) replies sent from [Client] back to the calling application. */
     @CordaSerializable
     sealed class ClusterResponse {
-        data class Error(val error: NotaryError) : ClusterResponse()
-        data class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
+        data class Error(val errors: List<SignedData<NotaryError>>) : ClusterResponse()
+        data class Signatures(val txSignatures: List<TransactionSignature>) : ClusterResponse()
     }
 
     interface Cluster {
@@ -136,7 +134,7 @@ object BFTSMaRt {
                     ClusterResponse.Signatures(accepted.map { it.txSignature })
                 } else {
                     log.debug { "Cluster response - error: ${rejected.first().error}" }
-                    ClusterResponse.Error(rejected.first().error)
+                    ClusterResponse.Error(rejected.map { it.error })
                 }
 
                 val messageContent = aggregateResponse.serialize().bytes
@@ -232,10 +230,9 @@ object BFTSMaRt {
                     }
                 } else {
                     log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
-                    val conflict = UniquenessProvider.Conflict(conflicts)
-                    val conflictData = conflict.serialize()
-                    val signedConflict = SignedData(conflictData, sign(conflictData.bytes))
-                    throw NotaryException(NotaryError.Conflict(txId, signedConflict))
+                    val conflict = conflicts.mapValues { StateConsumptionDetails(it.value.id.sha256()) }
+                    val error = NotaryError.Conflict(txId, conflict)
+                    throw NotaryInternalException(error)
                 }
             }
         }

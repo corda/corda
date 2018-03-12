@@ -182,6 +182,8 @@ class ProgressTracker(vararg steps: Step) {
     fun endWithError(error: Throwable) {
         check(!hasEnded) { "Progress tracker has already ended" }
         _changes.onError(error)
+        _stepsTreeIndexChanges.onError(error)
+        _stepsTreeChanges.onError(error)
     }
 
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */

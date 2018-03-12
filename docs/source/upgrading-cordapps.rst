@@ -398,6 +398,9 @@ Dealing with old contract code JAR files
 
   * This will change when the contract code as an attachment feature has been fully implemented.
 
+.. note:: Beware of the possible classpath clashes! If you keep the old JAR, make sure new one does not contain classes
+   with the same name! (for example, file-level declarations in Kotlin are put inside a static class named after the file)
+
 Permissioning
 ^^^^^^^^^^^^^
 * Only node administrators are able to run the contract upgrade authorisation and deauthorisation flows
