@@ -223,8 +223,8 @@ dependencies {
             throw new GradleException('Unsupported DB provider: ' + DB_PROVIDER)
     }
 
-    // Jolokia JVM monitoring agent
-    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    // Jolokia JVM monitoring agent, required to push logs through slf4j
+    compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {
