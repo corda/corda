@@ -430,8 +430,6 @@ class RPCClientProxyHandler(
                         "will throw an RPCException.")
                 rpcReplyMap.forEach { id, replyFuture ->
                     replyFuture.setException(RPCException("Could not re-connect to RPC server. Failover failed."))
-                    val observable = observableContext.observableMap.getIfPresent(id)
-                    observable?.onError(RPCException("Could not re-connect to RPC server. Failover failed."))
                 }
                 outgoingRequestBuffer.clear()
                 rpcReplyMap.clear()
