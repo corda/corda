@@ -113,7 +113,7 @@ class CordaRPCClient private constructor(
 
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
                 sslConfiguration: SSLConfiguration? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
