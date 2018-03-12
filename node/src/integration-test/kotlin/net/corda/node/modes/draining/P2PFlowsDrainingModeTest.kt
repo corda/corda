@@ -101,8 +101,8 @@ class P2PFlowsDrainingModeTest {
                     .doAfterTerminate { latch.countDown() }
                     .subscribe()
             nodeB.rpc.setFlowsDrainingModeEnabled(false)
-
             latch.await()
+
             assertThat(successful).isTrue()
         }
     }
