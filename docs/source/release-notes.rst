@@ -4,11 +4,11 @@ Release notes
 Release 3.0
 -----------
 
-Corda 3.0 is here and brings with it wire stability and a host of other exciting features that aim to enhance
-the developer and user experience whilst providing for the long term usability of deployed Corda instances. It
-will provide functionality to ensure anyone wishing to move to the anticipated release of R3 Corda can do so
-seamlessly and with the assurance stateful data persisted to the vault will remain understandable between
-newer and older nodes.
+Corda 3.0 is here and brings with it a commitment to a wire stable platform, a path for contract and node upgradability,
+and a host of other exciting features. The aim of which is to enhance the developer and user experience whilst providing
+for the long term usability of deployed Corda instances. This release will provide functionality to ensure anyone wishing
+to move to the anticipated release of R3 Corda can do so seamlessly and with the assurance that stateful data persisted to
+the vault will remain understandable between newer and older nodes.
 
 Special Thanks
 ~~~~~~~~~~~~~~
@@ -113,7 +113,7 @@ Significant Changes in 3.0
 
   Support for the upgrading of contracts has been significantly extended in this release.
 
-  Contract states express which attached JARs can define and check them using _constraints_. In older versions the only supported
+  Contract states express which attached JARs can define and verify them using _constraints_. In older versions the only supported
   constraint was a hash constraint. This provides similar behaviour as public blockchain systems like Bitcoin and Ethereum, in
   which code is entirely fixed once deployed and cannot be changed later. In Corda there is an upgrade path that involves the
   cooperation of all involved parties (as advertised by the states themselves), but this requires explicit transactions to be
@@ -155,7 +155,7 @@ Significant Changes in 3.0
       unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
       contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. For
       example, our `Cordapp template <https://github.com/corda/cordapp-template-kotlin/tree/release-V3>`_ is structured like that.
-      Only the first will be attached. Also be aware that any dependencies your app kernel has must be bundled / "sharded" into a fat JAR,
+      Only the first will be attached. Also be aware that any dependencies your app kernel has must be bundled into a fat JAR,
       as JAR dependencies are not supported in Corda 3.0.
 
   Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
