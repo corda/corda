@@ -118,7 +118,7 @@ object Crypto {
      * Not to be confused with the EdDSA variants, Ed25519ctx and Ed25519ph.
      */
     @JvmField
-    val EDDSA_ED25519_SHA512 = SignatureScheme(
+    val EDDSA_ED25519_SHA512: SignatureScheme = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
             // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
