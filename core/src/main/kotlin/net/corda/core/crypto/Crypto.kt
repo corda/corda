@@ -1,9 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.internal.bouncyCastlePQCProvider
-import net.corda.core.crypto.internal.cordaBouncyCastleProvider
-import net.corda.core.crypto.internal.cordaSecurityProvider
-import net.corda.core.crypto.internal.providerMap
+import net.corda.core.crypto.internal.*
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -14,7 +11,6 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1Integer
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
@@ -121,8 +117,7 @@ object Crypto {
     val EDDSA_ED25519_SHA512: SignatureScheme = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
-            // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
-            AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
+            AlgorithmIdentifier(`id-Curve25519ph`, null),
             emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
             // We added EdDSA to bouncy castle for certificate signing.
             cordaBouncyCastleProvider.name,
