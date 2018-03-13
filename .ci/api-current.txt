@@ -3918,7 +3918,7 @@ public final class net.corda.testing.driver.NotaryHandle extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort nextHostAndPort()
   public abstract int nextPort()
 ##
-public static final class net.corda.testing.driver.PortAllocation$Incremental extends net.corda.testing.driver.PortAllocation
+@net.corda.core.DoNotImplement public static final class net.corda.testing.driver.PortAllocation$Incremental extends net.corda.testing.driver.PortAllocation
   public <init>(int)
   @org.jetbrains.annotations.NotNull public final concurrent.atomic.AtomicInteger getPortCounter()
   public int nextPort()
@@ -3943,7 +3943,7 @@ public final class net.corda.testing.driver.WebserverHandle extends java.lang.Ob
   public <init>()
   public abstract int getClusterSize()
 ##
-public static final class net.corda.testing.node.ClusterSpec$Raft extends net.corda.testing.node.ClusterSpec
+@net.corda.core.DoNotImplement public static final class net.corda.testing.node.ClusterSpec$Raft extends net.corda.testing.node.ClusterSpec
   public <init>(int)
   public final int component1()
   @org.jetbrains.annotations.NotNull public final net.corda.testing.node.ClusterSpec$Raft copy(int)
@@ -4003,13 +4003,13 @@ public static final class net.corda.testing.node.InMemoryMessagingNetwork$MockMe
 @net.corda.core.DoNotImplement public abstract static class net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy extends java.lang.Object
   public abstract Object pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, List)
 ##
-public static final class net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$Random extends net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
+@net.corda.core.DoNotImplement public static final class net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$Random extends net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
   public <init>()
   public <init>(SplittableRandom)
   @org.jetbrains.annotations.NotNull public final SplittableRandom getRandom()
   public Object pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, List)
 ##
-public static final class net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$RoundRobin extends net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
+@net.corda.core.DoNotImplement public static final class net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$RoundRobin extends net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
   public <init>()
   public Object pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, List)
 ##
@@ -4297,7 +4297,7 @@ public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java
 ##
 public static final class net.corda.client.rpc.CordaRPCClientConfiguration$Companion extends java.lang.Object
 ##
-public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Object implements net.corda.client.rpc.RPCConnection
+@net.corda.core.DoNotImplement public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Object implements net.corda.client.rpc.RPCConnection
   public <init>(net.corda.client.rpc.RPCConnection)
   public void close()
   public void forceClose()
@@ -4354,7 +4354,7 @@ public static final class net.corda.testing.contracts.DummyContract$Companion ex
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionBuilder move(List, net.corda.core.identity.AbstractParty)
   @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionBuilder move(net.corda.core.contracts.StateAndRef, net.corda.core.identity.AbstractParty)
 ##
-public static final class net.corda.testing.contracts.DummyContract$MultiOwnerState extends java.lang.Object implements net.corda.testing.contracts.DummyContract$State
+@net.corda.core.DoNotImplement public static final class net.corda.testing.contracts.DummyContract$MultiOwnerState extends java.lang.Object implements net.corda.testing.contracts.DummyContract$State
   public <init>(int, List)
   public final int component1()
   @org.jetbrains.annotations.NotNull public final List component2()
@@ -4366,7 +4366,7 @@ public static final class net.corda.testing.contracts.DummyContract$MultiOwnerSt
   public int hashCode()
   public String toString()
 ##
-public static final class net.corda.testing.contracts.DummyContract$SingleOwnerState extends java.lang.Object implements net.corda.testing.contracts.DummyContract$State, net.corda.core.contracts.OwnableState
+@net.corda.core.DoNotImplement public static final class net.corda.testing.contracts.DummyContract$SingleOwnerState extends java.lang.Object implements net.corda.testing.contracts.DummyContract$State, net.corda.core.contracts.OwnableState
   public <init>(int, net.corda.core.identity.AbstractParty)
   public final int component1()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty component2()
@@ -4442,15 +4442,15 @@ public final class net.corda.testing.core.Expect extends java.lang.Object
 ##
 @net.corda.core.DoNotImplement public abstract class net.corda.testing.core.ExpectCompose extends java.lang.Object
 ##
-public static final class net.corda.testing.core.ExpectCompose$Parallel extends net.corda.testing.core.ExpectCompose
+@net.corda.core.DoNotImplement public static final class net.corda.testing.core.ExpectCompose$Parallel extends net.corda.testing.core.ExpectCompose
   public <init>(List)
   @org.jetbrains.annotations.NotNull public final List getParallel()
 ##
-public static final class net.corda.testing.core.ExpectCompose$Sequential extends net.corda.testing.core.ExpectCompose
+@net.corda.core.DoNotImplement public static final class net.corda.testing.core.ExpectCompose$Sequential extends net.corda.testing.core.ExpectCompose
   public <init>(List)
   @org.jetbrains.annotations.NotNull public final List getSequence()
 ##
-public static final class net.corda.testing.core.ExpectCompose$Single extends net.corda.testing.core.ExpectCompose
+@net.corda.core.DoNotImplement public static final class net.corda.testing.core.ExpectCompose$Single extends net.corda.testing.core.ExpectCompose
   public <init>(net.corda.testing.core.Expect)
   @org.jetbrains.annotations.NotNull public final net.corda.testing.core.Expect getExpect()
 ##
@@ -4558,10 +4558,10 @@ public final class net.corda.testing.dsl.DuplicateOutputLabel extends net.corda.
 ##
 @net.corda.core.DoNotImplement public abstract class net.corda.testing.dsl.EnforceVerifyOrFail extends java.lang.Object
 ##
-public static final class net.corda.testing.dsl.EnforceVerifyOrFail$Token extends net.corda.testing.dsl.EnforceVerifyOrFail
+@net.corda.core.DoNotImplement public static final class net.corda.testing.dsl.EnforceVerifyOrFail$Token extends net.corda.testing.dsl.EnforceVerifyOrFail
   public static final net.corda.testing.dsl.EnforceVerifyOrFail$Token INSTANCE
 ##
-public final class net.corda.testing.dsl.LedgerDSL extends java.lang.Object implements net.corda.testing.dsl.LedgerDSLInterpreter
+@net.corda.core.DoNotImplement public final class net.corda.testing.dsl.LedgerDSL extends java.lang.Object implements net.corda.testing.dsl.LedgerDSLInterpreter
   public <init>(net.corda.testing.dsl.LedgerDSLInterpreter, net.corda.core.identity.Party)
   @org.jetbrains.annotations.NotNull public net.corda.core.transactions.WireTransaction _transaction(String, net.corda.core.transactions.TransactionBuilder, kotlin.jvm.functions.Function1)
   public void _tweak(kotlin.jvm.functions.Function1)
@@ -4591,7 +4591,7 @@ public final class net.corda.testing.dsl.LedgerDSL extends java.lang.Object impl
 @net.corda.core.DoNotImplement public interface net.corda.testing.dsl.OutputStateLookup
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.StateAndRef retrieveOutputStateAndRef(Class, String)
 ##
-public final class net.corda.testing.dsl.TestLedgerDSLInterpreter extends java.lang.Object implements net.corda.testing.dsl.LedgerDSLInterpreter
+@net.corda.core.DoNotImplement public final class net.corda.testing.dsl.TestLedgerDSLInterpreter extends java.lang.Object implements net.corda.testing.dsl.LedgerDSLInterpreter
   public <init>(net.corda.core.node.ServiceHub)
   @org.jetbrains.annotations.NotNull public net.corda.core.transactions.WireTransaction _transaction(String, net.corda.core.transactions.TransactionBuilder, kotlin.jvm.functions.Function1)
   public void _tweak(kotlin.jvm.functions.Function1)
@@ -4636,7 +4636,7 @@ public static final class net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTra
   public int hashCode()
   public String toString()
 ##
-public final class net.corda.testing.dsl.TestTransactionDSLInterpreter extends java.lang.Object implements net.corda.testing.dsl.TransactionDSLInterpreter, net.corda.testing.dsl.OutputStateLookup
+@net.corda.core.DoNotImplement public final class net.corda.testing.dsl.TestTransactionDSLInterpreter extends java.lang.Object implements net.corda.testing.dsl.TransactionDSLInterpreter, net.corda.testing.dsl.OutputStateLookup
   public <init>(net.corda.testing.dsl.TestLedgerDSLInterpreter, net.corda.core.transactions.TransactionBuilder)
   public void _attachment(String)
   @org.jetbrains.annotations.NotNull public net.corda.testing.dsl.EnforceVerifyOrFail _tweak(kotlin.jvm.functions.Function1)
@@ -4668,7 +4668,7 @@ public static final class net.corda.testing.dsl.TestTransactionDSLInterpreter$se
   @org.jetbrains.annotations.NotNull public net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   @org.jetbrains.annotations.NotNull public Set loadStates(Set)
 ##
-public final class net.corda.testing.dsl.TransactionDSL extends java.lang.Object implements net.corda.testing.dsl.TransactionDSLInterpreter
+@net.corda.core.DoNotImplement public final class net.corda.testing.dsl.TransactionDSL extends java.lang.Object implements net.corda.testing.dsl.TransactionDSLInterpreter
   public <init>(net.corda.testing.dsl.TransactionDSLInterpreter, net.corda.core.identity.Party)
   public void _attachment(String)
   @org.jetbrains.annotations.NotNull public net.corda.testing.dsl.EnforceVerifyOrFail _tweak(kotlin.jvm.functions.Function1)
