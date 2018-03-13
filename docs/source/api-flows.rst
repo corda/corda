@@ -745,6 +745,12 @@ We then update the progress tracker's current step as we progress through the fl
         :end-before: DOCEND 18
         :dedent: 12
 
+HTTP and database calls
+-----------------------
+HTTP, database and other calls to external resources are allowed in flows. However, their support is currently limited:
+
+* The call must be executed in a BLOCKING way. Flows don't currently support suspending to await the response to a call to an external resource
+* The call must be idempotent. If the flow fails and has to restart from a checkpoint, the call will also be replayed
 
 Concurrency, Locking and Waiting
 --------------------------------
