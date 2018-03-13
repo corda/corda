@@ -16,6 +16,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import org.apache.mina.util.ConcurrentHashSet
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -29,6 +30,10 @@ import javax.persistence.Id
 class P2PMessageDeduplicator(private val database: CordaPersistence) {
     val ourSenderUUID = UUID.randomUUID().toString()
 
+    // A temporary in-memory set of deduplication IDs. When we receive a message we don't persist the ID immediately,
+    // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may
+    // redeliver messages to the same consumer if they weren't ACKed.
+    private val beingProcessedMessages = ConcurrentHashSet<DeduplicationId>()
     private val processedMessages = createProcessedMessages()
     // We add the peer to the key, so other peers cannot attempt malicious meddling with sequence numbers.
     // Expire after 7 days since we last touched an entry, to avoid infinite growth.
@@ -79,6 +84,9 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
      * @return true if we have seen this message before.
      */
     fun isDuplicate(msg: ReceivedMessage): Boolean {
+        if (msg.uniqueMessageId in beingProcessedMessages) {
+            return true
+        }
         val receivedSenderUUID = msg.senderUUID
         val receivedSenderSeqNo = msg.senderSeqNo
         // If we have received a new higher sequence number, then it cannot be a duplicate, and we don't need to check database.
@@ -91,8 +99,26 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
         }
     }
 
-    fun persistDeduplicationId(msg: ReceivedMessage) {
-        processedMessages[msg.uniqueMessageId] = Instant.now()
+    /**
+     * Called the first time we encounter [deduplicationId].
+     */
+    fun signalMessageProcessStart(deduplicationId: DeduplicationId) {
+        beingProcessedMessages.add(deduplicationId)
+    }
+
+    /**
+     * Called inside a DB transaction to persist [deduplicationId].
+     */
+    fun persistDeduplicationId(deduplicationId: DeduplicationId) {
+        processedMessages[deduplicationId] = Instant.now()
+    }
+
+    /**
+     * Called after the DB transaction persisting [deduplicationId] committed.
+     * Any subsequent redelivery will be deduplicated using the DB.
+     */
+    fun signalMessageProcessFinish(deduplicationId: DeduplicationId) {
+        beingProcessedMessages.remove(deduplicationId)
     }
 
     @Entity

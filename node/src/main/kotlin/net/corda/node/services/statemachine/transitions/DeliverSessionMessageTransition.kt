@@ -34,12 +34,12 @@ class DeliverSessionMessageTransition(
 ) : Transition {
     override fun transition(): TransitionResult {
         return builder {
-            // Add the AcknowledgeHandle to the unacknowledged messages ASAP so in case an error happens we still know
+            // Add the DeduplicationHandler to the pending ones ASAP so in case an error happens we still know
             // about the message. Note that in case of an error during deliver this message *will be acked*.
             // For example if the session corresponding to the message is not found the message is still acked to free
             // up the broker but the flow will error.
             currentState = currentState.copy(
-                    unacknowledgedMessages = currentState.unacknowledgedMessages + event.acknowledgeHandle
+                    pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers + event.deduplicationHandler
             )
             // Check whether we have a session corresponding to the message.
             val existingSession = startingState.checkpoint.sessions[event.sessionMessage.recipientSessionId]
@@ -163,12 +163,12 @@ class DeliverSessionMessageTransition(
             actions.addAll(arrayOf(
                     Action.CreateTransaction,
                     Action.PersistCheckpoint(context.id, currentState.checkpoint),
-                    Action.PersistDeduplicationIds(currentState.unacknowledgedMessages),
+                    Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                     Action.CommitTransaction,
-                    Action.AcknowledgeMessages(currentState.unacknowledgedMessages)
+                    Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
             ))
             currentState = currentState.copy(
-                    unacknowledgedMessages = emptyList(),
+                    pendingDeduplicationHandlers = emptyList(),
                     isAnyCheckpointPersisted = true
             )
         }

@@ -71,7 +71,7 @@ class ActionExecutorImpl(
         return when (action) {
             is Action.TrackTransaction -> executeTrackTransaction(fiber, action)
             is Action.PersistCheckpoint -> executePersistCheckpoint(action)
-            is Action.PersistDeduplicationIds -> executePersistDeduplicationIds(action)
+            is Action.PersistDeduplicationFacts -> executePersistDeduplicationIds(action)
             is Action.AcknowledgeMessages -> executeAcknowledgeMessages(action)
             is Action.PropagateErrors -> executePropagateErrors(action)
             is Action.ScheduleEvent -> executeScheduleEvent(fiber, action)
@@ -113,16 +113,16 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
-    private fun executePersistDeduplicationIds(action: Action.PersistDeduplicationIds) {
-        for (handle in action.acknowledgeHandles) {
-            handle.persistDeduplicationId()
+    private fun executePersistDeduplicationIds(action: Action.PersistDeduplicationFacts) {
+        for (handle in action.deduplicationHandlers) {
+            handle.insideDatabaseTransaction()
         }
     }
 
     @Suspendable
     private fun executeAcknowledgeMessages(action: Action.AcknowledgeMessages) {
-        action.acknowledgeHandles.forEach {
-            it.acknowledge()
+        action.deduplicationHandlers.forEach {
+            it.afterDatabaseTransaction()
         }
     }
 

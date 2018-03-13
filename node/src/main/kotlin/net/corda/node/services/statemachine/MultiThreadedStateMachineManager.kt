@@ -37,11 +37,10 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
-import net.corda.node.services.messaging.AcknowledgeHandle
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
-import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
@@ -139,9 +138,9 @@ class MultiThreadedStateMachineManager(
         }
         serviceHub.networkMapCache.nodeReady.then {
             resumeRestoredFlows(fibers)
-            flowMessaging.start { receivedMessage, acknowledgeHandle ->
+            flowMessaging.start { receivedMessage, deduplicationHandler ->
                 lifeCycle.requireState(State.STARTED) {
-                    onSessionMessage(receivedMessage, acknowledgeHandle)
+                    onSessionMessage(receivedMessage, deduplicationHandler)
                 }
             }
         }
@@ -202,7 +201,8 @@ class MultiThreadedStateMachineManager(
     override fun <A> startFlow(
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
-            ourIdentity: Party?
+            ourIdentity: Party?,
+            deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
         return lifeCycle.requireState(State.STARTED) {
             startFlowInternal(
@@ -210,7 +210,7 @@ class MultiThreadedStateMachineManager(
                     flowLogic = flowLogic,
                     flowStart = FlowStart.Explicit,
                     ourIdentity = ourIdentity ?: getOurFirstIdentity(),
-                    initialUnacknowledgedMessage = null,
+                    deduplicationHandler = deduplicationHandler,
                     isStartIdempotent = false
             )
         }
@@ -320,7 +320,7 @@ class MultiThreadedStateMachineManager(
             createFlowFromCheckpoint(
                     id = id,
                     checkpoint = checkpoint,
-                    initialUnacknowledgedMessage = null,
+                    initialDeduplicationHandler = null,
                     isAnyCheckpointPersisted = true,
                     isStartIdempotent = false
             )
@@ -333,32 +333,32 @@ class MultiThreadedStateMachineManager(
         }
     }
 
-    private fun onSessionMessage(message: ReceivedMessage, acknowledgeHandle: AcknowledgeHandle) {
+    private fun onSessionMessage(message: ReceivedMessage, deduplicationHandler: DeduplicationHandler) {
         val peer = message.peer
         val sessionMessage = try {
             message.data.deserialize<SessionMessage>()
         } catch (ex: Exception) {
             logger.error("Received corrupt SessionMessage data from $peer")
-            acknowledgeHandle.acknowledge()
+            deduplicationHandler.afterDatabaseTransaction()
             return
         }
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, acknowledgeHandle, sender)
-                is InitialSessionMessage -> onSessionInit(sessionMessage, message.platformVersion, acknowledgeHandle, sender)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, deduplicationHandler, sender)
+                is InitialSessionMessage -> onSessionInit(sessionMessage, message.platformVersion, deduplicationHandler, sender)
             }
         } else {
             logger.error("Unknown peer $peer in $sessionMessage")
         }
     }
 
-    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, acknowledgeHandle: AcknowledgeHandle, sender: Party) {
+    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, deduplicationHandler: DeduplicationHandler, sender: Party) {
         try {
             val recipientId = sessionMessage.recipientSessionId
             val flowId = sessionToFlow[recipientId]
             if (flowId == null) {
-                acknowledgeHandle.acknowledge()
+                deduplicationHandler.afterDatabaseTransaction()
                 if (sessionMessage.payload is EndSessionMessage) {
                     logger.debug {
                         "Got ${EndSessionMessage::class.java.simpleName} for " +
@@ -369,7 +369,7 @@ class MultiThreadedStateMachineManager(
                 }
             } else {
                 val flow = concurrentBox.content.flows[flowId] ?: throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
-                flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, acknowledgeHandle, sender))
+                flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
             }
         } catch (exception: Exception) {
             logger.error("Exception while routing $sessionMessage", exception)
@@ -377,7 +377,7 @@ class MultiThreadedStateMachineManager(
         }
     }
 
-    private fun onSessionInit(sessionMessage: InitialSessionMessage, senderPlatformVersion: Int, acknowledgeHandle: AcknowledgeHandle, sender: Party) {
+    private fun onSessionInit(sessionMessage: InitialSessionMessage, senderPlatformVersion: Int, deduplicationHandler: DeduplicationHandler, sender: Party) {
         fun createErrorMessage(initiatorSessionId: SessionId, message: String): ExistingSessionMessage {
             val errorId = secureRandom.nextLong()
             val payload = RejectSessionMessage(message, errorId)
@@ -396,7 +396,7 @@ class MultiThreadedStateMachineManager(
                 is InitiatedFlowFactory.Core -> senderPlatformVersion
                 is InitiatedFlowFactory.CorDapp -> null
             }
-            startInitiatedFlow(flowLogic, acknowledgeHandle, senderSession, initiatedSessionId, sessionMessage, senderCoreFlowVersion, initiatedFlowInfo)
+            startInitiatedFlow(flowLogic, deduplicationHandler, senderSession, initiatedSessionId, sessionMessage, senderCoreFlowVersion, initiatedFlowInfo)
             null
         } catch (exception: Exception) {
             logger.warn("Exception while creating initiated flow", exception)
@@ -408,7 +408,7 @@ class MultiThreadedStateMachineManager(
 
         if (replyError != null) {
             flowMessaging.sendSessionMessage(sender, replyError, DeduplicationId.createRandom(secureRandom))
-            acknowledgeHandle.acknowledge()
+            deduplicationHandler.afterDatabaseTransaction()
         }
     }
 
@@ -431,7 +431,7 @@ class MultiThreadedStateMachineManager(
 
     private fun <A> startInitiatedFlow(
             flowLogic: FlowLogic<A>,
-            triggeringUnacknowledgedMessage: AcknowledgeHandle,
+            initiatingMessageDeduplicationHandler: DeduplicationHandler,
             peerSession: FlowSessionImpl,
             initiatedSessionId: SessionId,
             initiatingMessage: InitialSessionMessage,
@@ -442,7 +442,7 @@ class MultiThreadedStateMachineManager(
         val ourIdentity = getOurFirstIdentity()
         startFlowInternal(
                 InvocationContext.peer(peerSession.counterparty.name), flowLogic, flowStart, ourIdentity,
-                triggeringUnacknowledgedMessage,
+                initiatingMessageDeduplicationHandler,
                 isStartIdempotent = false
         )
     }
@@ -452,7 +452,7 @@ class MultiThreadedStateMachineManager(
             flowLogic: FlowLogic<A>,
             flowStart: FlowStart,
             ourIdentity: Party,
-            initialUnacknowledgedMessage: AcknowledgeHandle?,
+            deduplicationHandler: DeduplicationHandler?,
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
         val flowId = StateMachineRunId.createRandom()
@@ -475,7 +475,7 @@ class MultiThreadedStateMachineManager(
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,
-                unacknowledgedMessages = initialUnacknowledgedMessage?.let { listOf(it) } ?: emptyList(),
+                pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
                 isFlowResumed = false,
                 isTransactionTracked = false,
                 isAnyCheckpointPersisted = false,
@@ -532,7 +532,7 @@ class MultiThreadedStateMachineManager(
             checkpoint: Checkpoint,
             isAnyCheckpointPersisted: Boolean,
             isStartIdempotent: Boolean,
-            initialUnacknowledgedMessage: AcknowledgeHandle?
+            initialDeduplicationHandler: DeduplicationHandler?
     ): Flow {
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
@@ -541,7 +541,7 @@ class MultiThreadedStateMachineManager(
                 val logic = flowState.frozenFlowLogic.deserialize(context = checkpointSerializationContext!!)
                 val state = StateMachineState(
                         checkpoint = checkpoint,
-                        unacknowledgedMessages = initialUnacknowledgedMessage?.let { listOf(it) } ?: emptyList(),
+                        pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                         isFlowResumed = false,
                         isTransactionTracked = false,
                         isAnyCheckpointPersisted = isAnyCheckpointPersisted,
@@ -559,7 +559,7 @@ class MultiThreadedStateMachineManager(
                 val fiber = flowState.frozenFiber.deserialize(context = checkpointSerializationContext!!)
                 val state = StateMachineState(
                         checkpoint = checkpoint,
-                        unacknowledgedMessages = initialUnacknowledgedMessage?.let { listOf(it) } ?: emptyList(),
+                        pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                         isFlowResumed = false,
                         isTransactionTracked = false,
                         isAnyCheckpointPersisted = isAnyCheckpointPersisted,
@@ -644,7 +644,7 @@ class MultiThreadedStateMachineManager(
         totalSuccessFlows.inc()
         drainFlowEventQueue(flow)
         // final sanity checks
-        require(lastState.unacknowledgedMessages.isEmpty())
+        require(lastState.pendingDeduplicationHandlers.isEmpty())
         require(lastState.isRemoved)
         require(lastState.checkpoint.subFlowStack.size == 1)
         sessionToFlow.none { it.value == flow.fiber.id }
@@ -676,7 +676,7 @@ class MultiThreadedStateMachineManager(
                 is Event.DoRemainingWork -> {}
                 is Event.DeliverSessionMessage -> {
                     // Acknowledge the message so it doesn't leak in the broker.
-                    event.acknowledgeHandle.acknowledge()
+                    event.deduplicationHandler.afterDatabaseTransaction()
                     when (event.sessionMessage.payload) {
                         EndSessionMessage -> {
                             logger.debug { "Unhandled message ${event.sessionMessage} by ${flow.fiber} due to flow shutting down" }

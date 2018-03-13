@@ -71,14 +71,14 @@ class ErrorFlowTransition(
                     actions.add(Action.RemoveCheckpoint(context.id))
                 }
                 actions.addAll(arrayOf(
-                        Action.PersistDeduplicationIds(currentState.unacknowledgedMessages),
+                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.unacknowledgedMessages),
+                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                         Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)
                 ))
 
                 currentState = currentState.copy(
-                        unacknowledgedMessages = emptyList(),
+                        pendingDeduplicationHandlers = emptyList(),
                         isRemoved = true
                 )
 

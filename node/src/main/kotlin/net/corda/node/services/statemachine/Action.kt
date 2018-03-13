@@ -13,7 +13,7 @@ package net.corda.node.services.statemachine
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.node.services.messaging.AcknowledgeHandle
+import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
 
 /**
@@ -55,14 +55,14 @@ sealed class Action {
     data class RemoveCheckpoint(val id: StateMachineRunId) : Action()
 
     /**
-     * Persist the deduplication IDs of [acknowledgeHandles].
+     * Persist the deduplication facts of [deduplicationHandlers].
      */
-    data class PersistDeduplicationIds(val acknowledgeHandles: List<AcknowledgeHandle>) : Action()
+    data class PersistDeduplicationFacts(val deduplicationHandlers: List<DeduplicationHandler>) : Action()
 
     /**
-     * Acknowledge messages in [acknowledgeHandles].
+     * Acknowledge messages in [deduplicationHandlers].
      */
-    data class AcknowledgeMessages(val acknowledgeHandles: List<AcknowledgeHandle>) : Action()
+    data class AcknowledgeMessages(val deduplicationHandlers: List<DeduplicationHandler>) : Action()
 
     /**
      * Propagate [errorMessages] to [sessions].

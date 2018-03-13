@@ -180,7 +180,7 @@ class P2PMessagingTest : IntegrationTest() {
                     val response = it.internalServices.networkService.createMessage("test.response", responseMessage.serialize().bytes)
                     it.internalServices.networkService.send(response, request.replyTo)
                 }
-                handler.acknowledge()
+                handler.afterDatabaseTransaction()
             }
         }
         return crashingNodes
@@ -212,7 +212,7 @@ class P2PMessagingTest : IntegrationTest() {
             val request = netMessage.data.deserialize<TestRequest>()
             val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
             internalServices.networkService.send(response, request.replyTo)
-            handle.acknowledge()
+            handle.afterDatabaseTransaction()
         }
     }
 
@@ -239,7 +239,7 @@ class P2PMessagingTest : IntegrationTest() {
             check(!consumed.getAndSet(true)) { "Called more than once" }
             check(msg.topic == topic) { "Topic/session mismatch: ${msg.topic} vs $topic" }
             callback(msg)
-            handle.acknowledge()
+            handle.afterDatabaseTransaction()
         }
     }
 

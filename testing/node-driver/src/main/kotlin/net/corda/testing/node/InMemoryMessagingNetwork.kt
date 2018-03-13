@@ -480,13 +480,7 @@ class InMemoryMessagingNetwork private constructor(
                     database.transaction {
                         for (handler in deliverTo) {
                             try {
-                                val acknowledgeHandle = object : AcknowledgeHandle {
-                                    override fun acknowledge() {
-                                    }
-                                    override fun persistDeduplicationId() {
-                                    }
-                                }
-                                handler.callback(transfer.toReceivedMessage(), handler, acknowledgeHandle)
+                                handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
                             } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
@@ -509,6 +503,13 @@ class InMemoryMessagingNetwork private constructor(
                 message.uniqueMessageId,
                 message.debugTimestamp,
                 sender.name)
+    }
+
+    private class DummyDeduplicationHandler : DeduplicationHandler {
+        override fun afterDatabaseTransaction() {
+        }
+        override fun insideDatabaseTransaction() {
+        }
     }
 }
 

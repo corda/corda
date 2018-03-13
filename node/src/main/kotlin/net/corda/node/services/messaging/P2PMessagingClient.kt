@@ -431,6 +431,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
             if (!deduplicator.isDuplicate(cordaMessage)) {
+                deduplicator.signalMessageProcessStart(cordaMessage.uniqueMessageId)
                 deliver(cordaMessage, artemisMessage)
             } else {
                 log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
@@ -444,7 +445,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
             try {
-                deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), acknowledgeHandleFor(artemisMessage, msg))
+                deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandler(artemisMessage, msg))
             } catch (e: Exception) {
                 log.error("Caught exception whilst executing message handler for ${msg.topic}", e)
             }
@@ -453,21 +454,18 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
-    private fun acknowledgeHandleFor(artemisMessage: ClientMessage, cordaMessage: ReceivedMessage): AcknowledgeHandle {
+    inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, val cordaMessage: ReceivedMessage) : DeduplicationHandler {
+        override fun insideDatabaseTransaction() {
+            deduplicator.persistDeduplicationId(cordaMessage.uniqueMessageId)
+        }
 
-        return object : AcknowledgeHandle {
+        override fun afterDatabaseTransaction() {
+            deduplicator.signalMessageProcessFinish(cordaMessage.uniqueMessageId)
+            messagingExecutor!!.acknowledge(artemisMessage)
+        }
 
-            override fun persistDeduplicationId() {
-                deduplicator.persistDeduplicationId(cordaMessage)
-            }
-
-            // ACKing a message calls back into the session which isn't thread safe, so we have to ensure it
-            // doesn't collide with a send here. Note that stop() could have been called whilst we were
-            // processing a message but if so, it'll be parked waiting for us to count down the latch, so
-            // the session itself is still around and we can still ack messages as a result.
-            override fun acknowledge() {
-                messagingExecutor!!.acknowledge(artemisMessage)
-            }
+        override fun toString(): String {
+            return "${javaClass.simpleName}(${cordaMessage.uniqueMessageId})"
         }
     }
 

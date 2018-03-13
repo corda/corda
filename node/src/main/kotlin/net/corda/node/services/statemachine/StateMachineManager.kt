@@ -18,6 +18,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
+import net.corda.node.services.messaging.DeduplicationHandler
 import rx.Observable
 
 /**
@@ -58,11 +59,14 @@ interface StateMachineManager {
      *
      * @param flowLogic The flow's code.
      * @param context The context of the flow.
+     * @param ourIdentity The identity to use for the flow.
+     * @param deduplicationHandler Allows exactly-once start of the flow, see [DeduplicationHandler].
      */
     fun <A> startFlow(
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
-            ourIdentity: Party? = null
+            ourIdentity: Party?,
+            deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>>
 
     /**

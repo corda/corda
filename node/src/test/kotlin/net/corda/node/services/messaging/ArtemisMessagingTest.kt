@@ -217,8 +217,8 @@ class ArtemisMessagingTest {
         try {
             val messagingClient2 = createMessagingClient()
             messagingClient2.addMessageHandler(TOPIC) { msg, _, handle ->
-                database.transaction { handle.persistDeduplicationId() }
-                handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
+                database.transaction { handle.insideDatabaseTransaction() }
+                handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
                 receivedMessages.add(msg)
             }
             startNodeMessagingClient()
@@ -252,8 +252,8 @@ class ArtemisMessagingTest {
 
             val messagingClient3 = createMessagingClient()
             messagingClient3.addMessageHandler(TOPIC) { msg, _, handle ->
-                database.transaction { handle.persistDeduplicationId() }
-                handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
+                database.transaction { handle.insideDatabaseTransaction() }
+                handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
                 receivedMessages.add(msg)
             }
             startNodeMessagingClient()
@@ -281,8 +281,8 @@ class ArtemisMessagingTest {
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
-            database.transaction { handle.persistDeduplicationId() }
-            handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
+            database.transaction { handle.insideDatabaseTransaction() }
+            handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
         startNodeMessagingClient()
