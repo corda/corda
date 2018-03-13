@@ -62,6 +62,7 @@ artifacts {
 
 jar {
     baseName 'corda-finance'
+    exclude('**/META-INF/**')
 }
 
 publish {
