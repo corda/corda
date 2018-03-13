@@ -1,5 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.core.crypto.internal.bouncyCastlePQCProvider
+import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
 import net.corda.core.crypto.internal.providerMap
 import net.corda.core.serialization.serialize
@@ -72,7 +74,7 @@ object Crypto {
             "RSA_SHA256",
             AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption, null),
             listOf(AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null)),
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "RSA",
             "SHA256WITHRSA",
             null,
@@ -87,7 +89,7 @@ object Crypto {
             "ECDSA_SECP256K1_SHA256",
             AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256k1),
             listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256k1)),
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "ECDSA",
             "SHA256withECDSA",
             ECNamedCurveTable.getParameterSpec("secp256k1"),
@@ -102,7 +104,7 @@ object Crypto {
             "ECDSA_SECP256R1_SHA256",
             AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256r1),
             listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256r1)),
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "ECDSA",
             "SHA256withECDSA",
             ECNamedCurveTable.getParameterSpec("secp256r1"),
@@ -123,7 +125,7 @@ object Crypto {
             AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
             emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
             // We added EdDSA to bouncy castle for certificate signing.
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "1.3.101.112",
             EdDSAEngine.SIGNATURE_ALGORITHM,
             EdDSANamedCurveTable.getByName("ED25519"),
@@ -146,7 +148,7 @@ object Crypto {
             "SPHINCS-256_SHA512",
             AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, DLSequence(arrayOf(ASN1Integer(0), SHA512_256))),
             listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), SHA512_256)))),
-            "BCPQC",
+            bouncyCastlePQCProvider.name,
             "SPHINCS256",
             "SHA512WITHSPHINCS256",
             SPHINCS256KeyGenParameterSpec(SPHINCS256KeyGenParameterSpec.SHA512_256),
@@ -851,7 +853,7 @@ object Crypto {
     // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
     private fun deriveHMAC(privateKey: PrivateKey, seed: ByteArray): ByteArray {
         // Compute hmac(privateKey, seed).
-        val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
+        val mac = Mac.getInstance("HmacSHA512", cordaBouncyCastleProvider)
         val keyData = when (privateKey) {
             is BCECPrivateKey -> privateKey.d.toByteArray()
             is EdDSAPrivateKey -> privateKey.geta()

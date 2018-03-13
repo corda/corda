@@ -32,11 +32,14 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
     Security.addProvider(it)
 }
+internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
+    require(name == "BCPQC") // The constant it comes from is not final.
+}
 // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
 // that could cause unexpected and suspicious behaviour.
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
 // The val is private to avoid any harmful state changes.
-internal val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, BouncyCastlePQCProvider()).map { it.name to it }.toMap()
+internal val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider).map { it.name to it }.toMap()
 internal val platformSecureRandomFactory: () -> SecureRandom = when {
     SystemUtils.IS_OS_LINUX -> {
         { SecureRandom.getInstance("NativePRNGNonBlocking") }
