@@ -418,12 +418,15 @@ object InteractiveShell {
     @JvmStatic
     fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
-        if (cmd.toLowerCase().startsWith("startflow")) {
+        if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to
             // the generic startFlow RPC interface which offers no type information with which to parse the
             // string form of the command.
             out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
             return null
+        } else if (cmd.substringAfter(" ").trim().equals("shutdowngracefully", ignoreCase = true)) {
+            out.println("Shutting node down...")
+            return InteractiveShell.shutdownGracefully(input, out, context, cordaRPCOps, om)
         }
 
         var result: Any? = null
@@ -464,17 +467,11 @@ object InteractiveShell {
 
 
     @JvmStatic
-    fun shutdownNode(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
+    fun shutdownGracefully(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
 
         var result: Any? = null
         try {
-//            val latch = CountDownLatch(1)
             result = client.drainAndShutdown(shellConfiguration.user, shellConfiguration.password)
-//                    .doOnError { error -> error.printStackTrace() }
-//                    .doOnCompleted { }
-//                    .doAfterTerminate { latch.countDown() }
-//                    .subscribe()
-//            latch.await()
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)
             }
@@ -501,7 +498,6 @@ object InteractiveShell {
         } finally {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
-
         }
 
         return result
