@@ -408,6 +408,14 @@ class RPCClientProxyHandler(
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
                 log.warn("RPC server unavailable. RPC calls are being buffered.")
+                log.warn("Terminating observables.")
+                val m = observableContext.observableMap.asMap()
+                m.keys.forEach { k ->
+                    observationExecutorPool.run(k) {
+                        m[k]?.onError(RPCException("Connection failure detected."))
+                    }
+                }
+                observableContext.observableMap.invalidateAll()
             }
 
             FailoverEventType.FAILOVER_COMPLETED -> {
@@ -422,8 +430,6 @@ class RPCClientProxyHandler(
                         "will throw an RPCException.")
                 rpcReplyMap.forEach { id, replyFuture ->
                     replyFuture.setException(RPCException("Could not re-connect to RPC server. Failover failed."))
-                    val observable = observableContext.observableMap.getIfPresent(id)
-                    observable?.onError(RPCException("Could not re-connect to RPC server. Failover failed."))
                 }
                 outgoingRequestBuffer.clear()
                 rpcReplyMap.clear()
