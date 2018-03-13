@@ -9,7 +9,6 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
@@ -23,19 +22,22 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.NotaryService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.RunOnStop
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
-import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -90,6 +92,23 @@ data class InternalMockNodeParameters(
             mockNodeParameters.configOverrides)
 }
 
+interface StartedMockNodeInternal : StartedNode<InternalMockNetwork.MockNode> {
+    fun disableDBCloseOnStop()
+    fun manuallyCloseDB()
+}
+
+private class StartedMockNodeInternalImpl(startedNode: StartedNode<InternalMockNetwork.MockNode>, private val runOnStop: RunOnStop) : StartedNode<InternalMockNetwork.MockNode> by startedNode, StartedMockNodeInternal {
+    private var dbCloser: (() -> Any?)? = database::close
+    override fun disableDBCloseOnStop() {
+        dbCloser?.let { runOnStop -= it }
+    }
+
+    override fun manuallyCloseDB() {
+        dbCloser?.invoke()
+        dbCloser = null
+    }
+}
+
 open class InternalMockNetwork(private val cordappPackages: List<String>,
                                defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
@@ -129,13 +148,13 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
      * Returns the list of nodes started by the network. Each notary specified when the network is constructed ([notarySpecs]
      * parameter) maps 1:1 to the notaries returned by this list.
      */
-    val notaryNodes: List<StartedNode<MockNode>>
+    val notaryNodes: List<StartedMockNodeInternal>
 
     /**
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode>
+    val defaultNotaryNode: StartedMockNodeInternal
         get() {
             return when (notaryNodes.size) {
                 0 -> throw IllegalStateException("There are no notaries defined on the network")
@@ -152,16 +171,6 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         get() {
             return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
         }
-
-    /**
-     * Return the identity of the default notary node.
-     * @see defaultNotaryNode
-     */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate
-        get() {
-            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-        }
-
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
      */
@@ -206,7 +215,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     }
 
     @VisibleForTesting
-    internal open fun createNotaries(): List<StartedNode<MockNode>> {
+    internal open fun createNotaries(): List<StartedMockNodeInternal> {
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(legalName = name, configOverrides = {
                 doReturn(NotaryConfig(validating)).whenever(it).notary
@@ -237,18 +246,20 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
                     mockNet.sharedUserCount.incrementAndGet()
                     mockNet.sharedServerThread
                 }
-
-        override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
-
-        override fun start(): StartedNode<MockNode> {
+        override val started get() = super.started as StartedMockNodeInternal?
+        override fun start(): StartedMockNodeInternal {
             mockNet.networkParametersCopier.install(configuration.baseDirectory)
-            val started: StartedNode<MockNode> = uncheckedCast(super.start())
+            val started = super.start() as StartedMockNodeInternal
             advertiseNodeToNetwork(started)
             return started
         }
 
+        override fun makeStartedNode(nodeInfo: NodeInfo, smm: StateMachineManager, database: CordaPersistence, rpcOps: CordaRPCOps, flowStarter: FlowStarter, notaryService: NotaryService?): StartedMockNodeInternal {
+            return StartedMockNodeInternalImpl(uncheckedCast(super.makeStartedNode(nodeInfo, smm, database, rpcOps, flowStarter, notaryService)), runOnStop)
+        }
+
         override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
-        private fun advertiseNodeToNetwork(newNode: StartedNode<MockNode>) {
+        private fun advertiseNodeToNetwork(newNode: StartedNode<*>) {
             mockNet.nodes
                     .mapNotNull { it.started }
                     .forEach { existingNode ->
@@ -310,20 +321,6 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         private val _serializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = _serializationWhitelists
-        private var dbCloser: (() -> Any?)? = null
-        override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
-            return super.initialiseDatabasePersistence(schemaService, identityService).also { dbCloser = it::close }
-        }
-
-        fun disableDBCloseOnStop() {
-            runOnStop.remove(dbCloser)
-        }
-
-        fun manuallyCloseDB() {
-            dbCloser?.invoke()
-            dbCloser = null
-        }
-
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
@@ -351,12 +348,12 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
-    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): StartedNode<MockNode> {
+    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): StartedMockNodeInternal {
         return createNode(parameters, defaultFactory)
     }
 
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
+    fun <N : MockNode> createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedMockNodeInternal {
         return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
@@ -400,7 +397,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
     }
 
     @JvmOverloads
-    fun createPartyNode(legalName: CordaX500Name? = null): StartedNode<MockNode> {
+    fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNodeInternal {
         return createNode(InternalMockNodeParameters(legalName = legalName))
     }
 

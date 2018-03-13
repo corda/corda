@@ -21,6 +21,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.StartedMockNodeInternal
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -65,7 +66,7 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
 class AttachmentSerializationTest {
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var server: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var client: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var client: StartedMockNodeInternal
     private lateinit var serverIdentity: Party
 
     @Before
@@ -73,7 +74,7 @@ class AttachmentSerializationTest {
         mockNet = InternalMockNetwork(emptyList())
         server = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         client = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
-        client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
+        client.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
         serverIdentity = server.info.singleIdentity()
     }

@@ -61,8 +61,8 @@ class FlowFrameworkTests {
 
     private lateinit var mockNet: InternalMockNetwork
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
-    private lateinit var aliceNode: StartedNode<MockNode>
-    private lateinit var bobNode: StartedNode<MockNode>
+    private lateinit var aliceNode: StartedMockNodeInternal
+    private lateinit var bobNode: StartedMockNodeInternal
     private lateinit var notaryIdentity: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
@@ -135,7 +135,7 @@ class FlowFrameworkTests {
 
         // We push through just enough messages to get only the payload sent
         bobNode.pumpReceive()
-        bobNode.internals.disableDBCloseOnStop()
+        bobNode.disableDBCloseOnStop()
         bobNode.internals.acceptableLiveFiberCountOnStop = 1
         bobNode.dispose()
         mockNet.runNetwork()
@@ -149,7 +149,7 @@ class FlowFrameworkTests {
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         bobNode.flushSmm()
-        bobNode.internals.disableDBCloseOnStop()
+        bobNode.disableDBCloseOnStop()
         bobNode.dispose() // kill receiver
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
@@ -175,7 +175,7 @@ class FlowFrameworkTests {
         }
         // Make sure the add() has finished initial processing.
         bobNode.flushSmm()
-        bobNode.internals.disableDBCloseOnStop()
+        bobNode.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         bobNode.dispose()
         bobNode.database.transaction {
@@ -183,7 +183,7 @@ class FlowFrameworkTests {
             bobNode.services.networkMapCache.clearNetworkMapCache()
         }
         val node2b = mockNet.createNode(InternalMockNodeParameters(bobNode.internals.id))
-        bobNode.internals.manuallyCloseDB()
+        bobNode.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         mockNet.runNetwork()
@@ -653,13 +653,10 @@ class FlowFrameworkTests {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //region Helpers
-
-    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow() = internals.run {
+    private inline fun <reified P : FlowLogic<*>> StartedMockNodeInternal.restartAndGetRestoredFlow() = run {
         disableDBCloseOnStop() // Handover DB to new node copy
-        stop()
-        val newNode = mockNet.createNode(InternalMockNodeParameters(id, configuration.myLegalName))
+        dispose()
+        val newNode = mockNet.createNode(InternalMockNodeParameters(internals.id, internals.configuration.myLegalName))
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork()
