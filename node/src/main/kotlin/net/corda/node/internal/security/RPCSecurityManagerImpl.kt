@@ -4,6 +4,7 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.Cache
 import com.google.common.primitives.Ints
 import net.corda.core.context.AuthServiceId
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.config.PasswordEncryption
@@ -300,7 +301,7 @@ private class GuavaCacheManager(val maxSize: Long,
     override fun <K, V> getCache(name: String): ShiroCache<K, V> {
         val result = instances[name] ?: buildCache<K, V>(name)
         instances.putIfAbsent(name, result)
-        return result as ShiroCache<K, V>
+        return uncheckedCast(result)
     }
 
     private fun <K, V> buildCache(name: String) : ShiroCache<K, V> {

@@ -186,7 +186,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Only do a receive here as the session init has carried the payload
             receiveInternal(newSession, receiveType)
         } else {
-            val sendData = createSessionData(session, payload)
+            val sendData = createSessionData(payload)
             sendAndReceiveInternal(session, sendData, receiveType)
         }
         val sessionData = receivedSessionMessage.message.checkDataSessionMessage()
@@ -232,7 +232,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Don't send the payload again if it was already piggy-backed on a session init
             initiateSession(otherParty, sessionFlow, payload, waitForConfirmation = false)
         } else {
-            sendInternal(session, ExistingSessionMessage(session.getPeerSessionId(), createSessionData(session, payload)))
+            sendInternal(session, ExistingSessionMessage(session.getPeerSessionId(), createSessionData(payload)))
         }
     }
 
@@ -349,7 +349,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
-    private fun createSessionData(session: FlowSessionInternal, payload: Any): DataSessionMessage {
+    private fun createSessionData(payload: Any): DataSessionMessage {
         return DataSessionMessage(payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
     }
 

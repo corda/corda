@@ -21,6 +21,6 @@ class CurrencyParameterSensitivitySerializer :
                     proxy.currency,
                     proxy.sensitivity)
 
-    override fun toProxy(obj: CurrencyParameterSensitivity) = Proxy((obj as CurrencyParameterSensitivity).currency,
+    override fun toProxy(obj: CurrencyParameterSensitivity) = Proxy(obj.currency,
             obj.marketDataName, obj.parameterMetadata, obj.sensitivity)
 }

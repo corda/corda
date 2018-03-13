@@ -746,6 +746,7 @@ class DriverDSLImpl(
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
          * in demo application like NodeExplorer.
          */
+        @Suppress("DEPRECATION")
         private val DRIVER_REQUIRED_PERMISSIONS = setOf(
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo),
                 Permissions.invokeRpc(CordaRPCOps::networkMapFeed),

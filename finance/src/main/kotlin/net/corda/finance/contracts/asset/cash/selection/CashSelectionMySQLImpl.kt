@@ -19,7 +19,13 @@ class CashSelectionMySQLImpl : AbstractCashSelection() {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
-    override fun executeQuery(statement: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, issuerKeysStr: Set<AbstractParty>, issuerRefsStr: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
+    override fun executeQuery(connection: Connection,
+                              amount: Amount<Currency>,
+                              lockId: UUID, notary: Party?,
+                              onlyFromIssuerParties: Set<AbstractParty>,
+                              withIssuerRefs: Set<OpaqueBytes>,
+                              withResultSet: (ResultSet) -> Boolean
+    ): Boolean {
         TODO("MySQL cash selection not implemented")
     }
 

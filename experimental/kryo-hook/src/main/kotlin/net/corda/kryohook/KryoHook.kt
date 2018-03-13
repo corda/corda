@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class KryoHookAgent {
     companion object {
         @JvmStatic
-        fun premain(argumentsString: String?, instrumentation: Instrumentation) {
+        fun premain(@Suppress("UNUSED_PARAMETER") argumentsString: String?, instrumentation: Instrumentation) {
             Runtime.getRuntime().addShutdownHook(Thread {
                 val statsTrees = KryoHook.events.values.flatMap {
                     readTrees(it, 0).second
@@ -98,13 +98,13 @@ object KryoHook : ClassFileTransformer {
     val events = ConcurrentHashMap<Long, ArrayList<StatsEvent>>()
 
     @JvmStatic
-    fun writeEnter(kryo: Kryo, output: Output, obj: Any) {
+    fun writeEnter(@Suppress("UNUSED_PARAMETER") kryo: Kryo, output: Output, obj: Any) {
         events.getOrPut(Strand.currentStrand().id) { ArrayList() }.add(
                 StatsEvent.Enter(obj.javaClass.name, output.total())
         )
     }
     @JvmStatic
-    fun writeExit(kryo: Kryo, output: Output, obj: Any) {
+    fun writeExit(@Suppress("UNUSED_PARAMETER") kryo: Kryo, output: Output, obj: Any) {
         events.get(Strand.currentStrand().id)!!.add(
                 StatsEvent.Exit(obj.javaClass.name, output.total())
         )

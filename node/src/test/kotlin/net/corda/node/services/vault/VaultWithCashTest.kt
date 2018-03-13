@@ -130,6 +130,7 @@ class VaultWithCashTest {
                 database.transaction {
                     // A tx that spends our money.
                     val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
+                    @Suppress("DEPRECATION")
                     Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
                     val spendPTX = services.signInitialTransaction(spendTXBuilder, freshKey)
                     notaryServices.addSignature(spendPTX)
@@ -178,6 +179,7 @@ class VaultWithCashTest {
         val first = backgroundExecutor.fork {
             database.transaction {
                 val txn1Builder = TransactionBuilder(DUMMY_NOTARY)
+                @Suppress("DEPRECATION")
                 Cash.generateSpend(services, txn1Builder, 60.DOLLARS, BOB)
                 val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
                 val txn1 = services.addSignature(ptxn1, freshKey)
@@ -209,6 +211,7 @@ class VaultWithCashTest {
         val second = backgroundExecutor.fork {
             database.transaction {
                 val txn2Builder = TransactionBuilder(DUMMY_NOTARY)
+                @Suppress("DEPRECATION")
                 Cash.generateSpend(services, txn2Builder, 80.DOLLARS, BOB)
                 val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
                 val txn2 = services.addSignature(ptxn2, freshKey)
@@ -333,6 +336,7 @@ class VaultWithCashTest {
         database.transaction {
             // A tx that spends our money.
             val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
+            @Suppress("DEPRECATION")
             Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
             val spendPTX = notaryServices.signInitialTransaction(spendTXBuilder)
             val spendTX = services.addSignature(spendPTX, freshKey)

@@ -291,7 +291,7 @@ open class SerializerFactory(
                 return if (declaredSuperClass == null
                         || !customSerializer.isSerializerFor(declaredSuperClass)
                         || !customSerializer.revealSubclassesInSchema) {
-                    customSerializer as? AMQPSerializer<Any>
+                    uncheckedCast(customSerializer)
                 } else {
                     // Make a subclass serializer for the subclass and return that...
                     CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))

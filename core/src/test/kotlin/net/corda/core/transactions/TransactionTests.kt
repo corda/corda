@@ -53,6 +53,7 @@ class TransactionTests {
         val cpub = ck.public
         val c1 = CompositeKey.Builder().addKeys(apub, bpub).build(2)
         val compKey = CompositeKey.Builder().addKeys(c1, cpub).build(1)
+        @Suppress("DEPRECATION")
         val wtx = WireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
@@ -79,6 +80,7 @@ class TransactionTests {
 
     @Test
     fun `signed transaction missing signatures`() {
+        @Suppress("DEPRECATION")
         val wtx = WireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
@@ -137,6 +139,7 @@ class TransactionTests {
     @Test
     fun `transaction cannot have duplicate inputs`() {
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+        @Suppress("DEPRECATION")
         fun buildTransaction() = WireTransaction(
                 inputs = listOf(stateRef, stateRef),
                 attachments = emptyList(),
@@ -178,6 +181,7 @@ class TransactionTests {
     @Test
     fun `transactions with identical contents must have different ids`() {
         val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
+        @Suppress("DEPRECATION")
         fun buildTransaction() = WireTransaction(
                 inputs = emptyList(),
                 attachments = emptyList(),

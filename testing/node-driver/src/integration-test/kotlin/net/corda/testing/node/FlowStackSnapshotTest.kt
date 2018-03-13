@@ -186,7 +186,7 @@ class FlowStackSnapshotSerializationTestingFlow : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
-        val flowStackSnapshot = flowStackSnapshot()
+        flowStackSnapshot()
         val mySession = initiateFlow(ourIdentity)
         mySession.sendAndReceive<String>("Ping")
     }

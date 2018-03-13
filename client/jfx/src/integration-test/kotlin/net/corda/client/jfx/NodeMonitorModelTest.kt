@@ -54,6 +54,7 @@ class NodeMonitorModelTest {
 
     private fun setup(runTest: () -> Unit) {
         driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            @Suppress("DEPRECATION")
             val cashUser = User("user1", "test", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),

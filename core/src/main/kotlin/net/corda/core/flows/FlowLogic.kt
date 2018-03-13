@@ -53,7 +53,6 @@ import java.time.Instant
  * parameter the flow must be prepared for scenarios where a previous running of the flow *already committed its
  * relevant database transactions*. Only set this option to true if you know what you're doing.
  */
-@Suppress("DEPRECATION", "DeprecatedCallableAddReplaceWith")
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
@@ -152,6 +151,7 @@ abstract class FlowLogic<out T> {
      */
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
+        @Suppress("DEPRECATION")
         return sendAndReceive(R::class.java, otherParty, payload)
     }
 
@@ -204,7 +204,10 @@ abstract class FlowLogic<out T> {
      * corrupted data in order to exploit your code.
      */
     @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
-    inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> = receive(R::class.java, otherParty)
+    inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> {
+        @Suppress("DEPRECATION")
+        return receive(R::class.java, otherParty)
+    }
 
     /**
      * Suspends until the specified [otherParty] sends us a message of type [receiveType].

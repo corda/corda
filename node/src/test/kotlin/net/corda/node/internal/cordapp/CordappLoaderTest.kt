@@ -13,8 +13,9 @@ class DummyFlow : FlowLogic<Unit>() {
     }
 }
 
+@Suppress("UNUSED") // This is required for the DummyFlow to register as an initiated flow
 @InitiatedBy(DummyFlow::class)
-class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
+class LoaderTestFlow(@Suppress("UNUSED_PARAMETER") unusedSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
     }

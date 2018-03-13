@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
@@ -392,7 +393,7 @@ class EnumEvolvabilityTests {
         val f = sf.javaClass.getDeclaredField("transformsCache")
         f.isAccessible = true
 
-        val transformsCache = f.get(sf) as ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
+        val transformsCache: ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = uncheckedCast(f.get(sf))
 
         assertEquals(0, transformsCache.size)
 

@@ -114,7 +114,8 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         private fun makeType(typeName: String, cl: ClassLoader): Type {
             // Not generic
             return if (typeName == "?") SerializerFactory.AnyType else {
-                Primitives.wrap(SerializerFactory.primitiveType(typeName) ?: Class.forName(typeName, false, cl))
+                val type = SerializerFactory.primitiveType(typeName) ?: Class.forName(typeName, false, cl)
+                Primitives.wrap(type)
             }
         }
 

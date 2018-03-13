@@ -264,6 +264,7 @@ class PartialMerkleTreeTest {
             timeWindow: TimeWindow? = null,
             attachments: List<SecureHash> = emptyList()
     ): WireTransaction {
+        @Suppress("DEPRECATION")
         return WireTransaction(
                 inputs = testTx.inputs,
                 attachments = attachments,

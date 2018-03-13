@@ -75,7 +75,6 @@ class UniversalContract : Contract {
                         Operation.MINUS -> l - r
                         Operation.PLUS -> l + r
                         Operation.TIMES -> l * r
-                        else -> throw NotImplementedError("eval - amount - operation " + expr.op)
                     }
                 }
                 is Fixing -> {

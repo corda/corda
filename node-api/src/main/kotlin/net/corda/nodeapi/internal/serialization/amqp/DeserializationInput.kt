@@ -133,7 +133,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
         return if (obj == null) null else readObject(obj, schema, type, offset)
     }
 
-    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, debugIndent: Int = 0): Any =
+    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, @Suppress("UNUSED_PARAMETER") debugIndent: Int = 0): Any =
             if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()

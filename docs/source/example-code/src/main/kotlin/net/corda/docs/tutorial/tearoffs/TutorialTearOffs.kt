@@ -11,6 +11,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.contracts.Fix
 import java.util.function.Predicate
 
+@Suppress("UNUSED_VARIABLE")
 fun main(args: Array<String>) {
     // Typealias to make the example coherent.
     val oracle = Any() as AbstractParty

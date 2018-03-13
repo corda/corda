@@ -13,7 +13,8 @@ import net.corda.core.utilities.unwrap
 class LaunchSpaceshipFlow : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val shouldLaunchSpaceship = receive<Boolean>(getPresident()).unwrap { it }
+        val presidentSession = initiateFlow(getPresident())
+        val shouldLaunchSpaceship = presidentSession.receive<Boolean>().unwrap { it }
         if (shouldLaunchSpaceship) {
             launchSpaceship()
         }
@@ -32,10 +33,12 @@ class LaunchSpaceshipFlow : FlowLogic<Unit>() {
 class PresidentSpaceshipFlow(val launcher: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
+        val secretarySession = initiateFlow(getSecretary())
+        val launcherSession = initiateFlow(launcher)
         val needCoffee = true
-        send(getSecretary(), needCoffee)
+        secretarySession.send(needCoffee)
         val shouldLaunchSpaceship = false
-        send(launcher, shouldLaunchSpaceship)
+        launcherSession.send(shouldLaunchSpaceship)
     }
 
     fun getSecretary(): Party {

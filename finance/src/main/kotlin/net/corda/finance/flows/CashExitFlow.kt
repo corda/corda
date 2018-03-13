@@ -49,6 +49,8 @@ class CashExitFlow(private val amount: Amount<Currency>,
         val exitStates = AbstractCashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        // TODO: Use non-deprecated generateExit call
+        @Suppress("DEPRECATION")
         val signers = try {
             Cash().generateExit(
                     builder,

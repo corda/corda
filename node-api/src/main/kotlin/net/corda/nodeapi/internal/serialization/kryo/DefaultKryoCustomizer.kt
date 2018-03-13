@@ -18,6 +18,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -215,7 +216,7 @@ object DefaultKryoCustomizer {
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()
-                val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
+                val additionalContracts: Set<ContractClassName> = uncheckedCast(kryo.readClassAndObject(input))
                 val uploader = input.readString()
                 val context = kryo.serializationContext()!!
                 val attachmentStorage = context.serviceHub.attachments
@@ -232,7 +233,7 @@ object DefaultKryoCustomizer {
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
-                val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
+                val additionalContracts: Set<ContractClassName> = uncheckedCast(kryo.readClassAndObject(input))
                 val uploader = input.readString()
                 return ContractAttachment(attachment, contract, additionalContracts, uploader)
             }

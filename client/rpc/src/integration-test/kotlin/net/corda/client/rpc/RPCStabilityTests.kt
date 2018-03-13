@@ -18,6 +18,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -477,7 +478,7 @@ class RPCStabilityTests {
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createTemporaryQueue(myQueue, myQueue)
+            session.createTemporaryQueue(myQueue, RoutingType.ANYCAST, myQueue)
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
                 Thread.sleep(50) // 5x slower than the server producer

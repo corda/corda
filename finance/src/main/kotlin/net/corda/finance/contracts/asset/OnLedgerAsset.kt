@@ -326,12 +326,13 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
     @Deprecated("Replaced with generateExit() which takes in a party to pay change to")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>): Set<PublicKey> {
+        @Suppress("DEPRECATION")
         return generateExit(
                 tx,
                 amountIssued,
                 assetStates,
                 deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-                generateMoveCommand = { -> generateMoveCommand() },
+                generateMoveCommand = { generateMoveCommand() },
                 generateExitCommand = { amount -> generateExitCommand(amount) }
         )
     }
@@ -348,14 +349,14 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
     @Throws(InsufficientBalanceException::class)
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>,
-                     payChangeTo: AbstractParty): Set<PublicKey> {
+                     payChangeTo: AbstractParty): Set<PublicKey>
         return generateExit(
                 tx,
                 amountIssued,
                 assetStates,
                 payChangeTo,
                 deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-                generateMoveCommand = { -> generateMoveCommand() },
+                generateMoveCommand = { generateMoveCommand() },
                 generateExitCommand = { amount -> generateExitCommand(amount) }
         )
     }

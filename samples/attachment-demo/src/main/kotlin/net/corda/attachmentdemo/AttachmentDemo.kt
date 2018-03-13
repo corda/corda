@@ -94,6 +94,7 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
             val avail = inputStream.available()
+            println("$avail bytes available to stream")
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
@@ -136,6 +137,7 @@ class AttachmentDemoFlow(private val otherSide: Party,
 // DOCSTART 1
 fun recipient(rpc: CordaRPCOps, webPort: Int) {
     println("Waiting to receive transaction ...")
+    @Suppress("DEPRECATION")
     val stx = rpc.internalVerifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {

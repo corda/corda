@@ -500,12 +500,13 @@ class Obligation<P : Any> : Contract {
      * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public keys which must sign the transaction for it to be valid.
      */
-    @Suppress("unused")
+    // TODO: Replace with generateExit that uses the non-deprecated [OnLedgerAsset::generateExit]
+    @Suppress("unused", "DEPRECATION")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
                      assetStates: List<StateAndRef<Obligation.State<P>>>): Set<PublicKey>
             = OnLedgerAsset.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.withNewOwnerAndAmount(amount, owner)) },
-            generateMoveCommand = { -> Commands.Move() },
+            generateMoveCommand = { Commands.Move() },
             generateExitCommand = { amount -> Commands.Exit(amount) }
     )
 

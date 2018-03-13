@@ -31,7 +31,7 @@ class SerializationPropertyOrdering {
 
         val u = User(l,l)
         val output = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(u)
-        val input = DeserializationInput(sf).deserialize(output.obj)
+        DeserializationInput(sf).deserialize(output.obj)
     }
 
     @Test
