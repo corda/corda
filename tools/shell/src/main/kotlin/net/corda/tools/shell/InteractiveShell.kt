@@ -8,8 +8,10 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -127,13 +129,16 @@ object InteractiveShell {
     private lateinit var connection: CordaRPCOps
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
+    private lateinit var shellConfiguration: ShellConfiguration
+    private lateinit var client: CordaRPCClient
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+        shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
-            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+             client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     sslConfiguration = configuration.ssl, classLoader = classLoader)
             client.start(username, credentials).proxy
         }
@@ -454,6 +459,51 @@ object InteractiveShell {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }
+        return result
+    }
+
+
+    @JvmStatic
+    fun shutdownNode(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
+
+        var result: Any? = null
+        try {
+//            val latch = CountDownLatch(1)
+            result = client.drainAndShutdown(shellConfiguration.user, shellConfiguration.password)
+//                    .doOnError { error -> error.printStackTrace() }
+//                    .doOnCompleted { }
+//                    .doAfterTerminate { latch.countDown() }
+//                    .subscribe()
+//            latch.await()
+            if (result != null && result !is kotlin.Unit && result !is Void) {
+                result = printAndFollowRPCResponse(result, out)
+            }
+            if (result is Future<*>) {
+                if (!result.isDone) {
+                    out.println("Waiting for completion or Ctrl-C ... ")
+                    out.flush()
+                }
+                try {
+                    result = result.get()
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (e: ExecutionException) {
+                    throw e.rootCause
+                } catch (e: InvocationTargetException) {
+                    throw e.rootCause
+                }
+            }
+        } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            out.println(e.message, Color.red)
+            out.println("Please try 'man run' to learn what syntax is acceptable")
+        } catch (e: Exception) {
+            out.println("RPC failed: ${e.rootCause}", Color.red)
+        } finally {
+            InputStreamSerializer.invokeContext = null
+            InputStreamDeserializer.closeAll()
+
+        }
+
         return result
     }
 

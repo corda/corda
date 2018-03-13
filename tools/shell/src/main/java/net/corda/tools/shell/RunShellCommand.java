@@ -29,8 +29,11 @@ public class RunShellCommand extends InteractiveShellCommand {
             emitHelp(context, parser);
             return null;
         }
-
-        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper());
+        if (command.toString().toLowerCase().contains("shutdownnode")) {
+            return InteractiveShell.shutdownNode(command, out, context, ops(), objectMapper());
+        } else {
+            return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper());
+        }
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

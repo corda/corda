@@ -5,6 +5,7 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import rx.Observable
@@ -57,12 +58,16 @@ fun CordaRPCClient.shutdownEvent(username: String, password: String, period: Dur
                     } catch (e: ActiveMQNotConnectedException) {
                         // not cool here, for the connection might be interrupted without the node actually getting shut down - OK for tests
                         nodeIsShut.onCompleted()
-                    } catch (e: ActiveMQSecurityException) {
+                    } catch (e: ActiveMQConnectionTimedOutException) {
+                        // rare, node shut down and we timed out trying to connect to something that doesn't exist
+                        nodeIsShut.onCompleted()
+                    } catch (ignored: ActiveMQSecurityException) {
                         // nothing here - this happens if trying to connect before the node is started
                     } catch (e: Throwable) {
-                        nodeIsShut.onError(e)
+                        //nodeIsShut.onError(e)
+                        nodeIsShut.onCompleted()
                     }
-                }, 1, period.toMillis(), TimeUnit.MILLISECONDS)
+                }, 0, period.toMillis(), TimeUnit.MILLISECONDS)
             }
             .doAfterTerminate {
                 task?.cancel(true)
