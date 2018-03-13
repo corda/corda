@@ -61,6 +61,8 @@ dependencies {
     // Pure-Java Snappy compression
     compile 'org.iq80.snappy:snappy:0.4'
 
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
