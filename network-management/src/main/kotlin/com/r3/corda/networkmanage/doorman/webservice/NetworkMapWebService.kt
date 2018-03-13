@@ -15,7 +15,6 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
-import com.r3.corda.networkmanage.common.persistence.NodeInfoWithSigned
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
@@ -25,7 +24,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import java.io.InputStream
 import java.security.InvalidKeyException
@@ -52,32 +53,32 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, Pair<SignedNetworkMap?, NetworkParameters?>> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ -> Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getNetworkParametersOfNetworkMap()?.verified()) })
+            .build(CacheLoader.from { _ ->
+                Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getNetworkParametersOfNetworkMap()?.verified()) }
+            )
 
     @POST
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun registerNode(input: InputStream): Response {
         val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
+        var nodeInfo: NodeInfo? = null
         return try {
             // Store the NodeInfo
-            val nodeInfoWithSignature = NodeInfoWithSigned(signedNodeInfo)
-            logger.trace { "Processing 'publish' request from '${nodeInfoWithSignature.nodeInfo.legalIdentities.first().name.organisation}'" }
-            verifyNodeInfo(nodeInfoWithSignature.nodeInfo)
-            nodeInfoStorage.putNodeInfo(nodeInfoWithSignature)
-            logger.trace { "Stored 'publish' request from '${nodeInfoWithSignature.nodeInfo.legalIdentities.first().name.organisation}'" }
+            val nodeInfoAndSigned = NodeInfoAndSigned(signedNodeInfo)
+            nodeInfo = nodeInfoAndSigned.nodeInfo
+            logger.debug { "Publishing node-info: $nodeInfo" }
+            verifyNodeInfo(nodeInfo)
+            nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
             ok()
         } catch (e: Exception) {
-            // Catch exceptions thrown by signature verification.
+            logger.warn("Unable to process node-info: $nodeInfo", e)
             when (e) {
                 is NetworkMapNotInitialisedException -> status(Response.Status.SERVICE_UNAVAILABLE).entity(e.message)
                 is InvalidPlatformVersionException -> status(Response.Status.BAD_REQUEST).entity(e.message)
-                is IllegalArgumentException, is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-            // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
-                else -> {
-                    logger.error("Unexpected error encountered while processing request.", e)
-                    throw e
-                }
+                is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
+                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+                else -> throw e
             }
         }.build()
     }
@@ -107,20 +108,14 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     @Path("my-ip")
     fun myIp(@Context request: HttpServletRequest): Response {
         val ip = request.getHeader("X-Forwarded-For")?.split(",")?.first() ?: "${request.remoteHost}:${request.remotePort}"
-        logger.trace { "Precessed ip request from client, IP: '$ip'" }
+        logger.trace { "Processed IP request from client, IP: '$ip'" }
         return ok(ip).build()
     }
 
     private fun verifyNodeInfo(nodeInfo: NodeInfo) {
         val minimumPlatformVersion = networkMapCache.get(true).second?.minimumPlatformVersion
-        if (minimumPlatformVersion == null) {
-            logger.error("Error processing request from node '${nodeInfo.legalIdentities.first().name.organisation}' : Network parameters have not been initialised")
-            logger.trace { "$nodeInfo" }
-            throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
-        }
+                ?: throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
         if (nodeInfo.platformVersion < minimumPlatformVersion) {
-            logger.error("Error processing request from node '${nodeInfo.legalIdentities.first().name.organisation}' : Minimum platform version is $minimumPlatformVersion")
-            logger.trace { "$nodeInfo" }
             throw InvalidPlatformVersionException("Minimum platform version is $minimumPlatformVersion")
         }
     }

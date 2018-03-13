@@ -22,7 +22,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 
-data class NetworkManagementServerParameters(// TODO: Move local signing to signing server.
+data class NetworkManagementServerConfig( // TODO: Move local signing to signing server.
         val host: String,
         val port: Int,
         val dataSourceProperties: Properties,
@@ -62,11 +62,11 @@ data class NetworkManagementServerParameters(// TODO: Move local signing to sign
 
 data class DoormanConfig(val approveAll: Boolean = false,
                          val jira: JiraConfig? = null,
-                         val approveInterval: Long = NetworkManagementServerParameters.DEFAULT_APPROVE_INTERVAL.toMillis())
+                         val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis())
 
 data class NetworkMapConfig(val cacheTimeout: Long,
         // TODO: Move signing to signing server.
-                            val signInterval: Long = NetworkManagementServerParameters.DEFAULT_SIGN_INTERVAL.toMillis())
+                            val signInterval: Long = NetworkManagementServerConfig.DEFAULT_SIGN_INTERVAL.toMillis())
 
 enum class Mode {
     // TODO CA_KEYGEN now also generates the network map cert, so it should be renamed.
@@ -85,7 +85,7 @@ data class JiraConfig(
 /**
  * Parses the doorman command line options.
  */
-fun parseParameters(vararg args: String): NetworkManagementServerParameters {
+fun parseParameters(vararg args: String): NetworkManagementServerConfig {
     val argConfig = args.toConfigWithOptions {
         accepts("config-file", "The path to the config file")
                 .withRequiredArg()
@@ -112,7 +112,7 @@ fun parseParameters(vararg args: String): NetworkManagementServerParameters {
 
     val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
             .resolve()
-            .parseAs<NetworkManagementServerParameters>(false)
+            .parseAs<NetworkManagementServerConfig>(false)
 
     // Make sure trust store password is only specified in root keygen mode.
     if (config.mode != Mode.ROOT_KEYGEN) {

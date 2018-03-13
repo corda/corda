@@ -16,7 +16,9 @@ import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.CertRole.NODE_CA
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -27,17 +29,18 @@ import java.security.cert.CertPath
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
-    override fun putNodeInfo(nodeInfoWithSigned: NodeInfoWithSigned): SecureHash {
-        val nodeInfo = nodeInfoWithSigned.nodeInfo
-        val signedNodeInfo = nodeInfoWithSigned.signedNodeInfo
-        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.x509Certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
+    override fun putNodeInfo(nodeInfoAndSigned: NodeInfoAndSigned): SecureHash {
+        val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
+        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.x509Certificates.find { CertRole.extract(it) == NODE_CA }
+        nodeCaCert ?: throw IllegalArgumentException("Missing Node CA")
         return database.transaction {
             // TODO Move these checks out of data access layer
-            val request = nodeCaCert?.let {
-                getSignedRequestByPublicHash(it.publicKey.encoded.sha256(), this)
+            val request = requireNotNull(getSignedRequestByPublicHash(nodeCaCert.publicKey.encoded.sha256(), this)) {
+                "Node-info not registered with us"
             }
-            request ?: throw IllegalArgumentException("Unknown node info, this public key is not registered with the network management service.")
-            require(request.certificateData!!.certificateStatus == CertificateStatus.VALID) { "Certificate is no longer valid" }
+            request.certificateData?.certificateStatus.let {
+                require(it == CertificateStatus.VALID) { "Certificate is no longer valid: $it" }
+            }
 
             /*
              * Delete any previous [NodeInfoEntity] instance for this CSR

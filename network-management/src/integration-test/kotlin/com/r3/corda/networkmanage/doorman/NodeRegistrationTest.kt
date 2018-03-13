@@ -17,7 +17,6 @@ import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.internal.list
@@ -94,7 +93,9 @@ class NodeRegistrationTest : IntegrationTest() {
 
     @Test
     fun `register nodes with doorman and then they transact with each other`() {
-        // Start the server without the network parameters since we don't have them yet
+        // Start the server without the network parameters config which won't start the network map. Just the doorman
+        // registration process will start up, allowing us to register the notaries which will then be used in the network
+        // parameters.
         server = startNetworkManagementServer(networkParameters = null)
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverAddress"),
@@ -120,14 +121,12 @@ class NodeRegistrationTest : IntegrationTest() {
             val (alice, notary) = listOf(
                     startNode(providedName = aliceName),
                     defaultNotaryNode
-            ).transpose().getOrThrow()
-            alice as NodeHandleInternal
-            notary as NodeHandleInternal
+            ).map { it.getOrThrow() as NodeHandleInternal }
+
             alice.onlySeesFromNetworkMap(alice, notary)
             notary.onlySeesFromNetworkMap(alice, notary)
 
-            val genevieve = startNode(providedName = genevieveName).getOrThrow()
-            genevieve as NodeHandleInternal
+            val genevieve = startNode(providedName = genevieveName).getOrThrow() as NodeHandleInternal
 
             // Wait for the nodes to poll again
             Thread.sleep(timeoutMillis * 2)
@@ -161,7 +160,7 @@ class NodeRegistrationTest : IntegrationTest() {
                     networkParameters?.let {
                         NetworkMapStartParams(
                                 LocalSigner(networkMapCa),
-                                networkParameters,
+                                it,
                                 NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis)
                         )
                     }

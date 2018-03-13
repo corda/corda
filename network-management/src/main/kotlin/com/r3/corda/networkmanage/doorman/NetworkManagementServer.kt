@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
+import com.r3.corda.networkmanage.common.persistence.ApproveAllCertificateSigningRequestStorage
 import com.r3.corda.networkmanage.common.persistence.PersistentCertificateSigningRequestStorage
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.PersistentNodeInfoStorage
@@ -24,7 +25,7 @@ import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.io.Closeable
 import java.net.URI
@@ -35,7 +36,7 @@ import java.util.concurrent.TimeUnit
 
 class NetworkManagementServer : Closeable {
     companion object {
-        private val logger = loggerFor<NetworkManagementServer>()
+        private val logger = contextLogger()
     }
 
     private val closeActions = mutableListOf<() -> Unit>()
@@ -95,7 +96,7 @@ class NetworkManagementServer : Closeable {
         val requestService = if (config.approveAll) {
             require(config.jira == null) { "Jira configuration cannot be specified when the approveAll parameter is set to true." }
             logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
-            ApproveAllCertificateRequestStorage(PersistentCertificateSigningRequestStorage(database))
+            ApproveAllCertificateSigningRequestStorage(PersistentCertificateSigningRequestStorage(database))
         } else {
             PersistentCertificateSigningRequestStorage(database)
         }

@@ -17,6 +17,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -114,7 +115,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         // Create node info.
         val (node1, key) = createValidSignedNodeInfo("Test", requestStorage)
         val nodeInfo2 = node1.nodeInfo.copy(serial = 2)
-        val node2 = NodeInfoWithSigned(nodeInfo2.signWith(listOf(key)))
+        val node2 = NodeInfoAndSigned(nodeInfo2.signWith(listOf(key)))
 
         val nodeInfo1Hash = nodeInfoStorage.putNodeInfo(node1)
         assertEquals(node1.nodeInfo, nodeInfoStorage.getNodeInfo(nodeInfo1Hash)?.verified())
@@ -137,12 +138,12 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         // then
         val persistedSignedNodeInfo = nodeInfoStorage.getNodeInfo(nodeInfoHash)
-        assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoWithSigned.signedNodeInfo.signatures)
+        assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoWithSigned.signed.signatures)
     }
 }
 
 internal fun createValidSignedNodeInfo(organisation: String,
-                                       storage: CertificateSigningRequestStorage): Pair<NodeInfoWithSigned, PrivateKey> {
+                                       storage: CertificateSigningRequestStorage): Pair<NodeInfoAndSigned, PrivateKey> {
     val (csr, nodeKeyPair) = createRequest(organisation, certRole = CertRole.NODE_CA)
     val requestId = storage.saveRequest(csr)
     storage.markRequestTicketCreated(requestId)
@@ -151,5 +152,5 @@ internal fun createValidSignedNodeInfo(organisation: String,
     val (identity, key) = nodeInfoBuilder.addIdentity(CordaX500Name.build(X500Principal(csr.subject.encoded)), nodeKeyPair)
     storage.putCertificatePath(requestId, identity.certPath, "Test")
     val (_, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(1)
-    return Pair(NodeInfoWithSigned(signedNodeInfo), key)
+    return Pair(NodeInfoAndSigned(signedNodeInfo), key)
 }
