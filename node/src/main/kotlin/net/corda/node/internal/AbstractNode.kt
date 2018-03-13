@@ -42,6 +42,7 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.*
+import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
@@ -56,7 +57,6 @@ import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
-import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NodeBuildProperties
@@ -67,6 +67,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.storeLegalIdentity
+import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
@@ -258,7 +259,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             tokenizableServices = nodeServices + cordaServices + schedulerService
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-            startShell(rpcOps)
+            startShell()
             Pair(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
@@ -296,9 +297,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      */
     protected abstract fun getRxIoScheduler(): Scheduler
 
-    open fun startShell(rpcOps: CordaRPCOps) {
+    open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
+            if (configuration.rpcOptions.address == null) {
+                throw ConfigurationException("Cannot init CrashShell because node RPC address is not set (via 'rpcSettings' option).")
+            }
+            InteractiveShell.startShell(configuration.toShellConfig())
         }
     }
 

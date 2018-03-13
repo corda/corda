@@ -7,13 +7,16 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
@@ -25,12 +28,15 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.thread
+import kotlin.test.assertNotNull
 
 class RPCStabilityTests {
     @Rule
@@ -251,6 +257,154 @@ class RPCStabilityTests {
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
+    }
+
+    @Test
+    fun `client reconnects to server and resends buffered messages`() {
+        rpcDriver(startNodesInProcess = false) {
+            var nodeInfo: NodeInfo? = null
+            var nodeTime: Instant?  = null
+            val alice = startNode(providedName = ALICE_NAME,
+                    rpcUsers = listOf(User("alice", "alice", setOf("ALL")))).getOrThrow()
+            CordaRPCClient(alice.rpcAddress).use("alice", "alice") { connection ->
+                val proxy = connection.proxy
+                alice.stop()
+                val nodeInfoThread = thread {
+                    nodeInfo = proxy.nodeInfo()
+                }
+
+                val currentTimeThread = thread {
+                    nodeTime = proxy.currentNodeTime()
+                }
+
+                Thread.sleep(5000)
+                startNode(providedName = ALICE_NAME,
+                        rpcUsers = listOf(User("alice", "alice", setOf("ALL"))),
+                        customOverrides = mapOf("rpcSettings" to mapOf("address" to "localhost:${alice.rpcAddress.port}")))
+                currentTimeThread.join()
+                nodeInfoThread.join()
+                assertNotNull(nodeInfo)
+                assertNotNull(nodeTime)
+            }
+        }
+    }
+
+    @Test
+    fun `connection failover fails, rpc calls throw`() {
+        rpcDriver {
+            val ops = object : ReconnectOps {
+                override val protocolVersion = 0
+                override fun ping() = "pong"
+            }
+
+            val serverFollower = shutdownManager.follower()
+            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
+            serverFollower.unfollow()
+            // Set retry interval to 1s to reduce test duration
+            val clientConfiguration = RPCClientConfiguration.default.copy(connectionRetryInterval = 1.seconds, maxReconnectAttempts = 5)
+            val clientFollower = shutdownManager.follower()
+            val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
+            clientFollower.unfollow()
+            assertEquals("pong", client.ping())
+            serverFollower.shutdown()
+            try {
+                client.ping()
+            } catch (e: Exception) {
+                assertTrue(e is RPCException)
+            }
+            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
+        }
+    }
+
+    interface NoOps : RPCOps {
+        fun subscribe(): Observable<Nothing>
+    }
+
+    @Test
+    fun `observables error when connection breaks`() {
+        rpcDriver {
+            val ops = object : NoOps {
+                override val protocolVersion = 0
+                override fun subscribe(): Observable<Nothing> {
+                    return PublishSubject.create<Nothing>()
+                }
+            }
+            val serverFollower = shutdownManager.follower()
+            val serverPort = startRpcServer<NoOps>(ops = ops).getOrThrow().broker.hostAndPort!!
+            serverFollower.unfollow()
+
+            val clientConfiguration = RPCClientConfiguration.default.copy(connectionRetryInterval = 500.millis, maxReconnectAttempts = 1)
+            val clientFollower = shutdownManager.follower()
+            val client = startRpcClient<NoOps>(serverPort, configuration = clientConfiguration).getOrThrow()
+            clientFollower.unfollow()
+
+            var terminateHandlerCalled = false
+            var errorHandlerCalled = false
+            val subscription = client.subscribe()
+                     .doOnTerminate{ terminateHandlerCalled = true }
+                     .doOnError { errorHandlerCalled = true }
+                     .subscribe()
+
+            serverFollower.shutdown()
+            Thread.sleep(100)
+
+            assertTrue(terminateHandlerCalled)
+            assertTrue(errorHandlerCalled)
+            assertTrue(subscription.isUnsubscribed)
+
+            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
+        }
+    }
+
+    interface ThreadOps : RPCOps {
+        fun sendMessage(id: Int, msgNo: Int): String
+    }
+
+    @Test
+    fun `multiple threads with 1000 messages for each thread`() {
+        val messageNo = 1000
+        val threadNo = 8
+        val ops = object : ThreadOps {
+            override val protocolVersion = 0
+            override fun sendMessage(id: Int, msgNo: Int): String {
+                return "($id-$msgNo)"
+            }
+        }
+
+        rpcDriver(startNodesInProcess = false) {
+            val serverFollower = shutdownManager.follower()
+            val serverPort = startRpcServer<ThreadOps>(rpcUser = User("alice", "alice", setOf("ALL")),
+                    ops = ops).getOrThrow().broker.hostAndPort!!
+
+            serverFollower.unfollow()
+            val proxy = RPCClient<ThreadOps>(serverPort).start(ThreadOps::class.java, "alice", "alice").proxy
+            val expectedMap = mutableMapOf<Int, StringBuilder>()
+            val resultsMap = mutableMapOf<Int, StringBuilder>()
+
+            (1 until threadNo).forEach { nr ->
+                (1 until messageNo).forEach { msgNo ->
+                    expectedMap[nr] = expectedMap.getOrDefault(nr, StringBuilder()).append("($nr-$msgNo)")
+                }
+            }
+
+            val threads = mutableMapOf<Int, Thread>()
+            (1 until threadNo).forEach { nr ->
+                val thread = thread {
+                    (1 until messageNo).forEach { msgNo ->
+                        resultsMap[nr] = resultsMap.getOrDefault(nr, StringBuilder()).append(proxy.sendMessage(nr, msgNo))
+                    }
+                }
+                threads[nr] = thread
+            }
+            // give the threads a chance to start sending some messages
+            Thread.sleep(50)
+            serverFollower.shutdown()
+            startRpcServer<ThreadOps>(rpcUser = User("alice", "alice", setOf("ALL")),
+                    ops = ops, customPort = serverPort).getOrThrow()
+            threads.values.forEach { it.join() }
+            (1 until threadNo).forEach { assertEquals(expectedMap[it].toString(), resultsMap[it].toString()) }
+        }
+
     }
 
     interface TrackSubscriberOps : RPCOps {

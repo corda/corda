@@ -69,7 +69,7 @@ class ArgsParser {
         val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
 
         val registrationConfig = if (isRegistration) {
-            requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode." }
+            requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
             require(networkRootTrustStorePath.exists()) { "Network root trust store path: '$networkRootTrustStorePath' doesn't exist" }
             NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword)
         } else {
@@ -110,7 +110,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                 mapOf("noLocalShell" to this.noLocalShell)
         )).parseAsNodeConfiguration()
         if (nodeRegistrationConfig != null) {
-            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
+            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone URL (compatibilityZoneURL) must be present in node configuration file in registration mode." }
         }
         return config
     }

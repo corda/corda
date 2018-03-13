@@ -6,7 +6,7 @@ import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
@@ -33,18 +33,19 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
 
     companion object {
         /** Call from main only. */
-        fun initialiseSerialization() {
-            nodeSerializationEnv = createSerializationEnv()
+        fun initialiseSerialization(classLoader: ClassLoader? = null) {
+            nodeSerializationEnv = createSerializationEnv(classLoader)
         }
 
-        fun createSerializationEnv(): SerializationEnvironment {
+        fun createSerializationEnv(classLoader: ClassLoader? = null): SerializationEnvironment {
             return SerializationEnvironmentImpl(
                     SerializationFactoryImpl().apply {
                         registerScheme(KryoClientSerializationScheme())
                         registerScheme(AMQPClientSerializationScheme(emptyList()))
                     },
-                    KRYO_P2P_CONTEXT,
-                    rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+                    if (classLoader != null) AMQP_P2P_CONTEXT.withClassLoader(classLoader) else AMQP_P2P_CONTEXT,
+                    rpcClientContext = if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+
         }
     }
 }

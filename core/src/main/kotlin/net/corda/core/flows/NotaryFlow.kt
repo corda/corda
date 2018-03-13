@@ -1,27 +1,24 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.generateSignature
+import net.corda.core.internal.validateSignatures
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import java.security.SignatureException
 import java.time.Instant
 import java.util.function.Predicate
 
@@ -36,6 +33,7 @@ class NotaryFlow {
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the time-window is invalid.
      */
+    @DoNotImplement
     @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<TransactionSignature>>() {
@@ -68,44 +66,32 @@ class NotaryFlow {
             check(serviceHub.loadStates(stx.inputs.toSet()).all { it.state.notary == notaryParty }) {
                 "Input states must have the same Notary"
             }
-
-            try {
-                stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
-            } catch (ex: SignatureException) {
-                throw NotaryException(NotaryError.TransactionInvalid(ex))
-            }
+            stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
             return notaryParty
         }
 
         /** Notarises the transaction with the [notaryParty], obtains the notary's signature(s). */
         @Throws(NotaryException::class)
         @Suspendable
-        protected fun notarise(notaryParty: Party): UntrustworthyData<List<TransactionSignature>> {
-            return try {
-                val session = initiateFlow(notaryParty)
-                val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
-                if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                    sendAndReceiveValidating(session, requestSignature)
-                } else {
-                    sendAndReceiveNonValidating(notaryParty, session, requestSignature)
-                }
-            } catch (e: NotaryException) {
-                if (e.error is NotaryError.Conflict) {
-                    e.error.conflict.verified()
-                }
-                throw e
+        protected fun notarise(notaryParty: Party): UntrustworthyData<NotarisationResponse> {
+            val session = initiateFlow(notaryParty)
+            val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
+            return if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+                sendAndReceiveValidating(session, requestSignature)
+            } else {
+                sendAndReceiveNonValidating(notaryParty, session, requestSignature)
             }
         }
 
         @Suspendable
-        private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<List<TransactionSignature>> {
+        private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
             return session.receive()
         }
 
         @Suspendable
-        private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<List<TransactionSignature>> {
+        private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
@@ -116,16 +102,11 @@ class NotaryFlow {
         }
 
         /** Checks that the notary's signature(s) is/are valid. */
-        protected fun validateResponse(response: UntrustworthyData<List<TransactionSignature>>, notaryParty: Party): List<TransactionSignature> {
-            return response.unwrap { signatures ->
-                signatures.forEach { validateSignature(it, stx.id, notaryParty) }
-                signatures
+        protected fun validateResponse(response: UntrustworthyData<NotarisationResponse>, notaryParty: Party): List<TransactionSignature> {
+            return response.unwrap {
+                it.validateSignatures(stx.id, notaryParty)
+                it.signatures
             }
-        }
-
-        private fun validateSignature(sig: TransactionSignature, txId: SecureHash, notaryParty: Party) {
-            check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
-            sig.verify(txId)
         }
 
         /**
@@ -156,11 +137,17 @@ class NotaryFlow {
             check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
                 "We are not a notary on the network"
             }
-            val (id, inputs, timeWindow, notary) = receiveAndVerifyTx()
-            checkNotary(notary)
-            service.validateTimeWindow(timeWindow)
-            service.commitInputStates(inputs, id, otherSideSession.counterparty)
-            signAndSendResponse(id)
+            var txId: SecureHash? = null
+            try {
+                val parts = receiveAndVerifyTx()
+                txId = parts.id
+                checkNotary(parts.notary)
+                service.validateTimeWindow(parts.timestamp)
+                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty)
+                signTransactionAndSendResponse(txId)
+            } catch (e: NotaryInternalException) {
+                throw NotaryException(e.error, txId)
+            }
             return null
         }
 
@@ -175,14 +162,14 @@ class NotaryFlow {
         @Suspendable
         protected fun checkNotary(notary: Party?) {
             if (notary?.owningKey != service.notaryIdentityKey) {
-                throw NotaryException(NotaryError.WrongNotary)
+                throw NotaryInternalException(NotaryError.WrongNotary)
             }
         }
 
         @Suspendable
-        private fun signAndSendResponse(txId: SecureHash) {
+        private fun signTransactionAndSendResponse(txId: SecureHash) {
             val signature = service.sign(txId)
-            otherSideSession.send(listOf(signature))
+            otherSideSession.send(NotarisationResponse(listOf(signature)))
         }
     }
 }
@@ -197,14 +184,27 @@ data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val 
  * Exception thrown by the notary service if any issues are encountered while trying to commit a transaction. The
  * underlying [error] specifies the cause of failure.
  */
-class NotaryException(val error: NotaryError) : FlowException("Unable to notarise: $error")
+class NotaryException(
+        /** Cause of notarisation failure. */
+        val error: NotaryError,
+        /** Id of the transaction to be notarised. Can be _null_ if an error occurred before the id could be resolved. */
+        val txId: SecureHash? = null
+) : FlowException("Unable to notarise transaction${txId ?: " "}: $error")
+
+/** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */
+class NotaryInternalException(val error: NotaryError) : FlowException("Unable to notarise: $error")
 
 /** Specifies the cause for notarisation request failure. */
 @CordaSerializable
 sealed class NotaryError {
-    /** Occurs when one or more input states of transaction with [txId] have already been consumed by another transaction. */
-    data class Conflict(val txId: SecureHash, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
-        override fun toString() = "One or more input states for transaction $txId have been used in another transaction"
+    /** Occurs when one or more input states have already been consumed by another transaction. */
+    data class Conflict(
+            /** Id of the transaction that was attempted to be notarised. */
+            val txId: SecureHash,
+            /** Specifies which states have already been consumed in another transaction. */
+            val consumedStates: Map<StateRef, StateConsumptionDetails>
+    ) : NotaryError() {
+        override fun toString() = "One or more input states have been used in another transaction"
     }
 
     /** Occurs when time specified in the [TimeWindow] command is outside the allowed tolerance. */
@@ -236,3 +236,15 @@ sealed class NotaryError {
         override fun toString() = cause.toString()
     }
 }
+
+/** Contains information about the consuming transaction for a particular state. */
+// TODO: include notary timestamp?
+@CordaSerializable
+data class StateConsumptionDetails(
+        /**
+         * Hash of the consuming transaction id.
+         *
+         * Note that this is NOT the transaction id itself – revealing it could lead to privacy leaks.
+         */
+        val hashOfTransactionId: SecureHash
+)

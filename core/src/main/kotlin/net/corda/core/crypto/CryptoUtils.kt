@@ -3,6 +3,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.crypto.internal.platformSecureRandomFactory
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
@@ -168,7 +169,7 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun secureRandomBytes(numOfBytes: Int): ByteArray = newSecureRandom().generateSeed(numOfBytes)
+fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply { newSecureRandom().nextBytes(this) }
 
 /**
  * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.
@@ -189,13 +190,7 @@ fun secureRandomBytes(numOfBytes: Int): ByteArray = newSecureRandom().generateSe
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun newSecureRandom(): SecureRandom {
-    return if (System.getProperty("os.name") == "Linux") {
-        SecureRandom.getInstance("NativePRNGNonBlocking")
-    } else {
-        SecureRandom.getInstanceStrong()
-    }
-}
+fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
 
 /**
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
@@ -222,7 +217,11 @@ fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentG
 /** Return the SHA256(SHA256(nonce || serializedComponent)). */
 fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
 
-/** Serialise the object and return the hash of the serialized bytes. */
+/**
+ * Serialise the object and return the hash of the serialized bytes. Note that the resulting hash may not be deterministic
+ * across platform versions: serialization can produce different values if any of the types being serialized have changed,
+ * or if the version of serialization specified by the context changes.
+ */
 fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
 
 /**

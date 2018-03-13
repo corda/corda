@@ -161,6 +161,9 @@ class RPCClientProxyHandler(
                 build()
     }
 
+    // Used to buffer client requests if the server is unavailable
+    private val outgoingRequestBuffer = ConcurrentHashMap<InvocationId, RPCApi.ClientToServer>()
+
     private var sessionFactory: ClientSessionFactory? = null
     private var producerSession: ClientSession? = null
     private var consumerSession: ClientSession? = null
@@ -195,6 +198,7 @@ class RPCClientProxyHandler(
         consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
+        producerSession!!.addFailoverListener(this::failoverHandler)
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         consumerSession!!.start()
         producerSession!!.start()
@@ -228,8 +232,14 @@ class RPCClientProxyHandler(
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
             }
+
+            outgoingRequestBuffer[replyId] = request
+            // try and send the request
             sendMessage(request)
-            return replyFuture.getOrThrow()
+            val result = replyFuture.getOrThrow()
+            // at this point the server responded, remove the buffered request
+            outgoingRequestBuffer.remove(replyId)
+            return result
         } catch (e: RuntimeException) {
             // Already an unchecked exception, so just rethrow it
             throw e
@@ -391,6 +401,40 @@ class RPCClientProxyHandler(
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
             sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
+        }
+    }
+
+    private fun failoverHandler(event: FailoverEventType) {
+        when (event) {
+            FailoverEventType.FAILURE_DETECTED -> {
+                log.warn("RPC server unavailable. RPC calls are being buffered.")
+                log.warn("Terminating observables.")
+                val m = observableContext.observableMap.asMap()
+                m.keys.forEach { k ->
+                    observationExecutorPool.run(k) {
+                        m[k]?.onError(RPCException("Connection failure detected."))
+                    }
+                }
+                observableContext.observableMap.invalidateAll()
+            }
+
+            FailoverEventType.FAILOVER_COMPLETED -> {
+                log.info("RPC server available. Draining request buffer.")
+                outgoingRequestBuffer.keys.forEach { replyId ->
+                    outgoingRequestBuffer[replyId]?.let { sendMessage(it) }
+                }
+            }
+
+            FailoverEventType.FAILOVER_FAILED -> {
+                log.error("Could not reconnect to the RPC server. All buffered requests will be discarded and RPC calls " +
+                        "will throw an RPCException.")
+                rpcReplyMap.forEach { id, replyFuture ->
+                    replyFuture.setException(RPCException("Could not re-connect to RPC server. Failover failed."))
+                }
+                outgoingRequestBuffer.clear()
+                rpcReplyMap.clear()
+                callSiteMap?.clear()
+            }
         }
     }
 }

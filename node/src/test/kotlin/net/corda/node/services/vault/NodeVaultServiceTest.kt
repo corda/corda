@@ -4,10 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
+import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.StatesNotAvailableException
@@ -17,7 +21,6 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -607,7 +610,7 @@ class NodeVaultServiceTest {
         // Change notary
         services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
-        val changeNotaryTx = NotaryChangeWireTransaction(listOf(initialCashState.ref), issueStx.notary!!, newNotary)
+        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary).build()
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
 
         database.transaction {

@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
@@ -26,9 +27,8 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
+import net.corda.node.services.config.shell.shellUser
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -92,6 +92,9 @@ open class Node(configuration: NodeConfiguration,
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
         }
+
+        // TODO Wire up maxMessageSize
+        const val MAX_FILE_SIZE = 10485760
     }
 
     override val log: Logger get() = staticLog
@@ -156,7 +159,7 @@ open class Node(configuration: NodeConfiguration,
         val securityManagerConfig = configuration.security?.authService ?:
         SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-        securityManager = RPCSecurityManagerImpl(securityManagerConfig)
+        securityManager = RPCSecurityManagerImpl(if (configuration.shouldInitCrashShell()) securityManagerConfig.copyWithAdditionalUser(configuration.shellUser()) else securityManagerConfig)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker(networkParameters)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
@@ -165,14 +168,14 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(networkParameters)
         }
         val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, networkParameters.maxMessageSize)
+            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
         }
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, networkParameters.maxMessageSize)
+            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             VerifierType.InMemory -> null
         }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
@@ -187,7 +190,7 @@ open class Node(configuration: NodeConfiguration,
                 database,
                 services.networkMapCache,
                 advertisedAddress,
-                networkParameters.maxMessageSize,
+                /*networkParameters.maxMessageSize*/MAX_FILE_SIZE,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
     }
@@ -199,24 +202,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(
-                                this.address!!,
-                                sslConfig,
-                                securityManager,
-                                certificateChainCheckPolicies,
-                                networkParameters.maxMessageSize,
-                                jmxMonitoringHttpPort != null,
-                                rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(
-                                this.address!!,
-                                adminAddress!!,
-                                sslConfig,
-                                securityManager,
-                                certificateChainCheckPolicies,
-                                networkParameters.maxMessageSize,
-                                jmxMonitoringHttpPort != null,
-                                rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
                 return rpcBroker!!.addresses
@@ -226,7 +214,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(networkParameters: NetworkParameters): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -385,11 +373,13 @@ open class Node(configuration: NodeConfiguration,
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoServerSerializationScheme())
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
+                    registerScheme(KryoClientSerializationScheme())
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
+                rpcClientContext = if (configuration.shouldInitCrashShell()) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
     }
 
     private var rpcMessagingClient: RPCMessagingClient? = null

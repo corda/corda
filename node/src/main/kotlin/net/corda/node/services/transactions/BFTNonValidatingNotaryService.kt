@@ -4,16 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
+import net.corda.core.crypto.SignedData
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
@@ -81,18 +76,22 @@ class BFTNonValidatingNotaryService(
         @Suspendable
         override fun call(): Void? {
             val payload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
-            val signatures = commit(payload)
-            otherSideSession.send(signatures)
+            val response = commit(payload)
+            otherSideSession.send(response)
             return null
         }
 
-        private fun commit(payload: NotarisationPayload): List<DigitalSignature> {
+        private fun commit(payload: NotarisationPayload): NotarisationResponse {
             val response = service.commitTransaction(payload, otherSideSession.counterparty)
             when (response) {
-                is BFTSMaRt.ClusterResponse.Error -> throw NotaryException(response.error)
+                is BFTSMaRt.ClusterResponse.Error -> {
+                    // TODO: here we assume that all error will be the same, but there might be invalid onces from mailicious nodes
+                    val responseError = response.errors.first().verified()
+                    throw NotaryException(responseError, payload.coreTransaction.id)
+                }
                 is BFTSMaRt.ClusterResponse.Signatures -> {
                     log.debug("All input states of transaction ${payload.coreTransaction.id} have been committed")
-                    return response.txSignatures
+                    return NotarisationResponse(response.txSignatures)
                 }
             }
         }
@@ -150,13 +149,16 @@ class BFTNonValidatingNotaryService(
                 val inputs = transaction.inputs
                 val notary = transaction.notary
                 if (transaction is FilteredTransaction) NotaryService.validateTimeWindow(services.clock, transaction.timeWindow)
-                if (notary !in services.myInfo.legalIdentities) throw NotaryException(NotaryError.WrongNotary)
+                if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(id))
-            } catch (e: NotaryException) {
+            } catch (e: NotaryInternalException) {
                 log.debug { "Error processing transaction: ${e.error}" }
-                BFTSMaRt.ReplicaResponse.Error(e.error)
+                val serializedError = e.error.serialize()
+                val errorSignature = sign(serializedError.bytes)
+                val signedError = SignedData(serializedError, errorSignature)
+                BFTSMaRt.ReplicaResponse.Error(signedError)
             }
         }
 

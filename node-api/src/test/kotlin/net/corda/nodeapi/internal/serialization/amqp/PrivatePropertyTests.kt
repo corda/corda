@@ -2,8 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.assertEquals
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import net.corda.core.serialization.ConstructorForDeserialization
 import org.junit.Test
 import org.apache.qpid.proton.amqp.Symbol
 import org.assertj.core.api.Assertions
