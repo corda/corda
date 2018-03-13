@@ -10,6 +10,7 @@
 
 package net.corda.core.crypto
 
+import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
@@ -63,12 +64,16 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             }
         }
 
+        private val threadLocalSha256MessageDigest = object : FastThreadLocal<MessageDigest>() {
+            override fun initialValue() = MessageDigest.getInstance("SHA-256")
+        }
+
         /**
          * Computes the SHA-256 hash value of the [ByteArray].
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
+        fun sha256(bytes: ByteArray) = SHA256(threadLocalSha256MessageDigest.get().digest(bytes))
 
         /**
          * Computes the SHA-256 hash of the [ByteArray], and then computes the SHA-256 hash of the hash.
