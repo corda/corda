@@ -141,7 +141,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         networkMapStorage.saveNetworkMap(signedNetworkMap)
 
         // when
-        val validNodeInfoHash = networkMapStorage.getNodeInfoHashes(CertificateStatus.VALID)
+        val validNodeInfoHash = networkMapStorage.getActiveNodeInfoHashes()
 
         // then
         assertThat(validNodeInfoHash).containsOnly(nodeInfoHashA, nodeInfoHashB)

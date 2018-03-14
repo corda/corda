@@ -37,10 +37,12 @@ import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PersistentNodeInfoStorageTest : TestBase() {
     private lateinit var requestStorage: CertificateSigningRequestStorage
     private lateinit var nodeInfoStorage: PersistentNodeInfoStorage
+    private lateinit var networkMapStorage: PersistentNetworkMapStorage
     private lateinit var persistence: CordaPersistence
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
@@ -53,6 +55,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         persistence = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateSigningRequestStorage(persistence)
+        networkMapStorage = PersistentNetworkMapStorage(persistence)
     }
 
     @After
@@ -119,12 +122,15 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         val nodeInfo1Hash = nodeInfoStorage.putNodeInfo(node1)
         assertEquals(node1.nodeInfo, nodeInfoStorage.getNodeInfo(nodeInfo1Hash)?.verified())
+        assertTrue(networkMapStorage.getActiveNodeInfoHashes().contains(nodeInfo1Hash))
 
         // This should replace the node info.
-        nodeInfoStorage.putNodeInfo(node2)
+        val nodeInfo2Hash = nodeInfoStorage.putNodeInfo(node2)
 
-        // Old node info should be removed.
-        assertNull(nodeInfoStorage.getNodeInfo(nodeInfo1Hash))
+        // Old node info should be removed from list of current node info hashes, but still accessible if required.
+        assertThat(networkMapStorage.getActiveNodeInfoHashes()).doesNotContain(nodeInfo1Hash)
+        assertThat(networkMapStorage.getActiveNodeInfoHashes()).contains(nodeInfo2Hash)
+        assertNotNull(nodeInfoStorage.getNodeInfo(nodeInfo1Hash))
         assertEquals(nodeInfo2, nodeInfoStorage.getNodeInfo(nodeInfo2.serialize().hash)?.verified())
     }
 

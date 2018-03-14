@@ -24,19 +24,23 @@ import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.Path
 import javax.persistence.criteria.Predicate
 
-fun <T> DatabaseTransaction.singleRequestWhere(clazz: Class<T>, predicate: (CriteriaBuilder, Path<T>) -> Predicate): T? {
-    val builder = session.criteriaBuilder
-    val criteriaQuery = builder.createQuery(clazz)
-    val query = criteriaQuery.from(clazz).run {
-        criteriaQuery.where(predicate(builder, this))
-    }
-    return session.createQuery(query).setLockMode(LockModeType.PESSIMISTIC_WRITE).resultList.firstOrNull()
+inline fun <reified T> DatabaseTransaction.singleEntityWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): T? {
+    return getEntitiesWhere(predicate).firstOrNull()
 }
 
-fun <T> DatabaseTransaction.deleteRequest(clazz: Class<T>, predicate: (CriteriaBuilder, Path<T>) -> Predicate): Int {
+inline fun <reified T> DatabaseTransaction.getEntitiesWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): List<T> {
     val builder = session.criteriaBuilder
-    val criteriaDelete = builder.createCriteriaDelete(clazz)
-    val delete = criteriaDelete.from(clazz).run {
+    val criteriaQuery = builder.createQuery(T::class.java)
+    val query = criteriaQuery.from(T::class.java).run {
+        criteriaQuery.where(predicate(builder, this))
+    }
+    return session.createQuery(query).setLockMode(LockModeType.PESSIMISTIC_WRITE).resultList
+}
+
+inline fun <reified T> DatabaseTransaction.deleteEntity(predicate: (CriteriaBuilder, Path<T>) -> Predicate): Int {
+    val builder = session.criteriaBuilder
+    val criteriaDelete = builder.createCriteriaDelete(T::class.java)
+    val delete = criteriaDelete.from(T::class.java).run {
         criteriaDelete.where(predicate(builder, this))
     }
     return session.createQuery(delete).executeUpdate()

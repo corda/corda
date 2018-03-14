@@ -35,29 +35,27 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         nodeCaCert ?: throw IllegalArgumentException("Missing Node CA")
         return database.transaction {
             // TODO Move these checks out of data access layer
-            val request = requireNotNull(getSignedRequestByPublicHash(nodeCaCert.publicKey.encoded.sha256(), this)) {
+            val request = requireNotNull(getSignedRequestByPublicHash(nodeCaCert.publicKey.encoded.sha256())) {
                 "Node-info not registered with us"
             }
             request.certificateData?.certificateStatus.let {
                 require(it == CertificateStatus.VALID) { "Certificate is no longer valid: $it" }
             }
 
-            /*
-             * Delete any previous [NodeInfoEntity] instance for this CSR
-             * Possibly it should be moved at the network signing process at the network signing process
-             * as for a while the network map will have invalid entries (i.e. hashes for node info which have been
-             * removed). Either way, there will be a period of time when the network map data will be invalid
-             * but it has been confirmed that this fact has been acknowledged at the design time and we are fine with it.
-             */
-            deleteRequest(NodeInfoEntity::class.java) { builder, path ->
-                builder.equal(path.get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name), request)
+            // Update any [NodeInfoEntity] instance for this CSR as not current.
+            val existingNodeInfo = getEntitiesWhere<NodeInfoEntity> { builder, path ->
+                val requestEq = builder.equal(path.get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name), request)
+                val isCurrent = builder.isTrue(path.get<Boolean>(NodeInfoEntity::isCurrent.name))
+                builder.and(requestEq, isCurrent)
             }
-            val hash = signedNodeInfo.raw.hash
+            existingNodeInfo.forEach { session.merge(it.copy(isCurrent = false)) }
 
+            val hash = signedNodeInfo.raw.hash
             val hashedNodeInfo = NodeInfoEntity(
                     nodeInfoHash = hash.toString(),
                     certificateSigningRequest = request,
-                    signedNodeInfoBytes = signedNodeInfo.serialize().bytes)
+                    signedNodeInfoBytes = signedNodeInfo.serialize().bytes,
+                    isCurrent = true)
             session.save(hashedNodeInfo)
             hash
         }
@@ -71,13 +69,13 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
 
     override fun getCertificatePath(publicKeyHash: SecureHash): CertPath? {
         return database.transaction {
-            val request = getSignedRequestByPublicHash(publicKeyHash, this)
+            val request = getSignedRequestByPublicHash(publicKeyHash)
             request?.let { buildCertPath(it.certificateData!!.certificatePathBytes) }
         }
     }
 
-    private fun getSignedRequestByPublicHash(publicKeyHash: SecureHash, transaction: DatabaseTransaction): CertificateSigningRequestEntity? {
-        return transaction.singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
+    private fun DatabaseTransaction.getSignedRequestByPublicHash(publicKeyHash: SecureHash): CertificateSigningRequestEntity? {
+        return singleEntityWhere { builder, path ->
             val publicKeyEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::publicKeyHash.name), publicKeyHash.toString())
             val statusEq = builder.equal(path.get<RequestStatus>(CertificateSigningRequestEntity::status.name), RequestStatus.DONE)
             builder.and(publicKeyEq, statusEq)

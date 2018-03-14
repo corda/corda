@@ -38,7 +38,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
 
     override fun putCertificatePath(requestId: String, certPath: CertPath, signedBy: String) {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
+            val request = singleEntityWhere<CertificateSigningRequestEntity> { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
                 val statusEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.APPROVED)
                 builder.and(requestIdEq, statusEq)
@@ -89,7 +89,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
 
     private fun DatabaseTransaction.findRequest(requestId: String,
                                                 requestStatus: RequestStatus? = null): CertificateSigningRequestEntity? {
-        return singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
+        return singleEntityWhere { builder, path ->
             val idClause = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
             if (requestStatus == null) {
                 idClause

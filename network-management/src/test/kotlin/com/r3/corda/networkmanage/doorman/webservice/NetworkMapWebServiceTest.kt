@@ -10,6 +10,7 @@
 
 package com.r3.corda.networkmanage.doorman.webservice
 
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
@@ -67,7 +68,9 @@ class NetworkMapWebServiceTest {
     @Test
     fun `submit nodeInfo`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getNetworkParametersOfNetworkMap() }.thenReturn(testNetworkParameters(emptyList()).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
+            val networkParameter = testNetworkParameters(emptyList()).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+            on { getSignedNetworkParameters(any()) }.thenReturn(networkParameter)
+            on { getCurrentNetworkMap() }.thenReturn(NetworkMap(emptyList(), networkParameter.raw.hash, null).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"))
@@ -83,7 +86,9 @@ class NetworkMapWebServiceTest {
     @Test
     fun `submit old nodeInfo`() {
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getNetworkParametersOfNetworkMap() }.thenReturn(testNetworkParameters(emptyList(), minimumPlatformVersion = 2).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
+            val networkParameter = testNetworkParameters(emptyList(), minimumPlatformVersion = 2).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+            on { getSignedNetworkParameters(any()) }.thenReturn(networkParameter)
+            on { getCurrentNetworkMap() }.thenReturn(NetworkMap(emptyList(), networkParameter.raw.hash, null).signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         }
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"), platformVersion = 1)
@@ -131,14 +136,21 @@ class NetworkMapWebServiceTest {
 
     @Test
     fun `get node info`() {
+        // Mock node info storage
         val (nodeInfo, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"))
         val nodeInfoHash = nodeInfo.serialize().hash
-
         val nodeInfoStorage: NodeInfoStorage = mock {
             on { getNodeInfo(nodeInfoHash) }.thenReturn(signedNodeInfo)
         }
 
-        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(nodeInfoStorage, mock(), testNetworkMapConfig)).use {
+        // Mock network map storage
+        val networkMap = NetworkMap(listOf(nodeInfoHash), randomSHA256(), null)
+        val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+        val networkMapStorage: NetworkMapStorage = mock {
+            on { getCurrentNetworkMap() }.thenReturn(signedNetworkMap)
+        }
+
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(nodeInfoStorage, networkMapStorage, testNetworkMapConfig)).use {
             it.start()
             val nodeInfoResponse = it.doGet<SignedNodeInfo>("node-info/$nodeInfoHash")
             verify(nodeInfoStorage, times(1)).getNodeInfo(nodeInfoHash)

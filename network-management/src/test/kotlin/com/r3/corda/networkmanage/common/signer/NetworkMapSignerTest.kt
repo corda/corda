@@ -27,10 +27,10 @@ import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import java.security.cert.X509Certificate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
+import java.security.cert.X509Certificate
 import kotlin.test.assertEquals
 
 class NetworkMapSignerTest : TestBase() {
@@ -60,7 +60,7 @@ class NetworkMapSignerTest : TestBase() {
         val networkMap = NetworkMap(signedNodeInfoHashes, currentParameters.serialize().hash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(signedNetworkMap)
-        whenever(networkMapStorage.getNodeInfoHashes(any())).thenReturn(signedNodeInfoHashes)
+        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(signedNodeInfoHashes)
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(latestNetworkParameters)
         whenever(networkMapStorage.getNetworkParametersOfNetworkMap()).thenReturn(currentParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
         whenever(signer.signBytes(any())).then {
@@ -76,7 +76,7 @@ class NetworkMapSignerTest : TestBase() {
 
         // then
         // Verify networkMapStorage calls
-        verify(networkMapStorage).getNodeInfoHashes(any())
+        verify(networkMapStorage).getActiveNodeInfoHashes()
         verify(networkMapStorage).getLatestNetworkParameters()
         verify(networkMapStorage).getNetworkParametersOfNetworkMap()
         argumentCaptor<SignedNetworkMap>().apply {
@@ -96,7 +96,7 @@ class NetworkMapSignerTest : TestBase() {
         val networkMap = NetworkMap(emptyList(), networkMapParametersHash, null)
         val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
         whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(signedNetworkMap)
-        whenever(networkMapStorage.getNodeInfoHashes(any())).thenReturn(emptyList())
+        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(networkParameters)
         whenever(networkMapStorage.getNetworkParametersOfNetworkMap()).thenReturn(networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate))
 
@@ -113,7 +113,7 @@ class NetworkMapSignerTest : TestBase() {
         // given
         val networkParameters = testNetworkParameters(emptyList())
         whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(null)
-        whenever(networkMapStorage.getNodeInfoHashes(any())).thenReturn(emptyList())
+        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(networkParameters)
         whenever(signer.signBytes(any())).then {
             DigitalSignatureWithCert(networkMapCa.certificate, Crypto.doSign(networkMapCa.keyPair.private, it.arguments[0] as ByteArray))
@@ -127,7 +127,7 @@ class NetworkMapSignerTest : TestBase() {
 
         // then
         // Verify networkMapStorage calls
-        verify(networkMapStorage).getNodeInfoHashes(any())
+        verify(networkMapStorage).getActiveNodeInfoHashes()
         verify(networkMapStorage).getLatestNetworkParameters()
         argumentCaptor<SignedNetworkMap>().apply {
             verify(networkMapStorage).saveNetworkMap(capture())

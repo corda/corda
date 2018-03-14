@@ -27,13 +27,11 @@ interface NetworkMapStorage {
     fun getCurrentNetworkMap(): SignedNetworkMap?
 
     /**
-     * Retrieves node info hashes where the certificate status matches [certificateStatus].
+     * Retrieves node info hashes where [isCurrent] is true and the certificate status is [CertificateStatus.VALID]
      *
-     * @param certificateStatus certificate status to be used in the node info filtering. Node info hash is returned
-     * in the result collection if its certificate status matches [certificateStatus].
-     * @return list of node info hashes satisfying the filtering criteria given by [certificateStatus].
+     * @return list of current and valid node info hashes.
      */
-    fun getNodeInfoHashes(certificateStatus: CertificateStatus): List<SecureHash>
+    fun getActiveNodeInfoHashes(): List<SecureHash>
 
     /**
      * Persists a new instance of the signed network map.
@@ -51,6 +49,7 @@ interface NetworkMapStorage {
     /**
      * Retrieve the network parameters of the current network map, or null if there's no network map.
      */
+    // TODO: Remove this method. We should get the "current" network parameter by using the the hash in the network map and use the [getSignedNetworkParameters] method.
     fun getNetworkParametersOfNetworkMap(): SignedNetworkParameters?
 
     /**

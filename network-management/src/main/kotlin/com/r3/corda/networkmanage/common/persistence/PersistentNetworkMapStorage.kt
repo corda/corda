@@ -57,15 +57,17 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         }
     }
 
-    override fun getNodeInfoHashes(certificateStatus: CertificateStatus): List<SecureHash> {
+    override fun getActiveNodeInfoHashes(): List<SecureHash> {
         return database.transaction {
             val builder = session.criteriaBuilder
             val query = builder.createQuery(String::class.java).run {
                 from(NodeInfoEntity::class.java).run {
-                    select(get<String>(NodeInfoEntity::nodeInfoHash.name))
-                            .where(builder.equal(get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
-                                    .get<CertificateDataEntity>(CertificateSigningRequestEntity::certificateData.name)
-                                    .get<CertificateStatus>(CertificateDataEntity::certificateStatus.name), certificateStatus))
+                    val certStatusExpression = get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
+                            .get<CertificateDataEntity>(CertificateSigningRequestEntity::certificateData.name)
+                            .get<CertificateStatus>(CertificateDataEntity::certificateStatus.name)
+                    val certStatusEq = builder.equal(certStatusExpression, CertificateStatus.VALID)
+                    val isCurrentNodeInfo = builder.isTrue(get<Boolean>(NodeInfoEntity::isCurrent.name))
+                    select(get<String>(NodeInfoEntity::nodeInfoHash.name)).where(builder.and(certStatusEq, isCurrentNodeInfo))
                 }
             }
             session.createQuery(query).resultList.map { SecureHash.parse(it) }
@@ -117,7 +119,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
 
     private fun getNetworkParametersEntity(parameterHash: String): NetworkParametersEntity? {
         return database.transaction {
-            singleRequestWhere(NetworkParametersEntity::class.java) { builder, path ->
+            singleEntityWhere { builder, path ->
                 builder.equal(path.get<String>(NetworkParametersEntity::parametersHash.name), parameterHash)
             }
         }

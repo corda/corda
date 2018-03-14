@@ -13,7 +13,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
     override fun saveRevocationRequest(certificateSerialNumber: BigInteger, reason: CRLReason, reporter: String): String {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             // Check if there is an entry for the given certificate serial number
-            val revocation = singleRequestWhere(CertificateRevocationRequestEntity::class.java) { builder, path ->
+            val revocation = singleEntityWhere<CertificateRevocationRequestEntity> { builder, path ->
                 val serialNumberEqual = builder.equal(path.get<BigInteger>(CertificateRevocationRequestEntity::certificateSerialNumber.name), certificateSerialNumber)
                 val statusNotEqualRejected = builder.notEqual(path.get<RequestStatus>(CertificateRevocationRequestEntity::status.name), RequestStatus.REJECTED)
                 builder.and(serialNumberEqual, statusNotEqualRejected)
@@ -21,7 +21,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
             if (revocation != null) {
                 revocation.requestId
             } else {
-                val certificateData = singleRequestWhere(CertificateDataEntity::class.java) { builder, path ->
+                val certificateData = singleEntityWhere<CertificateDataEntity> { builder, path ->
                     val serialNumberEqual = builder.equal(path.get<BigInteger>(CertificateDataEntity::certificateSerialNumber.name), certificateSerialNumber)
                     val statusEqualValid = builder.equal(path.get<CertificateStatus>(CertificateDataEntity::certificateStatus.name), CertificateStatus.VALID)
                     builder.and(serialNumberEqual, statusEqualValid)
@@ -90,7 +90,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
     }
 
     private fun getRevocationRequestEntity(requestId: String): CertificateRevocationRequestEntity? = database.transaction {
-        singleRequestWhere(CertificateRevocationRequestEntity::class.java) { builder, path ->
+        singleEntityWhere { builder, path ->
             builder.equal(path.get<String>(CertificateRevocationRequestEntity::requestId.name), requestId)
         }
     }

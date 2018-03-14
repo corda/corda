@@ -100,8 +100,16 @@
             <column name="node_info_hash" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="signed_node_info_bytes" type="BLOB"/>
+            <column name="signed_node_info_bytes" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
             <column name="certificate_signing_request" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_current" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -134,9 +142,6 @@
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-15">
         <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_CD_CSR" tableName="certificate_data"/>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1520338500424-16">
-        <addUniqueConstraint columnNames="certificate_signing_request" constraintName="UK_NI_CSR" tableName="node_info"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-19">
         <createIndex indexName="IDX_CSRA_REV" tableName="certificate_signing_request_AUD">

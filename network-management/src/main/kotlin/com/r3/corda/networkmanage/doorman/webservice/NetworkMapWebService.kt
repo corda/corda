@@ -51,11 +51,23 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         const val NETWORK_MAP_PATH = "network-map"
     }
 
-    private val networkMapCache: LoadingCache<Boolean, Pair<SignedNetworkMap?, NetworkParameters?>> = CacheBuilder.newBuilder()
+    private val networkMapCache: LoadingCache<Boolean, CachedData> = CacheBuilder.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ ->
-                Pair(networkMapStorage.getCurrentNetworkMap(), networkMapStorage.getNetworkParametersOfNetworkMap()?.verified()) }
-            )
+            .build(CacheLoader.from { _ -> networkMapStorage.getCurrentNetworkMap()?.let {
+                    val networkMap = it.verified()
+                    CachedData(it, networkMap.nodeInfoHashes.toSet(), networkMapStorage.getSignedNetworkParameters(networkMap.networkParameterHash)?.verified()) }
+            })
+
+    private val nodeInfoCache: LoadingCache<SecureHash, SignedNodeInfo> = CacheBuilder.newBuilder()
+            // TODO: Define cache retention policy.
+            .softValues()
+            .build(CacheLoader.from { key ->
+                key?.let { nodeInfoStorage.getNodeInfo(it) }
+            })
+
+    private val currentSignedNetworkMap: SignedNetworkMap? get() = networkMapCache.getOrNull(true)?.signedNetworkMap
+    private val currentNodeInfoHashes: Set<SecureHash> get() = networkMapCache.getOrNull(true)?.nodeInfoHashes ?: emptySet()
+    private val currentNetworkParameters: NetworkParameters? get() = networkMapCache.getOrNull(true)?.currentNetworkParameter
 
     @POST
     @Path("publish")
@@ -84,13 +96,19 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     @GET
-    fun getNetworkMap(): Response = createResponse(networkMapCache.get(true).first, addCacheTimeout = true)
+    fun getNetworkMap(): Response = createResponse(currentSignedNetworkMap, addCacheTimeout = true)
 
     @GET
     @Path("node-info/{nodeInfoHash}")
     fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
-        val signedNodeInfo = nodeInfoStorage.getNodeInfo(SecureHash.parse(nodeInfoHash))
-        logger.trace { "Precessed node info request for hash: '$nodeInfoHash'" }
+        // Only serve node info if its in the current network map, otherwise return 404.
+        logger.trace { "Processing node info request for hash: '$nodeInfoHash'" }
+        val signedNodeInfo = if (SecureHash.parse(nodeInfoHash) in currentNodeInfoHashes) {
+            nodeInfoCache.getOrNull(SecureHash.parse(nodeInfoHash))
+        } else {
+            logger.trace { "Requested node info is not current, returning null." }
+            null
+        }
         logger.trace { "Node Info: ${signedNodeInfo?.verified()}" }
         return createResponse(signedNodeInfo)
     }
@@ -113,7 +131,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     private fun verifyNodeInfo(nodeInfo: NodeInfo) {
-        val minimumPlatformVersion = networkMapCache.get(true).second?.minimumPlatformVersion
+        val minimumPlatformVersion = currentNetworkParameters?.minimumPlatformVersion
                 ?: throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
         if (nodeInfo.platformVersion < minimumPlatformVersion) {
             throw InvalidPlatformVersionException("Minimum platform version is $minimumPlatformVersion")
@@ -134,4 +152,16 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     class NetworkMapNotInitialisedException(message: String?) : Exception(message)
     class InvalidPlatformVersionException(message: String?) : Exception(message)
+
+    private data class CachedData(val signedNetworkMap: SignedNetworkMap, val nodeInfoHashes: Set<SecureHash>, val currentNetworkParameter: NetworkParameters?)
+
+    // Guava loading cache will throw if value is null, this helper method returns null instead.
+    // The loading cache will load the data from persistence again ignoring timeout if previous value was null.
+    private fun <K : Any, V : Any> LoadingCache<K, V>.getOrNull(key: K): V? {
+        return try {
+            get(key)
+        } catch (e: CacheLoader.InvalidCacheLoadException) {
+            null
+        }
+    }
 }

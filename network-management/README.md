@@ -48,6 +48,14 @@ The built file will appear in
 network-management/capsule-hsm-cert-generator/build/libs/hsm-cert-generator-<VERSION>.jar
 ```
 
+# Logs
+In order to set the desired logging level the system properties need to be used.
+Appropriate system properties can be set at the execution time.
+Example:
+```
+java -DdefaultLogLevel=TRACE -DconsoleLogLevel=TRACE -jar doorman-<version>.jar --config-file <config file>
+```
+
 #Configuring network management service
 ### Local signing
 
@@ -98,7 +106,8 @@ The doorman service can use JIRA to manage the certificate signing request appro
     signInterval = 10000
   }
   ```
-  `cacheTimeout`(ms) indicates how often the network map should poll the database for a newly signed network map. This is also added to the HTTP response header to set the node's network map update frequency.  
+  `cacheTimeout`(ms) determines how often the server should poll the database for a newly signed network map and also how often nodes should poll for a new network map (by including this value in the HTTP response header). **This is not how often changes to the network map are signed, which is a different process.**
+  
   `signInterval`(ms) this is only relevant when local signer is enabled. The signer poll the database according to the `signInterval`, and create a new network map if the collection of node info hashes is different from the current network map. 
     
 ##Example config file
@@ -212,10 +221,12 @@ We can now restart the network management server with both doorman and network m
 java -jar doorman-<version>.jar --config-file <config file> --update-network-parameters network-parameters.conf
 ```
 
-### 7. Logs
-In order to set the desired logging level the system properties need to be used.
-Appropriate system properties can be set at the execution time.
-Example:
+### 7. Archive policy
+The ``node_info`` and ``network_map`` table are designed to retain all historical data for auditing purposes and will grow over time.  
+**It is recommended to monitor the space usage and archive these tables according to the data retention policy.**
+
+Run the following SQL script to archive the node info table (change the timestamp according to the archive policy):
 ```
-java -DdefaultLogLevel=TRACE -DconsoleLogLevel=TRACE -jar doorman-<version>.jar --config-file <config file>
+    delect from node_info where is_current = false and published_at < '2018-03-12'
 ```
+
