@@ -906,8 +906,12 @@ fun configureDatabase(hikariProperties: Properties,
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
     val dataSource = DataSourceFactory.createDataSource(hikariProperties)
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
-
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    SchemaMigration(schemaService.schemaOptions.keys, dataSource, !isH2Database(jdbcUrl), databaseConfig).nodeStartup()
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters, cordappClassLoader)
+    SchemaMigration(
+            schemaService.schemaOptions.keys,
+            dataSource,
+            !isH2Database(jdbcUrl),
+            databaseConfig,
+            cordappClassLoader ?: Thread.currentThread().contextClassLoader).nodeStartup()
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters, cordappClassLoader)
 }
