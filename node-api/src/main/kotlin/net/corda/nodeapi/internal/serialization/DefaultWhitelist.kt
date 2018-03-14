@@ -17,6 +17,7 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import rx.exceptions.OnErrorNotImplementedException
 import sun.security.x509.X509CertImpl
+import java.security.cert.CRLReason
 import java.util.*
 
 /**
@@ -72,6 +73,7 @@ object DefaultWhitelist : SerializationWhitelist {
                     StackTraceElement::class.java,
 
                     // Implementation of X509Certificate.
-                    X509CertImpl::class.java
+                    X509CertImpl::class.java,
+                    CRLReason::class.java
                     )
 }

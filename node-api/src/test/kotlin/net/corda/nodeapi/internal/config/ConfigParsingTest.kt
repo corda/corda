@@ -17,8 +17,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -199,6 +198,14 @@ class ConfigParsingTest {
     }
 
     @Test
+    fun `data class with checks`() {
+        val config = config("positive" to -1)
+        assertThatExceptionOfType(IllegalArgumentException::class.java)
+                .isThrownBy { config.parseAs<PositiveData>() }
+                .withMessageContaining("-1")
+    }
+
+    @Test
     fun `old config property`() {
         assertThat(config("oldValue" to "old").parseAs<OldData>().newValue).isEqualTo("old")
         assertThat(config("newValue" to "new").parseAs<OldData>().newValue).isEqualTo("new")
@@ -301,6 +308,11 @@ class ConfigParsingTest {
     data class DataListData(val list: List<StringData>)
     data class DefaultData(val a: Int, val defaultOfTwo: Int = 2)
     data class NullableData(val nullable: String?)
+    data class PositiveData(private val positive: Int) {
+        init {
+            require(positive > 0) { "$positive is not positive" }
+        }
+    }
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)
