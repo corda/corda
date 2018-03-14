@@ -1,8 +1,7 @@
 package net.corda.node.utilities
 
-import com.google.common.cache.RemovalCause
-import com.google.common.cache.RemovalListener
-import com.google.common.cache.RemovalNotification
+import com.github.benmanes.caffeine.cache.RemovalCause
+import com.github.benmanes.caffeine.cache.RemovalListener
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.util.*
@@ -10,7 +9,7 @@ import java.util.*
 /**
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
-class PersistentMap<K, V, E, out EK>(
+class PersistentMap<K : Any, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
@@ -22,7 +21,6 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     private val cache = NonInvalidatingUnboundCache(
-            concurrencyLevel = 8,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) },
             removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
     ).apply {
@@ -34,11 +32,11 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
-        override fun onRemoval(notification: RemovalNotification<K, V>?) {
-            when (notification?.cause) {
+        override fun onRemoval(key: K?, value: V?, cause: RemovalCause) {
+            when (cause) {
                 RemovalCause.EXPLICIT -> {
                     val session = currentDBSession()
-                    val elem = session.find(persistentEntityClass, toPersistentEntityKey(notification.key))
+                    val elem = session.find(persistentEntityClass, toPersistentEntityKey(key!!))
                     if (elem != null) {
                         session.remove(elem)
                     }
@@ -53,14 +51,14 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     override operator fun get(key: K): V? {
-        return cache.get(key).orElse(null)
+        return cache.get(key)!!.orElse(null)
     }
 
     fun all(): Sequence<Pair<K, V>> {
         return cache.asMap().asSequence().filter { it.value.isPresent }.map { Pair(it.key, it.value.get()) }
     }
 
-    override val size get() = cache.size().toInt()
+    override val size get() = cache.estimatedSize().toInt()
 
     private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K, V) -> V?, replace: (K, V) -> Unit): Boolean {
         var insertionAttempt = false
@@ -72,7 +70,7 @@ class PersistentMap<K, V, E, out EK>(
             // Store the value, depending on store implementation this may replace existing entry in DB.
             store(key, value)
             Optional.of(value)
-        }
+        }!!
         if (!insertionAttempt) {
             if (existingInCache.isPresent) {
                 // Key already exists in cache, store the new value in the DB (depends on tore implementation) and refresh cache.
@@ -165,7 +163,7 @@ class PersistentMap<K, V, E, out EK>(
      * Removes the mapping for the specified key from this map and underlying storage if present.
      */
     override fun remove(key: K): V? {
-        val result = cache.get(key).orElse(null)
+        val result = cache.get(key)!!.orElse(null)
         cache.invalidate(key)
         return result
     }
@@ -253,7 +251,7 @@ class PersistentMap<K, V, E, out EK>(
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)
         addWithDuplicatesReplaced(key, value)
-        return old.orElse(null)
+        return old!!.orElse(null)
     }
 
     fun load() {

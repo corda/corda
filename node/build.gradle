@@ -79,6 +79,9 @@ dependencies {
 
     compile "com.google.guava:guava:$guava_version"
 
+    // For caches rather than guava
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 

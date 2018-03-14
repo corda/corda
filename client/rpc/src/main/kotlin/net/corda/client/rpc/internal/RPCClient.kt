@@ -44,12 +44,6 @@ data class RPCClientConfiguration(
         val reapInterval: Duration,
         /** The number of threads to use for observations (for executing [Observable.onNext]) */
         val observationExecutorPoolSize: Int,
-        /**
-         * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
-         * the limit on the number of leaked observables reaped because of garbage collection per reaping.
-         * See the implementation of [com.google.common.cache.LocalCache] for details.
-         */
-        val cacheConcurrencyLevel: Int,
         /** The retry interval of artemis connections in milliseconds */
         val connectionRetryInterval: Duration,
         /** The retry interval multiplier for exponential backoff */
@@ -71,7 +65,6 @@ data class RPCClientConfiguration(
                 trackRpcCallSites = false,
                 reapInterval = 1.seconds,
                 observationExecutorPoolSize = 4,
-                cacheConcurrencyLevel = 8,
                 connectionRetryInterval = 5.seconds,
                 connectionRetryIntervalMultiplier = 1.5,
                 connectionMaxRetryInterval = 3.minutes,
