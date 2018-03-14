@@ -10,9 +10,9 @@
 
 package net.corda.explorer.identicon
 
+import com.github.benmanes.caffeine.cache.CacheLoader
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.base.Splitter
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
 import javafx.scene.SnapshotParameters
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
@@ -85,7 +85,7 @@ object IdenticonRenderer {
 
     private val renderingSize = 30.0
 
-    private val cache = CacheBuilder.newBuilder().build(CacheLoader.from<SecureHash, Image> { key ->
+    private val cache = Caffeine.newBuilder().build(CacheLoader<SecureHash, Image> { key ->
         key?.let { render(key.hashCode(), renderingSize) }
     })
 
@@ -102,7 +102,7 @@ object IdenticonRenderer {
     }
 
     fun getIdenticon(hash: SecureHash): Image {
-        return cache.get(hash)
+        return cache.get(hash)!!
     }
 
     /**

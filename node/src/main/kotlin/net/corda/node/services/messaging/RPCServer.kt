@@ -10,13 +10,14 @@
 
 package net.corda.node.services.messaging
 
+import co.paralleluniverse.common.util.SameThreadExecutor
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.RemovalListener
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -155,11 +156,11 @@ class RPCServer(
     }
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
-        val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> {
-            log.debug { "Unsubscribing from Observable with id ${it.key} because of ${it.cause}" }
-            it.value.subscription.unsubscribe()
+        val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> { key, value, cause ->
+            log.debug { "Unsubscribing from Observable with id ${key} because of ${cause}" }
+            value!!.subscription.unsubscribe()
         }
-        return CacheBuilder.newBuilder().removalListener(onObservableRemove).build()
+        return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).build()
     }
 
     fun start(activeMqServerControl: ActiveMQServerControl) {

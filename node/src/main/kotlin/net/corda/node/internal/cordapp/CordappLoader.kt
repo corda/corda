@@ -53,7 +53,6 @@ import kotlin.streams.toList
  */
 class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) {
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
-
     val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
     init {
