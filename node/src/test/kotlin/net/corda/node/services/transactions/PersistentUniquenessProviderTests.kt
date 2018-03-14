@@ -1,9 +1,12 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.flows.NotaryInternalException
+import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryInternalException
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
@@ -28,6 +31,7 @@ class PersistentUniquenessProviderTests {
     val testSerialization = SerializationEnvironmentRule()
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val txID = SecureHash.randomSHA256()
+    private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
 
     private lateinit var database: CordaPersistence
 
@@ -49,7 +53,7 @@ class PersistentUniquenessProviderTests {
             val provider = PersistentUniquenessProvider()
             val inputState = generateStateRef()
 
-            provider.commit(listOf(inputState), txID, identity)
+            provider.commit(listOf(inputState), txID, identity, requestSignature)
         }
     }
 
@@ -60,9 +64,11 @@ class PersistentUniquenessProviderTests {
             val inputState = generateStateRef()
 
             val inputs = listOf(inputState)
-            provider.commit(inputs, txID, identity)
+            provider.commit(inputs, txID, identity, requestSignature)
 
-            val ex = assertFailsWith<NotaryInternalException> { provider.commit(inputs, txID, identity) }
+            val ex = assertFailsWith<NotaryInternalException> {
+                provider.commit(inputs, txID, identity, requestSignature)
+            }
             val error = ex.error as NotaryError.Conflict
 
             val conflictCause = error.consumedStates[inputState]!!
