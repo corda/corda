@@ -13,13 +13,13 @@
 package net.corda.core.crypto
 
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.crypto.internal.platformSecureRandomFactory
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toSHA256Bytes
 import java.math.BigInteger
-import net.corda.core.utilities.SgxSupport
 import java.nio.ByteBuffer
 import java.security.*
 
@@ -203,14 +203,6 @@ private class DummySecureRandomSpi : SecureRandomSpi() {
 }
 object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
 
-private val _newSecureRandom: () -> SecureRandom by lazy {
-    when {
-        SgxSupport.isInsideEnclave -> { { DummySecureRandom } }
-        System.getProperty("os.name") == "Linux" -> { { SecureRandom.getInstance("NativePRNGNonBlocking") } }
-        else -> { { SecureRandom.getInstanceStrong() } }
-    }
-}
-
 /**
  * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.
  * In this version, the NativePRNGNonBlocking is exclusively used on Linux OS to utilize dev/urandom because in high traffic
@@ -230,7 +222,7 @@ private val _newSecureRandom: () -> SecureRandom by lazy {
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun newSecureRandom(): SecureRandom = _newSecureRandom()
+fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
 
 /**
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
