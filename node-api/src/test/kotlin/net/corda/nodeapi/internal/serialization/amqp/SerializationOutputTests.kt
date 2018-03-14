@@ -1200,7 +1200,24 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val testExcp = TestException("hello", Throwable().apply { stackTrace = Thread.currentThread().stackTrace } )
         val factory = testDefaultFactoryNoEvolution()
         SerializationOutput(factory).serialize(testExcp)
+    }
 
+    @Test
+    fun nestedInner() {
+        class C(val a: Int) {
+            inner class D(val b: Int)
+
+            fun serialize() {
+                val factory = testDefaultFactoryNoEvolution()
+                SerializationOutput(factory).serialize(D(4))
+            }
+        }
+
+        // By the time we escape the serializer we should just have a general
+        // NotSerializable Exception
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            C(12).serialize()
+        }.withMessageContaining("has synthetic fields and is likely a nested inner class")
     }
 }
 
