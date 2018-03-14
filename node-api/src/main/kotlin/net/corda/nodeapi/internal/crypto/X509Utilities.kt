@@ -14,7 +14,10 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.reader
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.*
@@ -36,6 +39,7 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.SignatureException
 import java.security.cert.*
 import java.security.cert.Certificate
 import java.time.Duration
@@ -275,7 +279,11 @@ object X509Utilities {
         return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public)
                 .addAttribute(BCStyle.E, DERUTF8String(email))
                 .addAttribute(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), certRole)
-                .build(signer)
+                .build(signer).apply {
+            if (!isSignatureValid()) {
+                throw SignatureException("The certificate signing request signature validation failed.")
+            }
+        }
     }
 
     fun createCertificateSigningRequest(subject: X500Principal, email: String, keyPair: KeyPair, certRole: CertRole = CertRole.NODE_CA): PKCS10CertificationRequest {
@@ -320,6 +328,13 @@ val CertPath.x509Certificates: List<X509Certificate>
 val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certificate) { "Not an X.509 certificate: $this" }
 
 val Array<Certificate>.x509: List<X509Certificate> get() = map { it.x509 }
+
+/**
+ * Validates the signature of the CSR
+ */
+fun PKCS10CertificationRequest.isSignatureValid(): Boolean {
+    return this.isSignatureValid(JcaContentVerifierProviderBuilder().build(this.subjectPublicKeyInfo))
+}
 
 /**
  * Wraps a [CertificateFactory] to remove boilerplate. It's unclear whether [CertificateFactory] is threadsafe so best

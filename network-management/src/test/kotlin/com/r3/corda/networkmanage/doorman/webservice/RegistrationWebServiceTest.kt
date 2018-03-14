@@ -15,26 +15,31 @@ import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.doorman.NetworkManagementWebServer
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
+import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.post
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.seconds
 import net.corda.node.utilities.registration.cacheControl
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -43,13 +48,14 @@ import java.net.HttpURLConnection
 import java.net.HttpURLConnection.*
 import java.net.URL
 import java.nio.charset.StandardCharsets.UTF_8
+import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
 import javax.security.auth.x500.X500Principal
-import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class RegistrationWebServiceTest : TestBase() {
     private lateinit var webServer: NetworkManagementWebServer
@@ -75,7 +81,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     @Test
-    fun `submit request`() {
+    fun `submit request succeeds`() {
         val id = SecureHash.randomSHA256().toString()
 
         val requestProcessor = mock<CsrHandler> {
@@ -95,6 +101,22 @@ class RegistrationWebServiceTest : TestBase() {
         verify(requestProcessor, times(1)).saveRequest(any())
         submitRequest(request)
         verify(requestProcessor, times(2)).saveRequest(any())
+    }
+
+    @Test
+    fun `submit request fails with invalid public key`() {
+        startSigningServer(mock())
+
+        val keyPairGenuine = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val keyPairMalicious = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val request = createUnverifiedCertificateSigningRequest(
+                CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB").x500Principal,
+                "my@mail.com",
+                KeyPair(keyPairMalicious.public, keyPairGenuine.private))
+        // Post request to signing server via http.
+        assertFailsWith<IOException>("Invalid CSR signature") {
+            submitRequest(request)
+        }
     }
 
     @Test
@@ -213,12 +235,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     private fun submitRequest(request: PKCS10CertificationRequest): String {
-        val conn = URL("http://${webServer.hostAndPort}/certificate").openConnection() as HttpURLConnection
-        conn.doOutput = true
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
-        conn.outputStream.write(request.encoded)
-        return conn.inputStream.bufferedReader().use { it.readLine() }
+        return String(URL("http://${webServer.hostAndPort}/certificate").post(OpaqueBytes(request.encoded)))
     }
 
     private fun pollForResponse(id: String): PollResponse {
@@ -239,6 +256,14 @@ class RegistrationWebServiceTest : TestBase() {
             HTTP_UNAUTHORIZED -> PollResponse.Unauthorised(IOUtils.toString(conn.errorStream, UTF_8))
             else -> throw IOException("Cannot connect to Certificate Signing Server, HTTP response code : ${conn.responseCode}")
         }
+    }
+
+    private fun createUnverifiedCertificateSigningRequest(subject: X500Principal, email: String, keyPair: KeyPair): PKCS10CertificationRequest {
+        val signer = ContentSignerBuilder.build(DEFAULT_TLS_SIGNATURE_SCHEME, keyPair.private, Crypto.findProvider(DEFAULT_TLS_SIGNATURE_SCHEME.providerName))
+        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public)
+                .addAttribute(BCStyle.E, DERUTF8String(email))
+                .addAttribute(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), CertRole.NODE_CA)
+                .build(signer)
     }
 
     private interface PollResponse {
