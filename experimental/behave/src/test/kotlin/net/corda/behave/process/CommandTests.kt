@@ -57,7 +57,7 @@ class CommandTests {
      * https://github.com/corda/enterprise/blob/master/network-management/README.md
      */
 
-    private val source = doormanConfigDirectory // / "*"
+    private val source = doormanConfigDirectory
     private val runDir = currentDirectory / "build/runs/doorman"
     private val notaryRunDir = currentDirectory / "build/runs/notary"
 
