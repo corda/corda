@@ -9,6 +9,7 @@ import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.client.rpc.internal.drainAndShutdown
@@ -471,6 +472,12 @@ object InteractiveShell {
 
         var result: Any? = null
         try {
+            val conf = object : CordaRPCClientConfiguration {
+                override val maxReconnectAttempts = 1
+            }
+            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = shellConfiguration.hostAndPort,
+                    configuration = conf,
+                    sslConfiguration = shellConfiguration.ssl, classLoader = classLoader)
             result = client.drainAndShutdown(shellConfiguration.user, shellConfiguration.password)
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)
@@ -496,6 +503,7 @@ object InteractiveShell {
         } catch (e: Exception) {
             out.println("RPC failed: ${e.rootCause}", Color.red)
         } finally {
+            out.flush()
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }

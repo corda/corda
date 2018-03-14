@@ -8,6 +8,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Duration
@@ -63,9 +64,10 @@ fun CordaRPCClient.shutdownEvent(username: String, password: String, period: Dur
                         nodeIsShut.onCompleted()
                     } catch (ignored: ActiveMQSecurityException) {
                         // nothing here - this happens if trying to connect before the node is started
-                    } catch (e: Throwable) {
-                        //nodeIsShut.onError(e)
+                    } catch (e: ActiveMQUnBlockedException) {
                         nodeIsShut.onCompleted()
+                    } catch (e: Throwable) {
+                        nodeIsShut.onError(e)
                     }
                 }, 0, period.toMillis(), TimeUnit.MILLISECONDS)
             }
