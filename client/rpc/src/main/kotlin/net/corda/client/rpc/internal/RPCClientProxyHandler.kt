@@ -41,6 +41,8 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.withLock
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -82,7 +84,6 @@ class RPCClientProxyHandler(
     private enum class State {
         UNSTARTED,
         SERVER_VERSION_NOT_SET,
-        RECONNECTING,
         STARTED,
         FINISHED
     }
@@ -171,6 +172,9 @@ class RPCClientProxyHandler(
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
     private val deduplicationSequenceNumber = AtomicLong(0)
 
+    private val lock = ReentrantReadWriteLock()
+    private var sendingEnabled = true
+
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
      */
@@ -211,6 +215,11 @@ class RPCClientProxyHandler(
         }
         if (consumerSession!!.isClosed) {
             throw RPCException("RPC Proxy is closed")
+        }
+
+        lock.readLock().withLock {
+            if (!sendingEnabled)
+                throw RPCException("RPC server is not available.")
         }
 
         val replyId = InvocationId.newInstance()
@@ -400,7 +409,10 @@ class RPCClientProxyHandler(
     private fun failoverHandler(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
-                lifeCycle.justTransition(State.RECONNECTING)
+                lock.writeLock().withLock {
+                    sendingEnabled = false
+                }
+
                 log.warn("RPC server unavailable.")
                 log.warn("Terminating observables and in flight RPCs.")
                 val m = observableContext.observableMap.asMap()
@@ -412,7 +424,7 @@ class RPCClientProxyHandler(
                 observableContext.observableMap.invalidateAll()
 
                 rpcReplyMap.forEach { _, replyFuture ->
-                    replyFuture.setException(RPCException("Connection unavailable."))
+                    replyFuture.setException(RPCException("Connection failure detected."))
                 }
 
                 rpcReplyMap.clear()
@@ -420,13 +432,14 @@ class RPCClientProxyHandler(
             }
 
             FailoverEventType.FAILOVER_COMPLETED -> {
+                lock.writeLock().withLock {
+                    sendingEnabled = true
+                }
                 log.info("RPC server available.")
-                lifeCycle.justTransition(State.STARTED)
             }
 
             FailoverEventType.FAILOVER_FAILED -> {
                 log.error("Could not reconnect to the RPC server.")
-                close()
             }
         }
     }
