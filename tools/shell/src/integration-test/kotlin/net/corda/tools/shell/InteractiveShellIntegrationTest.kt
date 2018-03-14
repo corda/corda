@@ -142,6 +142,7 @@ class InteractiveShellIntegrationTest {
         }
     }
 
+    @Ignore
     @Test
     fun `ssh runs flows via standalone shell`() {
         val user = User("u", "p", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),

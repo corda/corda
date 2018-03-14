@@ -23,8 +23,6 @@ functionality is provided in the docs for the ``proxy`` method.
 
 For a brief tutorial on using the RPC API, see :doc:`tutorial-clientrpc-api`.
 
-.. _rpc_security_mgmt_ref:
-
 RPC permissions
 ---------------
 For a node's owner to interact with their node via RPC, they must define one or more RPC users. Each user is
@@ -128,7 +126,7 @@ You can provide an RPC user with the permission to perform any RPC operation (in
             ...
         ]
 
-.. _authentication_ref:
+.. _rpc_security_mgmt_ref:
 
 RPC security management
 -----------------------

@@ -22,9 +22,9 @@ HTTP network map protocol
 -------------------------
 
 If the node is configured with the ``compatibilityZoneURL`` config then it first uploads its own signed ``NodeInfo``
-to the server (and each time it changes on startup) and then proceeds to download the entire network map. The network map
-consists of a list of ``NodeInfo`` hashes. The node periodically polls for the network map (based on the HTTP cache expiry
-header) and any new entries are downloaded and cached. Entries which no longer exist are deleted from the node's cache.
+to the server at that URL (and each time it changes on startup) and then proceeds to download the entire network map from 
+the same server. The network map consists of a list of ``NodeInfo`` hashes. The node periodically polls for the network map 
+(based on the HTTP cache expiry header) and any new entries are downloaded and cached. Entries which no longer exist are deleted from the node's cache.
 
 The set of REST end-points for the network map service are as follows.
 
