@@ -105,7 +105,7 @@ will not be valid, and will not be accepted as inputs to subsequent transactions
 
 Other transaction components
 ----------------------------
-As well as input states and output states, transactions may contain:
+As well as input states and output states, transactions contain:
 
 * Commands
 * Attachments

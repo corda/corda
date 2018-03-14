@@ -3,6 +3,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.crypto.internal.platformSecureRandomFactory
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
@@ -189,13 +190,7 @@ fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply 
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun newSecureRandom(): SecureRandom {
-    return if (System.getProperty("os.name") == "Linux") {
-        SecureRandom.getInstance("NativePRNGNonBlocking")
-    } else {
-        SecureRandom.getInstanceStrong()
-    }
-}
+fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
 
 /**
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order

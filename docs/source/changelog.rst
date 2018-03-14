@@ -1,11 +1,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
-
-UNRELEASED
-----------
 
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
 
@@ -13,9 +13,10 @@ UNRELEASED
 
 * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
 
-* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
-  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
-  one node with the legal name is found.
+.. _changelog_v3:
+
+Version 3.0
+-----------
 
 * Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
   at CorDapp context creation time from a file source during runtime.
@@ -31,7 +32,6 @@ UNRELEASED
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
 
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
-
 * Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, defaulted to ``null``.
 
 * Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce username == CN condition on RPC SSL certificates.
@@ -92,6 +92,10 @@ UNRELEASED
 
    * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
      Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+
+  * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+    where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+    one node with the legal name is found.
 
    * The common name in the node's X500 legal name is no longer reserved and can be used as part of the node's name.
 
@@ -212,6 +216,9 @@ UNRELEASED
   ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
   will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
   process for existing projects in the ``tools\scripts`` directory of the Corda repo.
+
+* ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
+  multiple transactions at once.
 
 .. _changelog_v1:
 
