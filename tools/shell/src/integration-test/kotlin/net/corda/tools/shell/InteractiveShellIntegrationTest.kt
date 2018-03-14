@@ -21,6 +21,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertTrue
 
@@ -131,6 +132,7 @@ class InteractiveShellIntegrationTest {
         }
     }
 
+    @Ignore
     @Test
     fun `ssh runs flows via standalone shell`() {
         val user = User("u", "p", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
@@ -173,6 +175,7 @@ class InteractiveShellIntegrationTest {
         }
     }
 
+    @Ignore
     @Test
     fun `ssh run flows via standalone shell over ssl to node`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
