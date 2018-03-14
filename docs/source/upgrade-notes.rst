@@ -28,13 +28,31 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
+v3.0 to v3.1
+------------
+
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
+Corda 3.1 uses version 3.1.0 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
+
+.. sourcecode:: shell
+
+    ext.corda_gradle_plugins_version = '3.1.0'
+
+You will also need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = 'corda-3.1'
+
 V2.0 to V3.0
 ------------
 
 Gradle Plugin Version
 ^^^^^^^^^^^^^^^^^^^^^
 
-Corda 3.0 uses version 3.0.8 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
+Corda 3.0 uses version 3.0.9 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
 
 .. sourcecode:: shell
 

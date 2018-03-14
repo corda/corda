@@ -4,6 +4,17 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+.. _changelog_v3_1:
+
+Version 3.1
+-----------
+
+* Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
+  accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
+  to the v3 branch will make it easier for us to ensure that apis are stable for future versions. These changes are
+  released in gradle plugins version 3.0.10. For more information on the api scanner see
+  the `documentation <https://github.com/corda/corda-gradle-plugins/tree/master/api-scanner>`_.
+
 .. _changelog_v3:
 
 Version 3.0
