@@ -13,6 +13,10 @@ from the previous milestone release.
 
 * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
 
+* java.math.BigInteger serialization support added.
+
+* java.security.cert.CRLReason added to the default Whitelist.
+
 .. _changelog_v3:
 
 Version 3.0
