@@ -10,8 +10,9 @@
 
 package net.corda.node.internal.security
 
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.Cache
+
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Ints
 import net.corda.core.context.AuthServiceId
 import net.corda.core.utilities.loggerFor
@@ -112,7 +113,7 @@ class RPCSecurityManagerImpl(private val config: AuthServiceConfig) : RPCSecurit
             return DefaultSecurityManager(realm).also {
                 // Setup optional cache layer if configured
                 it.cacheManager = config.options?.cache?.let {
-                    GuavaCacheManager(
+                    CaffeineCacheManager(
                             timeToLiveSeconds = it.expireAfterSecs,
                             maxSize = it.maxEntries)
                 }
@@ -275,9 +276,9 @@ private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource
 private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
 
 /*
- * Adapts a [com.google.common.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
+ * Adapts a [com.github.benmanes.caffeine.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
  */
-private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
+private fun <K : Any, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
 
     val name = name
     private val impl = this@toShiroCache
@@ -300,7 +301,7 @@ private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<
         impl.invalidateAll()
     }
 
-    override fun size() = Ints.checkedCast(impl.size())
+    override fun size() = Ints.checkedCast(impl.estimatedSize())
     override fun keys() = impl.asMap().keys
     override fun values() = impl.asMap().values
     override fun toString() = "Guava cache adapter [$impl]"
@@ -308,22 +309,22 @@ private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<
 
 /*
  * Implementation of [org.apache.shiro.cache.CacheManager] based on
- * cache implementation in [com.google.common.cache]
+ * cache implementation in [com.github.benmanes.caffeine.cache.Cache]
  */
-private class GuavaCacheManager(val maxSize: Long,
-                                val timeToLiveSeconds: Long) : CacheManager {
+private class CaffeineCacheManager(val maxSize: Long,
+                                   val timeToLiveSeconds: Long) : CacheManager {
 
     private val instances = ConcurrentHashMap<String, ShiroCache<*, *>>()
 
-    override fun <K, V> getCache(name: String): ShiroCache<K, V> {
+    override fun <K : Any, V> getCache(name: String): ShiroCache<K, V> {
         val result = instances[name] ?: buildCache<K, V>(name)
         instances.putIfAbsent(name, result)
         return result as ShiroCache<K, V>
     }
 
-    private fun <K, V> buildCache(name: String) : ShiroCache<K, V> {
+    private fun <K : Any, V> buildCache(name: String): ShiroCache<K, V> {
         logger.info("Constructing cache '$name' with maximumSize=$maxSize, TTL=${timeToLiveSeconds}s")
-        return CacheBuilder.newBuilder()
+        return Caffeine.newBuilder()
                 .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
                 .maximumSize(maxSize)
                 .build<K, V>()
@@ -331,6 +332,6 @@ private class GuavaCacheManager(val maxSize: Long,
     }
 
     companion object {
-        private val logger = loggerFor<GuavaCacheManager>()
+        private val logger = loggerFor<CaffeineCacheManager>()
     }
 }

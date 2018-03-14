@@ -112,7 +112,7 @@ class NodeProcess(
         }
 
         fun setupPlugins(config: NodeConfig, jarPaths: List<String>): Factory {
-            (baseDirectory(config) / "plugins").createDirectories().also {
+            (baseDirectory(config) / "drivers").createDirectories().also {
                 jarPaths.forEach { jar -> Paths.get(jar).copyToDirectory(it) }
             }
             return this

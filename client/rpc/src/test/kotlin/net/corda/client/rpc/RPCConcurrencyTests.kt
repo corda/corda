@@ -101,8 +101,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         return testProxy<TestOps>(
                 TestOpsImpl(pool),
                 clientConfiguration = RPCClientConfiguration.default.copy(
-                        reapInterval = 100.millis,
-                        cacheConcurrencyLevel = 16
+                        reapInterval = 100.millis
                 ),
                 serverConfiguration = RPCServerConfiguration.default.copy(
                         rpcThreadPoolSize = 4

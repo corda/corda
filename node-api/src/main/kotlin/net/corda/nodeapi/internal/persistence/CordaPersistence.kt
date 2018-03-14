@@ -64,7 +64,8 @@ class CordaPersistence(
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
         val jdbcUrl: String,
-        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
+        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
+        val cordappClassLoader: ClassLoader? = null
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -74,7 +75,7 @@ class CordaPersistence(
     val hibernateConfig: HibernateConfiguration by lazy {
 
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl)
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cordappClassLoader)
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas

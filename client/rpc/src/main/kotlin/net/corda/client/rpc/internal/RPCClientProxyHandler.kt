@@ -10,14 +10,15 @@
 
 package net.corda.client.rpc.internal
 
+import co.paralleluniverse.common.util.SameThreadExecutor
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.RemovalCause
-import com.google.common.cache.RemovalListener
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.RemovalCause
+import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.RPCException
@@ -152,10 +153,10 @@ class RPCClientProxyHandler(
     private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
-        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> {
-            val observableId = it.key!!
+        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, value, cause ->
+            val observableId = key!!
             val rpcCallSite = callSiteMap?.remove(observableId)
-            if (it.cause == RemovalCause.COLLECTED) {
+            if (cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
                         "This wastes server-side resources because it was queueing observations for retrieval.",
@@ -166,10 +167,9 @@ class RPCClientProxyHandler(
             }
             observablesToReap.locked { observables.add(observableId) }
         }
-        return CacheBuilder.newBuilder().
+        return Caffeine.newBuilder().
                 weakValues().
-                removalListener(onObservableRemove).
-                concurrencyLevel(rpcConfiguration.cacheConcurrencyLevel).
+                removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).
                 build()
     }
 

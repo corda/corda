@@ -10,8 +10,8 @@
 
 package net.corda.nodeapi.internal
 
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
+import com.github.benmanes.caffeine.cache.CacheLoader
+import com.github.benmanes.caffeine.cache.Caffeine
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -21,11 +21,11 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class DeduplicationChecker(cacheExpiry: Duration) {
     // dedupe identity -> watermark cache
-    private val watermarkCache = CacheBuilder.newBuilder()
+    private val watermarkCache = Caffeine.newBuilder()
             .expireAfterAccess(cacheExpiry.toNanos(), TimeUnit.NANOSECONDS)
             .build(WatermarkCacheLoader)
 
-    private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong>() {
+    private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong> {
         override fun load(key: Any) = AtomicLong(-1)
     }
 
@@ -35,6 +35,7 @@ class DeduplicationChecker(cacheExpiry: Duration) {
      * @return true if the message is unique, false if it's a duplicate.
      */
     fun checkDuplicateMessageId(identity: Any, sequenceNumber: Long): Boolean {
-        return watermarkCache[identity].getAndUpdate { maxOf(sequenceNumber, it) } >= sequenceNumber
+        return watermarkCache[identity]!!.getAndUpdate { maxOf(sequenceNumber, it) } >= sequenceNumber
     }
 }
+

@@ -91,9 +91,8 @@ public class CordaCaplet extends Capsule {
             T cp = super.attribute(attr);
 
             (new File(baseDir, "cordapps")).mkdir();
-            augmentClasspath((List<Path>) cp, new File(baseDir, "cordapps"));
-            augmentClasspath((List<Path>) cp, new File(baseDir, "plugins"));
             // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers
+            augmentClasspath((List<Path>) cp, new File(baseDir, "drivers"));
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);

@@ -19,6 +19,8 @@ import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.service.UnknownUnwrapTypeException
@@ -36,7 +38,8 @@ class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
-        private val jdbcUrl: String
+        private val jdbcUrl: String,
+        val cordappClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
@@ -93,7 +96,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources)
+        val sessionFactory = buildSessionFactory(config, metadataSources, cordappClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -119,11 +122,17 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, cordappClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
+
+        if (cordappClassLoader != null) {
+            config.standardServiceRegistryBuilder.addService(
+                    ClassLoaderService::class.java,
+                    ClassLoaderServiceImpl(cordappClassLoader))
+        }
+
         val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
         val metadata = buildHibernateMetadata(metadataBuilder, jdbcUrl, attributeConverters)
-
         return metadata.sessionFactoryBuilder.run {
             allowOutOfTransactionUpdateOperations(true)
             applySecondLevelCacheSupport(false)

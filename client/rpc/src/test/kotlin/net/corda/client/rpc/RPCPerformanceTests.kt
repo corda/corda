@@ -98,7 +98,6 @@ class RPCPerformanceTests : AbstractRPCTest() {
             rpcDriver {
                 val proxy = testProxy(
                         RPCClientConfiguration.default.copy(
-                                cacheConcurrencyLevel = 16,
                                 observationExecutorPoolSize = 2
                         ),
                         RPCServerConfiguration.default.copy(
@@ -138,8 +137,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
             val metricRegistry = startReporter(shutdownManager)
             val proxy = testProxy(
                     RPCClientConfiguration.default.copy(
-                            reapInterval = 1.seconds,
-                            cacheConcurrencyLevel = 16
+                            reapInterval = 1.seconds
                     ),
                     RPCServerConfiguration.default.copy(
                             rpcThreadPoolSize = 8
