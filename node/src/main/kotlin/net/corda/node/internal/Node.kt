@@ -99,7 +99,7 @@ open class Node(configuration: NodeConfiguration,
 
     override val log: Logger get() = staticLog
     override fun makeTransactionVerifierService(): TransactionVerifierService = when (configuration.verifierType) {
-        VerifierType.OutOfProcess -> verifierMessagingClient!!.verifierService
+        VerifierType.OutOfProcess -> throw IllegalArgumentException("OutOfProcess verifier not supported") //verifierMessagingClient!!.verifierService
         VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
     }
 
@@ -175,7 +175,7 @@ open class Node(configuration: NodeConfiguration,
             rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
         }
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+            VerifierType.OutOfProcess ->  throw IllegalArgumentException("OutOfProcess verifier not supported") //VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             VerifierType.InMemory -> null
         }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
