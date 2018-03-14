@@ -139,20 +139,18 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     private fun updateTimestamp(session: Session, mutualExclusion: MutualExclusion): Boolean {
         val minWaitTime = mutualExclusion.timestamp.plus(waitInterval, ChronoField.MILLI_OF_SECOND.baseUnit)
-        val query = session.createNativeQuery("UPDATE $TABLE SET $MACHINE_NAME = :machineName, $TIMESTAMP = CURRENT_TIMESTAMP, $PID = :pid " +
+        val hql = "UPDATE RunOnceService\$MutualExclusion SET $MACHINE_NAME = :machineName, $TIMESTAMP = CURRENT_TIMESTAMP, $PID = :pid " +
                 "WHERE $ID = 'X' AND " +
-
                 // we are master node
                 "($MACHINE_NAME = :machineName OR " +
-
                 // change master node
                 "($MACHINE_NAME != :machineName AND " +
                 // no one else has updated timestamp whilst we attempted this update
-                "$TIMESTAMP = CAST(:mutualExclusionTimestamp AS DATETIME) AND " +
+                "$TIMESTAMP = CAST(:mutualExclusionTimestamp AS LocalDateTime) AND " +
                 // old timestamp
-                "CURRENT_TIMESTAMP > CAST(:waitTime AS DATETIME)))", MutualExclusion::class.java)
+                "CURRENT_TIMESTAMP > CAST(:waitTime AS LocalDateTime)))"
 
-        query.unwrap(org.hibernate.SQLQuery::class.java).addSynchronizedEntityClass(MutualExclusion::class.java)
+        val query = session.createQuery(hql)
 
         query.setParameter("pid", pid)
         query.setParameter("machineName", machineName)
