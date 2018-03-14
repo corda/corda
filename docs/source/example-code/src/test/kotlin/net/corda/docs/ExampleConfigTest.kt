@@ -3,13 +3,11 @@ package net.corda.docs
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
-import net.corda.verifier.Verifier
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.declaredMemberProperties
-import kotlin.reflect.jvm.isAccessible
 
 class ExampleConfigTest {
 
@@ -39,16 +37,6 @@ class ExampleConfigTest {
                     baseDirectory = baseDirectory,
                     configFile = it
             ).parseAsNodeConfiguration()
-        }
-    }
-
-    @Test
-    fun `example verifier_conf parses fine`() {
-        readAndCheckConfigurations(
-                "example-verifier.conf"
-        ) {
-            val baseDirectory = Paths.get("some-example-base-dir")
-            Verifier.loadConfiguration(baseDirectory, it)
         }
     }
 }
