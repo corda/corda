@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.serialization
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyBytes
@@ -30,7 +30,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) : SerializationContext {
-    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = CacheBuilder.newBuilder().weakValues().maximumSize(1024).build()
+    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
 
     /**
      * {@inheritDoc}
@@ -49,7 +49,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
                 AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
-            })
+            }!!)
         } catch (e: ExecutionException) {
             // Caught from within the cache get, so unwrap.
             throw e.cause!!
