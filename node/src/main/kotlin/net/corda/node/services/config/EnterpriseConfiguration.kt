@@ -16,8 +16,8 @@ import net.corda.node.services.statemachine.transitions.StateMachineConfiguratio
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
         val useMultiThreadedSMM: Boolean = true,
-        val tuning: PerformanceTuning = PerformanceTuning.default
-)
+        val tuning: PerformanceTuning = PerformanceTuning.default,
+        val externalBridge: Boolean? = null)
 
 data class MutualExclusionConfiguration(val on: Boolean = false, val machineName: String, val updateInterval: Long, val waitInterval: Long)
 

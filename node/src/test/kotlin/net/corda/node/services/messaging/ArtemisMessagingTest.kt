@@ -216,10 +216,10 @@ class ArtemisMessagingTest {
         // Now change the receiver
         try {
             val messagingClient2 = createMessagingClient()
-            messagingClient2.addMessageHandler(TOPIC) { message, _, handle ->
+            messagingClient2.addMessageHandler(TOPIC) { msg, _, handle ->
                 database.transaction { handle.persistDeduplicationId() }
                 handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
-                receivedMessages.add(message)
+                receivedMessages.add(msg)
             }
             startNodeMessagingClient()
 
@@ -251,10 +251,10 @@ class ArtemisMessagingTest {
             fakeMsg2!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
 
             val messagingClient3 = createMessagingClient()
-            messagingClient3.addMessageHandler(TOPIC) { message, _, handle ->
+            messagingClient3.addMessageHandler(TOPIC) { msg, _, handle ->
                 database.transaction { handle.persistDeduplicationId() }
                 handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
-                receivedMessages.add(message)
+                receivedMessages.add(msg)
             }
             startNodeMessagingClient()
 
@@ -305,6 +305,7 @@ class ArtemisMessagingTest {
                     database,
                     networkMapCache,
                     MetricRegistry(),
+                    ALICE_NAME.toString(),
                     maxMessageSize = maxMessageSize,
                     isDrainingModeOn = { false },
                     drainingModeWasChangedEvents = PublishSubject.create()).apply {

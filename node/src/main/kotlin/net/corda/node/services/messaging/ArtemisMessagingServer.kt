@@ -35,7 +35,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
