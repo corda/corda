@@ -46,7 +46,7 @@ public class FieldWithInternalAnnotationTest {
             .contains("net.corda.example.field.LocalInvisibleAnnotation");
 
         Path api = pathOf(testProjectDir, "build", "api", "field-internal-annotation.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals("public class net.corda.example.field.HasVisibleField extends java.lang.Object\n" +
             "  public <init>()\n" +
             "  public String hasInvisibleAnnotations\n" +

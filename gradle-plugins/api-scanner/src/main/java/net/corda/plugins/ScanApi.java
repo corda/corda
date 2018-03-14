@@ -138,11 +138,14 @@ public class ScanApi extends DefaultTask {
         private final Method classTypeMethod;
         private Collection<String> internalAnnotations;
         private Collection<String> invisibleAnnotations;
+        private Collection<String> inheritedAnnotations;
 
         @SuppressWarnings("unchecked")
         Scanner(URLClassLoader classpathLoader) {
             this.classpathLoader = classpathLoader;
             this.invisibleAnnotations = ANNOTATION_BLACKLIST;
+            this.inheritedAnnotations = emptySet();
+            this.internalAnnotations = emptySet();
 
             Class<? extends Annotation> kClass;
             Method kMethod;
@@ -181,7 +184,13 @@ public class ScanApi extends DefaultTask {
         }
 
         void scan(PrintWriter writer, ClassLoader appLoader) {
+            Set<String> inherited = new HashSet<>();
             ScanResult result = new FastClasspathScanner(getScanSpecification())
+                .matchAllAnnotationClasses(annotation -> {
+                    if (annotation.isAnnotationPresent(Inherited.class)) {
+                        inherited.add(annotation.getName());
+                    }
+                })
                 .overrideClassLoaders(appLoader)
                 .ignoreParentClassLoaders()
                 .ignoreMethodVisibility()
@@ -190,7 +199,12 @@ public class ScanApi extends DefaultTask {
                 .enableFieldInfo()
                 .verbose(verbose)
                 .scan();
+            inheritedAnnotations = unmodifiableSet(inherited);
             loadAnnotationCaches(result);
+            getLogger().info("Annotations:");
+            getLogger().info("- Inherited: {}", inheritedAnnotations);
+            getLogger().info("- Internal:  {}", internalAnnotations);
+            getLogger().info("- Invisible: {}", invisibleAnnotations);
             writeApis(writer, result);
         }
 
@@ -374,7 +388,7 @@ public class ScanApi extends DefaultTask {
         private List<ClassInfo> selectInheritedAnnotations(Collection<ClassInfo> classes) {
             return classes.stream()
                 .flatMap(cls -> cls.getAnnotations().stream())
-                .filter(ann -> ann.hasMetaAnnotation(Inherited.class.getName()))
+                .filter(ann -> inheritedAnnotations.contains(ann.getClassName()))
                 .collect(toList());
         }
 

@@ -41,7 +41,7 @@ public class InternalMethodTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "internal-method.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public class net.corda.example.WithInternalMethod extends java.lang.Object\n" +
             "  public <init>()\n" +

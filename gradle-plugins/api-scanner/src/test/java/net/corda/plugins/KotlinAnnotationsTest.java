@@ -42,7 +42,7 @@ public class KotlinAnnotationsTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "kotlin-annotations.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public final class net.corda.example.HasJvmField extends java.lang.Object\n" +
             "  public <init>()\n" +

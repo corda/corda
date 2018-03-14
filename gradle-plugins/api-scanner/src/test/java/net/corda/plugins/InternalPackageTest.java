@@ -44,7 +44,7 @@ public class InternalPackageTest {
         assertThat(output).contains("net.corda.internal.InvisibleClass");
 
         Path api = pathOf(testProjectDir, "build", "api", "internal-package.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
     "public class net.corda.VisibleClass extends java.lang.Object\n" +
             "  public <init>()\n" +

@@ -44,7 +44,7 @@ public class ClassWithInternalAnnotationTest {
         assertThat(output).contains("net.corda.example.InvisibleAnnotation");
 
         Path api = pathOf(testProjectDir, "build", "api", "class-internal-annotation.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals("public class net.corda.example.AnnotatedClass extends java.lang.Object\n" +
             "  public <init>()\n" +
             "##\n", CopyUtils.toString(api));

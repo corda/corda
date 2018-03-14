@@ -42,7 +42,7 @@ public class BasicClassTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "basic-class.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public class net.corda.example.BasicClass extends java.lang.Object\n" +
             "  public <init>(String)\n" +

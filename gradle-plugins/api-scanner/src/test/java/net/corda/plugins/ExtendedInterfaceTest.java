@@ -42,7 +42,7 @@ public class ExtendedInterfaceTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "extended-interface.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public interface net.corda.example.ExtendedInterface extends java.util.concurrent.Future\n" +
             "  public abstract String getName()\n" +

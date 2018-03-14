@@ -42,7 +42,7 @@ public class BasicInterfaceTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "basic-interface.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public interface net.corda.example.BasicInterface\n" +
             "  public abstract java.math.BigInteger getBigNumber()\n" +

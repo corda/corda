@@ -46,7 +46,7 @@ public class InternalAnnotationTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "internal-annotation.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals("", CopyUtils.toString(api));
     }
 }

@@ -40,7 +40,7 @@ public class VarargMethodTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "vararg-method.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals("public interface net.corda.example.VarargMethod\n" +
             "  public abstract void action(Object...)\n" +
             "##\n", CopyUtils.toString(api));

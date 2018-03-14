@@ -46,7 +46,7 @@ public class MethodWithInternalAnnotationTest {
             .contains("net.corda.example.method.LocalInvisibleAnnotation");
 
         Path api = pathOf(testProjectDir, "build", "api", "method-internal-annotation.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals("public class net.corda.example.method.HasVisibleMethod extends java.lang.Object\n" +
             "  public <init>()\n" +
             "  public void hasInvisibleAnnotations()\n" +

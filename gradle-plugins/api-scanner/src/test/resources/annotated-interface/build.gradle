@@ -18,6 +18,10 @@ sourceSets {
     }
 }
 
+dependencies {
+    compile files('../../annotations/build/libs/annotations.jar')
+}
+
 jar {
     baseName = "annotated-interface"
 }

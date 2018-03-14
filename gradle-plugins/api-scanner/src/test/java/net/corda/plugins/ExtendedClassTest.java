@@ -42,7 +42,7 @@ public class ExtendedClassTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "extended-class.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public class net.corda.example.ExtendedClass extends java.io.FilterInputStream\n" +
             "  public <init>(java.io.InputStream)\n" +

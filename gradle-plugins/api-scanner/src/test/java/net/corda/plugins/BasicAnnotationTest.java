@@ -42,7 +42,7 @@ public class BasicAnnotationTest {
         assertEquals(SUCCESS, scanApi.getOutcome());
 
         Path api = pathOf(testProjectDir, "build", "api", "basic-annotation.txt");
-        assertThat(api.toFile()).isFile();
+        assertThat(api).isRegularFile();
         assertEquals(
             "public @interface net.corda.example.BasicAnnotation\n" +
             "##\n", CopyUtils.toString(api));
