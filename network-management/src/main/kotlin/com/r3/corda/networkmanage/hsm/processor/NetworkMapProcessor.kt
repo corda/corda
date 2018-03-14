@@ -15,12 +15,12 @@ import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
-import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateParameters
+import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateConfig
 import com.r3.corda.networkmanage.hsm.signer.HsmSigner
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
-class NetworkMapProcessor(private val parameters: NetworkMapCertificateParameters,
+class NetworkMapProcessor(private val config: NetworkMapCertificateConfig,
                           private val device: String,
                           private val keySpecifier: Int,
                           private val database: CordaPersistence) {
@@ -29,7 +29,7 @@ class NetworkMapProcessor(private val parameters: NetworkMapCertificateParameter
     }
 
     init {
-        parameters.authParameters.run {
+        config.authParameters.run {
             requireNotNull(password)
             require(mode != AuthMode.CARD_READER)
             if (mode == AuthMode.KEY_FILE) {
@@ -40,7 +40,7 @@ class NetworkMapProcessor(private val parameters: NetworkMapCertificateParameter
 
     fun run() {
         logger.info("Starting network map processor.")
-        parameters.run {
+        config.run {
             val networkMapStorage = PersistentNetworkMapStorage(database)
             val signer = HsmSigner(
                     Authenticator(

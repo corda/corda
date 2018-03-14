@@ -10,10 +10,9 @@
 
 package com.r3.corda.networkmanage.common.utils
 
-import com.google.common.base.CaseFormat
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import joptsimple.ArgumentAcceptingOptionSpec
+import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.ConfigRenderOptions
 import joptsimple.OptionParser
 import net.corda.core.CordaOID
 import net.corda.core.crypto.sha256
@@ -22,6 +21,7 @@ import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.network.NetworkMap
@@ -32,6 +32,9 @@ import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -39,6 +42,8 @@ import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 
 const val CORDA_NETWORK_MAP = "cordanetworkmap"
+
+val logger: Logger = LoggerFactory.getLogger("com.r3.corda.networkmanage.common.utils")
 
 // TODO These should be defined in node-api
 typealias SignedNetworkParameters = SignedDataWithCert<NetworkParameters>
@@ -54,20 +59,10 @@ data class CertPathAndKey(val certPath: List<X509Certificate>, val key: PrivateK
  */
 fun PublicKey.hashString() = encoded.sha256().toString()
 
-fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Unit): Config {
-    val parser = OptionParser()
-    val helpOption = parser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp()
-    registerOptions(parser)
-    val optionSet = parser.parse(*this)
-    // Print help and exit on help option.
-    if (optionSet.has(helpOption)) {
-        throw ShowHelpException(parser)
-    }
-    // Convert all command line options to Config.
-    return ConfigFactory.parseMap(parser.recognizedOptions().mapValues {
-        val optionSpec = it.value
-        if (optionSpec is ArgumentAcceptingOptionSpec<*> && !optionSpec.requiresArgument() && optionSet.has(optionSpec)) true else optionSpec.value(optionSet)
-    }.mapKeys { it.key.toCamelcase() }.filterValues { it != null })
+inline fun <reified T : Any> parseConfig(file: Path): T {
+    val config = ConfigFactory.parseFile(file.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)).resolve()
+    logger.info(config.root().render(ConfigRenderOptions.defaults()))
+    return config.parseAs(strict = false)
 }
 
 class ShowHelpException(val parser: OptionParser, val errorMessage: String? = null) : Exception()
@@ -85,12 +80,6 @@ fun initialiseSerialization() {
                 registerScheme(AMQPClientSerializationScheme())
             },
             context)
-}
-
-private fun String.toCamelcase(): String {
-    return if (contains('_') || contains('-')) {
-        CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, this.replace("-", "_"))
-    } else this
 }
 
 private fun PKCS10CertificationRequest.firstAttributeValue(identifier: ASN1ObjectIdentifier): ASN1Encodable? {

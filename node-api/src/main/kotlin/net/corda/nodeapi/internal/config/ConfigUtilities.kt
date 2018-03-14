@@ -19,6 +19,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.isStatic
 import java.lang.reflect.ParameterizedType
 import java.net.Proxy
@@ -74,19 +75,20 @@ fun <T : Any> Config.parseAs(clazz: KClass<T>, strict: Boolean = true): T {
                 val path = defaultToOldPath(property)
                 getValueInternal<Any>(path, param.type, strict)
             }
-    return constructor.callBy(args)
+    try {
+        return constructor.callBy(args)
+    } catch (e: InvocationTargetException) {
+        throw e.cause!!
+    }
 }
 
 class UnknownConfigurationKeysException private constructor(val unknownKeys: Set<String>) : IllegalArgumentException(message(unknownKeys)) {
-
     init {
         require(unknownKeys.isNotEmpty()) { "Absence of unknown keys should not raise UnknownConfigurationKeysException." }
     }
 
     companion object {
-
         fun of(offendingKeys: Set<String>): UnknownConfigurationKeysException = UnknownConfigurationKeysException(offendingKeys)
-
         private fun message(offendingKeys: Set<String>) = "Unknown configuration keys: ${offendingKeys.joinToString(", ", "[", "]")}."
     }
 }

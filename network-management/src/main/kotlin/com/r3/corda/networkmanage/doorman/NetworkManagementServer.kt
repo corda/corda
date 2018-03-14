@@ -43,6 +43,7 @@ class NetworkManagementServer : Closeable {
     lateinit var hostAndPort: NetworkHostAndPort
 
     override fun close() {
+        logger.info("Closing server...")
         for (closeAction in closeActions) {
             try {
                 closeAction()
@@ -94,7 +95,6 @@ class NetworkManagementServer : Closeable {
                                   serverStatus: NetworkManagementServerStatus): RegistrationWebService {
         logger.info("Starting Doorman server.")
         val requestService = if (config.approveAll) {
-            require(config.jira == null) { "Jira configuration cannot be specified when the approveAll parameter is set to true." }
             logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
             ApproveAllCertificateSigningRequestStorage(PersistentCertificateSigningRequestStorage(database))
         } else {

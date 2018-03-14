@@ -12,7 +12,7 @@ package com.r3.corda.networkmanage.hsm.processor
 
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
-import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateParameters
+import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateConfig
 import com.r3.corda.networkmanage.hsm.menu.Menu
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
@@ -21,7 +21,7 @@ import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
-class CsrProcessor(private val parameters: DoormanCertificateParameters,
+class CsrProcessor(private val config: DoormanCertificateConfig,
                    private val device: String,
                    private val keySpecifier: Int,
                    private val database: CordaPersistence) {
@@ -29,12 +29,12 @@ class CsrProcessor(private val parameters: DoormanCertificateParameters,
         val logger = contextLogger()
     }
 
-    private val auth = parameters.authParameters
+    private val auth = config.authParameters
 
     fun showMenu() {
         val csrStorage = DBSignedCertificateRequestStorage(database)
         val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
-            val signer = parameters.run {
+            val signer = config.run {
                 HsmCsrSigner(
                         csrStorage,
                         loadRootKeyStore(),
@@ -42,7 +42,7 @@ class CsrProcessor(private val parameters: DoormanCertificateParameters,
                         null,
                         validDays,
                         Authenticator(
-                                provider = createProvider(parameters.keyGroup, keySpecifier, device),
+                                provider = createProvider(config.keyGroup, keySpecifier, device),
                                 mode = auth.mode,
                                 authStrengthThreshold = auth.threshold))
             }

@@ -71,8 +71,8 @@ Doorman service can be started with the following options :
 
 The doorman service can use JIRA to manage the certificate signing request approval workflow. This can be turned on by providing JIRA connection configuration in the config file.
    ```
-   doormanConfig {
-       jiraConfig {
+   doorman {
+       jira {
          address = "https://doorman-jira-host.com/"
          projectCode = "TD"
          username = "username"
@@ -93,7 +93,7 @@ The doorman service can use JIRA to manage the certificate signing request appro
 ### Network map service
   Network map service can be enabled by providing the following config:
   ```
-  networkMapConfig {
+  networkMap {
     cacheTimeout = 600000
     signInterval = 10000
   }
@@ -104,15 +104,13 @@ The doorman service can use JIRA to manage the certificate signing request appro
 ##Example config file
 ```
 basedir = "."
-host = localhost
-port = 0
+address = "localhost:0"
 rootStorePath = ${basedir}"/certificates/rootstore.jks"
 keystorePath = ${basedir}"/certificates/caKeystore.jks"
 #keystorePassword = "password" #Optional if not specified, user will be prompted on the console.
 #caPrivateKeyPassword = "password" #Optional if not specified, user will be prompted on the console.
 #rootPrivateKeyPassword = "password" #Optional if not specified, user will be prompted on the console.
 #rootKeystorePassword = "password" #Optional if not specified, user will be prompted on the console.
-#trustStorePassword = "password" #Optional if not specified, user will be prompted on the console. Applicable only if, in the ROOT_KEYGEN execution mode.
 
 dataSourceProperties {
   dataSourceClassName = org.h2.jdbcx.JdbcDataSource
@@ -153,31 +151,35 @@ networkMap {
    If local signer is enabled, the server will look for key stores in the certificate folder on start up.
    The key stores can be created using `--mode` flag.
    ```
-   java -jar doorman-<version>.jar --mode ROOT_KEYGEN
+   java -jar doorman-<version>.jar --config-file <config file> --mode ROOT_KEYGEN
    ```
    and 
    ```
-   java -jar doorman-<version>.jar --mode CA_KEYGEN
+   java -jar doorman-<version>.jar --config-file <config file> --mode CA_KEYGEN
    ```
    
-   A trust store file containing the root trust certificate will be produced in the location `distribute-nodes / truststore.jks`
-   (relative to `rootStorePath`). `truststore.jks` must be copied to the `certificates` directory of each node before
-   they attempt to register. The trust store password is `trustpass`.
    A trust store containing the root certificate will be created in the location `distribute-nodes / network-root-truststore.jks`
    (relative to `rootStorePath`). The trust store's password can be set using command line argument `--trust-store-password`, 
    or the doorman's keygen utility will ask for password input if trust store password is not provided using this flag.
-   Path to the network root trust store and password must be provided to corda node via command line arguments before 
-   they attempt to register.
+   This trust store file is to be distributed to every node that wishes to register with the doorman. The node cannot
+   register without it.
 
 ### 2. Start Doorman service for notary registration 
-   Start the network management server with the doorman service for initial bootstrapping. Network map service (`networkMapConfig`) should be **disabled** at this point.
-   **Comment out** network map config in the config file and start the server by running :
+   Start the network management server with the doorman service for initial bootstrapping. Network map service (`networkMap`)
+   should be **disabled** at this point. **Comment out** network map config in the config file and start the server by running :
    ```
-   java -jar doorman-<version>.jar
+   java -jar doorman-<version>.jar --config-file <config file>
    ```
    
 ### 3. Create notary node and register with the doorman
-   After the doorman service is started, start the notary node for the `initial-registration` process.
+   After the doorman service is started, start the notary node for registration.
+   ```
+   java -jar corda.jar --initial-registration --network-root-truststore-password <trust store password>
+   ```
+   By default it will expect trust store file received from the doorman to be in the location ``certificates/network-root-truststore.jks``.
+   This can be overridden with the additional `--network-root-truststore` flag.
+   
+   NOTE: This step applies to all nodes that wish to register with the doorman.
 
 ### 4. Generate node info files for notary nodes
    Once notary nodes are registered, run the notary nodes with the `just-generate-node-info` flag.
@@ -187,16 +189,19 @@ networkMap {
    The network parameters should contain reference to the notaries node info files.
       Example network parameters file:
       
-      notaries : [{
-          notaryNodeInfoFile: "/Path/To/NodeInfo/File1"
-          validating: true
-      }, {
-          notaryNodeInfoFile: "/Path/To/NodeInfo/File2"
-          validating: false
-      }]
+      notaries : [
+          {
+              notaryNodeInfoFile: "/Path/To/NodeInfo/File1"
+              validating: true
+          },
+          {
+              notaryNodeInfoFile: "/Path/To/NodeInfo/File2"
+              validating: false
+          }
+      ]
       minimumPlatformVersion = 1
       maxMessageSize = 10485760
-      maxTransactionSize = 40000
+      maxTransactionSize = 10485760
       
    Save the parameters to `network-parameters.conf`
 
@@ -204,7 +209,7 @@ networkMap {
 A network parameters file is required to start the network map service for the first time. The initial network parameters file can be loaded using the `--update-network-parameters` flag.
 We can now restart the network management server with both doorman and network map service.  
 ```
-java -jar doorman-<version>.jar --update-network-parameters network-parameters.conf
+java -jar doorman-<version>.jar --config-file <config file> --update-network-parameters network-parameters.conf
 ```
 
 ### 7. Logs
@@ -212,5 +217,5 @@ In order to set the desired logging level the system properties need to be used.
 Appropriate system properties can be set at the execution time.
 Example:
 ```
-java -DdefaultLogLevel=TRACE -DconsoleLogLevel=TRACE -jar doorman-<version>.jar
+java -DdefaultLogLevel=TRACE -DconsoleLogLevel=TRACE -jar doorman-<version>.jar --config-file <config file>
 ```

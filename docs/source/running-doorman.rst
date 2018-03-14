@@ -27,11 +27,7 @@ Allowed parameters are:
 
 :rootPrivateKeyPassword: Password for the root private key
 
-:host: host on which doorman runs
-
-:port: port on which doorman runs
-
-:mode: must be one of: DOORMAN (default), CA_KEYGEN, ROOT_KEYGEN.
+:address: The host and port on which doorman runs
 
 :database: database properties. The same (including its default value) as for node configuration (see :doc:`corda-configuration-file`).
 

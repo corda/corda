@@ -15,10 +15,10 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.HsmSimulator
 import com.r3.corda.networkmanage.hsm.authentication.InputReader
-import com.r3.corda.networkmanage.hsm.configuration.AuthenticationParameters
-import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateParameters
-import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateParameters
-import com.r3.corda.networkmanage.hsm.configuration.Parameters
+import com.r3.corda.networkmanage.hsm.configuration.AuthParametersConfig
+import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateConfig
+import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateConfig
+import com.r3.corda.networkmanage.hsm.configuration.SigningServiceConfig
 import com.r3.corda.networkmanage.hsm.generator.CertificateConfiguration
 import com.r3.corda.networkmanage.hsm.generator.GeneratorParameters
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
@@ -127,26 +127,26 @@ abstract class HsmBaseTest {
         ), hsmUserConfigs)
     }
 
-    protected fun createHsmSigningServiceConfig(): Parameters {
-        return Parameters(
+    protected fun createHsmSigningServiceConfig(): SigningServiceConfig {
+        return SigningServiceConfig(
                 dataSourceProperties = mock(),
                 device = "${hsmSimulator.port}@${hsmSimulator.host}",
                 keySpecifier = 1,
-                doorman = DoormanCertificateParameters(
+                doorman = DoormanCertificateConfig(
                         rootKeyStoreFile = rootKeyStoreFile,
                         keyGroup = DOORMAN_CERT_KEY_GROUP,
                         validDays = 3650,
                         rootKeyStorePassword = TRUSTSTORE_PASSWORD,
                         crlDistributionPoint = "http://test.com/revoked.crl",
-                        authParameters = AuthenticationParameters(
+                        authParameters = AuthParametersConfig(
                                 mode = SigningServiceAuthMode.PASSWORD,
                                 threshold = 2
                         )
                 ),
-                networkMap = NetworkMapCertificateParameters(
+                networkMap = NetworkMapCertificateConfig(
                         username = "INTEGRATION_TEST",
                         keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
-                        authParameters = AuthenticationParameters(
+                        authParameters = AuthParametersConfig(
                                 mode = SigningServiceAuthMode.PASSWORD,
                                 password = "INTEGRATION_TEST",
                                 threshold = 2
