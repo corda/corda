@@ -125,7 +125,7 @@ internal interface InternalMockMessagingService : MessagingService {
 
 fun NodeHandle.drainAndShutdown(user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
 
-    return rpcClient().drainAndShutdown(user.username, user.password, pollingPeriod)
+    return rpc.drainAndShutdown()
 }
 
 fun NodeHandle.shutdownEvent(user: User = rpcUsers[0], pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {

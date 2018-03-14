@@ -2,6 +2,8 @@ package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.RPCException
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -10,6 +12,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
 import rx.Observable
+import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -30,17 +33,14 @@ fun createCordaRPCClientWithSslAndClassLoader(
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
 
-fun CordaRPCClient.drainAndShutdown(username: String, password: String, pollingPeriod: Duration = Duration.ofSeconds(1)): Observable<Unit> {
+fun CordaRPCOps.drainAndShutdown(): Observable<Unit> {
 
-    val connection = start(username, password)
-    connection.proxy.apply {
-        setFlowsDrainingModeEnabled(true)
-        pendingFlowsCount().updates
-                .doOnError { error -> throw error }
-                .doOnCompleted { shutdown() }
-                .subscribe()
-    }
-    return shutdownEvent(username, password, pollingPeriod).doAfterTerminate { connection.close() }
+    setFlowsDrainingModeEnabled(true)
+    return pendingFlowsCount().updates
+            .doOnError { error ->
+                throw error
+            }
+            .doOnCompleted { shutdown() }.map {  }
 }
 
 fun CordaRPCClient.shutdownEvent(username: String, password: String, period: Duration = Duration.ofSeconds(1)): Observable<Unit> {
@@ -58,15 +58,20 @@ fun CordaRPCClient.shutdownEvent(username: String, password: String, period: Dur
                         }
                     } catch (e: ActiveMQNotConnectedException) {
                         // not cool here, for the connection might be interrupted without the node actually getting shut down - OK for tests
+                        println(e)
                         nodeIsShut.onCompleted()
                     } catch (e: ActiveMQConnectionTimedOutException) {
                         // rare, node shut down and we timed out trying to connect to something that doesn't exist
+                        println(e)
                         nodeIsShut.onCompleted()
                     } catch (ignored: ActiveMQSecurityException) {
                         // nothing here - this happens if trying to connect before the node is started
+                        println(ignored)
                     } catch (e: ActiveMQUnBlockedException) {
+                        println(e)
                         nodeIsShut.onCompleted()
                     } catch (e: Throwable) {
+                        println(e)
                         nodeIsShut.onError(e)
                     }
                 }, 0, period.toMillis(), TimeUnit.MILLISECONDS)

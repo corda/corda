@@ -10,9 +10,9 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
-import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -21,10 +21,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -127,7 +124,8 @@ data class ShellConfiguration(
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var rpcOps: (username: String, credentials: String) -> CordaRPCOps
-    private lateinit var connection: CordaRPCOps
+    private lateinit var ops: CordaRPCOps
+    private lateinit var connection: CordaRPCConnection
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
@@ -141,7 +139,9 @@ object InteractiveShell {
         rpcOps = { username: String, credentials: String ->
              client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     sslConfiguration = configuration.ssl, classLoader = classLoader)
-            client.start(username, credentials).proxy
+
+            this.connection = client.start(username, credentials)
+            connection.proxy
         }
         InteractiveShell.classLoader = classLoader
         val runSshDaemon = configuration.sshdPort != null
@@ -216,13 +216,13 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            connection = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, connection, StdoutANSIProgressRenderer))
+            ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops, StdoutANSIProgressRenderer))
         }
     }
 
     fun nodeInfo() = try {
-        connection.nodeInfo()
+        ops.nodeInfo()
     } catch (e: UndeclaredThrowableException) {
         throw e.cause ?: e
     }
@@ -472,31 +472,49 @@ object InteractiveShell {
 
         var result: Any? = null
         try {
-            val conf = object : CordaRPCClientConfiguration {
-                override val maxReconnectAttempts = 1
-            }
-            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = shellConfiguration.hostAndPort,
-                    configuration = conf,
-                    sslConfiguration = shellConfiguration.ssl, classLoader = classLoader)
-            result = client.drainAndShutdown(shellConfiguration.user, shellConfiguration.password)
-            if (result != null && result !is kotlin.Unit && result !is Void) {
-                result = printAndFollowRPCResponse(result, out)
-            }
-            if (result is Future<*>) {
-                if (!result.isDone) {
-                    out.println("Waiting for completion or Ctrl-C ... ")
-                    out.flush()
-                }
-                try {
-                    result = result.get()
-                } catch (e: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                } catch (e: ExecutionException) {
-                    throw e.rootCause
-                } catch (e: InvocationTargetException) {
-                    throw e.rootCause
-                }
-            }
+            out.println("Orchestrating a clean shutdown...")
+            out.println("...enabling draining mode")
+            out.flush()
+            cordaRPCOps.setFlowsDrainingModeEnabled(true)
+            out.println("...waiting for in-flight flows to be completed")
+            out.flush()
+            cordaRPCOps.pendingFlowsCount().updates
+                    .doOnError { error ->
+                        // TODO Szymon log this
+                        throw error
+                    }
+                    .doOnNext { remaining ->
+                        out.println("...remaining: ${remaining.first}/${remaining.second}")
+                        out.flush()
+                    }
+                    .doOnCompleted {
+                        out.println("...shutting down the node")
+                        out.flush()
+                        cordaRPCOps.shutdown()
+                        connection.forceClose()
+                        out.println("...done, quitting standalone shell now.")
+                        out.flush()
+                        System.exit(0)
+                    }.toBlocking().single()
+
+//            if (result !is kotlin.Unit && result !is Void) {
+//                result = printAndFollowRPCResponse(result, out)
+//            }
+//            if (result is Future<*>) {
+//                if (!result.isDone) {
+//                    out.println("Waiting for completion or Ctrl-C ... ")
+//                    out.flush()
+//                }
+//                try {
+//                    result = result.get()
+//                } catch (e: InterruptedException) {
+//                    Thread.currentThread().interrupt()
+//                } catch (e: ExecutionException) {
+//                    throw e.rootCause
+//                } catch (e: InvocationTargetException) {
+//                    throw e.rootCause
+//                }
+//            }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             out.println(e.message, Color.red)
             out.println("Please try 'man run' to learn what syntax is acceptable")
@@ -572,6 +590,7 @@ object InteractiveShell {
             return printNextElements(response.updates, printerFun, out)
         }
         if (response is Observable<*>) {
+
             return printNextElements(response, printerFun, out)
         }
 

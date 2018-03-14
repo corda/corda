@@ -40,7 +40,7 @@ data class CordaRPCClientConfigurationImpl(
         override val deduplicationCacheExpiry: Duration
 ) : CordaRPCClientConfiguration {
     companion object {
-        private const val unlimitedReconnectAttempts = -1
+        private const val unlimitedReconnectAttempts = 1
         @JvmStatic
         val default = CordaRPCClientConfigurationImpl(
                 minimumServerProtocolVersion = 0,

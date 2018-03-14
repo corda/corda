@@ -1,5 +1,6 @@
 package net.corda.tools.shell
 
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException

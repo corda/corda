@@ -34,6 +34,8 @@ import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import rx.Notification
 import rx.Observable
+import rx.plugins.RxJavaHooks
+import rx.plugins.RxJavaPlugins
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -343,7 +345,7 @@ class RPCClientProxyHandler(
      * @param notify whether to notify observables or not.
      */
     private fun close(notify: Boolean = true) {
-        sessionFactory?.close()
+//        sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables(notify)
@@ -410,6 +412,7 @@ class RPCClientProxyHandler(
             FailoverEventType.FAILURE_DETECTED -> {
                 log.warn("RPC server unavailable. RPC calls are being buffered.")
                 log.warn("Terminating observables.")
+                // TODO Szymon
                 val m = observableContext.observableMap.asMap()
                 m.keys.forEach { k ->
                     observationExecutorPool.run(k) {
@@ -435,6 +438,7 @@ class RPCClientProxyHandler(
                 outgoingRequestBuffer.clear()
                 rpcReplyMap.clear()
                 callSiteMap?.clear()
+                // TODO Szymon signal onCompleted()
             }
         }
     }
