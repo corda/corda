@@ -137,9 +137,9 @@ class Network private constructor(
     private fun bootstrapDoorman(distribution: Distribution) {
 
         // Copy over reference configuration files used in bootstapping
-        val source = doormanConfigDirectory / "*"
+        val source = doormanConfigDirectory
         val destination = currentDirectory / "build/runs/doorman"
-        Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
+        source.copyRecursively(destination, true)
 
         // 1. Create key stores for local signer
 
