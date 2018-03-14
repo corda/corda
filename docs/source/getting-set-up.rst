@@ -112,7 +112,7 @@ Java
 3. Toggle "Accept License Agreement"
 4. Click the download link for jdk-8uXXX-macosx-x64.dmg (where "XXX" is the latest minor version number)
 5. Download and run the executable to install Java (use the default settings)
-6. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
+6. Open a new terminal window and run ``java -version`` to test that Java is installed correctly
 
 IntelliJ
 ^^^^^^^^
