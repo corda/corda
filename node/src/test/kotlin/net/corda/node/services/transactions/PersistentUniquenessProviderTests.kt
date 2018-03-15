@@ -22,6 +22,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -50,7 +51,7 @@ class PersistentUniquenessProviderTests {
     @Test
     fun `should commit a transaction with unused inputs without exception`() {
         database.transaction {
-            val provider = PersistentUniquenessProvider()
+            val provider = PersistentUniquenessProvider(Clock.systemUTC())
             val inputState = generateStateRef()
 
             provider.commit(listOf(inputState), txID, identity, requestSignature)
@@ -60,7 +61,7 @@ class PersistentUniquenessProviderTests {
     @Test
     fun `should report a conflict for a transaction with previously used inputs`() {
         database.transaction {
-            val provider = PersistentUniquenessProvider()
+            val provider = PersistentUniquenessProvider(Clock.systemUTC())
             val inputState = generateStateRef()
 
             val inputs = listOf(inputState)

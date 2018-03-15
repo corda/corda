@@ -26,6 +26,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -105,7 +106,7 @@ class RaftTransactionCommitLogTests {
         val address = Address(myAddress.host, myAddress.port)
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(serverNameTablePrefix = "PORT_${myAddress.port}_"), rigorousMock(), NodeSchemaService(includeNotarySchemas = true))
         databases.add(database)
-        val stateMachineFactory = { RaftTransactionCommitLog(database, RaftUniquenessProvider.Companion::createMap) }
+        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), RaftUniquenessProvider.Companion::createMap) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
