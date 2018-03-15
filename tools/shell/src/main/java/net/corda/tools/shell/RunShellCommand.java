@@ -1,11 +1,16 @@
 package net.corda.tools.shell;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import net.corda.core.messaging.*;
 import net.corda.client.jackson.*;
 import org.crsh.cli.*;
 import org.crsh.command.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+
+import static com.google.common.collect.Maps.newHashMap;
 
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
@@ -41,15 +46,31 @@ public class RunShellCommand extends InteractiveShellCommand {
             if (entry.getKey().equals("startFlowDynamic")) continue;
             if (entry.getKey().equals("getProtocolVersion")) continue;
 
-            // Use a LinkedHashMap to ensure that the Command column comes first.
-            Map<String, String> m = new LinkedHashMap<>();
-            m.put("Command", entry.getKey());
-            m.put("Parameter types", entry.getValue());
             try {
-                context.provide(m);
+                context.provide(commandAndDesc(entry.getKey(), entry.getValue()));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
+
+        Lists.newArrayList(
+                commandAndDesc("shutdown", "Shuts node down (immediately)"),
+                commandAndDesc("gracefulShutdown", "Shuts node down gracefully, waiting for all flows to complete first.")
+        ).forEach(stringStringMap -> {
+            try {
+                context.provide(stringStringMap);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @NotNull
+    private Map<String, String> commandAndDesc(String command, String description) {
+        // Use a LinkedHashMap to ensure that the Command column comes first.
+        Map<String, String> abruptShutdown = Maps.newLinkedHashMap();
+        abruptShutdown.put("Command", command);
+        abruptShutdown.put("Parameter types", description);
+        return abruptShutdown;
     }
 }
