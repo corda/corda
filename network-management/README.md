@@ -230,3 +230,49 @@ Run the following SQL script to archive the node info table (change the timestam
     delect from node_info where is_current = false and published_at < '2018-03-12'
 ```
 
+## Private Network Map
+The private network is a tactical solution to provide temporary privacy to the initial network map.
+
+### Creating a private network
+To create a new private network, a entry has to be create in the ``private_network`` table manually.
+
+Run the following SQL script to create a new private network:
+
+```
+insert into private_network (id, name)
+values (NEWID(), 'Private Network Name')
+```  
+
+Then use the following SQL to retrieve the private network ID for the private network owner:
+```
+select id from private_network where name = 'Private Network Name'
+```
+
+### Modify existing private network registration
+Since this is a tactical solution, any modification will require manual database changes.
+
+**We should try to keep these changes to the minimal**
+
+#### Add nodes to a private network
+
+```
+update certificate_signing_request 
+set private_network = '<<private_network_id>>' 
+where request_id in ('<<certificate_request_id>>', ...)
+```
+
+or this SQL script to add all approved nodes to the private network map.
+
+```
+update certificate_signing_request 
+set private_network = '<<private_network_id>>' 
+where status = 'APPROVED'
+```
+
+#### Move a node from its private network and into the global network map**
+
+```
+update certificate_signing_request 
+set private_network = null 
+where request_id = '<<certificate_request_id>>'
+```

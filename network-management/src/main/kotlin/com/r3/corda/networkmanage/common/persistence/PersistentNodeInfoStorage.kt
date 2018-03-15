@@ -63,7 +63,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
 
     override fun getNodeInfo(nodeInfoHash: SecureHash): SignedNodeInfo? {
         return database.transaction {
-            session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())?.signedNodeInfo()
+            session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())?.toSignedNodeInfo()
         }
     }
 

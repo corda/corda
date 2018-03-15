@@ -56,7 +56,7 @@ interface CertificateSigningRequestStorage {
      * Persist the fact that a ticket has been created for the given [requestId].
      */
     fun markRequestTicketCreated(requestId: String)
-    
+
     /**
      * Approve the given request if it has not already been approved. Otherwise do nothing.
      * @param requestId id of the certificate signing request

@@ -26,7 +26,7 @@ import javax.persistence.*
 
 @Entity
 @Table(name = "certificate_signing_request", indexes = arrayOf(Index(name = "IDX_PUB_KEY_HASH", columnList = "public_key_hash")))
-class CertificateSigningRequestEntity(
+data class CertificateSigningRequestEntity(
         @Id
         @Column(name = "request_id", length = 64)
         val requestId: String,
@@ -60,7 +60,11 @@ class CertificateSigningRequestEntity(
 
         @Lob
         @Column(name = "request_bytes", nullable = false)
-        val requestBytes: ByteArray
+        val requestBytes: ByteArray,
+
+        @ManyToOne
+        @JoinColumn(name = "private_network", foreignKey = ForeignKey(name = "FK_CSR_PN"))
+        val privateNetwork: PrivateNetworkEntity? = null
 ) {
     fun toCertificateSigningRequest() = CertificateSigningRequest(
             requestId = requestId,
@@ -73,36 +77,12 @@ class CertificateSigningRequestEntity(
             certData = certificateData?.toCertificateData()
     )
 
-    fun copy(requestId: String = this.requestId,
-             legalName: String = this.legalName,
-             publicKeyHash: String = this.publicKeyHash,
-             status: RequestStatus = this.status,
-             modifiedBy: String = this.modifiedBy,
-             modifiedAt: Instant = this.modifiedAt,
-             remark: String? = this.remark,
-             certificateData: CertificateDataEntity? = this.certificateData,
-             requestBytes: ByteArray = this.requestBytes
-    ): CertificateSigningRequestEntity {
-        return CertificateSigningRequestEntity(
-                requestId = requestId,
-                legalName = legalName,
-                publicKeyHash = publicKeyHash,
-                status = status,
-                modifiedAt = modifiedAt,
-                modifiedBy = modifiedBy,
-                remark = remark,
-                certificateData = certificateData,
-                requestBytes = requestBytes
-        )
-    }
-
     private fun request() = PKCS10CertificationRequest(requestBytes)
 }
 
 @Entity
 @Table(name = "certificate_data")
-class CertificateDataEntity(
-
+data class CertificateDataEntity(
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         val id: Long? = null,
@@ -146,3 +126,14 @@ class CertificateDataEntity(
 
     private fun toCertificatePath(): CertPath = buildCertPath(certificatePathBytes)
 }
+
+@Entity
+@Table(name = "private_network")
+data class PrivateNetworkEntity(
+        @Id
+        @Column(name = "id")
+        val networkId: String,
+
+        @Column(name = "name")
+        val networkName: String
+)

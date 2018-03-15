@@ -12,13 +12,12 @@ package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.SignedNodeInfo
-import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
 import javax.persistence.*
 
 @Entity
 @Table(name = "node_info")
-class NodeInfoEntity(
+data class NodeInfoEntity(
         // Hash of serialized [NodeInfo] without signatures.
         @Id
         @Column(name = "node_info_hash", length = 64)
@@ -32,29 +31,14 @@ class NodeInfoEntity(
         @Column(name = "signed_node_info_bytes")
         val signedNodeInfoBytes: ByteArray,
 
-        @Column(name="is_current")
+        @Column(name = "is_current")
         val isCurrent: Boolean,
 
         @Column(name = "published_at")
         val publishedAt: Instant = Instant.now()
 ) {
     /**
-     * Deserializes NodeInfoEntity.soignedNodeInfoBytes into the [SignedNodeInfo] instance
+     * Deserialize NodeInfoEntity.signedNodeInfoBytes into the [SignedNodeInfo] instance
      */
-    fun signedNodeInfo() = signedNodeInfoBytes.deserialize<SignedNodeInfo>()
-
-    fun copy(nodeInfoHash: String = this.nodeInfoHash,
-             certificateSigningRequest: CertificateSigningRequestEntity = this.certificateSigningRequest,
-             signedNodeInfoBytes: ByteArray = this.signedNodeInfoBytes,
-             isCurrent: Boolean = this.isCurrent,
-             publishedAt: Instant = this.publishedAt
-    ): NodeInfoEntity {
-        return NodeInfoEntity(
-                nodeInfoHash = nodeInfoHash,
-                certificateSigningRequest = certificateSigningRequest,
-                signedNodeInfoBytes = signedNodeInfoBytes,
-                isCurrent = isCurrent,
-                publishedAt = publishedAt
-        )
-    }
+    fun toSignedNodeInfo() = signedNodeInfoBytes.deserialize<SignedNodeInfo>()
 }

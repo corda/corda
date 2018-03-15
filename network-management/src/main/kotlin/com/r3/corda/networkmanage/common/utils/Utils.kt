@@ -98,7 +98,4 @@ fun PKCS10CertificationRequest.getCertRole(): CertRole {
 /**
  * Helper method to extract email from certificate signing request.
  */
-fun PKCS10CertificationRequest.getEmail(): String {
-    // TODO: Add basic email check?
-    return firstAttributeValue(BCStyle.E).toString()
-}
+fun PKCS10CertificationRequest.getEmail(): String = firstAttributeValue(BCStyle.E).toString()
