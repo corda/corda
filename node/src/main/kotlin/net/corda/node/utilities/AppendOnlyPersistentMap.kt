@@ -1,7 +1,7 @@
 package net.corda.node.utilities
 
-import com.google.common.cache.LoadingCache
-import com.google.common.cache.Weigher
+import com.github.benmanes.caffeine.cache.LoadingCache
+import com.github.benmanes.caffeine.cache.Weigher
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.util.*
@@ -29,7 +29,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * Returns the value associated with the key, first loading that value from the storage if necessary.
      */
     operator fun get(key: K): V? {
-        return cache.get(key).orElse(null)
+        return cache.get(key)!!.orElse(null)
     }
 
     val size get() = allPersisted().toList().size
@@ -62,7 +62,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
             } else {
                 Optional.of(value)
             }
-        }
+        }!!
         if (!insertionAttempt) {
             if (existingInCache.isPresent) {
                 // Key already exists in cache, do nothing.
@@ -71,7 +71,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
                 // This happens when the key was queried before with no value associated. We invalidate the cached null
                 // value and recursively call set again. This is to avoid race conditions where another thread queries after
                 // the invalidate but before the set.
-                cache.invalidate(key)
+                cache.invalidate(key!!)
                 return set(key, value, logWarning, store)
             }
         }
@@ -148,7 +148,6 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
     //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
     override val cache = NonInvalidatingCache<K, Optional<V>>(
             bound = cacheBound,
-            concurrencyLevel = 8,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) })
 }
 
@@ -166,7 +165,6 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache<K, Optional<V>>(
             maxWeight = maxWeight,
-            concurrencyLevel = 8,
             weigher = object : Weigher<K, Optional<V>> {
                 override fun weigh(key: K, value: Optional<V>): Int {
                     return weighingFunc(key, value)

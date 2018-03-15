@@ -326,13 +326,14 @@ val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun URL.post(serializedData: OpaqueBytes) {
-    openHttpConnection().apply {
+fun URL.post(serializedData: OpaqueBytes): ByteArray {
+    return openHttpConnection().run {
         doOutput = true
         requestMethod = "POST"
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
+        inputStream.use { it.readBytes() }
     }
 }
 
@@ -396,10 +397,9 @@ fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoade
 }
 
 /** Verifies that the correct notarisation request was signed by the counterparty. */
-fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+fun NotaryFlow.Service.validateRequestSignature(request: NotarisationRequest, signature: NotarisationRequestSignature) {
     val requestingParty = otherSideSession.counterparty
     request.verifySignature(signature, requestingParty)
-    // TODO: persist the signature for traceability. Do we need to persist the request as well?
 }
 
 /** Creates a signature over the notarisation request using the legal identity key. */

@@ -43,7 +43,7 @@ object JVMAgentRegistry {
         } else {
             (this::class.java.classLoader as? URLClassLoader)
                 ?.urLs
-                ?.map { Paths.get(it.path) }
+                ?.map { Paths.get(it.toURI()) }
                 ?.firstOrNull { it.fileName.toString() == jarFileName }
         }
     }

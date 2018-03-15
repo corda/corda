@@ -1,7 +1,7 @@
 package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.cache.Weigher
+import com.github.benmanes.caffeine.cache.Weigher
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
@@ -24,7 +24,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
-import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
@@ -209,7 +208,6 @@ class NodeAttachmentService(
 
     private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<Pair<Attachment, ByteArray>>>(
             maxWeight = attachmentContentCacheSize,
-            concurrencyLevel = defaultCordaCacheConcurrencyLevel,
             weigher = object : Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> {
                 override fun weigh(key: SecureHash, value: Optional<Pair<Attachment, ByteArray>>): Int {
                     return key.size + if (value.isPresent) value.get().second.size else 0
@@ -234,12 +232,11 @@ class NodeAttachmentService(
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
             attachmentCacheBound,
-            defaultCordaCacheConcurrencyLevel,
             { key -> Optional.ofNullable(createAttachment(key)) }
     )
 
     private fun createAttachment(key: SecureHash): Attachment? {
-        val content = attachmentContentCache.get(key)
+        val content = attachmentContentCache.get(key)!!
         if (content.isPresent) {
             return content.get().first
         }
@@ -249,7 +246,7 @@ class NodeAttachmentService(
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = attachmentCache.get(id)
+        val attachment = attachmentCache.get(id)!!
         if (attachment.isPresent) {
             return attachment.get()
         }

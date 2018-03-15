@@ -643,7 +643,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val props = configuration.dataSourceProperties
         if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
-        val database = configureDatabase(props, configuration.database, identityService, schemaService)
+        val database = configureDatabase(props, configuration.database, identityService, schemaService, cordappLoader.appClassLoader)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
         runOnStop += database::close
@@ -677,7 +677,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
             if (raft != null) {
-                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
+                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.clock, services.monitoringService.metrics, raft)
                 (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
             } else if (bftSMaRt != null) {
                 if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
@@ -879,7 +879,8 @@ internal class NetworkMapCacheEmptyException : Exception()
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       identityService: IdentityService,
-                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
+                      schemaService: SchemaService = NodeSchemaService(),
+                      cordappClassLoader: ClassLoader? = null): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -887,5 +888,5 @@ fun configureDatabase(hikariProperties: Properties,
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
     val dataSource = DataSourceFactory.createDataSource(hikariProperties)
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters, cordappClassLoader)
 }

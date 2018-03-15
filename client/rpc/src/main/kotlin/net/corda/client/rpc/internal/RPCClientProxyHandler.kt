@@ -1,13 +1,14 @@
 package net.corda.client.rpc.internal
 
+import co.paralleluniverse.common.util.SameThreadExecutor
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.RemovalCause
-import com.google.common.cache.RemovalListener
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.RemovalCause
+import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -34,8 +35,6 @@ import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import rx.Notification
 import rx.Observable
-import rx.plugins.RxJavaHooks
-import rx.plugins.RxJavaPlugins
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -44,6 +43,8 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.withLock
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -143,10 +144,10 @@ class RPCClientProxyHandler(
     private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
-        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> {
-            val observableId = it.key!!
+        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, value, cause ->
+            val observableId = key!!
             val rpcCallSite = callSiteMap?.remove(observableId)
-            if (it.cause == RemovalCause.COLLECTED) {
+            if (cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
                         "This wastes server-side resources because it was queueing observations for retrieval.",
@@ -157,15 +158,11 @@ class RPCClientProxyHandler(
             }
             observablesToReap.locked { observables.add(observableId) }
         }
-        return CacheBuilder.newBuilder().
+        return Caffeine.newBuilder().
                 weakValues().
-                removalListener(onObservableRemove).
-                concurrencyLevel(rpcConfiguration.cacheConcurrencyLevel).
+                removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).
                 build()
     }
-
-    // Used to buffer client requests if the server is unavailable
-    private val outgoingRequestBuffer = ConcurrentHashMap<InvocationId, RPCApi.ClientToServer>()
 
     private var sessionFactory: ClientSessionFactory? = null
     private var producerSession: ClientSession? = null
@@ -175,6 +172,9 @@ class RPCClientProxyHandler(
 
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
     private val deduplicationSequenceNumber = AtomicLong(0)
+
+    private val lock = ReentrantReadWriteLock()
+    private var sendingEnabled = true
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
@@ -218,6 +218,11 @@ class RPCClientProxyHandler(
             throw RPCException("RPC Proxy is closed")
         }
 
+        lock.readLock().withLock {
+            if (!sendingEnabled)
+                throw RPCException("RPC server is not available.")
+        }
+
         val replyId = InvocationId.newInstance()
         callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
@@ -236,13 +241,8 @@ class RPCClientProxyHandler(
                 "Generated several RPC requests with same ID $replyId"
             }
 
-            outgoingRequestBuffer[replyId] = request
-            // try and send the request
             sendMessage(request)
-            val result = replyFuture.getOrThrow()
-            // at this point the server responded, remove the buffered request
-            outgoingRequestBuffer.remove(replyId)
-            return result
+            return replyFuture.getOrThrow()
         } catch (e: RuntimeException) {
             // Already an unchecked exception, so just rethrow it
             throw e
@@ -410,9 +410,12 @@ class RPCClientProxyHandler(
     private fun failoverHandler(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
+                lock.writeLock().withLock {
+                    sendingEnabled = false
+                }
+
                 log.warn("RPC server unavailable. RPC calls are being buffered.")
                 log.warn("Terminating observables.")
-                // TODO Szymon
                 val m = observableContext.observableMap.asMap()
                 m.keys.forEach { k ->
                     observationExecutorPool.run(k) {
@@ -420,25 +423,24 @@ class RPCClientProxyHandler(
                     }
                 }
                 observableContext.observableMap.invalidateAll()
+
+                rpcReplyMap.forEach { _, replyFuture ->
+                    replyFuture.setException(RPCException("Connection failure detected."))
+                }
+
+                rpcReplyMap.clear()
+                callSiteMap?.clear()
             }
 
             FailoverEventType.FAILOVER_COMPLETED -> {
-                log.info("RPC server available. Draining request buffer.")
-                outgoingRequestBuffer.keys.forEach { replyId ->
-                    outgoingRequestBuffer[replyId]?.let { sendMessage(it) }
+                lock.writeLock().withLock {
+                    sendingEnabled = true
                 }
+                log.info("RPC server available.")
             }
 
             FailoverEventType.FAILOVER_FAILED -> {
-                log.error("Could not reconnect to the RPC server. All buffered requests will be discarded and RPC calls " +
-                        "will throw an RPCException.")
-                rpcReplyMap.forEach { id, replyFuture ->
-                    replyFuture.setException(RPCException("Could not re-connect to RPC server. Failover failed."))
-                }
-                outgoingRequestBuffer.clear()
-                rpcReplyMap.clear()
-                callSiteMap?.clear()
-                // TODO Szymon signal onCompleted()
+                log.error("Could not reconnect to the RPC server.")
             }
         }
     }

@@ -164,9 +164,9 @@ open class PersistentNetworkMapCache(
 
     override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(session, name) }
 
-    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]
+    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
-    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024, 8, { key -> database.transaction { queryByIdentityKey(session, key) } })
+    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024, { key -> database.transaction { queryByIdentityKey(session, key) } })
 
     override fun getNodesByOwningKeyIndex(identityKeyIndex: String): List<NodeInfo> {
         return database.transaction {
@@ -176,9 +176,9 @@ open class PersistentNetworkMapCache(
 
     override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address) }
 
-    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = identityByLegalNameCache.get(name).orElse(null)
+    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = identityByLegalNameCache.get(name)!!.orElse(null)
 
-    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(1024, 8, { name -> Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) }) })
+    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(1024, { name -> Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) }) })
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {

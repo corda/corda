@@ -160,7 +160,7 @@ object NodeInterestRates {
         }
 
         private fun addDefaultFixes() {
-            knownFixes = parseFile(IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name()))
+            knownFixes = parseFile(IOUtils.toString(this::class.java.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name()))
         }
     }
 
