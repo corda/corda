@@ -10,7 +10,7 @@
 
 package net.corda.node.services.messaging
 
-import com.google.common.cache.CacheBuilder
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -32,7 +32,7 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
     private val processedMessages = createProcessedMessages()
     // We add the peer to the key, so other peers cannot attempt malicious meddling with sequence numbers.
     // Expire after 7 days since we last touched an entry, to avoid infinite growth.
-    private val senderUUIDSeqNoHWM: MutableMap<Pair<String, CordaX500Name>, Long> = CacheBuilder.newBuilder().expireAfterAccess(7, TimeUnit.DAYS).build<Pair<String, CordaX500Name>, Long>().asMap()
+    private val senderUUIDSeqNoHWM: MutableMap<Triple<String, CordaX500Name, Boolean>, Long> = Caffeine.newBuilder().expireAfterAccess(7, TimeUnit.DAYS).build<Triple<String, CordaX500Name, Boolean>, Long>().asMap()
 
     private fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, Instant, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
@@ -62,7 +62,7 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
      * We also ensure the UUID cannot be spoofed, by incorporating the authenticated sender into the key of the map/cache.
      */
     private fun isDuplicateWithPotentialOptimization(receivedSenderUUID: String, receivedSenderSeqNo: Long, msg: ReceivedMessage): Boolean {
-        return senderUUIDSeqNoHWM.compute(Pair(receivedSenderUUID, msg.peer)) { key, existingSeqNoHWM ->
+        return senderUUIDSeqNoHWM.compute(Triple(receivedSenderUUID, msg.peer, msg.isSessionInit)) { key, existingSeqNoHWM ->
             val isNewHWM = (existingSeqNoHWM != null && existingSeqNoHWM < receivedSenderSeqNo)
             if (isNewHWM) {
                 // If we are the new HWM, set the HWM to us.

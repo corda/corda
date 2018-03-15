@@ -149,7 +149,10 @@ interface ReceivedMessage : Message {
     val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
+    /** UUID representing the sending JVM */
     val senderSeqNo: Long?
+    /** True if a flow session init message */
+    val isSessionInit: Boolean
 }
 
 /** A singleton that's useful for validating topic strings */

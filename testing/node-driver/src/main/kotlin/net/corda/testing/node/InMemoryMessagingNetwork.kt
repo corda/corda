@@ -28,12 +28,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.AcknowledgeHandle
-import net.corda.node.services.messaging.Message
-import net.corda.node.services.messaging.MessageHandler
-import net.corda.node.services.messaging.MessageHandlerRegistration
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.*
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -307,7 +302,9 @@ class InMemoryMessagingNetwork private constructor(
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name,
                                                override val senderUUID: String? = null,
-                                               override val senderSeqNo: Long? = null) : ReceivedMessage {
+                                               override val senderSeqNo: Long? = null,
+                                               /** Note this flag is never set in the in memory network. */
+                                               override val isSessionInit: Boolean = false) : ReceivedMessage {
 
         override val additionalHeaders: Map<String, String> = emptyMap()
     }

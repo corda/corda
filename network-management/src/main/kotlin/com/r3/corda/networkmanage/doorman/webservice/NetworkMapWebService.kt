@@ -10,9 +10,8 @@
 
 package com.r3.corda.networkmanage.doorman.webservice
 
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
-import com.google.common.cache.LoadingCache
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.LoadingCache
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
@@ -51,23 +50,24 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         const val NETWORK_MAP_PATH = "network-map"
     }
 
-    private val networkMapCache: LoadingCache<Boolean, CachedData> = CacheBuilder.newBuilder()
+    private val networkMapCache: LoadingCache<Boolean, CachedData> = Caffeine.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build(CacheLoader.from { _ -> networkMapStorage.getCurrentNetworkMap()?.let {
+            .build({ _ ->
+                networkMapStorage.getCurrentNetworkMap()?.let {
                     val networkMap = it.verified()
                     CachedData(it, networkMap.nodeInfoHashes.toSet(), networkMapStorage.getSignedNetworkParameters(networkMap.networkParameterHash)?.verified()) }
             })
 
-    private val nodeInfoCache: LoadingCache<SecureHash, SignedNodeInfo> = CacheBuilder.newBuilder()
+    private val nodeInfoCache: LoadingCache<SecureHash, SignedNodeInfo> = Caffeine.newBuilder()
             // TODO: Define cache retention policy.
             .softValues()
-            .build(CacheLoader.from { key ->
+            .build({ key ->
                 key?.let { nodeInfoStorage.getNodeInfo(it) }
             })
 
-    private val currentSignedNetworkMap: SignedNetworkMap? get() = networkMapCache.getOrNull(true)?.signedNetworkMap
-    private val currentNodeInfoHashes: Set<SecureHash> get() = networkMapCache.getOrNull(true)?.nodeInfoHashes ?: emptySet()
-    private val currentNetworkParameters: NetworkParameters? get() = networkMapCache.getOrNull(true)?.currentNetworkParameter
+    private val currentSignedNetworkMap: SignedNetworkMap? get() = networkMapCache.get(true)?.signedNetworkMap
+    private val currentNodeInfoHashes: Set<SecureHash> get() = networkMapCache.get(true)?.nodeInfoHashes ?: emptySet()
+    private val currentNetworkParameters: NetworkParameters? get() = networkMapCache.get(true)?.currentNetworkParameter
 
     @POST
     @Path("publish")
@@ -104,7 +104,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         // Only serve node info if its in the current network map, otherwise return 404.
         logger.trace { "Processing node info request for hash: '$nodeInfoHash'" }
         val signedNodeInfo = if (SecureHash.parse(nodeInfoHash) in currentNodeInfoHashes) {
-            nodeInfoCache.getOrNull(SecureHash.parse(nodeInfoHash))
+            nodeInfoCache.get(SecureHash.parse(nodeInfoHash))
         } else {
             logger.trace { "Requested node info is not current, returning null." }
             null
@@ -155,13 +155,4 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private data class CachedData(val signedNetworkMap: SignedNetworkMap, val nodeInfoHashes: Set<SecureHash>, val currentNetworkParameter: NetworkParameters?)
 
-    // Guava loading cache will throw if value is null, this helper method returns null instead.
-    // The loading cache will load the data from persistence again ignoring timeout if previous value was null.
-    private fun <K : Any, V : Any> LoadingCache<K, V>.getOrNull(key: K): V? {
-        return try {
-            get(key)
-        } catch (e: CacheLoader.InvalidCacheLoadException) {
-            null
-        }
-    }
 }
