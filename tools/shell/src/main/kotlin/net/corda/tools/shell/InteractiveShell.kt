@@ -468,6 +468,7 @@ object InteractiveShell {
     fun gracefulShutdown(out: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false): Any? {
 
         var result: Any? = null
+        var isShuttingDown = false
         try {
             out.println("Orchestrating a clean shutdown...")
             out.println("...enabling draining mode")
@@ -492,13 +493,10 @@ object InteractiveShell {
                         out.println("...shutting down the node (it may take a while)")
                         out.flush()
                         cordaRPCOps.shutdown()
+                        isShuttingDown = true
                         connection.forceClose()
                         out.println("...done, quitting standalone shell now.")
                         out.flush()
-//                        if (isSsh) {
-//                            // print in the original Shell process
-//                            println("...done, quitting standalone shell now.")
-//                        }
                         onExit.invoke()
                     }.toBlocking().single()
 
@@ -506,7 +504,9 @@ object InteractiveShell {
             out.println(e.message, Color.red)
             out.println("Please try 'man run' to learn what syntax is acceptable")
         } catch (e: Exception) {
-            out.println("RPC failed: ${e.rootCause}", Color.red)
+            if (!isShuttingDown) {
+                out.println("RPC failed: ${e.rootCause}", Color.red)
+            }
         } finally {
             out.flush()
             InputStreamSerializer.invokeContext = null
